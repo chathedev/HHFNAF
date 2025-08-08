@@ -1,38 +1,73 @@
 "use client"
 
-import { Puck } from "@measured/puck"
 import { useState, useEffect } from "react"
-import Image from "next/image"
-import Link from "next/link"
+import { BuilderComponent, builder, useIsPreviewing } from "@builder.io/react"
 import { Button } from "@/components/ui/button"
-import { ArrowRight } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
-// Hero Component
-const Hero = ({ title, subtitle, backgroundImage, primaryButtonText, primaryButtonLink, secondaryButtonText, secondaryButtonLink }: {
-  title: string
-  subtitle: string
-  backgroundImage: string
-  primaryButtonText: string
-  primaryButtonLink: string
-  secondaryButtonText: string
-  secondaryButtonLink: string
-}) => (
+// Initialize Builder
+builder.init(process.env.NEXT_PUBLIC_BUILDER_API_KEY || "pub-01234567890abcdef")
+
+// Register custom components for Builder
+builder.register("insertMenu", {
+  name: "Hero Section",
+  inputs: [
+    {
+      name: "title",
+      type: "string",
+      defaultValue: "Härnösands Handbollsförening",
+    },
+    {
+      name: "subtitle", 
+      type: "string",
+      defaultValue: "Passion för handboll sedan 1964",
+    },
+    {
+      name: "backgroundImage",
+      type: "file",
+      allowedFileTypes: ["jpeg", "jpg", "png", "svg"],
+      defaultValue: "https://cdn.builder.io/api/v1/image/assets%2Fpub-01234567890abcdef%2F1920x1080_hero_placeholder",
+    },
+    {
+      name: "primaryButtonText",
+      type: "string", 
+      defaultValue: "Bli Medlem",
+    },
+    {
+      name: "primaryButtonLink",
+      type: "string",
+      defaultValue: "/lag",
+    },
+    {
+      name: "secondaryButtonText",
+      type: "string",
+      defaultValue: "Se Matcher", 
+    },
+    {
+      name: "secondaryButtonLink",
+      type: "string",
+      defaultValue: "/matcher",
+    },
+  ],
+})
+
+// Custom Hero component that Builder can render
+const HeroSection = ({ title, subtitle, backgroundImage, primaryButtonText, primaryButtonLink, secondaryButtonText, secondaryButtonLink }: any) => (
   <section className="relative w-full h-screen flex items-center justify-center overflow-hidden">
-    <Image
+    <img
       src={backgroundImage || "/placeholder.svg"}
       alt="Hero Background"
-      fill
-      quality={90}
-      priority
-      className="object-cover z-0"
+      className="absolute inset-0 w-full h-full object-cover z-0"
     />
     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent z-10" />
     <div className="relative z-20 text-white text-center px-4 max-w-5xl mx-auto">
-      <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold mb-4 leading-tight tracking-tight text-shadow-outline">
-        {title.split(" ")[0]}{" "}
-        <span className="text-orange-400">{title.split(" ").slice(1).join(" ")}</span>
+      <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold mb-4 leading-tight tracking-tight">
+        {title?.split(" ")[0]}{" "}
+        <span className="text-orange-400">{title?.split(" ").slice(1).join(" ")}</span>
       </h1>
-      <p className="text-lg sm:text-xl md:text-2xl mb-10 max-w-3xl mx-auto text-shadow-md">
+      <p className="text-lg sm:text-xl md:text-2xl mb-10 max-w-3xl mx-auto">
         {subtitle}
       </p>
       <div className="flex flex-col sm:flex-row justify-center gap-6">
@@ -40,167 +75,213 @@ const Hero = ({ title, subtitle, backgroundImage, primaryButtonText, primaryButt
           asChild
           className="bg-orange-500 hover:bg-orange-600 text-white px-10 py-4 rounded-full text-lg font-semibold shadow-lg transition-transform duration-300 hover:scale-105"
         >
-          <Link href={primaryButtonLink}>
+          <a href={primaryButtonLink}>
             {primaryButtonText}
-            <ArrowRight className="ml-3 h-5 w-5" />
-          </Link>
+          </a>
         </Button>
         <Button
           asChild
           className="bg-green-700 hover:bg-green-800 text-white px-10 py-4 rounded-full text-lg font-semibold shadow-lg transition-transform duration-300 hover:scale-105"
         >
-          <Link href={secondaryButtonLink}>{secondaryButtonText}</Link>
+          <a href={secondaryButtonLink}>{secondaryButtonText}</a>
         </Button>
       </div>
     </div>
   </section>
 )
 
-// Section Component
-const Section = ({ title, content, backgroundColor = "bg-white" }: {
-  title: string
-  content: string
-  backgroundColor?: string
-}) => (
-  <section className={`py-16 ${backgroundColor}`}>
-    <div className="container mx-auto px-4 max-w-4xl">
-      <h2 className="text-4xl font-bold text-green-600 mb-6 text-center">{title}</h2>
-      <p className="text-lg text-gray-700 text-center max-w-3xl mx-auto">{content}</p>
-    </div>
-  </section>
-)
+// Register the Hero component with Builder
+builder.registerComponent(HeroSection, {
+  name: "Hero Section",
+  inputs: [
+    {
+      name: "title",
+      type: "string",
+      defaultValue: "Härnösands Handbollsförening",
+    },
+    {
+      name: "subtitle",
+      type: "string", 
+      defaultValue: "Passion för handboll sedan 1964",
+    },
+    {
+      name: "backgroundImage",
+      type: "file",
+      allowedFileTypes: ["jpeg", "jpg", "png", "svg"],
+      defaultValue: "https://cdn.builder.io/api/v1/image/assets%2Fpub-01234567890abcdef%2F1920x1080_hero_placeholder",
+    },
+    {
+      name: "primaryButtonText",
+      type: "string",
+      defaultValue: "Bli Medlem",
+    },
+    {
+      name: "primaryButtonLink", 
+      type: "string",
+      defaultValue: "/lag",
+    },
+    {
+      name: "secondaryButtonText",
+      type: "string",
+      defaultValue: "Se Matcher",
+    },
+    {
+      name: "secondaryButtonLink",
+      type: "string", 
+      defaultValue: "/matcher",
+    },
+  ],
+})
 
-// RichText Component
-const RichText = ({ content }: { content: string }) => (
-  <div className="py-8">
-    <div className="container mx-auto px-4 max-w-4xl">
-      <div 
-        className="prose prose-lg max-w-none"
-        dangerouslySetInnerHTML={{ __html: content }}
-      />
-    </div>
-  </div>
-)
+function PasswordPrompt({ onLogin }: { onLogin: (password: string) => void }) {
+  const [password, setPassword] = useState("")
 
-// Puck configuration
-const config = {
-  components: {
-    Hero: {
-      render: Hero,
-      fields: {
-        title: { type: "text" as const },
-        subtitle: { type: "textarea" as const },
-        backgroundImage: { type: "text" as const },
-        primaryButtonText: { type: "text" as const },
-        primaryButtonLink: { type: "text" as const },
-        secondaryButtonText: { type: "text" as const },
-        secondaryButtonLink: { type: "text" as const },
-      },
-      defaultProps: {
-        title: "Your Title Here",
-        subtitle: "Your subtitle here",
-        backgroundImage: "/placeholder.svg",
-        primaryButtonText: "Primary Action",
-        primaryButtonLink: "/",
-        secondaryButtonText: "Secondary Action",
-        secondaryButtonLink: "/",
-      },
-    },
-    Section: {
-      render: Section,
-      fields: {
-        title: { type: "text" as const },
-        content: { type: "textarea" as const },
-        backgroundColor: {
-          type: "select" as const,
-          options: [
-            { label: "White", value: "bg-white" },
-            { label: "Gray 50", value: "bg-gray-50" },
-            { label: "Gray 100", value: "bg-gray-100" },
-            { label: "Green 50", value: "bg-green-50" },
-            { label: "Orange 50", value: "bg-orange-50" },
-          ],
-        },
-      },
-      defaultProps: {
-        title: "Section Title",
-        content: "Section content goes here.",
-        backgroundColor: "bg-white",
-      },
-    },
-    RichText: {
-      render: RichText,
-      fields: {
-        content: { type: "textarea" as const },
-      },
-      defaultProps: {
-        content: "<p>Rich text content goes here.</p>",
-      },
-    },
-  },
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onLogin(password)
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Editor Access</CardTitle>
+          <CardDescription>
+            Enter the editor password to access the Builder.io visual editor
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter editor password"
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full">
+              Access Editor
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  )
 }
 
 export default function EditorPage() {
-  const [data, setData] = useState(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [content, setContent] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [authChecked, setAuthChecked] = useState(false)
+  const isPreviewing = useIsPreviewing()
 
   useEffect(() => {
-    // Load initial data from content/home.json
-    fetch('/api/edit/load')
-      .then(res => res.json())
-      .then(initialData => {
-        setData(initialData)
-        setLoading(false)
-      })
-      .catch(err => {
-        console.error('Failed to load initial data:', err)
-        // Fallback to empty data
-        setData({
-          content: [],
-          root: { props: { title: "Härnösands HF - Hem" } }
-        })
-        setLoading(false)
-      })
+    // Check if user is already authenticated
+    const auth = sessionStorage.getItem("editor-auth")
+    if (auth === "true") {
+      setIsAuthenticated(true)
+    }
+    setAuthChecked(true)
   }, [])
 
-  const handlePublish = async (data: any) => {
-    try {
-      const response = await fetch('/api/edit/commit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to publish changes')
-      }
-
-      alert('Changes published successfully!')
-    } catch (error) {
-      console.error('Publish error:', error)
-      alert('Failed to publish changes. Please try again.')
+  useEffect(() => {
+    if (isAuthenticated || isPreviewing) {
+      // Load content from Builder.io
+      builder
+        .get("page", {
+          userAttributes: {
+            urlPath: "/editor"
+          }
+        })
+        .toPromise()
+        .then((content) => {
+          setContent(content)
+          setLoading(false)
+        })
+        .catch((error) => {
+          console.error("Error loading content:", error)
+          setLoading(false)
+        })
     }
+  }, [isAuthenticated, isPreviewing])
+
+  const handleLogin = (password: string) => {
+    const correctPassword = process.env.NEXT_PUBLIC_EDITOR_PASS || "editor123"
+    
+    if (password === correctPassword) {
+      setIsAuthenticated(true)
+      sessionStorage.setItem("editor-auth", "true")
+    } else {
+      alert("Incorrect password")
+    }
+  }
+
+  // If we're in Builder's preview mode, skip auth
+  if (isPreviewing) {
+    return (
+      <BuilderComponent 
+        model="page" 
+        content={content} 
+        options={{ includeRefs: true }}
+      />
+    )
+  }
+
+  if (!authChecked) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg text-gray-600">Loading...</div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return <PasswordPrompt onLogin={handleLogin} />
   }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg text-gray-600">Loading editor...</div>
+        <div className="text-lg text-gray-600">Loading Builder.io editor...</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-7xl mx-auto">
-        <Puck
-          config={config}
-          data={data}
-          onPublish={handlePublish}
+    <div className="min-h-screen">
+      {content ? (
+        <BuilderComponent 
+          model="page" 
+          content={content}
+          options={{ includeRefs: true }}
         />
-      </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-8">
+          <div className="text-center max-w-2xl">
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">
+              Welcome to Builder.io Visual Editor
+            </h1>
+            <p className="text-lg text-gray-600 mb-6">
+              No content found. Create your first page in the Builder.io dashboard.
+            </p>
+            <div className="space-y-4 text-left">
+              <h2 className="text-xl font-semibold">Next Steps:</h2>
+              <ol className="list-decimal list-inside space-y-2 text-gray-700">
+                <li>Go to <a href="https://builder.io" className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">builder.io</a> and log into your account</li>
+                <li>Create a new "Page" model</li>
+                <li>Set the URL to "/editor"</li>
+                <li>Add content and publish</li>
+                <li>Refresh this page to see your content</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
