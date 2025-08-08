@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 export async function POST() {
   const builderApiKey = process.env.NEXT_PUBLIC_BUILDER_API_KEY
   
-  if (!builderApiKey || builderApiKey === "pub-your-builder-api-key-here") {
+  if (!builderApiKey || builderApiKey === "cc46ebc207de40988f71591e1bf1e1c2") {
     return NextResponse.json(
       { error: "Builder.io API key not configured" },
       { status: 400 }
