@@ -1,7 +1,7 @@
 import { builder } from "@builder.io/react"
 
 // Initialize Builder with your API key
-builder.init(process.env.NEXT_PUBLIC_BUILDER_API_KEY || "pub-your-builder-api-key-here")
+builder.init(process.env.NEXT_PUBLIC_BUILDER_API_KEY || "cc46ebc207de40988f71591e1bf1e1c2")
 
 // Custom components for Builder.io
 export const builderComponents = {
