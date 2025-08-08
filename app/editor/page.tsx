@@ -1,7 +1,5 @@
-"use client"
-
-import { Builder, builder, BuilderComponent } from "@builder.io/react"
-import { useState, useEffect } from "react"
+import { builder } from '@/lib/builder'
+import { BuilderComponent, Builder } from '@builder.io/react'
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -10,14 +8,6 @@ import { ArrowRight, Users, Trophy, Award, History, Heart, TrendingUp, Goal, Cal
 import type { FullContent, HeroContent, StatsContent, AboutClubContent, Partner } from "@/lib/content-types"
 import { defaultContent } from "@/lib/default-content"
 import { allPartners } from "@/lib/partners-data"
-
-// Only initialize Builder.io if we have a valid API key
-const hasValidApiKey = process.env.NEXT_PUBLIC_BUILDER_PUBLIC_KEY && 
-                       process.env.NEXT_PUBLIC_BUILDER_PUBLIC_KEY !== 'your-builder-public-key'
-
-if (typeof window !== 'undefined' && hasValidApiKey) {
-  builder.init(process.env.NEXT_PUBLIC_BUILDER_PUBLIC_KEY!)
-}
 
 // Hero Component for Builder.io
 const EditableHero = ({ content }: { content?: HeroContent }) => {
@@ -207,9 +197,25 @@ const EditableUpcomingEvents = () => {
   )
 }
 
-// Partners Carousel Component for Builder.io  
+// Partners Carousel Component for Builder.io with proper error handling
 const EditablePartnersCarousel = ({ partners }: { partners?: Partner[] }) => {
-  const partnerData = partners || allPartners.filter(p => p.visibleInCarousel) || []
+  // Safe array handling - prevent the "Cannot read properties of undefined (reading 'map')" error
+  const partnerData = Array.isArray(partners) 
+    ? partners 
+    : Array.isArray(allPartners) 
+    ? allPartners.filter(p => p.visibleInCarousel) 
+    : []
+  
+  if (!partnerData.length) {
+    return (
+      <section className="py-16 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <h2 className="text-4xl font-bold text-center text-green-600 mb-12">Våra Partners</h2>
+          <p className="text-center text-gray-600">Inga partners att visa för tillfället.</p>
+        </div>
+      </section>
+    )
+  }
   
   return (
     <section className="py-16 bg-gray-50">
@@ -248,159 +254,30 @@ const CompleteLandingPage = ({ content }: { content?: FullContent }) => {
   )
 }
 
-// Register components with Builder.io only if we have a valid API key
-if (hasValidApiKey) {
-  Builder.registerComponent(EditableHero, {
-    name: 'Hero Section',
-    inputs: [
-      {
-        name: 'content',
-        type: 'object',
-        subFields: [
-          { name: 'imageUrl', type: 'file', allowedFileTypes: ['jpeg', 'jpg', 'png', 'svg'] },
-          { name: 'title', type: 'string' },
-          { name: 'description', type: 'longText' },
-          { name: 'button1Text', type: 'string' },
-          { name: 'button1Link', type: 'string' },
-          { name: 'button2Text', type: 'string' },
-          { name: 'button2Link', type: 'string' }
-        ]
-      }
-    ]
-  })
+// Server Component - no client-side fetching
+export default async function EditorPage() {
+  let builderContent = null
+  let error = null
+  
+  const apiKey = process.env.BUILDER_PUBLIC_KEY || process.env.NEXT_PUBLIC_BUILDER_PUBLIC_KEY
+  const hasValidApiKey = apiKey && apiKey !== 'your-builder-public-key'
 
-  Builder.registerComponent(EditableStats, {
-    name: 'Stats Section',
-    inputs: [
-      {
-        name: 'content',
-        type: 'object',
-        subFields: [
-          { name: 'totalTeams', type: 'number' },
-          { name: 'aTeams', type: 'number' },
-          { name: 'youthTeams', type: 'number' },
-          { name: 'yearsHistory', type: 'string' }
-        ]
-      }
-    ]
-  })
-
-  Builder.registerComponent(EditableAboutClub, {
-    name: 'About Club Section',
-    inputs: [
-      {
-        name: 'content',
-        type: 'object',
-        subFields: [
-          { name: 'title', type: 'string' },
-          { name: 'paragraph1', type: 'longText' },
-          { name: 'paragraph2', type: 'longText' },
-          { name: 'passionText', type: 'string' },
-          { name: 'developmentText', type: 'string' },
-          { name: 'communityText', type: 'string' },
-          { name: 'button1Text', type: 'string' },
-          { name: 'button1Link', type: 'string' },
-          { name: 'button2Text', type: 'string' },
-          { name: 'button2Link', type: 'string' },
-          { name: 'imageSrc', type: 'file', allowedFileTypes: ['jpeg', 'jpg', 'png', 'svg'] },
-          { name: 'imageAlt', type: 'string' },
-          { name: 'statNumber', type: 'number' },
-          { name: 'statLabel', type: 'string' }
-        ]
-      }
-    ]
-  })
-
-  Builder.registerComponent(EditableUpcomingEvents, {
-    name: 'Upcoming Events Section'
-  })
-
-  Builder.registerComponent(EditablePartnersCarousel, {
-    name: 'Partners Carousel Section',
-    inputs: [
-      {
-        name: 'partners',
-        type: 'list',
-        subFields: [
-          { name: 'id', type: 'string' },
-          { name: 'src', type: 'file', allowedFileTypes: ['jpeg', 'jpg', 'png', 'svg'] },
-          { name: 'alt', type: 'string' },
-          { name: 'tier', type: 'string' },
-          { name: 'visibleInCarousel', type: 'boolean' },
-          { name: 'linkUrl', type: 'string' }
-        ]
-      }
-    ]
-  })
-
-  Builder.registerComponent(CompleteLandingPage, {
-    name: 'Complete Landing Page',
-    inputs: [
-      {
-        name: 'content',
-        type: 'object',
-        subFields: [
-          { name: 'hero', type: 'object' },
-          { name: 'stats', type: 'object' },
-          { name: 'aboutClub', type: 'object' },
-          { name: 'partners', type: 'list' }
-        ]
-      }
-    ]
-  })
-}
-
-export default function EditorPage() {
-  const [builderContent, setBuilderContent] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    async function loadBuilderContent() {
-      try {
-        // If we don't have a valid API key, just show the landing page
-        if (!hasValidApiKey) {
-          console.warn('Builder.io API key not configured. Showing fallback content.')
-          setBuilderContent(null)
-          setLoading(false)
-          return
-        }
-
-        // Try to fetch existing content
-        const content = await builder
-          .get('page', {
-            url: '/editor',
-          })
-          .toPromise()
-
-        if (content) {
-          setBuilderContent(content)
-        } else {
-          // Create default content structure
-          setBuilderContent(null)
-        }
-      } catch (err) {
-        console.error('Error loading Builder.io content:', err)
-        setError(null) // Don't show error, just fall back to static content
-      } finally {
-        setLoading(false)
-      }
+  if (hasValidApiKey) {
+    try {
+      // Server-side fetch from Builder.io
+      builderContent = await builder
+        .get('page', {
+          url: '/editor',
+        })
+        .toPromise()
+    } catch (err) {
+      console.error('Error loading Builder.io content:', err)
+      error = 'Failed to load content from Builder.io'
     }
-
-    loadBuilderContent()
-  }, [])
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg text-gray-600">Loading editor content...</div>
-      </div>
-    )
   }
 
-  // Show Builder.io content if available, otherwise show static landing page
   return (
-    <div className="min-h-screen">
+    <main className="min-h-screen">
       {hasValidApiKey && builderContent ? (
         <BuilderComponent 
           model="page" 
@@ -413,7 +290,18 @@ export default function EditorPage() {
               <div className="flex">
                 <div className="ml-3">
                   <p className="text-sm">
-                    <strong>Builder.io not configured:</strong> Set NEXT_PUBLIC_BUILDER_PUBLIC_KEY environment variable to enable visual editing.
+                    <strong>Builder.io not configured:</strong> Set BUILDER_PUBLIC_KEY environment variable to enable visual editing.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          {error && (
+            <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
+              <div className="flex">
+                <div className="ml-3">
+                  <p className="text-sm">
+                    <strong>Error:</strong> {error}
                   </p>
                 </div>
               </div>
@@ -422,6 +310,6 @@ export default function EditorPage() {
           <CompleteLandingPage content={defaultContent} />
         </div>
       )}
-    </div>
+    </main>
   )
 }
