@@ -11,9 +11,12 @@ import type { FullContent, HeroContent, StatsContent, AboutClubContent, Partner 
 import { defaultContent } from "@/lib/default-content"
 import { allPartners } from "@/lib/partners-data"
 
-// Configure Builder.io
-if (typeof window !== 'undefined') {
-  builder.init(process.env.NEXT_PUBLIC_BUILDER_PUBLIC_KEY || '')
+// Only initialize Builder.io if we have a valid API key
+const hasValidApiKey = process.env.NEXT_PUBLIC_BUILDER_PUBLIC_KEY && 
+                       process.env.NEXT_PUBLIC_BUILDER_PUBLIC_KEY !== 'your-builder-public-key'
+
+if (typeof window !== 'undefined' && hasValidApiKey) {
+  builder.init(process.env.NEXT_PUBLIC_BUILDER_PUBLIC_KEY!)
 }
 
 // Hero Component for Builder.io
@@ -206,7 +209,7 @@ const EditableUpcomingEvents = () => {
 
 // Partners Carousel Component for Builder.io  
 const EditablePartnersCarousel = ({ partners }: { partners?: Partner[] }) => {
-  const partnerData = partners || allPartners.filter(p => p.visibleInCarousel)
+  const partnerData = partners || allPartners.filter(p => p.visibleInCarousel) || []
   
   return (
     <section className="py-16 bg-gray-50">
@@ -230,89 +233,122 @@ const EditablePartnersCarousel = ({ partners }: { partners?: Partner[] }) => {
   )
 }
 
-// Register all components with Builder.io
-Builder.registerComponent(EditableHero, {
-  name: 'Hero Section',
-  inputs: [
-    {
-      name: 'content',
-      type: 'object',
-      subFields: [
-        { name: 'imageUrl', type: 'file', allowedFileTypes: ['jpeg', 'jpg', 'png', 'svg'] },
-        { name: 'title', type: 'string' },
-        { name: 'description', type: 'longText' },
-        { name: 'button1Text', type: 'string' },
-        { name: 'button1Link', type: 'string' },
-        { name: 'button2Text', type: 'string' },
-        { name: 'button2Link', type: 'string' }
-      ]
-    }
-  ]
-})
+// Complete Landing Page Component
+const CompleteLandingPage = ({ content }: { content?: FullContent }) => {
+  const pageContent = content || defaultContent
+  
+  return (
+    <div className="min-h-screen">
+      <EditableHero content={pageContent.hero} />
+      <EditableStats content={pageContent.stats} />
+      <EditableUpcomingEvents />
+      <EditableAboutClub content={pageContent.aboutClub} />
+      <EditablePartnersCarousel partners={pageContent.partners} />
+    </div>
+  )
+}
 
-Builder.registerComponent(EditableStats, {
-  name: 'Stats Section',
-  inputs: [
-    {
-      name: 'content',
-      type: 'object',
-      subFields: [
-        { name: 'totalTeams', type: 'number' },
-        { name: 'aTeams', type: 'number' },
-        { name: 'youthTeams', type: 'number' },
-        { name: 'yearsHistory', type: 'string' }
-      ]
-    }
-  ]
-})
+// Register components with Builder.io only if we have a valid API key
+if (hasValidApiKey) {
+  Builder.registerComponent(EditableHero, {
+    name: 'Hero Section',
+    inputs: [
+      {
+        name: 'content',
+        type: 'object',
+        subFields: [
+          { name: 'imageUrl', type: 'file', allowedFileTypes: ['jpeg', 'jpg', 'png', 'svg'] },
+          { name: 'title', type: 'string' },
+          { name: 'description', type: 'longText' },
+          { name: 'button1Text', type: 'string' },
+          { name: 'button1Link', type: 'string' },
+          { name: 'button2Text', type: 'string' },
+          { name: 'button2Link', type: 'string' }
+        ]
+      }
+    ]
+  })
 
-Builder.registerComponent(EditableAboutClub, {
-  name: 'About Club Section',
-  inputs: [
-    {
-      name: 'content',
-      type: 'object',
-      subFields: [
-        { name: 'title', type: 'string' },
-        { name: 'paragraph1', type: 'longText' },
-        { name: 'paragraph2', type: 'longText' },
-        { name: 'passionText', type: 'string' },
-        { name: 'developmentText', type: 'string' },
-        { name: 'communityText', type: 'string' },
-        { name: 'button1Text', type: 'string' },
-        { name: 'button1Link', type: 'string' },
-        { name: 'button2Text', type: 'string' },
-        { name: 'button2Link', type: 'string' },
-        { name: 'imageSrc', type: 'file', allowedFileTypes: ['jpeg', 'jpg', 'png', 'svg'] },
-        { name: 'imageAlt', type: 'string' },
-        { name: 'statNumber', type: 'number' },
-        { name: 'statLabel', type: 'string' }
-      ]
-    }
-  ]
-})
+  Builder.registerComponent(EditableStats, {
+    name: 'Stats Section',
+    inputs: [
+      {
+        name: 'content',
+        type: 'object',
+        subFields: [
+          { name: 'totalTeams', type: 'number' },
+          { name: 'aTeams', type: 'number' },
+          { name: 'youthTeams', type: 'number' },
+          { name: 'yearsHistory', type: 'string' }
+        ]
+      }
+    ]
+  })
 
-Builder.registerComponent(EditableUpcomingEvents, {
-  name: 'Upcoming Events Section'
-})
+  Builder.registerComponent(EditableAboutClub, {
+    name: 'About Club Section',
+    inputs: [
+      {
+        name: 'content',
+        type: 'object',
+        subFields: [
+          { name: 'title', type: 'string' },
+          { name: 'paragraph1', type: 'longText' },
+          { name: 'paragraph2', type: 'longText' },
+          { name: 'passionText', type: 'string' },
+          { name: 'developmentText', type: 'string' },
+          { name: 'communityText', type: 'string' },
+          { name: 'button1Text', type: 'string' },
+          { name: 'button1Link', type: 'string' },
+          { name: 'button2Text', type: 'string' },
+          { name: 'button2Link', type: 'string' },
+          { name: 'imageSrc', type: 'file', allowedFileTypes: ['jpeg', 'jpg', 'png', 'svg'] },
+          { name: 'imageAlt', type: 'string' },
+          { name: 'statNumber', type: 'number' },
+          { name: 'statLabel', type: 'string' }
+        ]
+      }
+    ]
+  })
 
-Builder.registerComponent(EditablePartnersCarousel, {
-  name: 'Partners Carousel Section',
-  inputs: [
-    {
-      name: 'partners',
-      type: 'list',
-      subFields: [
-        { name: 'id', type: 'string' },
-        { name: 'src', type: 'file', allowedFileTypes: ['jpeg', 'jpg', 'png', 'svg'] },
-        { name: 'alt', type: 'string' },
-        { name: 'tier', type: 'string' },
-        { name: 'visibleInCarousel', type: 'boolean' },
-        { name: 'linkUrl', type: 'string' }
-      ]
-    }
-  ]
-})
+  Builder.registerComponent(EditableUpcomingEvents, {
+    name: 'Upcoming Events Section'
+  })
+
+  Builder.registerComponent(EditablePartnersCarousel, {
+    name: 'Partners Carousel Section',
+    inputs: [
+      {
+        name: 'partners',
+        type: 'list',
+        subFields: [
+          { name: 'id', type: 'string' },
+          { name: 'src', type: 'file', allowedFileTypes: ['jpeg', 'jpg', 'png', 'svg'] },
+          { name: 'alt', type: 'string' },
+          { name: 'tier', type: 'string' },
+          { name: 'visibleInCarousel', type: 'boolean' },
+          { name: 'linkUrl', type: 'string' }
+        ]
+      }
+    ]
+  })
+
+  Builder.registerComponent(CompleteLandingPage, {
+    name: 'Complete Landing Page',
+    inputs: [
+      {
+        name: 'content',
+        type: 'object',
+        subFields: [
+          { name: 'hero', type: 'object' },
+          { name: 'stats', type: 'object' },
+          { name: 'aboutClub', type: 'object' },
+          { name: 'partners', type: 'list' }
+        ]
+      }
+    ]
+  })
+}
 
 export default function EditorPage() {
   const [builderContent, setBuilderContent] = useState(null)
@@ -322,8 +358,12 @@ export default function EditorPage() {
   useEffect(() => {
     async function loadBuilderContent() {
       try {
-        if (!builder.apiKey) {
-          builder.init(process.env.NEXT_PUBLIC_BUILDER_PUBLIC_KEY || '')
+        // If we don't have a valid API key, just show the landing page
+        if (!hasValidApiKey) {
+          console.warn('Builder.io API key not configured. Showing fallback content.')
+          setBuilderContent(null)
+          setLoading(false)
+          return
         }
 
         // Try to fetch existing content
@@ -336,60 +376,12 @@ export default function EditorPage() {
         if (content) {
           setBuilderContent(content)
         } else {
-          // Create default content structure matching the landing page
-          const defaultBuilderContent = {
-            data: {
-              blocks: [
-                {
-                  '@type': '@builder.io/sdk:Element',
-                  component: {
-                    name: 'Hero Section',
-                    options: {
-                      content: defaultContent.hero
-                    }
-                  }
-                },
-                {
-                  '@type': '@builder.io/sdk:Element',
-                  component: {
-                    name: 'Stats Section',
-                    options: {
-                      content: defaultContent.stats
-                    }
-                  }
-                },
-                {
-                  '@type': '@builder.io/sdk:Element',
-                  component: {
-                    name: 'Upcoming Events Section'
-                  }
-                },
-                {
-                  '@type': '@builder.io/sdk:Element',
-                  component: {
-                    name: 'About Club Section',
-                    options: {
-                      content: defaultContent.aboutClub
-                    }
-                  }
-                },
-                {
-                  '@type': '@builder.io/sdk:Element',
-                  component: {
-                    name: 'Partners Carousel Section',
-                    options: {
-                      partners: defaultContent.partners.filter(p => p.visibleInCarousel)
-                    }
-                  }
-                }
-              ]
-            }
-          }
-          setBuilderContent(defaultBuilderContent)
+          // Create default content structure
+          setBuilderContent(null)
         }
       } catch (err) {
         console.error('Error loading Builder.io content:', err)
-        setError('Failed to load content from Builder.io. Please check your BUILDER_PUBLIC_KEY.')
+        setError(null) // Don't show error, just fall back to static content
       } finally {
         setLoading(false)
       }
@@ -401,39 +393,33 @@ export default function EditorPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg text-gray-600">Loading landing page content...</div>
+        <div className="text-lg text-gray-600">Loading editor content...</div>
       </div>
     )
   }
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="text-lg text-red-600 mb-4">{error}</div>
-          <div className="text-sm text-gray-500">
-            Make sure NEXT_PUBLIC_BUILDER_PUBLIC_KEY environment variable is set correctly.
-          </div>
-        </div>
-      </div>
-    )
-  }
-
+  // Show Builder.io content if available, otherwise show static landing page
   return (
     <div className="min-h-screen">
-      {builderContent ? (
+      {hasValidApiKey && builderContent ? (
         <BuilderComponent 
           model="page" 
           content={builderContent}
         />
       ) : (
-        <div className="py-16 text-center">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">
-            No content found
-          </h2>
-          <p className="text-gray-600">
-            Create content in Builder.io or check your configuration.
-          </p>
+        <div>
+          {!hasValidApiKey && (
+            <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+              <div className="flex">
+                <div className="ml-3">
+                  <p className="text-sm">
+                    <strong>Builder.io not configured:</strong> Set NEXT_PUBLIC_BUILDER_PUBLIC_KEY environment variable to enable visual editing.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          <CompleteLandingPage content={defaultContent} />
         </div>
       )}
     </div>
