@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 // Initialize Builder
-builder.init(process.env.NEXT_PUBLIC_BUILDER_API_KEY || "pub-01234567890abcdef")
+builder.init(process.env.NEXT_PUBLIC_BUILDER_API_KEY || "cc46ebc207de40988f71591e1bf1e1c2")
 
 // Register custom components for Builder
 builder.register("insertMenu", {
