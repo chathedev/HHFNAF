@@ -14,23 +14,28 @@ const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || "https://api.
 /*                           DATA-FETCHING FUNCTION                           */
 /* -------------------------------------------------------------------------- */
 async function getDynamicContent(): Promise<FullContent> {
-  try {
-    const res = await fetch(`${BACKEND_API_URL}/api/content`, { cache: "no-store" })
-    if (!res.ok) {
-      console.error(`Failed to fetch content from backend: ${res.statusText}`)
-      return defaultContent
-    }
-    const data = (await res.json()) as Partial<FullContent>
+  // Temporarily disabled external API to fix dev server stability
+  // TODO: Re-enable when BACKEND_API_URL is properly configured
+  console.log("Using default content (external API disabled)")
+  return defaultContent
 
-    // Guarantee partners is an array
-    const fetchedPartners = Array.isArray(data.partners) ? data.partners : defaultContent.partners
+  // try {
+  //   const res = await fetch(`${BACKEND_API_URL}/api/content`, { cache: "no-store" })
+  //   if (!res.ok) {
+  //     console.error(`Failed to fetch content from backend: ${res.statusText}`)
+  //     return defaultContent
+  //   }
+  //   const data = (await res.json()) as Partial<FullContent>
 
-    // Merge with defaults to ensure all fields exist
-    return { ...defaultContent, ...data, partners: fetchedPartners }
-  } catch (err) {
-    console.error("Error fetching dynamic content:", err)
-    return defaultContent
-  }
+  //   // Guarantee partners is an array
+  //   const fetchedPartners = Array.isArray(data.partners) ? data.partners : defaultContent.partners
+
+  //   // Merge with defaults to ensure all fields exist
+  //   return { ...defaultContent, ...data, partners: fetchedPartners }
+  // } catch (err) {
+  //   console.error("Error fetching dynamic content:", err)
+  //   return defaultContent
+  // }
 }
 
 /* -------------------------------------------------------------------------- */
