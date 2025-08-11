@@ -59,20 +59,26 @@ export default async function HomePage() {
     console.error("Server-side fetch error for homepage upcoming matches:", e)
   }
 
-  const sectionComponents: { [key: string]: JSX.Element } = {
-    hero: <Hero content={content.hero} />,
-    stats: <Stats content={content.stats} />,
-    upcomingEvents: <UpcomingEvents upcomingMatches={upcomingMatches} loading={matchesLoading} error={matchesError} />,
-    aboutClub: <AboutClub content={content.aboutClub} />,
-    partnersCarousel: <PartnersCarouselClient partners={content.partners} />,
-  }
-
   return (
     <div>
-      {content.sections.map((sectionKey) => {
-        const component = sectionComponents[sectionKey]
-        return component ? <div key={sectionKey}>{component}</div> : null
-      })}
+      {/* Load Hero immediately - critical above-the-fold content */}
+      <Hero content={content.hero} />
+
+      {/* Load Stats immediately - simple component */}
+      <Stats content={content.stats} />
+
+      {/* Lazy load heavy components with suspense boundaries */}
+      <Suspense fallback={<LoadingSkeleton />}>
+        <UpcomingEvents upcomingMatches={upcomingMatches} loading={matchesLoading} error={matchesError} />
+      </Suspense>
+
+      <Suspense fallback={<div className="h-64 bg-gray-100 animate-pulse" />}>
+        <AboutClub content={content.aboutClub} />
+      </Suspense>
+
+      <Suspense fallback={<div className="h-96 bg-gray-50 animate-pulse" />}>
+        <PartnersCarouselClient partners={content.partners} />
+      </Suspense>
     </div>
   )
 }
