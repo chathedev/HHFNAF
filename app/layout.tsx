@@ -5,8 +5,6 @@ import "./globals.css"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 
-// Opt-in to Partial Prerendering for the entire layout
-export const experimental_ppr = true
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -56,7 +54,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Härnösands HF - Handbollsklubb",
     description:
-      "Härnösands Handbollsförening – en handbollsklubb med stolthet, gemenskap och passion för sporten. Följ våra lag, nyheter och evenemang.",
+      "Härnösands Handbollsförening �� en handbollsklubb med stolthet, gemenskap och passion för sporten. Följ våra lag, nyheter och evenemang.",
     images: ["/opengraph-image.png"], // Reference to the dynamic OG image
     creator: "@HarnosandsHF", // Replace with actual Twitter handle if available
   },
