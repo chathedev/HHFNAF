@@ -1,5 +1,3 @@
-export const dynamic = "force-dynamic"
-
 import type { FullContent } from "@/lib/content-types"
 import { defaultContent } from "@/lib/default-content"
 import Hero from "@/components/hero"
@@ -20,7 +18,13 @@ const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || "https://api.
 /* -------------------------------------------------------------------------- */
 async function getDynamicContent(): Promise<FullContent> {
   try {
-    const res = await fetch(`${BACKEND_API_URL}/api/content`, { cache: "no-store" })
+    const res = await fetch(`${BACKEND_API_URL}/api/content`, {
+      next: { revalidate: 3600 },
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    })
     if (!res.ok) {
       console.error(`Failed to fetch content from backend: ${res.statusText}`)
       return defaultContent
