@@ -7,6 +7,7 @@ import { getUpcomingMatchesServer } from "@/lib/get-matches"
 import UpcomingEvents from "@/components/upcoming-events"
 import PartnersCarouselClient from "@/app/partners-carousel-client"
 import LazySectionWrapper from "@/components/lazy-section-wrapper"
+import FastLazyWrapper from "@/components/fast-lazy-wrapper"
 
 import { Suspense } from "react"
 import type { JSX } from "react/jsx-runtime"
@@ -102,11 +103,18 @@ export default async function HomePage() {
     <div>
       {content.sections.map((sectionKey, index) => {
         const component = sectionComponents[sectionKey]
-        // Wrap all sections in LazySectionWrapper for consistent fade-in animation
+        // First section (hero) gets priority loading, others use fast lazy loading
+        const isPriority = index === 0
+
         return component ? (
-          <LazySectionWrapper key={sectionKey} delay={index * 100}>
+          <FastLazyWrapper
+            key={sectionKey}
+            priority={isPriority}
+            threshold={0.1}
+            rootMargin="100px"
+          >
             {component}
-          </LazySectionWrapper>
+          </FastLazyWrapper>
         ) : null
       })}
     </div>
