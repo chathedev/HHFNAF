@@ -63,6 +63,9 @@ export default function AboutClub({ content }: AboutClubProps) {
                 src={content.imageSrc || "/placeholder.svg"}
                 alt={content.imageAlt}
                 fill
+                loading="lazy"
+                quality={80}
+                sizes="(max-width: 768px) 100vw, 50vw"
                 className="object-cover"
                 onContextMenu={(e) => e.preventDefault()}
                 onDragStart={(e) => e.preventDefault()}
