@@ -1,13 +1,16 @@
-export const dynamic = "force-dynamic"
-
 import type { FullContent } from "@/lib/content-types"
 import { defaultContent } from "@/lib/default-content"
+import { Suspense, lazy } from "react"
 import Hero from "@/components/hero"
 import Stats from "@/components/stats"
-import UpcomingEvents from "@/components/upcoming-events" // Client component
+import UpcomingEvents from "@/components/upcoming-events"
 import AboutClub from "@/components/about-club"
-import PartnersCarouselClient from "@/app/partners-carousel-client" // Client component for carousel
-import { getUpcomingMatchesServer } from "@/lib/get-matches" // Import the new server utility
+import PartnersCarouselClient from "@/app/partners-carousel-client"
+import { getUpcomingMatchesServer } from "@/lib/get-matches"
+import LoadingSkeleton from "@/components/loading-skeleton"
+
+// Static generation with revalidation every 300 seconds (5 minutes)
+export const revalidate = 300
 
 const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || "https://api.nuredo.se"
 
@@ -16,7 +19,10 @@ const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || "https://api.
 /* -------------------------------------------------------------------------- */
 async function getDynamicContent(): Promise<FullContent> {
   try {
-    const res = await fetch(`${BACKEND_API_URL}/api/content`, { cache: "no-store" })
+    const res = await fetch(`${BACKEND_API_URL}/api/content`, {
+      cache: "force-cache",
+      next: { revalidate: 300 } // Cache for 5 minutes
+    })
     if (!res.ok) {
       console.error(`Failed to fetch content from backend: ${res.statusText}`)
       return defaultContent
