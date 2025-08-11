@@ -91,6 +91,9 @@ export default function PartnersCarousel({ partners }: PartnersCarouselProps) {
                                   src={partner.src || "/placeholder.svg"}
                                   alt={partner.alt}
                                   fill
+                                  loading="lazy"
+                                  quality={75}
+                                  sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 16vw"
                                   className="object-contain transition-transform duration-300 group-hover:scale-105"
                                 />
                               </div>
