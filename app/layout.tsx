@@ -87,6 +87,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="sv">
+      <head>
+        <link rel="dns-prefetch" href="//api.nuredo.se" />
+        <link rel="preconnect" href="https://api.nuredo.se" crossOrigin="anonymous" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </head>
       <body className={`${inter.className} bg-white`}>
         <Header />
         <main>{children}</main>
