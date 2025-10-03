@@ -1,6 +1,3 @@
-import { Header } from "@/components/header"
-import Footer from "@/components/footer"
-
 export const metadata = {
   title: "Insläpp vid match (Clubmate) | Härnösands HF",
   description: "Snabbguide för hur du släpper in och säljer biljetter via Clubmate vid match.",
@@ -8,11 +5,8 @@ export const metadata = {
 
 export default function ClubmateCheckinPage() {
   return (
-    <>
-      <Header />
-      <main className="flex-1 bg-gray-50 text-gray-900">
-        <div className="h-24" />
-        <section className="py-12">
+    <main className="min-h-screen bg-gray-50 py-12 text-gray-900">
+      <section>
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto space-y-10">
               <header className="space-y-4 text-center">
@@ -106,9 +100,7 @@ export default function ClubmateCheckinPage() {
               </div>
             </div>
           </div>
-        </section>
-      </main>
-      <Footer />
-    </>
+      </section>
+    </main>
   )
 }
