@@ -1,0 +1,26 @@
+{
+  "name": "Härnösands HF - Handbollsklubb",
+  "short_name": "HHF",
+  "description": "Härnösands Handbollsförening - En förening för alla som älskar handboll",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#15803d",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["sports", "lifestyle"],
+  "lang": "sv",
+  "scope": "/",
+  "prefer_related_applications": false
+}

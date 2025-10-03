@@ -1,0 +1,51 @@
+{
+  "hero": {
+    "title": "LAGET FÖRE ALLT",
+    "description": "Härnösands Handbollsförening - Tillsammans sedan 2024. Vi bygger framtidens handbollsspelare genom gemenskap, träning och passion för sporten.",
+    "imageUrl": "/placeholder.svg?height=1080&width=1920",
+    "button1Text": "Börja Träna",
+    "button1Link": "/kontakt",
+    "button2Text": "Våra Lag",
+    "button2Link": "/lag"
+  },
+  "stats": {
+    "totalTeams": 23,
+    "aTeams": 2,
+    "youthTeams": 21,
+    "yearsHistory": 1
+  },
+  "aboutClub": {
+    "title": "Om Härnösands HF",
+    "paragraph1": "Härnösands Handbollsförening är en modern handbollsklubb som grundades 2024 med visionen att skapa en stark handbollskultur i Härnösand. Vi erbjuder träning och tävling för alla åldrar, från nybörjare till elitspelare.",
+    "paragraph2": "Vår förening bygger på värderingar som gemenskap, respekt och utveckling. Vi tror på att varje spelare har potential att växa, både som idrottare och som person.",
+    "passionText": "Kärlek för handboll",
+    "developmentText": "Kontinuerlig förbättring",
+    "communityText": "Stark sammanhållning",
+    "button1Text": "Läs mer om oss",
+    "button1Link": "/lag",
+    "button2Text": "Kontakta oss",
+    "button2Link": "/kontakt",
+    "imageSrc": "/placeholder.svg?height=400&width=600",
+    "imageAlt": "Härnösands HF träning",
+    "statNumber": "2024",
+    "statLabel": "Grundat"
+  },
+  "faq": [
+    {
+      "question": "Hur börjar jag spela handboll i Härnösands HF?",
+      "answer": "Det enklaste sättet att börja är att kontakta oss! Vi hjälper dig att hitta rätt lag baserat på din ålder och erfarenhet. Du kan fylla i vårt kontaktformulär eller skicka ett mejl direkt till oss."
+    },
+    {
+      "question": "Vilken utrustning behöver jag?",
+      "answer": "Till en början behöver du bara bekväma träningskläder, inomhusskor och en vattenflaska. Handbollar finns att låna under träningarna. När du väl bestämmer dig för att fortsätta kan du behöva klubbkläder."
+    },
+    {
+      "question": "Finns det provträningar?",
+      "answer": "Absolut! Vi erbjuder alltid några kostnadsfria provträningar så att du kan känna efter om handboll är något för dig. Detta ger dig en chans att träffa laget och tränarna innan du bestämmer dig."
+    },
+    {
+      "question": "Hur anmäler jag mig?",
+      "answer": "Efter dina provträningar får du information om hur du enkelt anmäler dig och blir en fullvärdig medlem i Härnösands HF. Vi ser fram emot att välkomna dig till vår handbollsfamilj!"
+    }
+  ]
+}

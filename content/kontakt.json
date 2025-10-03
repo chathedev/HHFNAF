@@ -1,0 +1,75 @@
+{
+  "pageTitle": "Kontakta Oss",
+  "pageDescription": "Har du frågor eller funderingar? Tveka inte att höra av dig till oss!",
+  "departments": [
+    {
+      "name": "Sponsring & Marknadsföring",
+      "description": "Vill du sponsra oss eller samarbeta?",
+      "email": "marknad@harnosandshf.se",
+      "icon": "Mail"
+    },
+    {
+      "name": "Kommunikation",
+      "description": "Media, press och kommunikation",
+      "email": "kommunikation@harnosandshf.se",
+      "icon": "Mail"
+    },
+    {
+      "name": "Föreningsinsats",
+      "description": "Förenings- och arbetsinsatser",
+      "email": "foreningsinsats@harnosandshf.se",
+      "icon": "Mail"
+    },
+    {
+      "name": "Sport & Träning",
+      "description": "Frågor om träning och sportverksamhet",
+      "email": "sport@harnosandshf.se",
+      "icon": "Mail"
+    },
+    {
+      "name": "Ekonomi",
+      "description": "Ekonomiska frågor och fakturor",
+      "email": "ekonomi@harnosandshf.se",
+      "icon": "Mail"
+    },
+    {
+      "name": "Styrelsen",
+      "description": "Kontakt med föreningens styrelse",
+      "email": "styrelsen@harnosandshf.se",
+      "icon": "Mail"
+    }
+  ],
+  "generalContact": {
+    "title": "Allmänna frågor",
+    "description": "För allmänna frågor och information",
+    "email": "kontakt@harnosandshf.se"
+  },
+  "contactForm": {
+    "title": "Skicka meddelande",
+    "fields": {
+      "name": "Namn",
+      "email": "E-post",
+      "subject": "Ämne",
+      "message": "Meddelande"
+    },
+    "submitText": "Skicka meddelande"
+  },
+  "faq": [
+    {
+      "question": "Hur börjar jag spela handboll i Härnösands HF?",
+      "answer": "Det enklaste sättet att börja är att kontakta oss! Vi hjälper dig att hitta rätt lag baserat på din ålder och erfarenhet. Du kan fylla i vårt kontaktformulär eller skicka ett mejl direkt till oss."
+    },
+    {
+      "question": "Vilken utrustning behöver jag?",
+      "answer": "Till en början behöver du bara bekväma träningskläder, inomhusskor och en vattenflaska. Handbollar finns att låna under träningarna. När du väl bestämmer dig för att fortsätta kan du behöva klubbkläder."
+    },
+    {
+      "question": "Finns det provträningar?",
+      "answer": "Absolut! Vi erbjuder alltid några kostnadsfria provträningar så att du kan känna efter om handboll är något för dig. Detta ger dig en chans att träffa laget och tränarna innan du bestämmer dig."
+    },
+    {
+      "question": "Hur anmäler jag mig?",
+      "answer": "Efter dina provträningar får du information om hur du enkelt anmäler dig och blir en fullvärdig medlem i Härnösands HF. Vi ser fram emot att välkomna dig till vår handbollsfamilj!"
+    }
+  ]
+}

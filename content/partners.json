@@ -1,0 +1,34 @@
+{
+  "pageTitle": "Våra Partners",
+  "pageDescription": "Vi är djupt tacksamma för det ovärderliga stöd vi får från våra partners. Deras engagemang är avgörande för att vi ska kunna fortsätta utveckla handbollen i Härnösand och erbjuda en meningsfull fritidsaktivitet för alla åldrar.",
+  "partnershipSection": {
+    "title": "Bli en del av Härnösands HF-familjen!",
+    "description": "Är ditt företag intresserat av att stödja lokal idrott och synas tillsammans med oss? Vi erbjuder olika partnerskapspaket som kan anpassas efter era behov.",
+    "buttonText": "Kontakta oss för mer information",
+    "buttonLink": "/kontakt"
+  },
+  "supportSection": {
+    "title": "Vill du stödja Härnösands HF?",
+    "description": "Vi välkomnar nya partners som vill stödja vår verksamhet och bidra till utvecklingen av handbollen i regionen.",
+    "buttonText": "Kontakta oss för mer information",
+    "buttonLink": "/kontakt"
+  },
+  "faq": [
+    {
+      "question": "Hur börjar jag spela handboll i Härnösands HF?",
+      "answer": "Det enklaste sättet att börja är att kontakta oss! Vi hjälper dig att hitta rätt lag baserat på din ålder och erfarenhet. Du kan fylla i vårt kontaktformulär eller skicka ett mejl direkt till oss."
+    },
+    {
+      "question": "Vilken utrustning behöver jag?",
+      "answer": "Till en början behöver du bara bekväma träningskläder, inomhusskor och en vattenflaska. Handbollar finns att låna under träningarna. När du väl bestämmer dig för att fortsätta kan du behöva klubbkläder."
+    },
+    {
+      "question": "Finns det provträningar?",
+      "answer": "Absolut! Vi erbjuder alltid några kostnadsfria provträningar så att du kan känna efter om handboll är något för dig. Detta ger dig en chans att träffa laget och tränarna innan du bestämmer dig."
+    },
+    {
+      "question": "Hur anmäler jag mig?",
+      "answer": "Efter dina provträningar får du information om hur du enkelt anmäler dig och blir en fullvärdig medlem i Härnösands HF. Vi ser fram emot att välkomna dig till vår handbollsfamilj!"
+    }
+  ]
+}

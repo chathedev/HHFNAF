@@ -1,0 +1,135 @@
+{
+  "pageTitle": "VÅRA LAG",
+  "pageDescription": "Härnösands HF har 23 lag från ungdom till seniorer. Klicka på ett lag för att besöka deras officiella sida.",
+  "teamCategories": [
+    {
+      "name": "A-lag",
+      "count": 2,
+      "description": "2 lag i kategorin",
+      "teams": [
+        {
+          "name": "Dam/utv",
+          "link": "https://www.laget.se/HHK-dam-utv",
+          "instagramLink": "https://www.instagram.com/harnosandshfdam/"
+        },
+        {
+          "name": "A-lag Herrar",
+          "link": "https://www.laget.se/HarnosandsHFHerr",
+          "instagramLink": "https://www.instagram.com/harnosandshfherr/"
+        }
+      ]
+    },
+    {
+      "name": "Ungdomslag",
+      "count": 21,
+      "description": "21 lag i kategorin",
+      "teams": [
+        {
+          "name": "Fritids-Teknikskola",
+          "link": "https://www.laget.se/HarnosandsHK-Fritids-Teknikskola"
+        },
+        {
+          "name": "Flickor 16 (F08/09)",
+          "link": "https://www.laget.se/HHK-Flickor16"
+        },
+        {
+          "name": "F-10",
+          "link": "https://www.laget.se/HHK-F10",
+          "instagramLink": "https://www.instagram.com/harnosandhff10/"
+        },
+        {
+          "name": "F-11",
+          "link": "https://www.laget.se/HHK-F11"
+        },
+        {
+          "name": "F-12",
+          "link": "https://www.laget.se/HHK-F12"
+        },
+        {
+          "name": "F-13",
+          "link": "https://www.laget.se/HHF-F13"
+        },
+        {
+          "name": "F-14",
+          "link": "https://www.laget.se/HHK-F14"
+        },
+        {
+          "name": "F-15",
+          "link": "https://www.laget.se/HarnosandsHK-F-15"
+        },
+        {
+          "name": "F-16",
+          "link": "https://www.laget.se/HarnosandsHK-F-16"
+        },
+        {
+          "name": "F-17",
+          "link": "https://www.laget.se/HarnosandsHK-F-17"
+        },
+        {
+          "name": "F-18",
+          "link": "https://www.laget.se/HarnosandsHF-F-18"
+        },
+        {
+          "name": "Pojkar 16 (P08/09)",
+          "link": "https://www.laget.se/HarnosandsHFP09"
+        },
+        {
+          "name": "P16 (09/10)",
+          "link": "https://www.laget.se/HarnosandsHFP16",
+          "instagramLink": "https://www.instagram.com/harnosandshfp16"
+        },
+        {
+          "name": "P-11",
+          "link": "https://www.laget.se/HHFP11",
+          "instagramLink": "https://www.instagram.com/harnosandshf_p11/"
+        },
+        {
+          "name": "P-12",
+          "link": "https://www.laget.se/HarnosandsHFP2012"
+        },
+        {
+          "name": "P-13",
+          "link": "https://www.laget.se/HHF2013"
+        },
+        {
+          "name": "P-14",
+          "link": "https://www.laget.se/HarnosandsHK-P-14"
+        },
+        {
+          "name": "P-15",
+          "link": "https://www.laget.se/HarnosandsHFP2015"
+        },
+        {
+          "name": "P-16",
+          "link": "https://www.laget.se/HarnosandsHFP2016"
+        },
+        {
+          "name": "P-17",
+          "link": "https://www.laget.se/HarnosandsHFP2017"
+        },
+        {
+          "name": "P-18",
+          "link": "https://www.laget.se/HarnosandsHF-P-18"
+        }
+      ]
+    }
+  ],
+  "faq": [
+    {
+      "question": "Hur börjar jag spela handboll i Härnösands HF?",
+      "answer": "Det enklaste sättet att börja är att kontakta oss! Vi hjälper dig att hitta rätt lag baserat på din ålder och erfarenhet. Du kan fylla i vårt kontaktformulär eller skicka ett mejl direkt till oss."
+    },
+    {
+      "question": "Vilken utrustning behöver jag?",
+      "answer": "Till en början behöver du bara bekväma träningskläder, inomhusskor och en vattenflaska. Handbollar finns att låna under träningarna. När du väl bestämmer dig för att fortsätta kan du behöva klubbkläder."
+    },
+    {
+      "question": "Finns det provträningar?",
+      "answer": "Absolut! Vi erbjuder alltid några kostnadsfria provträningar så att du kan känna efter om handboll är något för dig. Detta ger dig en chans att träffa laget och tränarna innan du bestämmer dig."
+    },
+    {
+      "question": "Hur anmäler jag mig?",
+      "answer": "Efter dina provträningar får du information om hur du enkelt anmäler dig och blir en fullvärdig medlem i Härnösands HF. Vi ser fram emot att välkomna dig till vår handbollsfamilj!"
+    }
+  ]
+}
