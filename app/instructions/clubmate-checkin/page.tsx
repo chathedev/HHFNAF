@@ -93,6 +93,10 @@ export default function ClubmateCheckinPage() {
                       Förklara att det nya systemet är: Förköpta biljetter = scannas. På plats = köps via Swish direkt i
                       systemet.
                     </li>
+                    <li>
+                      Några (cirka 7 personer) har köpt säsongskort på plats – deras kort kan visas som ogiltig biljett,
+                      men de ska ändå släppas in.
+                    </li>
                     <li>Om något fel uppstår → vänta lite och försök igen.</li>
                     <li>Håll koll – vissa kan försöka smita in.</li>
                   </ul>
