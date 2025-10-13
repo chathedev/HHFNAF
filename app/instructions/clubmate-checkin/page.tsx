@@ -1,3 +1,5 @@
+import SaveAsPdfButton from "@/components/save-as-pdf-button"
+
 export const metadata = {
   title: "Insläpp vid match (Clubmate) | Härnösands HF",
   description: "Snabbguide för hur du släpper in och säljer biljetter via Clubmate vid match.",
@@ -15,6 +17,10 @@ export default function ClubmateCheckinPage() {
                 <p className="text-lg text-gray-600">
                   Så här funkar det nya systemet när vi släpper in folk på match. Följ stegen.
                 </p>
+                <div className="flex flex-col items-center justify-center gap-2 pt-2">
+                  <SaveAsPdfButton />
+                  <p className="text-xs text-gray-500">Knappen öppnar utskriftsdialogen så att du kan spara som PDF.</p>
+                </div>
               </header>
 
               <div className="grid gap-6">
