@@ -1,6 +1,6 @@
 {
   "pageTitle": "VÅRA LAG",
-  "pageDescription": "Härnösands HF har 23 lag från ungdom till seniorer. Klicka på ett lag för att besöka deras officiella sida.",
+  "pageDescription": "Härnösands HF har 24 lag från ungdom till seniorer. Klicka på ett lag för att besöka deras officiella sida.",
   "teamCategories": [
     {
       "name": "A-lag",
@@ -11,27 +11,259 @@
           "name": "Dam/utv",
           "link": "https://www.laget.se/HHK-dam-utv",
           "instagramLink": "https://www.instagram.com/harnosandshfdam/",
-          "heroImage": "/placeholder.jpg",
-          "heroImageAlt": "Lagbild Dam/utv",
+          "heroImage": "/HarnosandsHF/Gruppfoto/Härnösands HF - Dam.jpg",
+          "heroImageAlt": "Lagfoto Dam",
           "description": "",
-          "individuals": []
+          "individuals": [
+            {
+              "name": "Agnes Komijenko",
+              "image": "/HarnosandsHF/Härnösands HF - Dam/Agnes Komijenko.jpg"
+            },
+            {
+              "name": "Alice Östlund",
+              "image": "/HarnosandsHF/Härnösands HF - Dam/Alice Östlund.jpg"
+            },
+            {
+              "name": "Darja Pindejera",
+              "image": "/HarnosandsHF/Härnösands HF - Dam/Darja Pindejera.jpg"
+            },
+            {
+              "name": "Diana Bozian",
+              "image": "/HarnosandsHF/Härnösands HF - Dam/Diana Bozian.jpg"
+            },
+            {
+              "name": "Elin Egland",
+              "image": "/HarnosandsHF/Härnösands HF - Dam/Elin Egland.jpg"
+            },
+            {
+              "name": "Emilia Ödlund",
+              "image": "/HarnosandsHF/Härnösands HF - Dam/Emilia Ödlund.jpg"
+            },
+            {
+              "name": "Engla Näslund",
+              "image": "/HarnosandsHF/Härnösands HF - Dam/Engla Näslund.jpg"
+            },
+            {
+              "name": "Jessica Hägglund",
+              "image": "/HarnosandsHF/Härnösands HF - Dam/Jessica Hägglund.jpg"
+            },
+            {
+              "name": "Johanna Ullsten",
+              "image": "/HarnosandsHF/Härnösands HF - Dam/Johanna Ullsten.jpg"
+            },
+            {
+              "name": "Klara Åström",
+              "image": "/HarnosandsHF/Härnösands HF - Dam/Klara Åström.jpg"
+            },
+            {
+              "name": "Liza Andersson-Knut",
+              "image": "/HarnosandsHF/Härnösands HF - Dam/Liza Andersson-Knut.jpg"
+            },
+            {
+              "name": "Lovisa Gustavsson",
+              "image": "/HarnosandsHF/Härnösands HF - Dam/Lovisa Gustavsson.jpg"
+            },
+            {
+              "name": "Meja Åström",
+              "image": "/HarnosandsHF/Härnösands HF - Dam/Meja Åström.jpg"
+            },
+            {
+              "name": "Nora Alf Dahlin",
+              "image": "/HarnosandsHF/Härnösands HF - Dam/Nora Alf Dahlin.jpg"
+            },
+            {
+              "name": "Patrik Östlund",
+              "image": "/HarnosandsHF/Härnösands HF - Dam/Patrik Östlund.jpg"
+            },
+            {
+              "name": "Selma Jonsson",
+              "image": "/HarnosandsHF/Härnösands HF - Dam/Selma Jonsson.jpg"
+            },
+            {
+              "name": "Sofia Jamal",
+              "image": "/HarnosandsHF/Härnösands HF - Dam/Sofia Jamal.jpg"
+            },
+            {
+              "name": "Tess Wessling",
+              "image": "/HarnosandsHF/Härnösands HF - Dam/Tess Wessling.jpg"
+            },
+            {
+              "name": "Ulf Sandin",
+              "image": "/HarnosandsHF/Härnösands HF - Dam/Ulf Sandin.jpg"
+            },
+            {
+              "name": "Ulrika Ekebro",
+              "image": "/HarnosandsHF/Härnösands HF - Dam/Ulrika Ekebro.jpg"
+            },
+            {
+              "name": "Viktoria Sapage",
+              "image": "/HarnosandsHF/Härnösands HF - Dam/Viktoria Sapage.jpg"
+            }
+          ]
         },
         {
           "name": "A-lag Herrar",
           "link": "https://www.laget.se/HarnosandsHFHerr",
           "instagramLink": "https://www.instagram.com/harnosandshfherr/",
-          "heroImage": "/placeholder.jpg",
-          "heroImageAlt": "Lagbild A-lag Herrar",
+          "heroImage": "/HarnosandsHF/Gruppfoto/Härnösands HF - A lag herr.jpg",
+          "heroImageAlt": "Lagfoto A-lag Herrar",
           "description": "",
-          "individuals": []
+          "individuals": [
+            {
+              "name": "Albin Lithén Bergström",
+              "image": "/HarnosandsHF/Härnösands HF - A lag herr/Albin Lithén Bergström.jpg"
+            },
+            {
+              "name": "Albin Wedin Eliasson",
+              "image": "/HarnosandsHF/Härnösands HF - A lag herr/Albin Wedin Eliasson.jpg"
+            },
+            {
+              "name": "Alfred Vesterlund",
+              "image": "/HarnosandsHF/Härnösands HF - A lag herr/Alfred Vesterlund.jpg"
+            },
+            {
+              "name": "Anton Olsson",
+              "image": "/HarnosandsHF/Härnösands HF - A lag herr/Anton Olsson.jpg"
+            },
+            {
+              "name": "Benjamin Öström",
+              "image": "/HarnosandsHF/Härnösands HF - A lag herr/Benjamin Öström.jpg"
+            },
+            {
+              "name": "Claes Renström Halling",
+              "image": "/HarnosandsHF/Härnösands HF - A lag herr/Claes Renström Halling.jpg"
+            },
+            {
+              "name": "David Bozian",
+              "image": "/HarnosandsHF/Härnösands HF - A lag herr/David Bozian.jpg"
+            },
+            {
+              "name": "Erik Wänglund",
+              "image": "/HarnosandsHF/Härnösands HF - A lag herr/Erik Wänglund.jpg"
+            },
+            {
+              "name": "Jusuf Dizdarevic",
+              "image": "/HarnosandsHF/Härnösands HF - A lag herr/Jusuf Dizdarevic.jpg"
+            },
+            {
+              "name": "Karim Abdullah",
+              "image": "/HarnosandsHF/Härnösands HF - A lag herr/Karim Abdullah.jpg"
+            },
+            {
+              "name": "Magnus Bergström",
+              "image": "/HarnosandsHF/Härnösands HF - A lag herr/Magnus Bergström.jpg"
+            },
+            {
+              "name": "Milton Lundgren",
+              "image": "/HarnosandsHF/Härnösands HF - A lag herr/Milton Lundgren.jpg"
+            },
+            {
+              "name": "Oliver Ivarsson",
+              "image": "/HarnosandsHF/Härnösands HF - A lag herr/Oliver Ivarsson.jpg"
+            },
+            {
+              "name": "Robin Jönsson",
+              "image": "/HarnosandsHF/Härnösands HF - A lag herr/Robin Jönsson.jpg"
+            },
+            {
+              "name": "Simon Hammarstrand",
+              "image": "/HarnosandsHF/Härnösands HF - A lag herr/Simon Hammarstrand.jpg"
+            },
+            {
+              "name": "Sixten Jagebo",
+              "image": "/HarnosandsHF/Härnösands HF - A lag herr/Sixten Jagebo.jpg"
+            },
+            {
+              "name": "Stefan Vesterlund",
+              "image": "/HarnosandsHF/Härnösands HF - A lag herr/Stefan Vesterlund.jpg"
+            },
+            {
+              "name": "Walter Magnusson",
+              "image": "/HarnosandsHF/Härnösands HF - A lag herr/Walter Magnusson.jpg"
+            },
+            {
+              "name": "William Oderstad",
+              "image": "/HarnosandsHF/Härnösands HF - A lag herr/William Oderstad.jpg"
+            }
+          ]
         }
       ]
     },
     {
       "name": "Ungdomslag",
-      "count": 21,
-      "description": "21 lag i kategorin",
+      "count": 22,
+      "description": "22 lag i kategorin",
       "teams": [
+        {
+          "name": "F19",
+          "link": "",
+          "instagramLink": "",
+          "heroImage": "/HarnosandsHF/Gruppfoto/Härnösands HF - F19.jpg",
+          "heroImageAlt": "Lagfoto F19",
+          "description": "",
+          "individuals": [
+            {
+              "name": "Agnes Komijenko",
+              "image": "/HarnosandsHF/Härnösands HF - F19/Agnes Komijenko.jpg"
+            },
+            {
+              "name": "Alice Östlund",
+              "image": "/HarnosandsHF/Härnösands HF - F19/Alice Östlund.jpg"
+            },
+            {
+              "name": "Elina Gunn",
+              "image": "/HarnosandsHF/Härnösands HF - F19/Elina Gunn.jpg"
+            },
+            {
+              "name": "Embla Gradin",
+              "image": "/HarnosandsHF/Härnösands HF - F19/Embla Gradin.jpg"
+            },
+            {
+              "name": "Engla Näslund",
+              "image": "/HarnosandsHF/Härnösands HF - F19/Engla Näslund.jpg"
+            },
+            {
+              "name": "Meja Åström",
+              "image": "/HarnosandsHF/Härnösands HF - F19/Meja Åström.jpg"
+            },
+            {
+              "name": "Molly Lundin",
+              "image": "/HarnosandsHF/Härnösands HF - F19/Molly Lundin.jpg"
+            },
+            {
+              "name": "Nora Alf Dahlin",
+              "image": "/HarnosandsHF/Härnösands HF - F19/Nora Alf Dahlin.jpg"
+            },
+            {
+              "name": "Patrik Östlund",
+              "image": "/HarnosandsHF/Härnösands HF - F19/Patrik Östlund.jpg"
+            },
+            {
+              "name": "Saga Kjelsson",
+              "image": "/HarnosandsHF/Härnösands HF - F19/Saga Kjelsson.jpg"
+            },
+            {
+              "name": "Selma Jonsson",
+              "image": "/HarnosandsHF/Härnösands HF - F19/Selma Jonsson.jpg"
+            },
+            {
+              "name": "Sofia Jamal",
+              "image": "/HarnosandsHF/Härnösands HF - F19/Sofia Jamal.jpg"
+            },
+            {
+              "name": "Svea Gidmark",
+              "image": "/HarnosandsHF/Härnösands HF - F19/Svea Gidmark.jpg"
+            },
+            {
+              "name": "Tess Wessling",
+              "image": "/HarnosandsHF/Härnösands HF - F19/Tess Wessling.jpg"
+            },
+            {
+              "name": "Viktoria Sapage",
+              "image": "/HarnosandsHF/Härnösands HF - F19/Viktoria Sapage.jpg"
+            }
+          ]
+        },
         {
           "name": "Fritids-Teknikskola",
           "link": "https://www.laget.se/HarnosandsHK-Fritids-Teknikskola",
