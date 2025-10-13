@@ -563,15 +563,15 @@ export default function LagPage() {
                   )}
                 </div>
 
-                <Card className="overflow-hidden rounded-4xl border border-green-100 bg-gradient-to-br from-white via-green-50/40 to-white shadow-2xl shadow-green-100/50">
+                <Card className="overflow-hidden rounded-4xl border border-emerald-100/70 bg-white shadow-2xl shadow-emerald-100/50">
                   {hasSelectedTeamHeroImage ? (
-                    <div className="relative flex h-[380px] w-full items-center justify-center md:h-[540px]">
+                    <div className="relative flex h-[380px] w-full items-center justify-center bg-white md:h-[520px]">
                       <Image
                         src={selectedTeam.heroImage as string}
                         alt={selectedTeam.heroImageAlt || `Lagbild ${selectedTeam.name}`}
                         fill
-                        className="object-cover select-none"
-                        style={{ borderRadius: "inherit" }}
+                        className="object-contain select-none"
+                        style={{ borderRadius: "inherit", padding: "1.25rem" }}
                         draggable={false}
                         onContextMenu={(event) => event.preventDefault()}
                         onDragStart={(event) => event.preventDefault()}
@@ -607,14 +607,14 @@ export default function LagPage() {
                         className="relative overflow-hidden rounded-3xl border border-emerald-100/60 bg-white shadow-lg transition hover:-translate-y-1 hover:shadow-2xl"
                       >
                         <div
-                          className="relative h-80 w-full overflow-hidden"
+                          className="relative h-80 w-full overflow-hidden bg-white"
                           style={{ borderTopLeftRadius: "inherit", borderTopRightRadius: "inherit" }}
                         >
                           <Image
                             src={person.image || PLACEHOLDER_INDIVIDUAL}
                             alt={person.image ? `${person.name}` : `Bild på ${person.name} kommer snart`}
                             fill
-                            className="object-cover select-none"
+                            className="object-contain select-none"
                             style={{ borderRadius: "inherit" }}
                             draggable={false}
                             onContextMenu={(event) => event.preventDefault()}
