@@ -197,6 +197,9 @@ body {
     min-height: auto;
     background: #fff !important;
     padding: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #1f2937;
   }
 
   body[data-print-target="clubmate"] #clubmate-print .container {
@@ -208,15 +211,71 @@ body {
     margin-top: 20px;
   }
 
-  body[data-print-target="clubmate"] #clubmate-print section {
-    border: 1px solid #d1d5db;
-    box-shadow: none !important;
-    padding: 16px;
-    page-break-inside: avoid;
+  body[data-print-target="clubmate"] #clubmate-print header {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: #fff;
+    padding: 18px 24px 20px;
+    border-radius: 16px;
+    text-align: left;
+    box-shadow: none;
+    margin-bottom: 18px;
+    page-break-after: avoid;
   }
 
-  body[data-print-target="clubmate"] #clubmate-print header {
-    page-break-after: avoid;
+  body[data-print-target="clubmate"] #clubmate-print header h1 {
+    font-size: 26px;
+    margin-bottom: 6px;
+  }
+
+  body[data-print-target="clubmate"] #clubmate-print header p {
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 0;
+  }
+
+  body[data-print-target="clubmate"] #clubmate-print header button,
+  body[data-print-target="clubmate"] #clubmate-print header .text-xs {
+    display: none !important;
+  }
+
+  body[data-print-target="clubmate"] #clubmate-print .grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  body[data-print-target="clubmate"] #clubmate-print section {
+    border: 1px solid #e5e7eb;
+    box-shadow: none !important;
+    background: #f9fafb;
+    border-radius: 14px;
+    padding: 18px;
+    page-break-inside: avoid;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  body[data-print-target="clubmate"] #clubmate-print section h2 {
+    font-size: 16px;
+    color: #ea580c;
+    margin-bottom: 6px;
+  }
+
+  body[data-print-target="clubmate"] #clubmate-print section p {
+    margin: 0;
+  }
+
+  body[data-print-target="clubmate"] #clubmate-print section ul {
+    margin: 0;
+    padding-left: 18px;
+  }
+
+  body[data-print-target="clubmate"] #clubmate-print section ul li {
+    margin-bottom: 6px;
+  }
+
+  body[data-print-target="clubmate"] #clubmate-print section ul li:last-child {
+    margin-bottom: 0;
   }
 
   body[data-print-target="clubmate"] #clubmate-print .text-xs {

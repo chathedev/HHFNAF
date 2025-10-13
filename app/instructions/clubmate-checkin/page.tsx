@@ -56,7 +56,6 @@ export default function ClubmateCheckinPage() {
                         <li>Välj rätt match (oftast första i listan, men dubbelkolla).</li>
                         <li>Klicka på Skanning och starta scannern.</li>
                         <li>Scanna biljetten → grönt innebär att personen är inne.</li>
-                        <li>Behöver någon sin biljett som PDF? Använd utskriftsknappen på biljettsidan och skriv ut direkt.</li>
                       </ul>
                     </div>
                     <div>
