@@ -470,45 +470,28 @@ export default function LagPage() {
 
           {selectedTeam ? (
             <>
-              <section className="mt-16">
-                <div className="rounded-3xl border border-green-100 bg-white shadow-xl">
-                  <div className="grid gap-6 md:grid-cols-[1.2fr,1fr]">
-                    <div className="flex flex-col justify-center px-8 py-10 md:px-12 md:py-14 lg:px-16">
-                      <span className="inline-flex w-fit items-center rounded-full bg-green-50 px-4 py-1 text-xs font-semibold uppercase tracking-wider text-green-700">
-                        {selectedTeam.category}
-                      </span>
-                      <h2 className="mt-5 text-4xl font-bold text-gray-900 md:text-5xl">{selectedTeam.name}</h2>
-                      {selectedTeam.description && (
-                        <p className="mt-5 max-w-xl text-base text-gray-600 md:text-lg">
-                          {selectedTeam.description}
-                        </p>
-                      )}
-                      <span className="mt-6 inline-flex w-fit items-center rounded-full bg-orange-100 px-4 py-1 text-xs font-semibold uppercase tracking-wider text-orange-600">
-                        Matchtrupp uppdateras snart
-                      </span>
-                    </div>
-                    <div className="relative min-h-[220px] overflow-hidden rounded-t-3xl border-t border-green-50 bg-gray-100 md:rounded-l-none md:rounded-r-3xl md:border-t-0 md:border-l">
-                      {hasSelectedTeamHeroImage ? (
-                        <Image
-                          src={selectedTeam.heroImage as string}
-                          alt={selectedTeam.heroImageAlt || `Lagbild ${selectedTeam.name}`}
-                          fill
-                          className="object-cover"
-                          sizes="(min-width: 1024px) 520px, 100vw"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-white text-sm font-semibold text-gray-500">
-                          Lagfoto kommer snart
-                        </div>
-                      )}
-                    </div>
+              <section className="mt-16 space-y-10">
+                <Card className="rounded-3xl border border-green-100 bg-white px-8 py-10 text-center shadow-xl md:px-12 md:py-14 md:text-left lg:px-16">
+                  <div className="flex flex-col items-center md:items-start">
+                    <span className="inline-flex items-center rounded-full bg-green-50 px-4 py-1 text-xs font-semibold uppercase tracking-wider text-green-700">
+                      {selectedTeam.category}
+                    </span>
+                    <h2 className="mt-5 text-4xl font-bold text-gray-900 md:text-5xl">
+                      {selectedTeam.name}
+                    </h2>
+                    {selectedTeam.description && (
+                      <p className="mt-5 max-w-2xl text-base text-gray-600 md:text-lg">
+                        {selectedTeam.description}
+                      </p>
+                    )}
+                    <span className="mt-6 inline-flex items-center rounded-full bg-orange-100 px-4 py-1 text-xs font-semibold uppercase tracking-wider text-orange-600">
+                      Matchtrupp uppdateras snart
+                    </span>
                   </div>
-                </div>
-              </section>
+                </Card>
 
-              <section className="mt-10">
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <Card className="rounded-2xl border border-green-100 bg-white p-6 text-center">
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Card className="rounded-3xl border border-green-100 bg-white p-6 text-center shadow-sm">
                     <p className="text-sm font-semibold text-green-700 uppercase tracking-wide">
                       Laget.se
                     </p>
@@ -526,7 +509,7 @@ export default function LagPage() {
                       <p className="mt-3 text-sm text-gray-500">Länk kommer snart.</p>
                     )}
                   </Card>
-                  <Card className="rounded-2xl border border-green-100 bg-white p-6 text-center">
+                  <Card className="rounded-3xl border border-green-100 bg-white p-6 text-center shadow-sm">
                     <p className="text-sm font-semibold text-green-700 uppercase tracking-wide">
                       Instagram
                     </p>
@@ -544,13 +527,31 @@ export default function LagPage() {
                       <p className="mt-3 text-sm text-gray-500">Instagram uppdateras snart.</p>
                     )}
                   </Card>
-                  <Card className="rounded-2xl border border-green-100 bg-white p-6 text-center">
-                    <p className="text-sm font-semibold text-green-700 uppercase tracking-wide">
+                  <Card className="rounded-3xl border border-orange-100 bg-gradient-to-br from-orange-50 to-white p-6 text-center shadow-sm">
+                    <p className="text-sm font-semibold text-orange-600 uppercase tracking-wide">
                       Matchtrupp
                     </p>
-                    <p className="mt-3 text-sm text-gray-500">Matchtruppen publiceras inom kort.</p>
+                    <p className="mt-3 text-sm text-orange-600">Matchtruppen publiceras inom kort.</p>
                   </Card>
                 </div>
+
+                <Card className="overflow-hidden rounded-3xl border border-green-100 bg-white shadow-lg">
+                  {hasSelectedTeamHeroImage ? (
+                    <div className="relative h-[360px] w-full overflow-hidden md:h-[480px]">
+                      <Image
+                        src={selectedTeam.heroImage as string}
+                        alt={selectedTeam.heroImageAlt || `Lagbild ${selectedTeam.name}`}
+                        fill
+                        className="object-cover"
+                        sizes="(min-width: 1024px) 1000px, 100vw"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex h-[300px] w-full items-center justify-center bg-gray-50 text-sm font-semibold text-gray-500 md:h-[380px]">
+                      Lagfoto kommer snart
+                    </div>
+                  )}
+                </Card>
               </section>
 
               <section className="mt-16">
@@ -572,7 +573,7 @@ export default function LagPage() {
                         key={person.name}
                         className="overflow-hidden rounded-3xl border-0 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
                       >
-                        <div className="relative h-48 w-full bg-gray-100">
+                        <div className="relative h-72 w-full bg-gray-100">
                           <Image
                             src={person.image || PLACEHOLDER_INDIVIDUAL}
                             alt={person.image ? `${person.name}` : `Bild på ${person.name} kommer snart`}
