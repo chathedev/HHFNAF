@@ -16,7 +16,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { cn } from "@/lib/utils"
 
 type Individual = {
   name: string
@@ -392,6 +391,22 @@ export default function LagPage() {
             <p className="text-lg text-gray-700">{content.pageDescription}</p>
           </div>
 
+          <section className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {categoryStats.map((stat) => (
+              <Card
+                key={stat.name}
+                className="rounded-2xl border border-green-100 bg-white p-6 text-center shadow-sm"
+              >
+                <p className="text-3xl font-bold text-green-700">{stat.count}</p>
+                <p className="mt-2 text-base font-semibold text-gray-900">{stat.name}</p>
+              </Card>
+            ))}
+            <Card className="rounded-2xl border border-green-100 bg-white p-6 text-center shadow-sm">
+              <p className="text-3xl font-bold text-orange-500">{totalTeams}</p>
+              <p className="mt-2 text-base font-semibold text-gray-900">Totalt antal lag</p>
+            </Card>
+          </section>
+
           <section className="mt-12 space-y-6">
             <div className="mx-auto w-full max-w-3xl">
               <label
@@ -405,7 +420,7 @@ export default function LagPage() {
                 <Input
                   id="team-search"
                   type="search"
-                  placeholder="Börja skriva för att filtrera lag..."
+                  placeholder="Sök efter lag..."
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                   onFocus={handleSearchFocus}
@@ -447,53 +462,13 @@ export default function LagPage() {
                       </div>
                     ) : (
                       <div className="px-4 py-6 text-center text-sm text-gray-500">
-                        Inga lag matchade sökningen. Kontrollera stavningen eller försök med ett annat
-                        namn.
+                        Inga lag matchade sökningen.
                       </div>
                     )}
                   </div>
                 )}
               </div>
-              <p className="mt-2 text-sm text-gray-500">
-                Välj ett lag för att se lagbild, kanaler och trupp.
-              </p>
             </div>
-
-            <div className="flex flex-wrap justify-center gap-2">
-              {teams.map((team) => (
-                <button
-                  key={team.id}
-                  type="button"
-                  onClick={() => handleTeamSelect(team.id)}
-                  className={cn(
-                    "rounded-full border px-4 py-2 text-sm font-medium transition",
-                    selectedTeamId === team.id
-                      ? "border-green-600 bg-green-600 text-white shadow-sm"
-                      : "border-gray-200 bg-white text-gray-600 hover:border-green-400 hover:text-green-700",
-                  )}
-                >
-                  {team.name}
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section className="mt-12 grid gap-4 md:grid-cols-3">
-            {categoryStats.map((stat) => (
-              <Card
-                key={stat.name}
-                className="rounded-3xl border-0 bg-gradient-to-br from-green-50 to-white p-6 shadow-sm"
-              >
-                <p className="text-4xl font-bold text-green-700">{stat.count}</p>
-                <p className="mt-1 text-lg font-semibold text-gray-900">{stat.name}</p>
-                {stat.description && <p className="mt-2 text-sm text-gray-500">{stat.description}</p>}
-              </Card>
-            ))}
-            <Card className="rounded-3xl border-0 bg-gradient-to-br from-orange-50 to-white p-6 shadow-sm">
-              <p className="text-4xl font-bold text-orange-500">{totalTeams}</p>
-              <p className="mt-1 text-lg font-semibold text-gray-900">Totalt antal lag</p>
-              <p className="mt-2 text-sm text-gray-500">Alla lag i föreningen samlade på ett ställe.</p>
-            </Card>
           </section>
 
           {selectedTeam ? (
@@ -519,109 +494,64 @@ export default function LagPage() {
                     <p className="mt-5 max-w-2xl text-base text-white/85 md:text-lg">
                       {selectedTeam.description}
                     </p>
-                    <div className="mt-8 flex flex-wrap items-center gap-3">
-                      {selectedTeam.link ? (
-                        <Link
-                          href={selectedTeam.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-gray-900 transition hover:bg-white/90"
-                        >
-                          Besök laget.se
-                          <ExternalLink className="h-4 w-4" />
-                        </Link>
-                      ) : (
-                        <span className="inline-flex items-center gap-2 rounded-full border border-white/40 px-5 py-2 text-sm font-medium text-white/70">
-                          Länk till laget.se läggs till snart
-                        </span>
-                      )}
-                      {selectedTeam.instagramLink ? (
-                        <Link
-                          href={selectedTeam.instagramLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 rounded-full border border-white/60 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
-                        >
-                          Följ på Instagram
-                          <Instagram className="h-4 w-4" />
-                        </Link>
-                      ) : (
-                        <span className="inline-flex items-center gap-2 rounded-full border border-white/40 px-5 py-2 text-sm font-medium text-white/70">
-                          Instagram uppdateras snart
-                        </span>
-                      )}
-                    </div>
+                    <span className="mt-6 inline-flex items-center rounded-full bg-white/15 px-4 py-1 text-xs font-semibold uppercase tracking-wider text-white/80">
+                      Matchtrupp uppdateras snart
+                    </span>
                   </div>
                 </div>
               </section>
 
-              <section className="mt-12">
-                <Card className="mx-auto max-w-4xl rounded-3xl border border-green-100 p-8 shadow-sm">
-                  <h3 className="text-xl font-semibold text-gray-900">Lagets kanaler</h3>
-                  <p className="mt-2 text-sm text-gray-500">
-                    Uppdatera länkarna i <code>public/content/lag.json</code> för att hålla sidan aktuell.
-                  </p>
-                  <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <section className="mt-10">
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Card className="rounded-2xl border border-green-100 bg-white p-6">
+                    <p className="text-sm font-semibold text-green-700 uppercase tracking-wide">
+                      Laget.se
+                    </p>
                     {selectedTeam.link ? (
                       <Link
                         href={selectedTeam.link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group flex h-full flex-col justify-between rounded-2xl border border-gray-200 bg-white p-5 transition hover:border-green-500 hover:shadow-lg"
+                        className="mt-3 inline-flex items-center gap-2 text-base font-semibold text-gray-900 hover:text-green-700"
                       >
-                        <div className="flex items-center gap-3 text-green-700">
-                          <ExternalLink className="h-5 w-5" />
-                          <span className="text-base font-semibold">laget.se</span>
-                        </div>
-                        <p className="mt-4 text-sm text-gray-600">
-                          Matcher, tabell, nyheter och all lagadministration.
-                        </p>
-                        <span className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-green-700 transition group-hover:translate-x-1">
-                          Öppna laget.se
-                          <ExternalLink className="h-4 w-4" />
-                        </span>
+                        Öppna laget.se
+                        <ExternalLink className="h-4 w-4" />
                       </Link>
                     ) : (
-                      <div className="flex h-full flex-col justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-5 text-center text-sm text-gray-500">
-                        Lägg in lagets länk från laget.se i JSON-filen för att visa den här.
-                      </div>
+                      <p className="mt-3 text-sm text-gray-500">Länk kommer snart.</p>
                     )}
-
+                  </Card>
+                  <Card className="rounded-2xl border border-green-100 bg-white p-6">
+                    <p className="text-sm font-semibold text-green-700 uppercase tracking-wide">
+                      Instagram
+                    </p>
                     {selectedTeam.instagramLink ? (
                       <Link
                         href={selectedTeam.instagramLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group flex h-full flex-col justify-between rounded-2xl border border-gray-200 bg-white p-5 transition hover:border-orange-400 hover:shadow-lg"
+                        className="mt-3 inline-flex items-center gap-2 text-base font-semibold text-gray-900 hover:text-green-700"
                       >
-                        <div className="flex items-center gap-3 text-orange-500">
-                          <Instagram className="h-5 w-5" />
-                          <span className="text-base font-semibold">Instagram</span>
-                        </div>
-                        <p className="mt-4 text-sm text-gray-600">
-                          Följ laget i sociala medier för bilder, filmer och uppdateringar.
-                        </p>
-                        <span className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-orange-500 transition group-hover:translate-x-1">
-                          Öppna Instagram
-                          <ExternalLink className="h-4 w-4" />
-                        </span>
+                        Följ laget
+                        <Instagram className="h-4 w-4" />
                       </Link>
                     ) : (
-                      <div className="flex h-full flex-col justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-5 text-center text-sm text-gray-500">
-                        Lägg till lagets Instagram-länk i JSON-filen för att aktivera denna ruta.
-                      </div>
+                      <p className="mt-3 text-sm text-gray-500">Instagram uppdateras snart.</p>
                     )}
-                  </div>
-                </Card>
+                  </Card>
+                  <Card className="rounded-2xl border border-green-100 bg-white p-6">
+                    <p className="text-sm font-semibold text-green-700 uppercase tracking-wide">
+                      Matchtrupp
+                    </p>
+                    <p className="mt-3 text-sm text-gray-500">Matchtruppen publiceras inom kort.</p>
+                  </Card>
+                </div>
               </section>
 
               <section className="mt-16">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h3 className="text-2xl font-semibold text-gray-900">Spelartrupp</h3>
-                    <p className="text-sm text-gray-500">
-                      Lägg till spelare och bilder i JSON-filen för att fylla på truppen automatiskt.
-                    </p>
                   </div>
                   {(!selectedTeam.individuals || selectedTeam.individuals.length === 0) && (
                     <span className="inline-flex items-center rounded-full bg-orange-100 px-4 py-1 text-sm font-semibold text-orange-600">
@@ -654,13 +584,7 @@ export default function LagPage() {
                             </p>
                           )}
                           {!person.image && (
-                            <p className="mt-3 text-xs text-gray-500">
-                              Lägg till filen{" "}
-                              <span className="font-semibold text-gray-700">
-                                {person.name.replace(/\s+/g, "")}.png
-                              </span>{" "}
-                              i <code>public/lag/{selectedTeam.id}</code> för att visa bilden.
-                            </p>
+                            <p className="mt-3 text-xs text-gray-500">Bild publiceras snart.</p>
                           )}
                         </div>
                       </Card>
@@ -668,9 +592,7 @@ export default function LagPage() {
                   </div>
                 ) : (
                   <Card className="mt-8 border-2 border-dashed border-gray-200 bg-gray-50 p-10 text-center text-gray-600">
-                    Spelartruppen lanseras snart. Lägg till spelare i{" "}
-                    <code>public/content/lag.json</code> för att visa dem här med automatiska kort och
-                    bilder.
+                    Spelartruppen kommer snart.
                   </Card>
                 )}
               </section>
@@ -678,7 +600,7 @@ export default function LagPage() {
           ) : (
             <section className="mt-16">
               <Card className="rounded-3xl border border-dashed border-gray-200 bg-gray-50 p-10 text-center text-gray-600">
-                Välj ett lag för att visa detaljerad information, lagkanaler och spelare.
+                Sök efter ett lag för att visa information.
               </Card>
             </section>
           )}
