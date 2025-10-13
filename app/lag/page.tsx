@@ -421,7 +421,7 @@ export default function LagPage() {
                   onFocus={handleSearchFocus}
                   onBlur={handleSearchBlur}
                   onKeyDown={handleSearchKeyDown}
-                  className="h-12 rounded-2xl border border-gray-200 bg-white pl-12 text-base shadow-sm transition focus:border-green-500 focus:ring-0"
+                  className="h-12 rounded-2xl border border-gray-200 bg-white pl-12 text-base text-gray-900 placeholder:text-gray-500 shadow-sm transition focus:border-green-500 focus:ring-0"
                   autoComplete="off"
                 />
                 {showDropdown && (
