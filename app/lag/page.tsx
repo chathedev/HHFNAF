@@ -554,12 +554,16 @@ export default function LagPage() {
                 <Card className="overflow-hidden rounded-4xl border border-green-100 bg-gradient-to-br from-white via-green-50/40 to-white shadow-2xl shadow-green-100/50">
                   {hasSelectedTeamHeroImage ? (
                     <div className="relative flex h-[380px] w-full items-center justify-center bg-gradient-to-br from-white via-green-50/60 to-white md:h-[540px]">
-                      <div className="absolute inset-6 rounded-[2rem] border border-white/60 bg-white/60 shadow-inner shadow-green-200/40 backdrop-blur">
+                      <div
+                        className="absolute inset-6 border border-white/60 bg-white/60 shadow-inner shadow-green-200/40 backdrop-blur"
+                        style={{ borderRadius: "min(48px, 7vw)" }}
+                      >
                         <Image
                           src={selectedTeam.heroImage as string}
                           alt={selectedTeam.heroImageAlt || `Lagbild ${selectedTeam.name}`}
                           fill
-                          className="rounded-[2rem] object-contain object-center select-none"
+                          className="object-contain object-center select-none"
+                          style={{ borderRadius: "inherit" }}
                           draggable={false}
                           onContextMenu={(event) => event.preventDefault()}
                           onDragStart={(event) => event.preventDefault()}
@@ -596,12 +600,16 @@ export default function LagPage() {
                         className="relative overflow-hidden rounded-4xl border border-green-100/60 bg-white shadow-xl transition hover:-translate-y-1 hover:shadow-2xl"
                       >
                         <div className="absolute inset-0 bg-gradient-to-tr from-green-100/20 via-transparent to-orange-100/30 opacity-0 transition hover:opacity-100" />
-                        <div className="relative flex h-80 w-full items-center justify-center overflow-hidden rounded-t-[2rem] bg-gradient-to-br from-gray-100 via-white to-gray-100">
+                        <div
+                          className="relative flex h-80 w-full items-center justify-center overflow-hidden bg-gradient-to-br from-gray-100 via-white to-gray-100"
+                          style={{ borderTopLeftRadius: "min(36px, 6vw)", borderTopRightRadius: "min(36px, 6vw)" }}
+                        >
                           <Image
                             src={person.image || PLACEHOLDER_INDIVIDUAL}
                             alt={person.image ? `${person.name}` : `Bild på ${person.name} kommer snart`}
                             fill
-                            className="object-contain object-center select-none rounded-t-[2rem]"
+                            className="object-contain object-center select-none"
+                            style={{ borderTopLeftRadius: "inherit", borderTopRightRadius: "inherit" }}
                             draggable={false}
                             onContextMenu={(event) => event.preventDefault()}
                             onDragStart={(event) => event.preventDefault()}
