@@ -565,24 +565,19 @@ export default function LagPage() {
 
                 <Card className="overflow-hidden rounded-4xl border border-green-100 bg-gradient-to-br from-white via-green-50/40 to-white shadow-2xl shadow-green-100/50">
                   {hasSelectedTeamHeroImage ? (
-                    <div className="relative flex h-[380px] w-full items-center justify-center bg-gradient-to-br from-white via-green-50/60 to-white md:h-[540px]">
-                      <div
-                        className="absolute inset-6 border border-white/60 bg-white/60 shadow-inner shadow-green-200/40 backdrop-blur"
-                        style={{ borderRadius: "min(48px, 7vw)" }}
-                      >
-                        <Image
-                          src={selectedTeam.heroImage as string}
-                          alt={selectedTeam.heroImageAlt || `Lagbild ${selectedTeam.name}`}
-                          fill
-                          className="object-contain object-center select-none"
-                          style={{ borderRadius: "inherit" }}
-                          draggable={false}
-                          onContextMenu={(event) => event.preventDefault()}
-                          onDragStart={(event) => event.preventDefault()}
-                          sizes="(min-width: 1024px) 1000px, 100vw"
-                          priority
-                        />
-                      </div>
+                    <div className="relative flex h-[380px] w-full items-center justify-center md:h-[540px]">
+                      <Image
+                        src={selectedTeam.heroImage as string}
+                        alt={selectedTeam.heroImageAlt || `Lagbild ${selectedTeam.name}`}
+                        fill
+                        className="object-cover select-none"
+                        style={{ borderRadius: "inherit" }}
+                        draggable={false}
+                        onContextMenu={(event) => event.preventDefault()}
+                        onDragStart={(event) => event.preventDefault()}
+                        sizes="(min-width: 1024px) 1000px, 100vw"
+                        priority
+                      />
                     </div>
                   ) : (
                     <div className="flex h-[300px] w-full items-center justify-center bg-gray-50 text-sm font-semibold text-gray-500 md:h-[380px]">
@@ -609,29 +604,28 @@ export default function LagPage() {
                     {selectedTeam.individuals.map((person) => (
                       <Card
                         key={person.name}
-                        className="relative overflow-hidden rounded-4xl border border-emerald-100/60 bg-gradient-to-br from-emerald-50 via-white to-lime-50 shadow-xl transition hover:-translate-y-1 hover:shadow-2xl"
+                        className="relative overflow-hidden rounded-3xl border border-emerald-100/60 bg-white shadow-lg transition hover:-translate-y-1 hover:shadow-2xl"
                       >
-                        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,rgba(34,197,94,0.18),transparent_60%)] opacity-0 transition hover:opacity-100" />
                         <div
-                          className="relative flex h-80 w-full items-center justify-center overflow-hidden bg-gradient-to-br from-white via-emerald-50 to-lime-50"
-                          style={{ borderTopLeftRadius: "min(36px, 6vw)", borderTopRightRadius: "min(36px, 6vw)" }}
+                          className="relative h-80 w-full overflow-hidden"
+                          style={{ borderTopLeftRadius: "inherit", borderTopRightRadius: "inherit" }}
                         >
                           <Image
                             src={person.image || PLACEHOLDER_INDIVIDUAL}
                             alt={person.image ? `${person.name}` : `Bild på ${person.name} kommer snart`}
                             fill
-                            className="object-contain object-center select-none shadow-[inset_0_0_35px_rgba(15,118,110,0.08)]"
-                            style={{ borderTopLeftRadius: "inherit", borderTopRightRadius: "inherit", padding: "1.75rem" }}
+                            className="object-cover select-none"
+                            style={{ borderRadius: "inherit" }}
                             draggable={false}
                             onContextMenu={(event) => event.preventDefault()}
                             onDragStart={(event) => event.preventDefault()}
                             sizes="(min-width: 1280px) 300px, (min-width: 768px) 240px, 100vw"
                           />
                         </div>
-                        <div className="relative z-10 space-y-2 px-6 pb-6 pt-4 text-center">
+                        <div className="space-y-1 px-6 pb-6 pt-4 text-center">
                           <p className="text-lg font-semibold tracking-tight text-gray-900">{person.name}</p>
                           {person.role && (
-                            <p className="text-[10px] uppercase tracking-[0.4em] text-emerald-700">
+                            <p className="text-xs uppercase tracking-[0.3em] text-emerald-700">
                               {person.role}
                             </p>
                           )}
