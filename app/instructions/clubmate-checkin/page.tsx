@@ -39,33 +39,53 @@ export default function ClubmateCheckinPage() {
 
                 <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
                   <h2 className="flex items-center gap-3 text-xl font-semibold">
-                    <span className="text-3xl" aria-hidden="true">✅</span>
-                    Om personen redan har biljett eller säsongskort
+                    <span className="text-3xl" aria-hidden="true">🎟️</span>
+                    Biljetter
                   </h2>
-                  <ul className="mt-4 space-y-2 text-gray-700">
-                    <li>Klicka på Evenemang (mitten-ikonen i nedersta menyraden).</li>
-                    <li>Välj rätt match (oftast första i listan, men dubbelkolla).</li>
-                    <li>Klicka på Skanning.</li>
-                    <li>Starta scannern och scanna biljetten → grönt = personen är inne.</li>
-                  </ul>
+                  <div className="mt-4 space-y-6 text-gray-700">
+                    <div>
+                      <h3 className="font-semibold text-gray-800">Förköpta biljetter och säsongskort</h3>
+                      <ul className="mt-2 space-y-2">
+                        <li>Klicka på Evenemang (mitten-ikonen i nedersta menyraden).</li>
+                        <li>Välj rätt match (oftast första i listan, men dubbelkolla).</li>
+                        <li>Klicka på Skanning och starta scannern.</li>
+                        <li>Scanna biljetten → grönt innebär att personen är inne.</li>
+                        <li>Behöver någon sin biljett som PDF? Använd utskriftsknappen på biljettsidan och skriv ut direkt.</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-800">Köp på plats via Sälj-knappen</h3>
+                      <ul className="mt-2 space-y-2">
+                        <li>Klicka på Evenemang och välj matchen.</li>
+                        <li>Öppna Sälj → Kassa (eller Sälj) och välj biljettkategori samt antal.</li>
+                        <li>Klicka på Ta betalt och låt besökaren betala i sin Swish-app.</li>
+                        <li>När betalningen är klar checkas biljetten in automatiskt – scanna inte biljetten manuellt, även om det inte står uttryckligen i listan.</li>
+                      </ul>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Biljetter kan även köpas i förväg via hemsidan och via Sälj-knappen på eventet. Försäljningen stängs
+                      automatiskt 1 timme och 15 minuter efter matchstart.
+                    </p>
+                  </div>
                 </section>
 
                 <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
                   <h2 className="flex items-center gap-3 text-xl font-semibold">
-                    <span className="text-3xl" aria-hidden="true">💳</span>
-                    Om personen vill köpa biljett på plats
+                    <span className="text-3xl" aria-hidden="true">🎉</span>
+                    Lotter
                   </h2>
-                  <ul className="mt-4 space-y-2 text-gray-700">
-                    <li>Klicka på Evenemang (mitten-ikonen längst ner).</li>
-                    <li>Välj rätt match.</li>
-                    <li>Klicka på Sälj – Kassa (eller Sälj).</li>
-                    <li>Välj biljettkategori (vuxen, ungdom osv.) och antal.</li>
-                    <li>Klicka på Ta betalt.</li>
-                    <li>
-                      Personen öppnar sin Swish-app och betalar (inte via mobilkameran). När betalningen är klar blir
-                      personen automatiskt incheckad och kan gå in.
-                    </li>
-                  </ul>
+                  <div className="mt-4 space-y-2 text-gray-700">
+                    <p>
+                      Varje match har en egen lottsida. På plats finns en QR-kod som leder direkt till den sidan och
+                      används endast för lotter. Samma lott kan även köpas i förväg via hemsidan.
+                    </p>
+                    <ul className="space-y-2">
+                      <li>Alla lottköp kopplas automatiskt till rätt match och är inte återbetalningsbara.</li>
+                      <li>Dragningen sker automatiskt 1 timme och 15 minuter efter matchstart – vinnare får besked direkt och kan hämta ut sin vinst.</li>
+                      <li>Sekretariatet kan ropa ut vinnande nummer om man vill, men det är helt valfritt.</li>
+                      <li>All hantering sker i systemet, så inga manuella listor behövs.</li>
+                    </ul>
+                  </div>
                 </section>
 
                 <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -79,6 +99,7 @@ export default function ClubmateCheckinPage() {
                   <ul className="mt-2 space-y-2 text-gray-700">
                     <li>En skannar biljetter.</li>
                     <li>En säljer via Swish.</li>
+                    <li>Ha lotternas QR-kod redo så att besökare snabbt kan köpa via sina telefoner.</li>
                   </ul>
                 </section>
 
@@ -88,16 +109,15 @@ export default function ClubmateCheckinPage() {
                     Viktigt att veta
                   </h2>
                   <ul className="mt-4 space-y-2 text-gray-700">
-                    <li>Det finns inga QR-koder vid entrén längre.</li>
-                    <li>
-                      Förklara att det nya systemet är: Förköpta biljetter = scannas. På plats = köps via Swish direkt i
-                      systemet.
-                    </li>
+                    <li>Det finns inga QR-koder för biljetter vid entrén, men lottförsäljningen har en egen QR-kod.</li>
+                    <li>Förklara att allt är automatiserat: förköpta biljetter scannas, biljetter som säljs på plats checkas in via Swish.</li>
+                    <li>Skanna aldrig biljetter som sålts på plats – de är redan incheckade.</li>
                     <li>
                       Några (cirka 7 personer) har köpt säsongskort på plats – deras kort kan visas som ogiltig biljett,
                       men de ska ändå släppas in.
                     </li>
                     <li>Om något fel uppstår → vänta lite och försök igen.</li>
+                    <li>Biljett- och lottsförsäljning stängs automatiskt 1 timme och 15 minuter efter matchstart.</li>
                     <li>Håll koll – vissa kan försöka smita in.</li>
                   </ul>
                 </section>
