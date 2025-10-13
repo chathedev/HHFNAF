@@ -10,12 +10,20 @@
         {
           "name": "Dam/utv",
           "link": "https://www.laget.se/HHK-dam-utv",
-          "instagramLink": "https://www.instagram.com/harnosandshfdam/"
+          "instagramLink": "https://www.instagram.com/harnosandshfdam/",
+          "heroImage": "/placeholder.jpg",
+          "heroImageAlt": "Lagbild Dam/utv",
+          "description": "",
+          "individuals": []
         },
         {
           "name": "A-lag Herrar",
           "link": "https://www.laget.se/HarnosandsHFHerr",
-          "instagramLink": "https://www.instagram.com/harnosandshfherr/"
+          "instagramLink": "https://www.instagram.com/harnosandshfherr/",
+          "heroImage": "/placeholder.jpg",
+          "heroImageAlt": "Lagbild A-lag Herrar",
+          "description": "",
+          "individuals": []
         }
       ]
     },
@@ -26,90 +34,174 @@
       "teams": [
         {
           "name": "Fritids-Teknikskola",
-          "link": "https://www.laget.se/HarnosandsHK-Fritids-Teknikskola"
+          "link": "https://www.laget.se/HarnosandsHK-Fritids-Teknikskola",
+          "heroImage": "/placeholder.jpg",
+          "heroImageAlt": "Lagbild Fritids-Teknikskola",
+          "description": "",
+          "individuals": []
         },
         {
           "name": "Flickor 16 (F08/09)",
-          "link": "https://www.laget.se/HHK-Flickor16"
+          "link": "https://www.laget.se/HHK-Flickor16",
+          "heroImage": "/placeholder.jpg",
+          "heroImageAlt": "Lagbild Flickor 16 (F08/09)",
+          "description": "",
+          "individuals": []
         },
         {
           "name": "F-10",
           "link": "https://www.laget.se/HHK-F10",
-          "instagramLink": "https://www.instagram.com/harnosandhff10/"
+          "instagramLink": "https://www.instagram.com/harnosandhff10/",
+          "heroImage": "/placeholder.jpg",
+          "heroImageAlt": "Lagbild F-10",
+          "description": "",
+          "individuals": []
         },
         {
           "name": "F-11",
-          "link": "https://www.laget.se/HHK-F11"
+          "link": "https://www.laget.se/HHK-F11",
+          "heroImage": "/placeholder.jpg",
+          "heroImageAlt": "Lagbild F-11",
+          "description": "",
+          "individuals": []
         },
         {
           "name": "F-12",
-          "link": "https://www.laget.se/HHK-F12"
+          "link": "https://www.laget.se/HHK-F12",
+          "heroImage": "/placeholder.jpg",
+          "heroImageAlt": "Lagbild F-12",
+          "description": "",
+          "individuals": []
         },
         {
           "name": "F-13",
-          "link": "https://www.laget.se/HHF-F13"
+          "link": "https://www.laget.se/HHF-F13",
+          "heroImage": "/placeholder.jpg",
+          "heroImageAlt": "Lagbild F-13",
+          "description": "",
+          "individuals": []
         },
         {
           "name": "F-14",
-          "link": "https://www.laget.se/HHK-F14"
+          "link": "https://www.laget.se/HHK-F14",
+          "heroImage": "/placeholder.jpg",
+          "heroImageAlt": "Lagbild F-14",
+          "description": "",
+          "individuals": []
         },
         {
           "name": "F-15",
-          "link": "https://www.laget.se/HarnosandsHK-F-15"
+          "link": "https://www.laget.se/HarnosandsHK-F-15",
+          "heroImage": "/placeholder.jpg",
+          "heroImageAlt": "Lagbild F-15",
+          "description": "",
+          "individuals": []
         },
         {
           "name": "F-16",
-          "link": "https://www.laget.se/HarnosandsHK-F-16"
+          "link": "https://www.laget.se/HarnosandsHK-F-16",
+          "heroImage": "/placeholder.jpg",
+          "heroImageAlt": "Lagbild F-16",
+          "description": "",
+          "individuals": []
         },
         {
           "name": "F-17",
-          "link": "https://www.laget.se/HarnosandsHK-F-17"
+          "link": "https://www.laget.se/HarnosandsHK-F-17",
+          "heroImage": "/placeholder.jpg",
+          "heroImageAlt": "Lagbild F-17",
+          "description": "",
+          "individuals": []
         },
         {
           "name": "F-18",
-          "link": "https://www.laget.se/HarnosandsHF-F-18"
+          "link": "https://www.laget.se/HarnosandsHF-F-18",
+          "heroImage": "/placeholder.jpg",
+          "heroImageAlt": "Lagbild F-18",
+          "description": "",
+          "individuals": []
         },
         {
           "name": "Pojkar 16 (P08/09)",
-          "link": "https://www.laget.se/HarnosandsHFP09"
+          "link": "https://www.laget.se/HarnosandsHFP09",
+          "heroImage": "/placeholder.jpg",
+          "heroImageAlt": "Lagbild Pojkar 16 (P08/09)",
+          "description": "",
+          "individuals": []
         },
         {
           "name": "P16 (09/10)",
           "link": "https://www.laget.se/HarnosandsHFP16",
-          "instagramLink": "https://www.instagram.com/harnosandshfp16"
+          "instagramLink": "https://www.instagram.com/harnosandshfp16",
+          "heroImage": "/placeholder.jpg",
+          "heroImageAlt": "Lagbild P16 (09/10)",
+          "description": "",
+          "individuals": []
         },
         {
           "name": "P-11",
           "link": "https://www.laget.se/HHFP11",
-          "instagramLink": "https://www.instagram.com/harnosandshf_p11/"
+          "instagramLink": "https://www.instagram.com/harnosandshf_p11/",
+          "heroImage": "/placeholder.jpg",
+          "heroImageAlt": "Lagbild P-11",
+          "description": "",
+          "individuals": []
         },
         {
           "name": "P-12",
-          "link": "https://www.laget.se/HarnosandsHFP2012"
+          "link": "https://www.laget.se/HarnosandsHFP2012",
+          "heroImage": "/placeholder.jpg",
+          "heroImageAlt": "Lagbild P-12",
+          "description": "",
+          "individuals": []
         },
         {
           "name": "P-13",
-          "link": "https://www.laget.se/HHF2013"
+          "link": "https://www.laget.se/HHF2013",
+          "heroImage": "/placeholder.jpg",
+          "heroImageAlt": "Lagbild P-13",
+          "description": "",
+          "individuals": []
         },
         {
           "name": "P-14",
-          "link": "https://www.laget.se/HarnosandsHK-P-14"
+          "link": "https://www.laget.se/HarnosandsHK-P-14",
+          "heroImage": "/placeholder.jpg",
+          "heroImageAlt": "Lagbild P-14",
+          "description": "",
+          "individuals": []
         },
         {
           "name": "P-15",
-          "link": "https://www.laget.se/HarnosandsHFP2015"
+          "link": "https://www.laget.se/HarnosandsHFP2015",
+          "heroImage": "/placeholder.jpg",
+          "heroImageAlt": "Lagbild P-15",
+          "description": "",
+          "individuals": []
         },
         {
           "name": "P-16",
-          "link": "https://www.laget.se/HarnosandsHFP2016"
+          "link": "https://www.laget.se/HarnosandsHFP2016",
+          "heroImage": "/placeholder.jpg",
+          "heroImageAlt": "Lagbild P-16",
+          "description": "",
+          "individuals": []
         },
         {
           "name": "P-17",
-          "link": "https://www.laget.se/HarnosandsHFP2017"
+          "link": "https://www.laget.se/HarnosandsHFP2017",
+          "heroImage": "/placeholder.jpg",
+          "heroImageAlt": "Lagbild P-17",
+          "description": "",
+          "individuals": []
         },
         {
           "name": "P-18",
-          "link": "https://www.laget.se/HarnosandsHF-P-18"
+          "link": "https://www.laget.se/HarnosandsHF-P-18",
+          "heroImage": "/placeholder.jpg",
+          "heroImageAlt": "Lagbild P-18",
+          "description": "",
+          "individuals": []
         }
       ]
     }
