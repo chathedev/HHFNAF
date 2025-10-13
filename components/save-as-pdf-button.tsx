@@ -7,7 +7,28 @@ type SaveAsPdfButtonProps = {
 export default function SaveAsPdfButton({ className = "" }: SaveAsPdfButtonProps) {
   const handleClick = () => {
     if (typeof window !== "undefined") {
+      const { body } = document
+      if (!body) {
+        window.print()
+        return
+      }
+
+      body.dataset.printTarget = "clubmate"
+
+      const cleanup = () => {
+        delete body.dataset.printTarget
+        window.removeEventListener("afterprint", cleanup)
+      }
+
+      window.addEventListener("afterprint", cleanup)
       window.print()
+
+      // Fallback if afterprint doesn't fire (some browsers)
+      setTimeout(() => {
+        if (body.dataset.printTarget === "clubmate") {
+          cleanup()
+        }
+      }, 2000)
     }
   }
 

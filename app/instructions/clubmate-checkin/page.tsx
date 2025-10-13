@@ -131,61 +131,6 @@ export default function ClubmateCheckinPage() {
             </div>
           </div>
       </section>
-        <style jsx global>{`
-          @media print {
-            @page {
-              size: A4 portrait;
-              margin: 12mm;
-            }
-
-            body {
-              visibility: hidden;
-              background: #fff !important;
-            }
-
-            #clubmate-print,
-            #clubmate-print * {
-              visibility: visible;
-            }
-
-            #clubmate-print {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100%;
-              min-height: auto;
-              background: #fff;
-              padding: 0;
-            }
-
-            #clubmate-print .container {
-              padding: 0 12mm;
-            }
-
-            #clubmate-print .space-y-10 > :not([hidden]) ~ :not([hidden]) {
-              margin-top: 20px;
-            }
-
-            #clubmate-print section {
-              box-shadow: none !important;
-              border: 1px solid #d1d5db;
-              padding: 16px;
-              page-break-inside: avoid;
-            }
-
-            #clubmate-print .rounded-2xl {
-              border-radius: 12px;
-            }
-
-            #clubmate-print header {
-              page-break-after: avoid;
-            }
-
-            #clubmate-print .text-xs {
-              font-size: 11px;
-            }
-          }
-        `}</style>
     </main>
   )
 }

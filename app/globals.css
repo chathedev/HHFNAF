@@ -170,3 +170,56 @@ body {
 .animate-fade-in {
   animation: fadeIn 0.5s ease-out forwards;
 }
+
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
+@media print {
+  body[data-print-target="clubmate"] {
+    background: #fff !important;
+  }
+
+  body[data-print-target="clubmate"] * {
+    visibility: hidden;
+  }
+
+  body[data-print-target="clubmate"] #clubmate-print,
+  body[data-print-target="clubmate"] #clubmate-print * {
+    visibility: visible;
+  }
+
+  body[data-print-target="clubmate"] #clubmate-print {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    min-height: auto;
+    background: #fff !important;
+    padding: 0;
+  }
+
+  body[data-print-target="clubmate"] #clubmate-print .container {
+    padding: 0 12mm;
+    max-width: 100%;
+  }
+
+  body[data-print-target="clubmate"] #clubmate-print .space-y-10 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 20px;
+  }
+
+  body[data-print-target="clubmate"] #clubmate-print section {
+    border: 1px solid #d1d5db;
+    box-shadow: none !important;
+    padding: 16px;
+    page-break-inside: avoid;
+  }
+
+  body[data-print-target="clubmate"] #clubmate-print header {
+    page-break-after: avoid;
+  }
+
+  body[data-print-target="clubmate"] #clubmate-print .text-xs {
+    font-size: 11px;
+  }
+}
