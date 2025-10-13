@@ -537,12 +537,15 @@ export default function LagPage() {
 
                 <Card className="overflow-hidden rounded-3xl border border-green-100 bg-white shadow-lg">
                   {hasSelectedTeamHeroImage ? (
-                    <div className="relative h-[360px] w-full overflow-hidden md:h-[480px]">
+                    <div className="relative flex h-[360px] w-full items-center justify-center bg-gradient-to-br from-gray-100 via-white to-gray-100 md:h-[520px]">
                       <Image
                         src={selectedTeam.heroImage as string}
                         alt={selectedTeam.heroImageAlt || `Lagbild ${selectedTeam.name}`}
                         fill
-                        className="object-cover"
+                        className="object-contain object-center select-none"
+                        draggable={false}
+                        onContextMenu={(event) => event.preventDefault()}
+                        onDragStart={(event) => event.preventDefault()}
                         sizes="(min-width: 1024px) 1000px, 100vw"
                       />
                     </div>
@@ -573,12 +576,15 @@ export default function LagPage() {
                         key={person.name}
                         className="overflow-hidden rounded-3xl border-0 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
                       >
-                        <div className="relative h-72 w-full bg-gray-100">
+                        <div className="relative flex h-80 w-full items-center justify-center bg-gradient-to-br from-gray-100 via-white to-gray-100">
                           <Image
                             src={person.image || PLACEHOLDER_INDIVIDUAL}
                             alt={person.image ? `${person.name}` : `Bild på ${person.name} kommer snart`}
                             fill
-                            className="object-cover"
+                            className="object-contain object-center select-none"
+                            draggable={false}
+                            onContextMenu={(event) => event.preventDefault()}
+                            onDragStart={(event) => event.preventDefault()}
                             sizes="(min-width: 1280px) 300px, (min-width: 768px) 240px, 100vw"
                           />
                         </div>
