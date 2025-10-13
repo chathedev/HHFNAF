@@ -58,6 +58,13 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "")
 
+const normalizeSearch = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "")
+
 const getTeamDescription = (team: RawTeam) => {
   if (typeof team.description === "string" && team.description.trim().length > 0) {
     return team.description
@@ -294,15 +301,15 @@ export default function LagPage() {
   )
 
   const filteredTeams = useMemo(() => {
-    const normalized = searchTerm.trim().toLowerCase()
+    const normalized = normalizeSearch(searchTerm.trim())
     if (!normalized) {
       return teams
     }
 
     return teams.filter(
       (team) =>
-        team.name.toLowerCase().includes(normalized) ||
-        team.category.toLowerCase().includes(normalized),
+        normalizeSearch(team.name).includes(normalized) ||
+        normalizeSearch(team.category).includes(normalized),
     )
   }, [teams, searchTerm])
 
