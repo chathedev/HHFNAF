@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { cn } from "@/lib/utils"
 
 type Individual = {
   name: string
@@ -289,15 +290,13 @@ export default function LagPage() {
     })
   }, [content])
 
-  useEffect(() => {
-    if (teams.length > 0 && !selectedTeamId) {
-      setSelectedTeamId(teams[0].id)
-    }
-  }, [teams, selectedTeamId])
-
   const selectedTeam = useMemo(
     () => teams.find((team) => team.id === selectedTeamId),
     [teams, selectedTeamId],
+  )
+
+  const hasSelectedTeamHeroImage = Boolean(
+    selectedTeam?.heroImage && selectedTeam.heroImage !== PLACEHOLDER_HERO,
   )
 
   const filteredTeams = useMemo(() => {
@@ -313,7 +312,6 @@ export default function LagPage() {
     )
   }, [teams, searchTerm])
 
-  const dropdownTeams = filteredTeams.slice(0, 8)
   const showDropdown = dropdownOpen && (filteredTeams.length > 0 || searchTerm.trim().length > 0)
 
   const handleTeamSelect = (teamId: string) => {
@@ -391,31 +389,31 @@ export default function LagPage() {
             <p className="text-lg text-gray-700">{content.pageDescription}</p>
           </div>
 
-          <section className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <section className="mt-12 mx-auto max-w-3xl grid gap-4 sm:grid-cols-3 place-items-center text-center">
             {categoryStats.map((stat) => (
               <Card
                 key={stat.name}
-                className="rounded-2xl border border-green-100 bg-white p-6 text-center shadow-sm"
+                className="flex h-full w-full flex-col items-center justify-center rounded-2xl border border-green-100 bg-white p-6 shadow-sm"
               >
                 <p className="text-3xl font-bold text-green-700">{stat.count}</p>
                 <p className="mt-2 text-base font-semibold text-gray-900">{stat.name}</p>
               </Card>
             ))}
-            <Card className="rounded-2xl border border-green-100 bg-white p-6 text-center shadow-sm">
+            <Card className="flex h-full w-full flex-col items-center justify-center rounded-2xl border border-green-100 bg-white p-6 shadow-sm">
               <p className="text-3xl font-bold text-orange-500">{totalTeams}</p>
               <p className="mt-2 text-base font-semibold text-gray-900">Totalt antal lag</p>
             </Card>
           </section>
 
           <section className="mt-12 space-y-6">
-            <div className="mx-auto w-full max-w-3xl">
+            <div className="mx-auto w-full max-w-3xl text-center">
               <label
                 htmlFor="team-search"
-                className="text-sm font-semibold uppercase tracking-wide text-gray-600"
+                className="block text-sm font-semibold uppercase tracking-wide text-gray-600 text-center sm:text-left"
               >
                 Hitta ditt lag
               </label>
-              <div className="relative mt-3">
+              <div className="relative mt-3 text-left">
                 <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <Input
                   id="team-search"
@@ -432,8 +430,8 @@ export default function LagPage() {
                 {showDropdown && (
                   <div className="absolute left-0 top-full z-20 mt-2 w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
                     {filteredTeams.length > 0 ? (
-                      <div className="max-h-72 overflow-y-auto py-2">
-                        {dropdownTeams.map((team) => (
+                      <div className="max-h-80 overflow-y-auto py-2">
+                        {filteredTeams.map((team) => (
                           <button
                             key={team.id}
                             type="button"
@@ -454,11 +452,6 @@ export default function LagPage() {
                             </span>
                           </button>
                         ))}
-                        {filteredTeams.length > dropdownTeams.length && (
-                          <p className="px-4 py-2 text-xs text-gray-400">
-                            Visar {dropdownTeams.length} av {filteredTeams.length} lag
-                          </p>
-                        )}
                       </div>
                     ) : (
                       <div className="px-4 py-6 text-center text-sm text-gray-500">
@@ -474,27 +467,65 @@ export default function LagPage() {
           {selectedTeam ? (
             <>
               <section className="mt-16">
-                <div className="relative min-h-[320px] overflow-hidden rounded-3xl bg-gray-900 shadow-xl">
-                  <Image
-                    src={selectedTeam.heroImage || PLACEHOLDER_HERO}
-                    alt={selectedTeam.heroImageAlt || `Lagbild ${selectedTeam.name}`}
-                    fill
-                    className="object-cover"
-                    priority
-                    sizes="(min-width: 1024px) 1200px, 100vw"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/60" />
-                  <div className="relative z-10 p-8 md:p-12 lg:p-16">
-                    <span className="inline-flex items-center rounded-full bg-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-wider text-white/80 backdrop-blur">
+                <div
+                  className={cn(
+                    "relative min-h-[280px] overflow-hidden rounded-3xl shadow-xl transition",
+                    hasSelectedTeamHeroImage ? "bg-gray-900 md:min-h-[320px]" : "bg-white",
+                  )}
+                >
+                  {hasSelectedTeamHeroImage && (
+                    <>
+                      <Image
+                        src={selectedTeam.heroImage as string}
+                        alt={selectedTeam.heroImageAlt || `Lagbild ${selectedTeam.name}`}
+                        fill
+                        className="object-cover"
+                        priority
+                        sizes="(min-width: 1024px) 1200px, 100vw"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/60" />
+                    </>
+                  )}
+                  <div
+                    className={cn(
+                      "relative z-10 p-8 md:p-12 lg:p-16 text-center sm:text-left",
+                      hasSelectedTeamHeroImage ? "text-white" : "text-gray-900",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur",
+                        hasSelectedTeamHeroImage
+                          ? "bg-white/10 text-white/80"
+                          : "bg-green-50 text-green-700",
+                      )}
+                    >
                       {selectedTeam.category}
                     </span>
-                    <h2 className="mt-5 text-4xl font-bold text-white md:text-5xl">
+                    <h2
+                      className={cn(
+                        "mt-5 text-4xl font-bold md:text-5xl",
+                        hasSelectedTeamHeroImage ? "text-white" : "text-gray-900",
+                      )}
+                    >
                       {selectedTeam.name}
                     </h2>
-                    <p className="mt-5 max-w-2xl text-base text-white/85 md:text-lg">
+                    <p
+                      className={cn(
+                        "mt-5 mx-auto max-w-2xl text-base md:text-lg",
+                        hasSelectedTeamHeroImage ? "text-white/85" : "text-gray-600",
+                      )}
+                    >
                       {selectedTeam.description}
                     </p>
-                    <span className="mt-6 inline-flex items-center rounded-full bg-white/15 px-4 py-1 text-xs font-semibold uppercase tracking-wider text-white/80">
+                    <span
+                      className={cn(
+                        "mt-6 inline-flex items-center rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-wider",
+                        hasSelectedTeamHeroImage
+                          ? "bg-white/15 text-white/80"
+                          : "bg-orange-100 text-orange-600",
+                      )}
+                    >
                       Matchtrupp uppdateras snart
                     </span>
                   </div>
@@ -503,7 +534,7 @@ export default function LagPage() {
 
               <section className="mt-10">
                 <div className="grid gap-4 sm:grid-cols-3">
-                  <Card className="rounded-2xl border border-green-100 bg-white p-6">
+                  <Card className="rounded-2xl border border-green-100 bg-white p-6 text-center">
                     <p className="text-sm font-semibold text-green-700 uppercase tracking-wide">
                       Laget.se
                     </p>
@@ -512,7 +543,7 @@ export default function LagPage() {
                         href={selectedTeam.link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-3 inline-flex items-center gap-2 text-base font-semibold text-gray-900 hover:text-green-700"
+                        className="mt-3 inline-flex items-center justify-center gap-2 text-base font-semibold text-gray-900 hover:text-green-700"
                       >
                         Öppna laget.se
                         <ExternalLink className="h-4 w-4" />
@@ -521,7 +552,7 @@ export default function LagPage() {
                       <p className="mt-3 text-sm text-gray-500">Länk kommer snart.</p>
                     )}
                   </Card>
-                  <Card className="rounded-2xl border border-green-100 bg-white p-6">
+                  <Card className="rounded-2xl border border-green-100 bg-white p-6 text-center">
                     <p className="text-sm font-semibold text-green-700 uppercase tracking-wide">
                       Instagram
                     </p>
@@ -530,7 +561,7 @@ export default function LagPage() {
                         href={selectedTeam.instagramLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-3 inline-flex items-center gap-2 text-base font-semibold text-gray-900 hover:text-green-700"
+                        className="mt-3 inline-flex items-center justify-center gap-2 text-base font-semibold text-gray-900 hover:text-green-700"
                       >
                         Följ laget
                         <Instagram className="h-4 w-4" />
@@ -539,7 +570,7 @@ export default function LagPage() {
                       <p className="mt-3 text-sm text-gray-500">Instagram uppdateras snart.</p>
                     )}
                   </Card>
-                  <Card className="rounded-2xl border border-green-100 bg-white p-6">
+                  <Card className="rounded-2xl border border-green-100 bg-white p-6 text-center">
                     <p className="text-sm font-semibold text-green-700 uppercase tracking-wide">
                       Matchtrupp
                     </p>
