@@ -2,7 +2,7 @@
   "hero": {
     "title": "LAGET FÖRE ALLT",
     "description": "Härnösands Handbollsförening - Tillsammans sedan 2024. Vi bygger framtidens handbollsspelare genom gemenskap, träning och passion för sporten.",
-    "imageUrl": "/placeholder.svg?height=1080&width=1920",
+    "imageUrl": "/heropic.png",
     "button1Text": "Börja Träna",
     "button1Link": "/kontakt",
     "button2Text": "Våra Lag",
