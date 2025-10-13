@@ -303,6 +303,10 @@ export default function LagPage() {
     selectedTeam?.heroImage && selectedTeam.heroImage !== PLACEHOLDER_HERO,
   )
 
+  const selectedTeamHasRoster = Boolean(selectedTeam?.individuals && selectedTeam.individuals.length > 0)
+  const showMatchtruppCard = Boolean(selectedTeam && !selectedTeamHasRoster && !hasSelectedTeamHeroImage)
+  const showMatchtruppBadge = Boolean(selectedTeam && !selectedTeamHasRoster && !hasSelectedTeamHeroImage)
+
   const filteredTeams = useMemo(() => {
     const normalized = normalizeSearch(searchTerm.trim())
     if (!normalized) {
@@ -489,17 +493,20 @@ export default function LagPage() {
                         {selectedTeam.description}
                       </p>
                     )}
-                    <span className="inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-white shadow-lg shadow-orange-200/60">
-                      Matchtrupp uppdateras snart
-                    </span>
+                    {showMatchtruppBadge && (
+                      <span className="inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-orange-500 to-pink-500 px-5 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-white shadow-lg shadow-orange-200/60">
+                        Matchtrupp uppdateras snart
+                      </span>
+                    )}
                   </div>
                 </Card>
 
-                <div className="grid gap-4 md:grid-cols-3">
-                  <Card className="group relative overflow-hidden rounded-3xl border border-green-100 bg-white p-6 text-center shadow-md transition hover:-translate-y-1 hover:shadow-xl">
-                    <div className="absolute inset-0 bg-gradient-to-b from-green-50/40 to-transparent opacity-0 transition group-hover:opacity-100" />
+                <div className={cn("grid gap-4", showMatchtruppCard ? "md:grid-cols-3" : "md:grid-cols-2")}>
+                  <Card className="relative overflow-hidden rounded-4xl border border-emerald-100/80 bg-gradient-to-br from-emerald-50 via-emerald-100/70 to-white p-6 text-center shadow-md transition hover:-translate-y-1 hover:shadow-xl">
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_0%,rgba(16,185,129,0.25),transparent_55%)]" />
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_100%,rgba(250,204,21,0.15),transparent_55%)]" />
                     <div className="relative">
-                      <p className="text-sm font-semibold uppercase tracking-wide text-green-700">
+                      <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-700">
                         Laget.se
                       </p>
                       {selectedTeam.link ? (
@@ -507,7 +514,7 @@ export default function LagPage() {
                           href={selectedTeam.link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="mt-3 inline-flex items-center justify-center gap-2 rounded-full border border-green-200 bg-white px-4 py-2 text-sm font-semibold text-gray-900 transition hover:border-green-400 hover:text-green-700"
+                          className="mt-3 inline-flex items-center justify-center gap-2 rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-600"
                         >
                           Öppna laget.se
                           <ExternalLink className="h-4 w-4" />
@@ -517,10 +524,11 @@ export default function LagPage() {
                       )}
                     </div>
                   </Card>
-                  <Card className="group relative overflow-hidden rounded-3xl border border-green-100 bg-white p-6 text-center shadow-md transition hover:-translate-y-1 hover:shadow-xl">
-                    <div className="absolute inset-0 bg-gradient-to-b from-pink-50/40 to-transparent opacity-0 transition group-hover:opacity-100" />
+                  <Card className="relative overflow-hidden rounded-4xl border border-rose-100/80 bg-gradient-to-br from-rose-50 via-white to-pink-50 p-6 text-center shadow-md transition hover:-translate-y-1 hover:shadow-xl">
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_0%,rgba(244,114,182,0.35),transparent_55%)]" />
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_90%_90%,rgba(251,191,36,0.18),transparent_55%)]" />
                     <div className="relative">
-                      <p className="text-sm font-semibold uppercase tracking-wide text-green-700">
+                      <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-700">
                         Instagram
                       </p>
                       {selectedTeam.instagramLink ? (
@@ -528,7 +536,7 @@ export default function LagPage() {
                           href={selectedTeam.instagramLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="mt-3 inline-flex items-center justify-center gap-2 rounded-full border border-pink-200 bg-white px-4 py-2 text-sm font-semibold text-gray-900 transition hover:border-pink-400 hover:text-pink-600"
+                          className="mt-3 inline-flex items-center justify-center gap-2 rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600"
                         >
                           Följ laget
                           <Instagram className="h-4 w-4" />
@@ -538,17 +546,20 @@ export default function LagPage() {
                       )}
                     </div>
                   </Card>
-                  <Card className="relative overflow-hidden rounded-3xl border border-orange-100 bg-gradient-to-br from-orange-50 to-white p-6 text-center shadow-md transition hover:-translate-y-1 hover:shadow-xl">
-                    <div className="absolute inset-0 bg-gradient-to-b from-orange-100/50 to-transparent opacity-70" />
-                    <div className="relative">
-                      <p className="text-sm font-semibold uppercase tracking-wide text-orange-600">
-                        Matchtrupp
-                      </p>
-                      <p className="mt-3 text-sm font-semibold text-orange-600">
-                        Matchtruppen publiceras inom kort.
-                      </p>
-                    </div>
-                  </Card>
+                  {showMatchtruppCard && (
+                    <Card className="relative overflow-hidden rounded-4xl border border-orange-200/80 bg-gradient-to-br from-orange-100 via-white to-amber-100 p-6 text-center shadow-md transition hover:-translate-y-1 hover:shadow-xl">
+                      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(251,146,60,0.25),transparent_55%)]" />
+                      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_120%,rgba(234,179,8,0.2),transparent_55%)]" />
+                      <div className="relative">
+                        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-orange-600">
+                          Matchtrupp
+                        </p>
+                        <p className="mt-3 text-sm font-semibold text-orange-600">
+                          Matchtruppen publiceras inom kort.
+                        </p>
+                      </div>
+                    </Card>
+                  )}
                 </div>
 
                 <Card className="overflow-hidden rounded-4xl border border-green-100 bg-gradient-to-br from-white via-green-50/40 to-white shadow-2xl shadow-green-100/50">
@@ -597,19 +608,19 @@ export default function LagPage() {
                     {selectedTeam.individuals.map((person) => (
                       <Card
                         key={person.name}
-                        className="relative overflow-hidden rounded-4xl border border-green-100/60 bg-white shadow-xl transition hover:-translate-y-1 hover:shadow-2xl"
+                        className="relative overflow-hidden rounded-4xl border border-emerald-100/60 bg-gradient-to-br from-emerald-50 via-white to-lime-50 shadow-xl transition hover:-translate-y-1 hover:shadow-2xl"
                       >
-                        <div className="absolute inset-0 bg-gradient-to-tr from-green-100/20 via-transparent to-orange-100/30 opacity-0 transition hover:opacity-100" />
+                        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,rgba(34,197,94,0.18),transparent_60%)] opacity-0 transition hover:opacity-100" />
                         <div
-                          className="relative flex h-80 w-full items-center justify-center overflow-hidden bg-gradient-to-br from-gray-100 via-white to-gray-100"
+                          className="relative flex h-80 w-full items-center justify-center overflow-hidden bg-gradient-to-br from-white via-emerald-50 to-lime-50"
                           style={{ borderTopLeftRadius: "min(36px, 6vw)", borderTopRightRadius: "min(36px, 6vw)" }}
                         >
                           <Image
                             src={person.image || PLACEHOLDER_INDIVIDUAL}
                             alt={person.image ? `${person.name}` : `Bild på ${person.name} kommer snart`}
                             fill
-                            className="object-contain object-center select-none"
-                            style={{ borderTopLeftRadius: "inherit", borderTopRightRadius: "inherit" }}
+                            className="object-contain object-center select-none shadow-[inset_0_0_35px_rgba(15,118,110,0.08)]"
+                            style={{ borderTopLeftRadius: "inherit", borderTopRightRadius: "inherit", padding: "1.75rem" }}
                             draggable={false}
                             onContextMenu={(event) => event.preventDefault()}
                             onDragStart={(event) => event.preventDefault()}
@@ -617,9 +628,9 @@ export default function LagPage() {
                           />
                         </div>
                         <div className="relative z-10 space-y-2 px-6 pb-6 pt-4 text-center">
-                          <p className="text-lg font-semibold text-gray-900">{person.name}</p>
+                          <p className="text-lg font-semibold tracking-tight text-gray-900">{person.name}</p>
                           {person.role && (
-                            <p className="text-xs uppercase tracking-[0.3em] text-green-700">
+                            <p className="text-[10px] uppercase tracking-[0.4em] text-emerald-700">
                               {person.role}
                             </p>
                           )}
