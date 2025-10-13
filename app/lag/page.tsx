@@ -26,6 +26,7 @@ type Individual = {
 
 type RawTeam = {
   name: string
+  displayName?: string
   link?: string
   instagramLink?: string
   heroImage?: string
@@ -38,6 +39,7 @@ type RawTeam = {
 type Team = {
   id: string
   name: string
+  displayName?: string
   category: string
   link?: string
   instagramLink?: string
@@ -280,6 +282,7 @@ export default function LagPage() {
       (category.teams ?? []).map((team: RawTeam) => ({
         id: typeof team.id === "string" && team.id.trim().length > 0 ? team.id : slugify(team.name),
         name: team.name,
+        displayName: typeof team.displayName === "string" && team.displayName.trim().length > 0 ? team.displayName : undefined,
         category: category.name,
         link: team.link,
         instagramLink: team.instagramLink,
@@ -471,83 +474,99 @@ export default function LagPage() {
           {selectedTeam ? (
             <>
               <section className="mt-16 space-y-10">
-                <Card className="rounded-3xl border border-green-100 bg-white px-8 py-10 text-center shadow-xl md:px-12 md:py-14 md:text-left lg:px-16">
-                  <div className="flex flex-col items-center md:items-start">
-                    <span className="inline-flex items-center rounded-full bg-green-50 px-4 py-1 text-xs font-semibold uppercase tracking-wider text-green-700">
+                <Card className="relative overflow-hidden rounded-4xl border border-green-100 bg-gradient-to-br from-white via-green-50/70 to-white px-8 py-12 text-center shadow-2xl shadow-green-100/60 md:px-14 md:py-16 md:text-left">
+                  <div className="absolute -top-32 -right-10 h-64 w-64 rounded-full bg-green-100/40 blur-3xl" />
+                  <div className="absolute -bottom-28 -left-16 h-72 w-72 rounded-full bg-orange-100/40 blur-3xl" />
+                  <div className="relative flex flex-col items-center gap-4 md:items-start">
+                    <span className="inline-flex items-center rounded-full border border-green-200 bg-white/80 px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-green-700 shadow-sm backdrop-blur">
                       {selectedTeam.category}
                     </span>
-                    <h2 className="mt-5 text-4xl font-bold text-gray-900 md:text-5xl">
-                      {selectedTeam.name}
+                    <h2 className="text-4xl font-black tracking-tight text-gray-900 drop-shadow-sm md:text-5xl lg:text-6xl">
+                      {selectedTeam.displayName ?? selectedTeam.name}
                     </h2>
                     {selectedTeam.description && (
-                      <p className="mt-5 max-w-2xl text-base text-gray-600 md:text-lg">
+                      <p className="max-w-2xl text-base leading-relaxed text-gray-600 md:text-lg">
                         {selectedTeam.description}
                       </p>
                     )}
-                    <span className="mt-6 inline-flex items-center rounded-full bg-orange-100 px-4 py-1 text-xs font-semibold uppercase tracking-wider text-orange-600">
+                    <span className="inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-white shadow-lg shadow-orange-200/60">
                       Matchtrupp uppdateras snart
                     </span>
                   </div>
                 </Card>
 
                 <div className="grid gap-4 md:grid-cols-3">
-                  <Card className="rounded-3xl border border-green-100 bg-white p-6 text-center shadow-sm">
-                    <p className="text-sm font-semibold text-green-700 uppercase tracking-wide">
-                      Laget.se
-                    </p>
-                    {selectedTeam.link ? (
-                      <Link
-                        href={selectedTeam.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-3 inline-flex items-center justify-center gap-2 text-base font-semibold text-gray-900 hover:text-green-700"
-                      >
-                        Öppna laget.se
-                        <ExternalLink className="h-4 w-4" />
-                      </Link>
-                    ) : (
-                      <p className="mt-3 text-sm text-gray-500">Länk kommer snart.</p>
-                    )}
+                  <Card className="group relative overflow-hidden rounded-3xl border border-green-100 bg-white p-6 text-center shadow-md transition hover:-translate-y-1 hover:shadow-xl">
+                    <div className="absolute inset-0 bg-gradient-to-b from-green-50/40 to-transparent opacity-0 transition group-hover:opacity-100" />
+                    <div className="relative">
+                      <p className="text-sm font-semibold uppercase tracking-wide text-green-700">
+                        Laget.se
+                      </p>
+                      {selectedTeam.link ? (
+                        <Link
+                          href={selectedTeam.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-3 inline-flex items-center justify-center gap-2 rounded-full border border-green-200 bg-white px-4 py-2 text-sm font-semibold text-gray-900 transition hover:border-green-400 hover:text-green-700"
+                        >
+                          Öppna laget.se
+                          <ExternalLink className="h-4 w-4" />
+                        </Link>
+                      ) : (
+                        <p className="mt-3 text-sm text-gray-500">Länk kommer snart.</p>
+                      )}
+                    </div>
                   </Card>
-                  <Card className="rounded-3xl border border-green-100 bg-white p-6 text-center shadow-sm">
-                    <p className="text-sm font-semibold text-green-700 uppercase tracking-wide">
-                      Instagram
-                    </p>
-                    {selectedTeam.instagramLink ? (
-                      <Link
-                        href={selectedTeam.instagramLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-3 inline-flex items-center justify-center gap-2 text-base font-semibold text-gray-900 hover:text-green-700"
-                      >
-                        Följ laget
-                        <Instagram className="h-4 w-4" />
-                      </Link>
-                    ) : (
-                      <p className="mt-3 text-sm text-gray-500">Instagram uppdateras snart.</p>
-                    )}
+                  <Card className="group relative overflow-hidden rounded-3xl border border-green-100 bg-white p-6 text-center shadow-md transition hover:-translate-y-1 hover:shadow-xl">
+                    <div className="absolute inset-0 bg-gradient-to-b from-pink-50/40 to-transparent opacity-0 transition group-hover:opacity-100" />
+                    <div className="relative">
+                      <p className="text-sm font-semibold uppercase tracking-wide text-green-700">
+                        Instagram
+                      </p>
+                      {selectedTeam.instagramLink ? (
+                        <Link
+                          href={selectedTeam.instagramLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-3 inline-flex items-center justify-center gap-2 rounded-full border border-pink-200 bg-white px-4 py-2 text-sm font-semibold text-gray-900 transition hover:border-pink-400 hover:text-pink-600"
+                        >
+                          Följ laget
+                          <Instagram className="h-4 w-4" />
+                        </Link>
+                      ) : (
+                        <p className="mt-3 text-sm text-gray-500">Instagram uppdateras snart.</p>
+                      )}
+                    </div>
                   </Card>
-                  <Card className="rounded-3xl border border-orange-100 bg-gradient-to-br from-orange-50 to-white p-6 text-center shadow-sm">
-                    <p className="text-sm font-semibold text-orange-600 uppercase tracking-wide">
-                      Matchtrupp
-                    </p>
-                    <p className="mt-3 text-sm text-orange-600">Matchtruppen publiceras inom kort.</p>
+                  <Card className="relative overflow-hidden rounded-3xl border border-orange-100 bg-gradient-to-br from-orange-50 to-white p-6 text-center shadow-md transition hover:-translate-y-1 hover:shadow-xl">
+                    <div className="absolute inset-0 bg-gradient-to-b from-orange-100/50 to-transparent opacity-70" />
+                    <div className="relative">
+                      <p className="text-sm font-semibold uppercase tracking-wide text-orange-600">
+                        Matchtrupp
+                      </p>
+                      <p className="mt-3 text-sm font-semibold text-orange-600">
+                        Matchtruppen publiceras inom kort.
+                      </p>
+                    </div>
                   </Card>
                 </div>
 
-                <Card className="overflow-hidden rounded-3xl border border-green-100 bg-white shadow-lg">
+                <Card className="overflow-hidden rounded-4xl border border-green-100 bg-gradient-to-br from-white via-green-50/40 to-white shadow-2xl shadow-green-100/50">
                   {hasSelectedTeamHeroImage ? (
-                    <div className="relative flex h-[360px] w-full items-center justify-center bg-gradient-to-br from-gray-100 via-white to-gray-100 md:h-[520px]">
-                      <Image
-                        src={selectedTeam.heroImage as string}
-                        alt={selectedTeam.heroImageAlt || `Lagbild ${selectedTeam.name}`}
-                        fill
-                        className="object-contain object-center select-none"
-                        draggable={false}
-                        onContextMenu={(event) => event.preventDefault()}
-                        onDragStart={(event) => event.preventDefault()}
-                        sizes="(min-width: 1024px) 1000px, 100vw"
-                      />
+                    <div className="relative flex h-[380px] w-full items-center justify-center bg-gradient-to-br from-white via-green-50/60 to-white md:h-[540px]">
+                      <div className="absolute inset-6 rounded-[2rem] border border-white/60 bg-white/60 shadow-inner shadow-green-200/40 backdrop-blur">
+                        <Image
+                          src={selectedTeam.heroImage as string}
+                          alt={selectedTeam.heroImageAlt || `Lagbild ${selectedTeam.name}`}
+                          fill
+                          className="rounded-[2rem] object-contain object-center select-none"
+                          draggable={false}
+                          onContextMenu={(event) => event.preventDefault()}
+                          onDragStart={(event) => event.preventDefault()}
+                          sizes="(min-width: 1024px) 1000px, 100vw"
+                          priority
+                        />
+                      </div>
                     </div>
                   ) : (
                     <div className="flex h-[300px] w-full items-center justify-center bg-gray-50 text-sm font-semibold text-gray-500 md:h-[380px]">
@@ -574,24 +593,25 @@ export default function LagPage() {
                     {selectedTeam.individuals.map((person) => (
                       <Card
                         key={person.name}
-                        className="overflow-hidden rounded-3xl border-0 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+                        className="relative overflow-hidden rounded-4xl border border-green-100/60 bg-white shadow-xl transition hover:-translate-y-1 hover:shadow-2xl"
                       >
-                        <div className="relative flex h-80 w-full items-center justify-center bg-gradient-to-br from-gray-100 via-white to-gray-100">
+                        <div className="absolute inset-0 bg-gradient-to-tr from-green-100/20 via-transparent to-orange-100/30 opacity-0 transition hover:opacity-100" />
+                        <div className="relative flex h-80 w-full items-center justify-center overflow-hidden rounded-t-[2rem] bg-gradient-to-br from-gray-100 via-white to-gray-100">
                           <Image
                             src={person.image || PLACEHOLDER_INDIVIDUAL}
                             alt={person.image ? `${person.name}` : `Bild på ${person.name} kommer snart`}
                             fill
-                            className="object-contain object-center select-none"
+                            className="object-contain object-center select-none rounded-t-[2rem]"
                             draggable={false}
                             onContextMenu={(event) => event.preventDefault()}
                             onDragStart={(event) => event.preventDefault()}
                             sizes="(min-width: 1280px) 300px, (min-width: 768px) 240px, 100vw"
                           />
                         </div>
-                        <div className="p-5">
-                          <p className="text-base font-semibold text-gray-900">{person.name}</p>
+                        <div className="relative z-10 space-y-2 px-6 pb-6 pt-4 text-center">
+                          <p className="text-lg font-semibold text-gray-900">{person.name}</p>
                           {person.role && (
-                            <p className="mt-1 text-sm uppercase tracking-wide text-gray-500">
+                            <p className="text-xs uppercase tracking-[0.3em] text-green-700">
                               {person.role}
                             </p>
                           )}

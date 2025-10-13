@@ -99,7 +99,8 @@
               "name": "Viktoria Sapage",
               "image": "/HarnosandsHF/Härnösands HF - Dam/Viktoria Sapage.jpg"
             }
-          ]
+          ],
+          "displayName": "Damlaget"
         },
         {
           "name": "A-lag Herrar",
@@ -185,7 +186,8 @@
               "name": "William Oderstad",
               "image": "/HarnosandsHF/Härnösands HF - A lag herr/William Oderstad.jpg"
             }
-          ]
+          ],
+          "displayName": "A-lag Herrar"
         }
       ]
     },
