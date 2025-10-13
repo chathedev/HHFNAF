@@ -478,9 +478,10 @@ export default function LagPage() {
           {selectedTeam ? (
             <>
               <section className="mt-16 space-y-10">
-                <Card className="relative overflow-hidden rounded-4xl border border-green-100 bg-gradient-to-br from-white via-green-50/70 to-white px-8 py-12 text-center shadow-2xl shadow-green-100/60 md:px-14 md:py-16 md:text-left">
-                  <div className="absolute -top-32 -right-10 h-64 w-64 rounded-full bg-green-100/40 blur-3xl" />
-                  <div className="absolute -bottom-28 -left-16 h-72 w-72 rounded-full bg-orange-100/40 blur-3xl" />
+                <Card className="relative overflow-hidden rounded-4xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-amber-50 px-8 py-12 text-center shadow-xl shadow-emerald-100/70 md:px-14 md:py-16 md:text-left">
+                  <div className="pointer-events-none absolute -top-36 -right-20 h-72 w-72 rounded-full bg-emerald-200/35 blur-3xl" />
+                  <div className="pointer-events-none absolute bottom-[-120px] left-[-80px] h-80 w-80 rounded-full bg-orange-200/30 blur-3xl" />
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(34,197,94,0.08),transparent_55%)]" />
                   <div className="relative flex flex-col items-center gap-4 md:items-start">
                     <span className="inline-flex items-center rounded-full border border-green-200 bg-white/80 px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-green-700 shadow-sm backdrop-blur">
                       {selectedTeam.category}
@@ -524,9 +525,9 @@ export default function LagPage() {
                       )}
                     </div>
                   </Card>
-                  <Card className="relative overflow-hidden rounded-4xl border border-rose-100/80 bg-gradient-to-br from-rose-50 via-white to-pink-50 p-6 text-center shadow-md transition hover:-translate-y-1 hover:shadow-xl">
-                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_0%,rgba(244,114,182,0.35),transparent_55%)]" />
-                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_90%_90%,rgba(251,191,36,0.18),transparent_55%)]" />
+                  <Card className="relative overflow-hidden rounded-4xl border border-emerald-100/70 bg-gradient-to-br from-white via-emerald-50 to-amber-50 p-6 text-center shadow-md transition hover:-translate-y-1 hover:shadow-xl">
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(22,163,74,0.22),transparent_55%)]" />
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_90%_90%,rgba(249,115,22,0.18),transparent_55%)]" />
                     <div className="relative">
                       <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-700">
                         Instagram
@@ -536,7 +537,7 @@ export default function LagPage() {
                           href={selectedTeam.instagramLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="mt-3 inline-flex items-center justify-center gap-2 rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600"
+                          className="mt-3 inline-flex items-center justify-center gap-2 rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-600"
                         >
                           Följ laget
                           <Instagram className="h-4 w-4" />
