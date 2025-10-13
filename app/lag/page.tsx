@@ -58,16 +58,12 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "")
 
-const getTeamDescription = (team: RawTeam, categoryDescription?: string) => {
+const getTeamDescription = (team: RawTeam) => {
   if (typeof team.description === "string" && team.description.trim().length > 0) {
     return team.description
   }
 
-  if (typeof categoryDescription === "string" && categoryDescription.trim().length > 0) {
-    return categoryDescription
-  }
-
-  return "Laginfo uppdateras inom kort."
+  return ""
 }
 
 const getDefaultContent = () => ({
@@ -273,10 +269,8 @@ export default function LagPage() {
       return [] as Team[]
     }
 
-    return content.teamCategories.flatMap((category: any) => {
-      const categoryDescription = category.description as string | undefined
-
-      return (category.teams ?? []).map((team: RawTeam) => ({
+    return content.teamCategories.flatMap((category: any) =>
+      (category.teams ?? []).map((team: RawTeam) => ({
         id: typeof team.id === "string" && team.id.trim().length > 0 ? team.id : slugify(team.name),
         name: team.name,
         category: category.name,
@@ -284,10 +278,10 @@ export default function LagPage() {
         instagramLink: team.instagramLink,
         heroImage: team.heroImage,
         heroImageAlt: team.heroImageAlt,
-        description: getTeamDescription(team, categoryDescription),
+        description: getTeamDescription(team),
         individuals: Array.isArray(team.individuals) ? team.individuals : [],
-      }))
-    })
+      })),
+    )
   }, [content])
 
   const selectedTeam = useMemo(
@@ -389,42 +383,45 @@ export default function LagPage() {
             <p className="text-lg text-gray-700">{content.pageDescription}</p>
           </div>
 
-          <section className="mt-12 mx-auto max-w-3xl grid gap-4 sm:grid-cols-3 place-items-center text-center">
+          <section className="mt-12 mx-auto grid w-full max-w-4xl gap-4 sm:grid-cols-3 text-center">
             {categoryStats.map((stat) => (
               <Card
                 key={stat.name}
-                className="flex h-full w-full flex-col items-center justify-center rounded-2xl border border-green-100 bg-white p-6 shadow-sm"
+                className="flex h-full w-full flex-col items-center justify-center rounded-2xl border border-green-100 bg-gradient-to-br from-white via-white to-green-50 p-6 shadow-sm"
               >
                 <p className="text-3xl font-bold text-green-700">{stat.count}</p>
                 <p className="mt-2 text-base font-semibold text-gray-900">{stat.name}</p>
               </Card>
             ))}
-            <Card className="flex h-full w-full flex-col items-center justify-center rounded-2xl border border-green-100 bg-white p-6 shadow-sm">
+            <Card className="flex h-full w-full flex-col items-center justify-center rounded-2xl border border-green-100 bg-gradient-to-br from-white via-white to-orange-50 p-6 shadow-sm">
               <p className="text-3xl font-bold text-orange-500">{totalTeams}</p>
               <p className="mt-2 text-base font-semibold text-gray-900">Totalt antal lag</p>
             </Card>
           </section>
 
-          <section className="mt-12 space-y-6">
-            <div className="mx-auto w-full max-w-3xl text-center">
-              <label
-                htmlFor="team-search"
-                className="block text-sm font-semibold uppercase tracking-wide text-gray-600 text-center sm:text-left"
-              >
-                Hitta ditt lag
-              </label>
-              <div className="relative mt-3 text-left">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <section className="mt-12">
+            <Card className="mx-auto w-full max-w-3xl rounded-3xl border border-green-100 bg-white p-6 shadow-lg md:p-8">
+              <div className="mx-auto max-w-2xl text-center">
+                <h2 className="text-xl font-semibold text-gray-900">Hitta ditt lag</h2>
+                <p className="mt-2 text-sm text-gray-600">
+                  Sök efter lagets namn eller kategori och välj i listan för att se mer information.
+                </p>
+              </div>
+              <div className="relative mt-6">
+                <label htmlFor="team-search" className="sr-only">
+                  Sök lag
+                </label>
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
                 <Input
                   id="team-search"
                   type="search"
-                  placeholder="Sök efter lag..."
+                  placeholder="Skriv till exempel ”A-lag” eller ”F-13”"
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                   onFocus={handleSearchFocus}
                   onBlur={handleSearchBlur}
                   onKeyDown={handleSearchKeyDown}
-                  className="h-12 rounded-2xl border border-gray-200 bg-white pl-11 text-base shadow-sm transition focus:border-green-500 focus:ring-0"
+                  className="h-12 rounded-2xl border border-gray-200 bg-white pl-12 text-base shadow-sm transition focus:border-green-500 focus:ring-0"
                   autoComplete="off"
                 />
                 {showDropdown && (
@@ -461,73 +458,43 @@ export default function LagPage() {
                   </div>
                 )}
               </div>
-            </div>
+            </Card>
           </section>
 
           {selectedTeam ? (
             <>
               <section className="mt-16">
-                <div
-                  className={cn(
-                    "relative min-h-[280px] overflow-hidden rounded-3xl shadow-xl transition",
-                    hasSelectedTeamHeroImage ? "bg-gray-900 md:min-h-[320px]" : "bg-white",
-                  )}
-                >
-                  {hasSelectedTeamHeroImage && (
-                    <>
-                      <Image
-                        src={selectedTeam.heroImage as string}
-                        alt={selectedTeam.heroImageAlt || `Lagbild ${selectedTeam.name}`}
-                        fill
-                        className="object-cover"
-                        priority
-                        sizes="(min-width: 1024px) 1200px, 100vw"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/60" />
-                    </>
-                  )}
-                  <div
-                    className={cn(
-                      "relative z-10 p-8 md:p-12 lg:p-16 text-center sm:text-left",
-                      hasSelectedTeamHeroImage ? "text-white" : "text-gray-900",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "inline-flex items-center rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur",
-                        hasSelectedTeamHeroImage
-                          ? "bg-white/10 text-white/80"
-                          : "bg-green-50 text-green-700",
+                <div className="rounded-3xl border border-green-100 bg-white shadow-xl">
+                  <div className="grid gap-6 md:grid-cols-[1.2fr,1fr]">
+                    <div className="flex flex-col justify-center px-8 py-10 md:px-12 md:py-14 lg:px-16">
+                      <span className="inline-flex w-fit items-center rounded-full bg-green-50 px-4 py-1 text-xs font-semibold uppercase tracking-wider text-green-700">
+                        {selectedTeam.category}
+                      </span>
+                      <h2 className="mt-5 text-4xl font-bold text-gray-900 md:text-5xl">{selectedTeam.name}</h2>
+                      {selectedTeam.description && (
+                        <p className="mt-5 max-w-xl text-base text-gray-600 md:text-lg">
+                          {selectedTeam.description}
+                        </p>
                       )}
-                    >
-                      {selectedTeam.category}
-                    </span>
-                    <h2
-                      className={cn(
-                        "mt-5 text-4xl font-bold md:text-5xl",
-                        hasSelectedTeamHeroImage ? "text-white" : "text-gray-900",
+                      <span className="mt-6 inline-flex w-fit items-center rounded-full bg-orange-100 px-4 py-1 text-xs font-semibold uppercase tracking-wider text-orange-600">
+                        Matchtrupp uppdateras snart
+                      </span>
+                    </div>
+                    <div className="relative min-h-[220px] overflow-hidden rounded-t-3xl border-t border-green-50 bg-gray-100 md:rounded-l-none md:rounded-r-3xl md:border-t-0 md:border-l">
+                      {hasSelectedTeamHeroImage ? (
+                        <Image
+                          src={selectedTeam.heroImage as string}
+                          alt={selectedTeam.heroImageAlt || `Lagbild ${selectedTeam.name}`}
+                          fill
+                          className="object-cover"
+                          sizes="(min-width: 1024px) 520px, 100vw"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-white text-sm font-semibold text-gray-500">
+                          Lagfoto kommer snart
+                        </div>
                       )}
-                    >
-                      {selectedTeam.name}
-                    </h2>
-                    <p
-                      className={cn(
-                        "mt-5 mx-auto max-w-2xl text-base md:text-lg",
-                        hasSelectedTeamHeroImage ? "text-white/85" : "text-gray-600",
-                      )}
-                    >
-                      {selectedTeam.description}
-                    </p>
-                    <span
-                      className={cn(
-                        "mt-6 inline-flex items-center rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-wider",
-                        hasSelectedTeamHeroImage
-                          ? "bg-white/15 text-white/80"
-                          : "bg-orange-100 text-orange-600",
-                      )}
-                    >
-                      Matchtrupp uppdateras snart
-                    </span>
+                    </div>
                   </div>
                 </div>
               </section>
