@@ -1,5 +1,6 @@
 import Link from "next/link"
-import { Mail, MapPin, ExternalLink } from "lucide-react"
+import Script from "next/script"
+import { Mail, MapPin } from "lucide-react"
 
 export default function Footer() {
   return (
@@ -75,23 +76,10 @@ export default function Footer() {
             </p>
           </div>
 
-          {/* WBY Credit - Smaller on mobile */}
+          {/* WBY Badge */}
           <div className="mt-2 md:mt-0">
-            <Link
-              href="https://wby.se"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group flex items-center space-x-1 text-xs md:text-sm transition-all duration-300 hover:scale-105"
-            >
-              <span className="text-gray-400">Byggd av</span>
-              <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent font-bold group-hover:from-blue-300 group-hover:to-blue-500 transition-all duration-300">
-                Websites by you
-              </span>
-              <ExternalLink
-                size={10}
-                className="text-blue-400 group-hover:text-blue-300 transition-colors duration-300 md:hidden"
-              />
-            </Link>
+            <Script src="https://badge.wby.se/badge.js" strategy="afterInteractive" />
+            <div data-wby-badge className="flex justify-center md:justify-end" />
           </div>
         </div>
       </div>
