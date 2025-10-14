@@ -356,54 +356,48 @@ export default function LagPage() {
             </Card>
           </section>
 
-          <section className="mt-12 space-y-12">
+          <section className="mt-12 space-y-8">
             {content.teamCategories.map((category: any) => {
               const categoryTeams = teams.filter((team) => team.category === category.name)
               if (categoryTeams.length === 0) {
                 return null
               }
 
+              const handleCategorySelect = (teamId: string) => {
+                handleTeamSelect(teamId)
+                const details = document.getElementById("team-details")
+                details?.scrollIntoView({ behavior: "smooth", block: "start" })
+              }
+
               return (
-                <div key={category.name} className="space-y-6">
-                  <div className="flex flex-col items-center justify-between gap-3 text-center md:flex-row md:text-left">
+                <div key={category.name} className="space-y-4">
+                  <div className="flex flex-col justify-between gap-3 text-center md:flex-row md:items-center md:text-left">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.4em] text-emerald-600">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.45em] text-emerald-600">
                         {category.name}
                       </p>
-                      <h2 className="mt-2 text-2xl font-bold text-gray-900 md:text-3xl">
-                        Välj lag i {category.name.toLowerCase()}
+                      <h2 className="mt-1 text-xl font-semibold text-gray-900 md:text-2xl">
+                        Lag i {category.name.toLowerCase()}
                       </h2>
                     </div>
                     {category.description && (
-                      <p className="max-w-md text-sm text-gray-500 md:text-right">{category.description}</p>
+                      <p className="max-w-sm text-xs text-gray-500 md:text-right">{category.description}</p>
                     )}
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  <div className="flex flex-wrap gap-2">
                     {categoryTeams.map((team) => (
                       <button
                         key={team.id}
                         type="button"
-                        onClick={() => handleTeamSelect(team.id)}
+                        onClick={() => handleCategorySelect(team.id)}
                         className={cn(
-                          "group relative overflow-hidden rounded-3xl border p-6 text-left transition hover:-translate-y-1 hover:shadow-xl",
+                          "rounded-full border px-3 py-1.5 text-left text-xs font-semibold tracking-[0.15em] transition",
                           selectedTeamId === team.id
-                            ? "border-emerald-400 bg-gradient-to-br from-emerald-50 via-white to-amber-50 shadow-emerald-100"
-                            : "border-gray-200 bg-white shadow-sm hover:border-emerald-200",
+                            ? "border-emerald-500 bg-emerald-50 text-emerald-800 shadow-sm"
+                            : "border-gray-200 bg-white text-gray-700 hover:border-emerald-300 hover:text-emerald-700",
                         )}
                       >
-                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-700">
-                          {team.category}
-                        </span>
-                        <h3 className="mt-4 text-xl font-semibold tracking-tight text-gray-900">
-                          {team.displayName ?? team.name}
-                        </h3>
-                        <p className="mt-3 text-sm text-gray-500">
-                          {team.link ? "Se lagets sida och kontakt" : "Information uppdateras inom kort"}
-                        </p>
-                        <div className="mt-6 inline-flex items-center text-sm font-semibold text-emerald-600 transition group-hover:translate-x-1">
-                          Visa detaljer
-                          <ExternalLink className="ml-2 h-4 w-4" />
-                        </div>
+                        {team.displayName ?? team.name}
                       </button>
                     ))}
                   </div>
@@ -414,8 +408,8 @@ export default function LagPage() {
 
           {selectedTeam ? (
             <>
-              <section className="mt-16 space-y-10">
-                <Card className="relative overflow-hidden rounded-4xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-amber-50 px-8 py-12 text-center shadow-xl shadow-emerald-100/70 md:px-14 md:py-16 md:text-left">
+              <section id="team-details" className="mt-14 space-y-8">
+                <Card className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-amber-50 px-6 py-8 text-center shadow-lg shadow-emerald-100/70 md:px-10 md:py-12 md:text-left">
                   <div className="pointer-events-none absolute -top-36 -right-20 h-72 w-72 rounded-full bg-emerald-200/35 blur-3xl" />
                   <div className="pointer-events-none absolute bottom-[-120px] left-[-80px] h-80 w-80 rounded-full bg-orange-200/30 blur-3xl" />
                   <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(34,197,94,0.08),transparent_55%)]" />
@@ -439,8 +433,8 @@ export default function LagPage() {
                   </div>
                 </Card>
 
-                <div className={cn("grid gap-4", showMatchtruppCard ? "md:grid-cols-3" : "md:grid-cols-2")}>
-                  <Card className="relative overflow-hidden rounded-4xl border border-emerald-100/80 bg-gradient-to-br from-emerald-50 via-emerald-100/70 to-white p-6 text-center shadow-md transition hover:-translate-y-1 hover:shadow-xl">
+                <div className={cn("grid gap-2", showMatchtruppCard ? "md:grid-cols-3" : "md:grid-cols-2")}>
+                  <Card className="relative overflow-hidden rounded-xl border border-emerald-100/80 bg-white p-5 text-center shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_0%,rgba(16,185,129,0.25),transparent_55%)]" />
                     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_100%,rgba(250,204,21,0.15),transparent_55%)]" />
                     <div className="relative">
@@ -452,17 +446,17 @@ export default function LagPage() {
                           href={selectedTeam.link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="mt-3 inline-flex items-center justify-center gap-2 rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-600"
+                          className="mt-2 inline-flex items-center justify-center gap-1.5 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-700 transition hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-600"
                         >
                           Öppna laget.se
                           <ExternalLink className="h-4 w-4" />
                         </Link>
                       ) : (
-                        <p className="mt-3 text-sm text-gray-500">Länk kommer snart.</p>
+                        <p className="mt-2 text-xs text-gray-500">Länk kommer snart.</p>
                       )}
                     </div>
                   </Card>
-                  <Card className="relative overflow-hidden rounded-4xl border border-emerald-100/70 bg-gradient-to-br from-white via-emerald-50 to-amber-50 p-6 text-center shadow-md transition hover:-translate-y-1 hover:shadow-xl">
+                  <Card className="relative overflow-hidden rounded-xl border border-emerald-100/70 bg-white p-5 text-center shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(22,163,74,0.22),transparent_55%)]" />
                     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_90%_90%,rgba(249,115,22,0.18),transparent_55%)]" />
                     <div className="relative">
@@ -474,25 +468,25 @@ export default function LagPage() {
                           href={selectedTeam.instagramLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="mt-3 inline-flex items-center justify-center gap-2 rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-600"
+                          className="mt-2 inline-flex items-center justify-center gap-1.5 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-600"
                         >
                           Följ laget
                           <Instagram className="h-4 w-4" />
                         </Link>
                       ) : (
-                        <p className="mt-3 text-sm text-gray-500">Instagram uppdateras snart.</p>
+                        <p className="mt-2 text-xs text-gray-500">Instagram uppdateras snart.</p>
                       )}
                     </div>
                   </Card>
                   {showMatchtruppCard && (
-                    <Card className="relative overflow-hidden rounded-4xl border border-orange-200/80 bg-gradient-to-br from-orange-100 via-white to-amber-100 p-6 text-center shadow-md transition hover:-translate-y-1 hover:shadow-xl">
+                    <Card className="relative overflow-hidden rounded-xl border border-orange-200/80 bg-white p-5 text-center shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(251,146,60,0.25),transparent_55%)]" />
                       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_120%,rgba(234,179,8,0.2),transparent_55%)]" />
                       <div className="relative">
                         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-orange-600">
                           Matchtrupp
                         </p>
-                        <p className="mt-3 text-sm font-semibold text-orange-600">
+                        <p className="mt-2 text-xs font-semibold text-orange-600">
                           Matchtruppen publiceras inom kort.
                         </p>
                       </div>
@@ -500,7 +494,7 @@ export default function LagPage() {
                   )}
                 </div>
 
-                <Card className="overflow-hidden rounded-4xl border border-emerald-100/70 bg-white shadow-2xl shadow-emerald-100/50">
+                <Card className="overflow-hidden rounded-2xl border border-emerald-100/70 bg-white shadow-2xl shadow-emerald-100/50">
                   {hasSelectedTeamHeroImage ? (
                     <div className="relative flex h-[380px] w-full items-center justify-center bg-white md:h-[520px]">
                       <Image
@@ -541,7 +535,7 @@ export default function LagPage() {
                     {selectedTeam.individuals.map((person) => (
                       <Card
                         key={person.name}
-                        className="relative overflow-hidden rounded-3xl border border-emerald-100/60 bg-white shadow-lg transition hover:-translate-y-1 hover:shadow-2xl"
+                        className="relative overflow-hidden rounded-xl border border-emerald-100/60 bg-white shadow-lg transition hover:-translate-y-1 hover:shadow-2xl"
                       >
                         <div
                           className="relative h-80 w-full overflow-hidden bg-white"
@@ -582,7 +576,7 @@ export default function LagPage() {
             </>
           ) : (
             <section className="mt-16">
-              <Card className="rounded-3xl border border-dashed border-gray-200 bg-gray-50 p-10 text-center text-gray-600">
+              <Card className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-10 text-center text-gray-600">
                 Sök efter ett lag för att visa information.
               </Card>
             </section>
