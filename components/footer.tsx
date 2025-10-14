@@ -77,9 +77,9 @@ export default function Footer() {
           </div>
 
           {/* WBY Badge */}
-          <div className="mt-2 md:mt-0">
+          <div className="mt-2 md:mt-0 flex justify-center md:justify-end">
             <Script src="https://badge.wby.se/badge.js" strategy="afterInteractive" />
-            <div data-wby-badge className="flex justify-center md:justify-end" />
+            <div data-wby-badge />
           </div>
         </div>
       </div>
