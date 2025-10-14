@@ -75,22 +75,22 @@ export default function LagPage() {
             <p className="mt-3 text-base text-gray-600 md:text-lg">{lagContent.pageDescription}</p>
           </div>
 
-          <section className="mt-12">
-            <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <section className="mt-12 flex justify-center">
+            <div className="grid w-full max-w-4xl gap-4 sm:grid-cols-3">
               {categoryStats.map((stat) => (
                 <Card
                   key={stat.name}
-                  className="flex h-full flex-col items-center justify-center rounded-xl border border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50 p-5 text-center shadow-sm"
+                  className="flex h-full flex-col items-center justify-center rounded-2xl border border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50 p-6 text-center shadow-sm"
                 >
-                  <p className="text-3xl font-bold text-emerald-700">{stat.count}</p>
-                  <p className="mt-2 text-sm font-semibold text-gray-900">{stat.name}</p>
-                  {stat.description && <p className="mt-1 text-xs text-gray-500">{stat.description}</p>}
+                  <p className="text-4xl font-black text-emerald-700">{stat.count}</p>
+                  <p className="mt-2 text-base font-semibold text-gray-900">{stat.name}</p>
+                  {stat.description && <p className="mt-1 text-sm text-gray-500">{stat.description}</p>}
                 </Card>
               ))}
-              <Card className="flex h-full flex-col items-center justify-center rounded-xl border border-orange-100 bg-gradient-to-br from-white via-white to-orange-50 p-5 text-center shadow-sm">
-                <p className="text-3xl font-bold text-orange-500">{totalTeams}</p>
-                <p className="mt-2 text-sm font-semibold text-gray-900">Totalt antal lag</p>
-                <p className="mt-1 text-xs text-gray-500">Alla lag i föreningen</p>
+              <Card className="flex h-full flex-col items-center justify-center rounded-2xl border border-orange-100 bg-gradient-to-br from-white via-white to-orange-50 p-6 text-center shadow-sm">
+                <p className="text-4xl font-black text-orange-500">{totalTeams}</p>
+                <p className="mt-2 text-base font-semibold text-gray-900">Totalt antal lag</p>
+                <p className="mt-1 text-sm text-gray-500">Alla lag i föreningen</p>
               </Card>
             </div>
           </section>
@@ -123,43 +123,44 @@ export default function LagPage() {
                         key={team.id}
                         className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-emerald-300 hover:shadow-lg"
                       >
-                        <div
-                          className="h-32 w-full bg-gray-200 transition group-hover:scale-[1.02]"
-                          style={{
-                            backgroundImage: `url(${team.heroImage})`,
-                            backgroundSize: "cover",
-                            backgroundPosition: "center",
-                          }}
-                          aria-hidden
-                        />
-                        <div className="px-4 py-3 space-y-2">
+                        <div className="relative h-32 w-full overflow-hidden bg-gray-200">
+                          <div
+                            className="h-full w-full transition group-hover:scale-[1.02]"
+                            style={{
+                              backgroundImage: `url(${team.heroImage})`,
+                              backgroundSize: "cover",
+                              backgroundPosition: "center",
+                            }}
+                            aria-hidden
+                          />
+                          <Link
+                            href={`/lag/${team.id}`}
+                            className="pointer-events-none absolute inset-0 flex items-center justify-center bg-emerald-800/85 opacity-0 transition group-hover:pointer-events-auto group-hover:opacity-100"
+                          >
+                            <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.35em] text-emerald-700 shadow">
+                              Läs mer →
+                            </span>
+                          </Link>
+                        </div>
+                        <div className="px-4 py-4 space-y-3">
                           <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-emerald-600">
                             {team.category}
                           </p>
                           <h3 className="text-sm font-semibold tracking-tight text-gray-900">{team.displayName}</h3>
-                          <div className="flex items-center gap-2">
+                          {team.link ? (
                             <Link
-                              href={`/lag/${team.id}`}
-                              className="inline-flex items-center gap-1 rounded-full border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700 transition hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-600"
+                              href={team.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex w-full items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-emerald-700"
                             >
-                              Läs mer
+                              Till laget.se
                             </Link>
-                            {team.link && (
-                              <Link
-                                href={team.link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 rounded-full border border-orange-200 px-3 py-1 text-xs font-semibold text-orange-600 transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-500"
-                              >
-                                Till laget.se
-                              </Link>
-                            )}
-                          </div>
-                        </div>
-                        <div className="pointer-events-none absolute inset-0 flex items-end justify-end pb-3 pr-4 opacity-0 transition group-hover:opacity-100">
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600/90 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-white shadow">
-                            Läs mer →
-                          </span>
+                          ) : (
+                            <span className="inline-flex w-full items-center justify-center rounded-full border border-dashed border-gray-300 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-gray-400">
+                              Länk kommer snart
+                            </span>
+                          )}
                         </div>
                       </Card>
                     ))}
