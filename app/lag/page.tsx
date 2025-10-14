@@ -75,22 +75,24 @@ export default function LagPage() {
             <p className="mt-3 text-base text-gray-600 md:text-lg">{lagContent.pageDescription}</p>
           </div>
 
-          <section className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {categoryStats.map((stat) => (
-              <Card
-                key={stat.name}
-                className="flex h-full flex-col items-center justify-center rounded-xl border border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50 p-5 text-center shadow-sm"
-              >
-                <p className="text-3xl font-bold text-emerald-700">{stat.count}</p>
-                <p className="mt-2 text-sm font-semibold text-gray-900">{stat.name}</p>
-                {stat.description && <p className="mt-1 text-xs text-gray-500">{stat.description}</p>}
+          <section className="mt-12">
+            <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {categoryStats.map((stat) => (
+                <Card
+                  key={stat.name}
+                  className="flex h-full flex-col items-center justify-center rounded-xl border border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50 p-5 text-center shadow-sm"
+                >
+                  <p className="text-3xl font-bold text-emerald-700">{stat.count}</p>
+                  <p className="mt-2 text-sm font-semibold text-gray-900">{stat.name}</p>
+                  {stat.description && <p className="mt-1 text-xs text-gray-500">{stat.description}</p>}
+                </Card>
+              ))}
+              <Card className="flex h-full flex-col items-center justify-center rounded-xl border border-orange-100 bg-gradient-to-br from-white via-white to-orange-50 p-5 text-center shadow-sm">
+                <p className="text-3xl font-bold text-orange-500">{totalTeams}</p>
+                <p className="mt-2 text-sm font-semibold text-gray-900">Totalt antal lag</p>
+                <p className="mt-1 text-xs text-gray-500">Alla lag i föreningen</p>
               </Card>
-            ))}
-            <Card className="flex h-full flex-col items-center justify-center rounded-xl border border-orange-100 bg-gradient-to-br from-white via-white to-orange-50 p-5 text-center shadow-sm">
-              <p className="text-3xl font-bold text-orange-500">{totalTeams}</p>
-              <p className="mt-2 text-sm font-semibold text-gray-900">Totalt antal lag</p>
-              <p className="mt-1 text-xs text-gray-500">Alla lag i föreningen</p>
-            </Card>
+            </div>
           </section>
 
           <section className="mt-12 space-y-8">
@@ -117,28 +119,49 @@ export default function LagPage() {
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
                     {categoryTeams.map((team) => (
-                      <Link key={team.id} href={`/lag/${team.id}`}>
-                        <Card className="group overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-emerald-300 hover:shadow-lg">
-                          <div
-                            className="h-32 w-full bg-gray-200 transition group-hover:scale-[1.02]"
-                            style={{
-                              backgroundImage: `url(${team.heroImage})`,
-                              backgroundSize: "cover",
-                              backgroundPosition: "center",
-                            }}
-                            aria-hidden
-                          />
-                          <div className="px-4 py-3">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-emerald-600">
-                              {team.category}
-                            </p>
-                            <h3 className="mt-2 text-sm font-semibold tracking-tight text-gray-900">
-                              {team.displayName}
-                            </h3>
-                            <p className="mt-1 text-xs text-gray-500">Öppna lagprofilen</p>
+                      <Card
+                        key={team.id}
+                        className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-emerald-300 hover:shadow-lg"
+                      >
+                        <div
+                          className="h-32 w-full bg-gray-200 transition group-hover:scale-[1.02]"
+                          style={{
+                            backgroundImage: `url(${team.heroImage})`,
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                          }}
+                          aria-hidden
+                        />
+                        <div className="px-4 py-3 space-y-2">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-emerald-600">
+                            {team.category}
+                          </p>
+                          <h3 className="text-sm font-semibold tracking-tight text-gray-900">{team.displayName}</h3>
+                          <div className="flex items-center gap-2">
+                            <Link
+                              href={`/lag/${team.id}`}
+                              className="inline-flex items-center gap-1 rounded-full border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700 transition hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-600"
+                            >
+                              Läs mer
+                            </Link>
+                            {team.link && (
+                              <Link
+                                href={team.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 rounded-full border border-orange-200 px-3 py-1 text-xs font-semibold text-orange-600 transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-500"
+                              >
+                                Till laget.se
+                              </Link>
+                            )}
                           </div>
-                        </Card>
-                      </Link>
+                        </div>
+                        <div className="pointer-events-none absolute inset-0 flex items-end justify-end pb-3 pr-4 opacity-0 transition group-hover:opacity-100">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600/90 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-white shadow">
+                            Läs mer →
+                          </span>
+                        </div>
+                      </Card>
                     ))}
                   </div>
                 </div>
