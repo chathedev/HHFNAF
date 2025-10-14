@@ -1,4 +1,3 @@
-import Image from "next/image"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
@@ -70,14 +69,14 @@ export default function TeamPage({ params }: TeamPageProps) {
       <main className="flex-1 bg-white">
         <div className="h-24" />
         <div className="min-h-[70vh]">
-          <section className="relative h-[55vh] overflow-hidden rounded-b-[2rem] bg-gray-900">
-            <Image
-              src={team.heroImage}
-              alt={team.heroImageAlt}
-              fill
-              className="object-cover"
-              priority
-            />
+          <section
+            className="relative h-[55vh] overflow-hidden rounded-b-[2rem] bg-gray-900"
+            style={{
+              backgroundImage: `url(${team.heroImage})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          >
             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70" />
             <div className="relative mx-auto flex h-full max-w-5xl flex-col justify-end px-4 pb-16 text-white md:px-6">
               <Link href="/lag" className="w-fit rounded-full border border-white/40 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.35em] text-white/80 transition hover:border-white">
@@ -148,16 +147,17 @@ export default function TeamPage({ params }: TeamPageProps) {
               </div>
 
               <Card className="overflow-hidden rounded-2xl border border-emerald-100/70 bg-white shadow-lg shadow-emerald-50">
-                <div className="relative flex h-[420px] w-full items-center justify-center bg-white md:h-[520px]">
-                  <Image
-                    src={team.heroImage}
-                    alt={team.heroImageAlt}
-                    fill
-                    className="object-contain"
-                    style={{ borderRadius: "inherit", padding: "1.5rem" }}
-                    sizes="(min-width: 1024px) 1000px, 100vw"
-                  />
-                </div>
+                <div
+                  className="h-[420px] w-full rounded-2xl bg-gray-200 md:h-[520px]"
+                  style={{
+                    backgroundImage: `url(${team.heroImage})`,
+                    backgroundSize: "contain",
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "center",
+                  }}
+                  role="img"
+                  aria-label={team.heroImageAlt}
+                />
               </Card>
             </div>
           </div>

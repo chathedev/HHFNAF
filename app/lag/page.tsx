@@ -3,6 +3,13 @@ import Link from "next/link"
 import lagContent from "@/public/content/lag.json"
 import Footer from "@/components/footer"
 import { Header } from "@/components/header"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 
 type RawTeam = (typeof lagContent)["teamCategories"][number]["teams"][number]
