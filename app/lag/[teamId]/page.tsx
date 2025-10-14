@@ -77,7 +77,7 @@ export default function TeamPage({ params }: TeamPageProps) {
     <>
       <Header />
       <main className="flex-1 bg-white">
-        <div className="h-12" />
+        <div className="h-6" />
 
         <section className="relative overflow-hidden rounded-b-[3rem] bg-gradient-to-br from-emerald-600 via-emerald-500 to-orange-400">
           <div className="pointer-events-none absolute -left-36 top-8 h-72 w-72 rounded-full bg-white/15 blur-3xl" />
@@ -85,7 +85,7 @@ export default function TeamPage({ params }: TeamPageProps) {
           <div className="relative mx-auto flex max-w-4xl flex-col items-center px-4 py-20 text-center text-white md:px-6 md:py-24">
             <Link
               href="/lag"
-              className="mb-6 inline-flex items-center gap-1.5 rounded-full border border-white/40 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/80 transition hover:border-white"
+              className="mb-6 inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.35em] text-emerald-600 shadow transition hover:bg-emerald-50"
             >
               Tillbaka till alla lag
             </Link>
