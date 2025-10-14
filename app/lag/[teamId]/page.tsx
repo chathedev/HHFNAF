@@ -3,7 +3,6 @@ import { notFound } from "next/navigation"
 
 import lagContent from "@/public/content/lag.json"
 import Footer from "@/components/footer"
-import { Header } from "@/components/header"
 import { Card } from "@/components/ui/card"
 
 type RawTeam = (typeof lagContent)["teamCategories"][number]["teams"][number]
@@ -75,9 +74,7 @@ export default function TeamPage({ params }: TeamPageProps) {
 
   return (
     <>
-      <Header />
       <main className="flex-1 bg-white">
-        <div className="h-6" />
 
         <section className="relative overflow-hidden rounded-b-[3rem] bg-gradient-to-br from-emerald-600 via-emerald-500 to-orange-400">
           <div className="pointer-events-none absolute -left-36 top-8 h-72 w-72 rounded-full bg-white/15 blur-3xl" />
