@@ -1,55 +1,13 @@
-"use client"
-
-import { useEffect, useMemo, useState } from "react"
-import Image from "next/image"
 import Link from "next/link"
-import { ExternalLink, Instagram } from "lucide-react"
 
+import lagContent from "@/../public/content/lag.json"
 import Footer from "@/components/footer"
 import { Header } from "@/components/header"
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
-import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { cn } from "@/lib/utils"
 
-type Individual = {
-  name: string
-  role?: string
-  image?: string
-}
-
-type RawTeam = {
-  name: string
-  displayName?: string
-  link?: string
-  instagramLink?: string
-  heroImage?: string
-  heroImageAlt?: string
-  description?: string
-  individuals?: Individual[]
-  [key: string]: unknown
-}
-
-type Team = {
-  id: string
-  name: string
-  displayName?: string
-  category: string
-  link?: string
-  instagramLink?: string
-  heroImage?: string
-  heroImageAlt?: string
-  description?: string
-  individuals: Individual[]
-}
+type RawTeam = (typeof lagContent)["teamCategories"][number]["teams"][number]
 
 const PLACEHOLDER_HERO = "/placeholder.jpg"
-const PLACEHOLDER_INDIVIDUAL = "/placeholder-user.jpg"
 
 const slugify = (value: string) =>
   value
@@ -59,314 +17,72 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "")
 
-const getTeamDescription = (team: RawTeam) => {
-  if (typeof team.description === "string" && team.description.trim().length > 0) {
-    return team.description
-  }
+const teams = lagContent.teamCategories.flatMap((category) =>
+  (category.teams ?? []).map((team: RawTeam) => ({
+    id: typeof team.id === "string" && team.id.trim().length > 0 ? team.id : slugify(team.name),
+    category: category.name,
+    displayName:
+      typeof team.displayName === "string" && team.displayName.trim().length > 0
+        ? team.displayName
+        : team.name,
+    name: team.name,
+    link: team.link,
+    heroImage: team.heroImage || PLACEHOLDER_HERO,
+    heroImageAlt: team.heroImageAlt || `Lagbild ${team.name}`,
+  })),
+)
 
-  return ""
-}
+const categoryStats = lagContent.teamCategories.map((category) => ({
+  name: category.name,
+  count:
+    typeof category.count === "number"
+      ? category.count
+      : Array.isArray(category.teams)
+      ? category.teams.length
+      : 0,
+  description: category.description,
+}))
 
-const getDefaultContent = () => ({
-  pageTitle: "VÅRA LAG",
-  pageDescription:
-    "Härnösands HF har 23 lag från ungdom till seniorer. Klicka på ett lag för att besöka deras officiella sida.",
-  teamCategories: [
-    {
-      name: "A-lag",
-      count: 2,
-      description: "2 lag i kategorin",
-      teams: [
-        {
-          name: "Dam/utv",
-          link: "https://www.laget.se/HHK-dam-utv",
-          instagramLink: "https://www.instagram.com/harnosandshfdam/",
-        },
-        {
-          name: "A-lag Herrar",
-          link: "https://www.laget.se/HarnosandsHFHerr",
-          instagramLink: "https://www.instagram.com/harnosandshfherr/",
-        },
-      ],
-    },
-    {
-      name: "Ungdomslag",
-      count: 21,
-      description: "21 lag i kategorin",
-      teams: [
-        {
-          name: "Fritids-Teknikskola",
-          link: "https://www.laget.se/HarnosandsHK-Fritids-Teknikskola",
-        },
-        {
-          name: "Flickor 16 (F08/09)",
-          link: "https://www.laget.se/HHK-Flickor16",
-        },
-        {
-          name: "F-10",
-          link: "https://www.laget.se/HHK-F10",
-          instagramLink: "https://www.instagram.com/harnosandhff10/",
-        },
-        {
-          name: "F-11",
-          link: "https://www.laget.se/HHK-F11",
-        },
-        {
-          name: "F-12",
-          link: "https://www.laget.se/HHK-F12",
-        },
-        {
-          name: "F-13",
-          link: "https://www.laget.se/HHF-F13",
-        },
-        {
-          name: "F-14",
-          link: "https://www.laget.se/HHK-F14",
-        },
-        {
-          name: "F-15",
-          link: "https://www.laget.se/HarnosandsHK-F-15",
-        },
-        {
-          name: "F-16",
-          link: "https://www.laget.se/HarnosandsHK-F-16",
-        },
-        {
-          name: "F-17",
-          link: "https://www.laget.se/HarnosandsHK-F-17",
-        },
-        {
-          name: "F-18",
-          link: "https://www.laget.se/HarnosandsHF-F-18",
-        },
-        {
-          name: "Pojkar 16 (P08/09)",
-          link: "https://www.laget.se/HarnosandsHFP09",
-        },
-        {
-          name: "P16 (09/10)",
-          link: "https://www.laget.se/HarnosandsHFP16",
-          instagramLink: "https://www.instagram.com/harnosandshfp16",
-        },
-        {
-          name: "P-11",
-          link: "https://www.laget.se/HHFP11",
-          instagramLink: "https://www.instagram.com/harnosandshf_p11/",
-        },
-        {
-          name: "P-12",
-          link: "https://www.laget.se/HarnosandsHFP2012",
-        },
-        {
-          name: "P-13",
-          link: "https://www.laget.se/HHF2013",
-        },
-        {
-          name: "P-14",
-          link: "https://www.laget.se/HarnosandsHK-P-14",
-        },
-        {
-          name: "P-15",
-          link: "https://www.laget.se/HarnosandsHFP2015",
-        },
-        {
-          name: "P-16",
-          link: "https://www.laget.se/HarnosandsHFP2016",
-        },
-        {
-          name: "P-17",
-          link: "https://www.laget.se/HarnosandsHFP2017",
-        },
-        {
-          name: "P-18",
-          link: "https://www.laget.se/HarnosandsHF-P-18",
-        },
-      ],
-    },
-  ],
-  faq: [
-    {
-      question: "Hur börjar jag spela handboll i Härnösands HF?",
-      answer:
-        "Det enklaste sättet att börja är att kontakta oss! Vi hjälper dig att hitta rätt lag baserat på din ålder och erfarenhet. Du kan fylla i vårt kontaktformulär eller skicka ett mejl direkt till oss.",
-    },
-    {
-      question: "Vilken utrustning behöver jag?",
-      answer:
-        "Till en början behöver du bara bekväma träningskläder, inomhusskor och en vattenflaska. Handbollar finns att låna under träningarna. När du väl bestämmer dig för att fortsätta kan du behöva klubbkläder.",
-    },
-    {
-      question: "Finns det provträningar?",
-      answer:
-        "Absolut! Vi erbjuder alltid några kostnadsfria provträningar så att du kan känna efter om handboll är något för dig. Detta ger dig en chans att träffa laget och tränarna innan du bestämmer dig.",
-    },
-    {
-      question: "Hur anmäler jag mig?",
-      answer:
-        "Efter dina provträningar får du information om hur du enkelt anmäler dig och blir en fullvärdig medlem i Härnösands HF. Vi ser fram emot att välkomna dig till vår handbollsfamilj!",
-    },
-  ],
-})
+const totalTeams = categoryStats.reduce((sum, category) => sum + category.count, 0)
 
 export default function LagPage() {
-  const [content, setContent] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null)
-
-  useEffect(() => {
-    const loadContent = async () => {
-      try {
-        const response = await fetch("/content/lag.json", { cache: "no-store" })
-        if (response.ok) {
-          const data = await response.json()
-          setContent(data)
-        } else {
-          setContent(getDefaultContent())
-        }
-      } catch (error) {
-        console.error("Failed to load content:", error)
-        setContent(getDefaultContent())
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadContent()
-
-  }, [])
-
-  const categoryStats = useMemo(() => {
-    if (!content?.teamCategories) {
-      return []
-    }
-
-    return content.teamCategories.map((category: any) => ({
-      name: category.name,
-      count:
-        typeof category.count === "number"
-          ? category.count
-          : Array.isArray(category.teams)
-            ? category.teams.length
-            : 0,
-      description: category.description,
-    }))
-  }, [content])
-
-  const totalTeams = useMemo(
-    () => categoryStats.reduce((sum, stat) => sum + (stat.count ?? 0), 0),
-    [categoryStats],
-  )
-
-  const teams = useMemo(() => {
-    if (!content?.teamCategories) {
-      return [] as Team[]
-    }
-
-    return content.teamCategories.flatMap((category: any) =>
-      (category.teams ?? []).map((team: RawTeam) => ({
-        id: typeof team.id === "string" && team.id.trim().length > 0 ? team.id : slugify(team.name),
-        name: team.name,
-        displayName: typeof team.displayName === "string" && team.displayName.trim().length > 0 ? team.displayName : undefined,
-        category: category.name,
-        link: team.link,
-        instagramLink: team.instagramLink,
-        heroImage: team.heroImage,
-        heroImageAlt: team.heroImageAlt,
-        description: getTeamDescription(team),
-        individuals: Array.isArray(team.individuals) ? team.individuals : [],
-      })),
-    )
-  }, [content])
-
-  const selectedTeam = useMemo(
-    () => teams.find((team) => team.id === selectedTeamId),
-    [teams, selectedTeamId],
-  )
-
-  const hasSelectedTeamHeroImage = Boolean(
-    selectedTeam?.heroImage && selectedTeam.heroImage !== PLACEHOLDER_HERO,
-  )
-
-  const selectedTeamHasRoster = Boolean(selectedTeam?.individuals && selectedTeam.individuals.length > 0)
-  const showMatchtruppCard = Boolean(selectedTeam && !selectedTeamHasRoster && !hasSelectedTeamHeroImage)
-  const showMatchtruppBadge = Boolean(selectedTeam && !selectedTeamHasRoster && !hasSelectedTeamHeroImage)
-
-  const handleTeamSelect = (teamId: string) => {
-    setSelectedTeamId(teamId)
-  }
-
-  if (loading) {
-    return (
-      <>
-        <Header />
-        <main className="flex-1 bg-white">
-          <div className="h-24" />
-          <div className="container px-4 md:px-6 py-16">
-            <div className="flex items-center justify-center py-16">
-              <p className="text-gray-600">Laddar lag...</p>
-            </div>
-          </div>
-        </main>
-        <Footer />
-      </>
-    )
-  }
-
-  if (!content) {
-    return (
-      <>
-        <Header />
-        <main className="flex-1 bg-white">
-          <div className="h-24" />
-          <div className="container px-4 md:px-6 py-16">
-            <div className="flex items-center justify-center py-16">
-              <p className="text-red-600">Kunde inte ladda lag. Försök igen senare.</p>
-            </div>
-          </div>
-        </main>
-        <Footer />
-      </>
-    )
-  }
-
   return (
     <>
       <Header />
       <main className="flex-1 bg-white">
         <div className="h-24" />
         <div className="container px-4 md:px-6 py-8 md:py-12 lg:py-16">
-          <div className="mx-auto max-w-4xl text-center">
-            <h1 className="text-5xl font-bold text-green-700 mb-4">{content.pageTitle}</h1>
-            <p className="text-lg text-gray-700">{content.pageDescription}</p>
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.45em] text-emerald-600">
+              Härnösands HF
+            </p>
+            <h1 className="mt-3 text-4xl font-black text-gray-900 md:text-5xl">{lagContent.pageTitle}</h1>
+            <p className="mt-3 text-base text-gray-600 md:text-lg">{lagContent.pageDescription}</p>
           </div>
 
-          <section className="mt-12 mx-auto grid w-full max-w-4xl gap-4 sm:grid-cols-3 text-center">
+          <section className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {categoryStats.map((stat) => (
               <Card
                 key={stat.name}
-                className="flex h-full w-full flex-col items-center justify-center rounded-2xl border border-green-100 bg-gradient-to-br from-white via-white to-green-50 p-6 shadow-sm"
+                className="flex h-full flex-col items-center justify-center rounded-xl border border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50 p-5 text-center shadow-sm"
               >
-                <p className="text-3xl font-bold text-green-700">{stat.count}</p>
-                <p className="mt-2 text-base font-semibold text-gray-900">{stat.name}</p>
+                <p className="text-3xl font-bold text-emerald-700">{stat.count}</p>
+                <p className="mt-2 text-sm font-semibold text-gray-900">{stat.name}</p>
+                {stat.description && <p className="mt-1 text-xs text-gray-500">{stat.description}</p>}
               </Card>
             ))}
-            <Card className="flex h-full w-full flex-col items-center justify-center rounded-2xl border border-green-100 bg-gradient-to-br from-white via-white to-orange-50 p-6 shadow-sm">
+            <Card className="flex h-full flex-col items-center justify-center rounded-xl border border-orange-100 bg-gradient-to-br from-white via-white to-orange-50 p-5 text-center shadow-sm">
               <p className="text-3xl font-bold text-orange-500">{totalTeams}</p>
-              <p className="mt-2 text-base font-semibold text-gray-900">Totalt antal lag</p>
+              <p className="mt-2 text-sm font-semibold text-gray-900">Totalt antal lag</p>
+              <p className="mt-1 text-xs text-gray-500">Alla lag i föreningen</p>
             </Card>
           </section>
 
           <section className="mt-12 space-y-8">
-            {content.teamCategories.map((category: any) => {
+            {lagContent.teamCategories.map((category) => {
               const categoryTeams = teams.filter((team) => team.category === category.name)
               if (categoryTeams.length === 0) {
                 return null
-              }
-
-              const handleCategorySelect = (teamId: string) => {
-                handleTeamSelect(teamId)
-                const details = document.getElementById("team-details")
-                details?.scrollIntoView({ behavior: "smooth", block: "start" })
               }
 
               return (
@@ -386,19 +102,16 @@ export default function LagPage() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {categoryTeams.map((team) => (
-                      <button
+                      <Link
                         key={team.id}
-                        type="button"
-                        onClick={() => handleCategorySelect(team.id)}
+                        href={`/lag/${team.id}`}
                         className={cn(
-                          "rounded-full border px-3 py-1.5 text-left text-xs font-semibold tracking-[0.15em] transition",
-                          selectedTeamId === team.id
-                            ? "border-emerald-500 bg-emerald-50 text-emerald-800 shadow-sm"
-                            : "border-gray-200 bg-white text-gray-700 hover:border-emerald-300 hover:text-emerald-700",
+                          "rounded-full border px-3 py-1.5 text-xs font-semibold tracking-[0.15em] transition",
+                          "border-gray-200 bg-white text-gray-700 hover:border-emerald-300 hover:text-emerald-700",
                         )}
                       >
-                        {team.displayName ?? team.name}
-                      </button>
+                        {team.displayName}
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -406,202 +119,27 @@ export default function LagPage() {
             })}
           </section>
 
-          {selectedTeam ? (
-            <>
-              <section id="team-details" className="mt-14 space-y-8">
-                <Card className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-amber-50 px-6 py-8 text-center shadow-lg shadow-emerald-100/70 md:px-10 md:py-12 md:text-left">
-                  <div className="pointer-events-none absolute -top-36 -right-20 h-72 w-72 rounded-full bg-emerald-200/35 blur-3xl" />
-                  <div className="pointer-events-none absolute bottom-[-120px] left-[-80px] h-80 w-80 rounded-full bg-orange-200/30 blur-3xl" />
-                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(34,197,94,0.08),transparent_55%)]" />
-                  <div className="relative flex flex-col items-center gap-4 md:items-start">
-                    <span className="inline-flex items-center rounded-full border border-green-200 bg-white/80 px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-green-700 shadow-sm backdrop-blur">
-                      {selectedTeam.category}
-                    </span>
-                    <h2 className="text-4xl font-black tracking-tight text-gray-900 drop-shadow-sm md:text-5xl lg:text-6xl">
-                      {selectedTeam.displayName ?? selectedTeam.name}
-                    </h2>
-                    {selectedTeam.description && (
-                      <p className="max-w-2xl text-base leading-relaxed text-gray-600 md:text-lg">
-                        {selectedTeam.description}
-                      </p>
-                    )}
-                    {showMatchtruppBadge && (
-                      <span className="inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-orange-500 to-pink-500 px-5 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-white shadow-lg shadow-orange-200/60">
-                        Matchtrupp uppdateras snart
-                      </span>
-                    )}
-                  </div>
-                </Card>
-
-                <div className={cn("grid gap-2", showMatchtruppCard ? "md:grid-cols-3" : "md:grid-cols-2")}>
-                  <Card className="relative overflow-hidden rounded-xl border border-emerald-100/80 bg-white p-5 text-center shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_0%,rgba(16,185,129,0.25),transparent_55%)]" />
-                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_100%,rgba(250,204,21,0.15),transparent_55%)]" />
-                    <div className="relative">
-                      <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-700">
-                        Laget.se
-                      </p>
-                      {selectedTeam.link ? (
-                        <Link
-                          href={selectedTeam.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-2 inline-flex items-center justify-center gap-1.5 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-700 transition hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-600"
-                        >
-                          Öppna laget.se
-                          <ExternalLink className="h-4 w-4" />
-                        </Link>
-                      ) : (
-                        <p className="mt-2 text-xs text-gray-500">Länk kommer snart.</p>
-                      )}
-                    </div>
-                  </Card>
-                  <Card className="relative overflow-hidden rounded-xl border border-emerald-100/70 bg-white p-5 text-center shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(22,163,74,0.22),transparent_55%)]" />
-                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_90%_90%,rgba(249,115,22,0.18),transparent_55%)]" />
-                    <div className="relative">
-                      <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-700">
-                        Instagram
-                      </p>
-                      {selectedTeam.instagramLink ? (
-                        <Link
-                          href={selectedTeam.instagramLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-2 inline-flex items-center justify-center gap-1.5 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-600"
-                        >
-                          Följ laget
-                          <Instagram className="h-4 w-4" />
-                        </Link>
-                      ) : (
-                        <p className="mt-2 text-xs text-gray-500">Instagram uppdateras snart.</p>
-                      )}
-                    </div>
-                  </Card>
-                  {showMatchtruppCard && (
-                    <Card className="relative overflow-hidden rounded-xl border border-orange-200/80 bg-white p-5 text-center shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(251,146,60,0.25),transparent_55%)]" />
-                      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_120%,rgba(234,179,8,0.2),transparent_55%)]" />
-                      <div className="relative">
-                        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-orange-600">
-                          Matchtrupp
-                        </p>
-                        <p className="mt-2 text-xs font-semibold text-orange-600">
-                          Matchtruppen publiceras inom kort.
-                        </p>
-                      </div>
-                    </Card>
-                  )}
-                </div>
-
-                <Card className="overflow-hidden rounded-2xl border border-emerald-100/70 bg-white shadow-2xl shadow-emerald-100/50">
-                  {hasSelectedTeamHeroImage ? (
-                    <div className="relative flex h-[380px] w-full items-center justify-center bg-white md:h-[520px]">
-                      <Image
-                        src={selectedTeam.heroImage as string}
-                        alt={selectedTeam.heroImageAlt || `Lagbild ${selectedTeam.name}`}
-                        fill
-                        className="object-contain select-none"
-                        style={{ borderRadius: "inherit", padding: "1.25rem" }}
-                        draggable={false}
-                        onContextMenu={(event) => event.preventDefault()}
-                        onDragStart={(event) => event.preventDefault()}
-                        sizes="(min-width: 1024px) 1000px, 100vw"
-                        priority
-                      />
-                    </div>
-                  ) : (
-                    <div className="flex h-[300px] w-full items-center justify-center bg-gray-50 text-sm font-semibold text-gray-500 md:h-[380px]">
-                      Lagfoto kommer snart
-                    </div>
-                  )}
-                </Card>
-              </section>
-
-              <section className="mt-16">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-2xl font-semibold text-gray-900">Spelartrupp</h3>
-                  </div>
-                  {(!selectedTeam.individuals || selectedTeam.individuals.length === 0) && (
-                    <span className="inline-flex items-center rounded-full bg-orange-100 px-4 py-1 text-sm font-semibold text-orange-600">
-                      Kommer snart
-                    </span>
-                  )}
-                </div>
-
-                {selectedTeam.individuals && selectedTeam.individuals.length > 0 ? (
-                  <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {selectedTeam.individuals.map((person) => (
-                      <Card
-                        key={person.name}
-                        className="relative overflow-hidden rounded-xl border border-emerald-100/60 bg-white shadow-lg transition hover:-translate-y-1 hover:shadow-2xl"
-                      >
-                        <div
-                          className="relative h-80 w-full overflow-hidden bg-white"
-                          style={{ borderTopLeftRadius: "inherit", borderTopRightRadius: "inherit" }}
-                        >
-                          <Image
-                            src={person.image || PLACEHOLDER_INDIVIDUAL}
-                            alt={person.image ? `${person.name}` : `Bild på ${person.name} kommer snart`}
-                            fill
-                            className="object-contain select-none"
-                            style={{ borderRadius: "inherit" }}
-                            draggable={false}
-                            onContextMenu={(event) => event.preventDefault()}
-                            onDragStart={(event) => event.preventDefault()}
-                            sizes="(min-width: 1280px) 300px, (min-width: 768px) 240px, 100vw"
-                          />
-                        </div>
-                        <div className="space-y-1 px-6 pb-6 pt-4 text-center">
-                          <p className="text-lg font-semibold tracking-tight text-gray-900">{person.name}</p>
-                          {person.role && (
-                            <p className="text-xs uppercase tracking-[0.3em] text-emerald-700">
-                              {person.role}
-                            </p>
-                          )}
-                          {!person.image && (
-                            <p className="mt-3 text-xs text-gray-500">Bild publiceras snart.</p>
-                          )}
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <Card className="mt-8 border-2 border-dashed border-gray-200 bg-gray-50 p-10 text-center text-gray-600">
-                    Spelartruppen kommer snart.
-                  </Card>
-                )}
-              </section>
-            </>
-          ) : (
-            <section className="mt-16">
-              <Card className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-10 text-center text-gray-600">
-                Sök efter ett lag för att visa information.
-              </Card>
-            </section>
-          )}
-
-          <section className="mt-20">
-            <div className="mx-auto max-w-4xl rounded-3xl bg-white p-8 shadow-lg shadow-green-50">
-              <h2 className="text-3xl font-bold text-green-700 text-center mb-8">
-                Vanliga frågor om att börja träna
-              </h2>
-              <Accordion type="single" collapsible className="w-full">
-                {content.faq.map((faqItem: any, index: number) => (
-                  <AccordionItem key={faqItem.question} value={`item-${index + 1}`}>
-                    <AccordionTrigger className="text-lg font-semibold text-gray-800 hover:no-underline">
+          <section className="mt-16">
+            <div className="mx-auto max-w-4xl rounded-2xl bg-white p-8 text-gray-700 shadow-lg shadow-emerald-50 md:p-10">
+              <h2 className="text-center text-3xl font-bold text-emerald-700">Vanliga frågor om att börja träna</h2>
+              <p className="mt-2 text-center text-sm text-gray-500">
+                Här hittar du svar på de vanligaste frågorna från nya spelare och vårdnadshavare.
+              </p>
+              <Accordion type="single" collapsible className="mt-6 w-full">
+                {lagContent.faq.map((faqItem, index) => (
+                  <AccordionItem key={faqItem.question} value={`faq-${index}`}>
+                    <AccordionTrigger className="text-left text-base font-semibold text-gray-900">
                       {faqItem.question}
                     </AccordionTrigger>
-                    <AccordionContent className="text-gray-700 text-base">
+                    <AccordionContent className="text-sm text-gray-600">
                       {faqItem.answer}
                       {faqItem.question.includes("anmäler") && (
-                        <Link href="/kontakt" className="text-orange-500 hover:underline ml-2">
+                        <Link href="/kontakt" className="ml-2 text-orange-500 hover:underline">
                           Anmäl dig via kontaktformuläret.
                         </Link>
                       )}
                       {faqItem.question.includes("börjar") && (
-                        <Link href="/kontakt" className="text-orange-500 hover:underline ml-2">
+                        <Link href="/kontakt" className="ml-2 text-orange-500 hover:underline">
                           Kontakta oss här.
                         </Link>
                       )}
@@ -609,12 +147,12 @@ export default function LagPage() {
                   </AccordionItem>
                 ))}
               </Accordion>
-              <div className="text-center mt-8">
+              <div className="mt-8 text-center">
                 <Button
                   asChild
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-full text-lg font-semibold transition-colors"
+                  className="rounded-full bg-orange-500 px-8 py-3 text-sm font-semibold text-white transition hover:bg-orange-600"
                 >
-                  <Link href="/kontakt">Kontakta oss för mer information</Link>
+                  <Link href="/kontakt">Kontakta oss</Link>
                 </Button>
               </div>
             </div>
