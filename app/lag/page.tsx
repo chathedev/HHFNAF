@@ -118,14 +118,15 @@ export default function LagPage() {
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
                     {categoryTeams.map((team) => (
                       <Link key={team.id} href={`/lag/${team.id}`}>
-                        <Card className="group overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-emerald-300 hover:shadow-lg">
+                        <Card className="group overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-emerald-300 hover:shadow-lg">
                           <div
-                            className="h-24 w-full bg-gray-200 transition group-hover:scale-[1.02]"
+                            className="h-32 w-full bg-gray-200 transition group-hover:scale-[1.02]"
                             style={{
                               backgroundImage: `url(${team.heroImage})`,
                               backgroundSize: "cover",
                               backgroundPosition: "center",
                             }}
+                            aria-hidden
                           />
                           <div className="px-4 py-3">
                             <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-emerald-600">
