@@ -88,7 +88,22 @@ body {
   * {
     @apply border-border;
   }
-  body {
+body {
     @apply bg-background text-foreground;
   }
+}
+
+[data-wby-badge] .wby-badge,
+[data-wby-badge] .wby-badge-container,
+[data-wby-badge] .wby-badge-wrapper {
+  position: static !important;
+  inset: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+}
+
+[data-wby-badge] .wby-badge,
+[data-wby-badge] .wby-badge-container,
+[data-wby-badge] .wby-badge-wrapper {
+  margin: 0 auto !important;
 }
