@@ -140,30 +140,25 @@ export default function TeamPage({ params }: TeamPageProps) {
                 </Card>
 
                 <Card className="rounded-xl border border-orange-200/80 bg-white p-5 text-center shadow-sm">
-                  <p className="text-sm font-semibold uppercase tracking-[0.3em] text-orange-600">
-                    Kontakt
-                  </p>
-                  <Link
-                    href="/kontakt"
-                    className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full border border-orange-200 bg-white px-3 py-1 text-xs font-semibold text-orange-600 transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-500"
-                  >
-                    Kontakta föreningen
-                  </Link>
-                </Card>
-              </div>
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-orange-600">
+                Kontakt
+              </p>
+              <Link
+                href="/kontakt"
+                className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full border border-orange-200 bg-white px-3 py-1 text-xs font-semibold text-orange-600 transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-500"
+              >
+                Kontakta föreningen
+              </Link>
+            </Card>
+          </div>
 
-              <Card className="overflow-hidden rounded-2xl border border-emerald-100/70 bg-white shadow-lg shadow-emerald-50">
-                <div
-                  className="h-[420px] w-full rounded-2xl bg-gray-200 md:h-[520px]"
-                  style={{
-                    backgroundImage: `url(${team.heroImage})`,
-                    backgroundSize: "contain",
-                    backgroundRepeat: "no-repeat",
-                    backgroundPosition: "center",
-                  }}
-                  role="img"
-                  aria-label={team.heroImageAlt}
-                />
+              <Card className="rounded-2xl border border-emerald-100/70 bg-white p-6 shadow-lg shadow-emerald-50 md:p-8">
+                <h2 className="text-xl font-semibold text-gray-900 md:text-2xl">Om {team.displayName}</h2>
+                <p className="mt-3 text-sm leading-relaxed text-gray-600 md:text-base">
+                  {team.description && team.description.trim().length > 0
+                    ? team.description
+                    : "Detta lag representerar Härnösands HF med stolthet. Uppdateringar kring trupp och verksamhet kommer löpande på laget.se och via våra sociala kanaler."}
+                </p>
               </Card>
             </div>
           </div>
