@@ -24,6 +24,14 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "")
 
+const encodeAssetPath = (path: string) => {
+  if (!path) {
+    return PLACEHOLDER_HERO
+  }
+  const segments = path.split("/").map((segment, index) => (index === 0 ? segment : encodeURIComponent(segment)))
+  return segments.join("/")
+}
+
 const teams = lagContent.teamCategories.flatMap((category) =>
   (category.teams ?? []).map((team: RawTeam) => ({
     id: typeof team.id === "string" && team.id.trim().length > 0 ? team.id : slugify(team.name),
@@ -34,7 +42,7 @@ const teams = lagContent.teamCategories.flatMap((category) =>
         : team.name,
     name: team.name,
     link: team.link,
-    heroImage: team.heroImage || PLACEHOLDER_HERO,
+    heroImage: encodeAssetPath(team.heroImage || PLACEHOLDER_HERO),
     heroImageAlt: team.heroImageAlt || `Lagbild ${team.name}`,
   })),
 )
@@ -107,14 +115,28 @@ export default function LagPage() {
                       <p className="max-w-sm text-xs text-gray-500 md:text-right">{category.description}</p>
                     )}
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
                     {categoryTeams.map((team) => (
-                      <Link
-                        key={team.id}
-                        href={`/lag/${team.id}`}
-                        className="rounded-full border border-gray-200 px-3 py-1.5 text-xs font-semibold tracking-[0.15em] text-gray-700 transition hover:border-emerald-300 hover:text-emerald-700"
-                      >
-                        {team.displayName}
+                      <Link key={team.id} href={`/lag/${team.id}`}>
+                        <Card className="group overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-emerald-300 hover:shadow-lg">
+                          <div
+                            className="h-24 w-full bg-gray-200 transition group-hover:scale-[1.02]"
+                            style={{
+                              backgroundImage: `url(${team.heroImage})`,
+                              backgroundSize: "cover",
+                              backgroundPosition: "center",
+                            }}
+                          />
+                          <div className="px-4 py-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-emerald-600">
+                              {team.category}
+                            </p>
+                            <h3 className="mt-2 text-sm font-semibold tracking-tight text-gray-900">
+                              {team.displayName}
+                            </h3>
+                            <p className="mt-1 text-xs text-gray-500">Öppna lagprofilen</p>
+                          </div>
+                        </Card>
                       </Link>
                     ))}
                   </div>

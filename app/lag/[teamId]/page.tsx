@@ -10,6 +10,14 @@ type RawTeam = (typeof lagContent)["teamCategories"][number]["teams"][number]
 
 const PLACEHOLDER_HERO = "/placeholder.jpg"
 
+const encodeAssetPath = (path: string) => {
+  if (!path) {
+    return PLACEHOLDER_HERO
+  }
+  const segments = path.split("/").map((segment, index) => (index === 0 ? segment : encodeURIComponent(segment)))
+  return segments.join("/")
+}
+
 const slugify = (value: string) =>
   value
     .toLowerCase()
@@ -30,7 +38,7 @@ const teams = lagContent.teamCategories.flatMap((category) =>
     description: typeof team.description === "string" ? team.description : "",
     link: team.link,
     instagramLink: team.instagramLink,
-    heroImage: team.heroImage || PLACEHOLDER_HERO,
+    heroImage: encodeAssetPath(team.heroImage || PLACEHOLDER_HERO),
     heroImageAlt: team.heroImageAlt || `Lagbild ${team.name}`,
   })),
 )
@@ -76,16 +84,14 @@ export default function TeamPage({ params }: TeamPageProps) {
               backgroundSize: "cover",
               backgroundPosition: "center",
             }}
+            aria-label={team.heroImageAlt}
           >
             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70" />
             <div className="relative mx-auto flex h-full max-w-5xl flex-col justify-end px-4 pb-16 text-white md:px-6">
-              <Link href="/lag" className="w-fit rounded-full border border-white/40 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.35em] text-white/80 transition hover:border-white">
-                Tillbaka
-              </Link>
-              <p className="mt-6 text-xs font-semibold uppercase tracking-[0.4em] text-white/75">
+              <p className="text-xs font-semibold uppercase tracking-[0.4em] text-white/75">
                 {team.category}
               </p>
-              <h1 className="mt-3 text-4xl font-black tracking-tight md:text-5xl lg:text-6xl">
+              <h1 className="mt-4 text-4xl font-black tracking-tight md:text-5xl lg:text-6xl">
                 {team.displayName}
               </h1>
               {team.description && (
