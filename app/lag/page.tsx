@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { ExternalLink, Instagram, Search } from "lucide-react"
+import { ExternalLink, Instagram } from "lucide-react"
 
 import Footer from "@/components/footer"
 import { Header } from "@/components/header"
@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
 type Individual = {
@@ -59,13 +58,6 @@ const slugify = (value: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "")
-
-const normalizeSearch = (value: string) =>
-  value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]/g, "")
 
 const getTeamDescription = (team: RawTeam) => {
   if (typeof team.description === "string" && team.description.trim().length > 0) {
@@ -220,9 +212,6 @@ export default function LagPage() {
   const [content, setContent] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [dropdownOpen, setDropdownOpen] = useState(false)
-  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     const loadContent = async () => {
@@ -244,11 +233,6 @@ export default function LagPage() {
 
     loadContent()
 
-    return () => {
-      if (blurTimeoutRef.current) {
-        clearTimeout(blurTimeoutRef.current)
-      }
-    }
   }, [])
 
   const categoryStats = useMemo(() => {
@@ -307,49 +291,8 @@ export default function LagPage() {
   const showMatchtruppCard = Boolean(selectedTeam && !selectedTeamHasRoster && !hasSelectedTeamHeroImage)
   const showMatchtruppBadge = Boolean(selectedTeam && !selectedTeamHasRoster && !hasSelectedTeamHeroImage)
 
-  const filteredTeams = useMemo(() => {
-    const normalized = normalizeSearch(searchTerm.trim())
-    if (!normalized) {
-      return teams
-    }
-
-    return teams.filter(
-      (team) =>
-        normalizeSearch(team.name).includes(normalized) ||
-        normalizeSearch(team.category).includes(normalized),
-    )
-  }, [teams, searchTerm])
-
-  const showDropdown = dropdownOpen && (filteredTeams.length > 0 || searchTerm.trim().length > 0)
-
   const handleTeamSelect = (teamId: string) => {
     setSelectedTeamId(teamId)
-    setDropdownOpen(false)
-    setSearchTerm("")
-  }
-
-  const handleSearchFocus = () => {
-    if (blurTimeoutRef.current) {
-      clearTimeout(blurTimeoutRef.current)
-      blurTimeoutRef.current = null
-    }
-
-    setDropdownOpen(true)
-  }
-
-  const handleSearchBlur = () => {
-    blurTimeoutRef.current = setTimeout(() => setDropdownOpen(false), 120)
-  }
-
-  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter" && filteredTeams.length > 0) {
-      event.preventDefault()
-      handleTeamSelect(filteredTeams[0].id)
-    }
-
-    if (event.key === "Escape") {
-      setDropdownOpen(false)
-    }
   }
 
   if (loading) {
@@ -413,66 +356,60 @@ export default function LagPage() {
             </Card>
           </section>
 
-          <section className="mt-12">
-            <Card className="mx-auto w-full max-w-3xl rounded-3xl border border-green-100 bg-white p-6 shadow-lg md:p-8">
-              <div className="mx-auto max-w-2xl text-center">
-                <h2 className="text-xl font-semibold text-gray-900">Hitta ditt lag</h2>
-                <p className="mt-2 text-sm text-gray-600">
-                  Sök efter lagets namn eller kategori och välj i listan för att se mer information.
-                </p>
-              </div>
-              <div className="relative mt-6">
-                <label htmlFor="team-search" className="sr-only">
-                  Sök lag
-                </label>
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-                <Input
-                  id="team-search"
-                  type="search"
-                  placeholder="Skriv till exempel ”A-lag” eller ”F-13”"
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  onFocus={handleSearchFocus}
-                  onBlur={handleSearchBlur}
-                  onKeyDown={handleSearchKeyDown}
-                  className="h-12 rounded-2xl border border-gray-200 bg-white pl-12 text-base text-gray-900 placeholder:text-gray-500 shadow-sm transition focus:border-green-500 focus:ring-0"
-                  autoComplete="off"
-                />
-                {showDropdown && (
-                  <div className="absolute left-0 top-full z-20 mt-2 w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
-                    {filteredTeams.length > 0 ? (
-                      <div className="max-h-80 overflow-y-auto py-2">
-                        {filteredTeams.map((team) => (
-                          <button
-                            key={team.id}
-                            type="button"
-                            onMouseDown={(event) => event.preventDefault()}
-                            onClick={() => handleTeamSelect(team.id)}
-                            className="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-green-50"
-                          >
-                            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-green-100 text-sm font-semibold text-green-700">
-                              {team.name.charAt(0)}
-                            </span>
-                            <span>
-                              <span className="block text-sm font-semibold text-gray-900">
-                                {team.name}
-                              </span>
-                              <span className="text-xs uppercase tracking-wide text-gray-500">
-                                {team.category}
-                              </span>
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="px-4 py-6 text-center text-sm text-gray-500">
-                        Inga lag matchade sökningen.
-                      </div>
+          <section className="mt-12 space-y-12">
+            {content.teamCategories.map((category: any) => {
+              const categoryTeams = teams.filter((team) => team.category === category.name)
+              if (categoryTeams.length === 0) {
+                return null
+              }
+
+              return (
+                <div key={category.name} className="space-y-6">
+                  <div className="flex flex-col items-center justify-between gap-3 text-center md:flex-row md:text-left">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.4em] text-emerald-600">
+                        {category.name}
+                      </p>
+                      <h2 className="mt-2 text-2xl font-bold text-gray-900 md:text-3xl">
+                        Välj lag i {category.name.toLowerCase()}
+                      </h2>
+                    </div>
+                    {category.description && (
+                      <p className="max-w-md text-sm text-gray-500 md:text-right">{category.description}</p>
                     )}
                   </div>
-                )}
-              </div>
-            </Card>
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {categoryTeams.map((team) => (
+                      <button
+                        key={team.id}
+                        type="button"
+                        onClick={() => handleTeamSelect(team.id)}
+                        className={cn(
+                          "group relative overflow-hidden rounded-3xl border p-6 text-left transition hover:-translate-y-1 hover:shadow-xl",
+                          selectedTeamId === team.id
+                            ? "border-emerald-400 bg-gradient-to-br from-emerald-50 via-white to-amber-50 shadow-emerald-100"
+                            : "border-gray-200 bg-white shadow-sm hover:border-emerald-200",
+                        )}
+                      >
+                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-700">
+                          {team.category}
+                        </span>
+                        <h3 className="mt-4 text-xl font-semibold tracking-tight text-gray-900">
+                          {team.displayName ?? team.name}
+                        </h3>
+                        <p className="mt-3 text-sm text-gray-500">
+                          {team.link ? "Se lagets sida och kontakt" : "Information uppdateras inom kort"}
+                        </p>
+                        <div className="mt-6 inline-flex items-center text-sm font-semibold text-emerald-600 transition group-hover:translate-x-1">
+                          Visa detaljer
+                          <ExternalLink className="ml-2 h-4 w-4" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
           </section>
 
           {selectedTeam ? (
