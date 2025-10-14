@@ -1,6 +1,6 @@
 import Link from "next/link"
 
-import lagContent from "@/../public/content/lag.json"
+import lagContent from "@/public/content/lag.json"
 import Footer from "@/components/footer"
 import { Header } from "@/components/header"
 import { Card } from "@/components/ui/card"
