@@ -153,11 +153,8 @@ export default function TeamPage({ params }: TeamPageProps) {
                     src={team.heroImage}
                     alt={team.heroImageAlt}
                     fill
-                    className="object-contain select-none"
+                    className="object-contain"
                     style={{ borderRadius: "inherit", padding: "1.5rem" }}
-                    draggable={false}
-                    onContextMenu={(event) => event.preventDefault()}
-                    onDragStart={(event) => event.preventDefault()}
                     sizes="(min-width: 1024px) 1000px, 100vw"
                   />
                 </div>

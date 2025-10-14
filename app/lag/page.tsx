@@ -105,10 +105,7 @@ export default function LagPage() {
                       <Link
                         key={team.id}
                         href={`/lag/${team.id}`}
-                        className={cn(
-                          "rounded-full border px-3 py-1.5 text-xs font-semibold tracking-[0.15em] transition",
-                          "border-gray-200 bg-white text-gray-700 hover:border-emerald-300 hover:text-emerald-700",
-                        )}
+                        className="rounded-full border border-gray-200 px-3 py-1.5 text-xs font-semibold tracking-[0.15em] text-gray-700 transition hover:border-emerald-300 hover:text-emerald-700"
                       >
                         {team.displayName}
                       </Link>
