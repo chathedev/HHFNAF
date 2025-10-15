@@ -395,14 +395,14 @@ export default function HomePage() {
           {(matchLoading || matchesToDisplay.length > 0 || matchError) && (
             <section className="bg-white py-12">
               <div className="container mx-auto px-4">
-                <div className="mx-auto max-w-5xl space-y-6">
-                  <div className="space-y-4 rounded-3xl border border-emerald-100 bg-emerald-700 px-6 py-7 text-white shadow-lg">
+                <div className="mx-auto max-w-5xl space-y-5">
+                  <div className="space-y-3 rounded-3xl border border-emerald-100 bg-emerald-700 px-5 py-6 text-white shadow-lg">
                     <h3 className="text-lg font-semibold text-white md:text-xl">Kommande matcher</h3>
 
                     {matchLoading && matchesToDisplay.length === 0 && (
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         {[0, 1, 2].map((item) => (
-                          <div key={item} className="h-24 rounded-2xl bg-white/15 animate-pulse" />
+                          <div key={item} className="h-20 rounded-2xl bg-white/15 animate-pulse" />
                         ))}
                       </div>
                     )}
@@ -443,7 +443,7 @@ export default function HomePage() {
                       return (
                         <Card
                           key={match.eventUrl}
-                          className="flex flex-col gap-5 rounded-3xl border border-white/20 bg-gradient-to-r from-white/15 via-white/5 to-transparent px-6 py-6 text-white/90 transition hover:border-white/35 hover:shadow-xl"
+                          className="flex flex-col gap-4 rounded-2xl border border-white/20 bg-gradient-to-r from-white/15 via-white/5 to-transparent px-4 py-4 text-white/90 transition hover:border-white/35 hover:shadow-lg"
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -471,8 +471,8 @@ export default function HomePage() {
                             </div>
                           </div>
 
-                          <div className="flex flex-wrap items-center gap-6">
-                            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/15 text-2xl font-black md:h-24 md:w-24 md:text-3xl">
+                          <div className="flex flex-wrap items-center gap-4">
+                            <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-white/15 text-xl font-black md:h-20 md:w-20 md:text-2xl">
                               {match.time}
                             </div>
                             <div className="space-y-1 text-sm text-white/80">
@@ -485,8 +485,8 @@ export default function HomePage() {
                           </div>
 
                           <div className="space-y-2">
-                            <h4 className="text-2xl font-semibold text-white md:text-3xl">{teams.clubTeamName}</h4>
-                            <p className="text-base text-white/80 md:text-lg">vs {teams.opponentName}</p>
+                            <h4 className="text-xl font-semibold text-white md:text-2xl">{teams.clubTeamName}</h4>
+                            <p className="text-sm text-white/80 md:text-base">vs {teams.opponentName}</p>
                           </div>
 
                           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -496,7 +496,7 @@ export default function HomePage() {
                                   href={TICKET_URL}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center justify-center rounded-full bg-orange-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600"
+                                  className="inline-flex items-center justify-center rounded-full bg-orange-500 px-4 py-1.5 text-xs font-semibold text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600 md:text-sm"
                                 >
                                   Köp biljett
                                 </Link>
@@ -505,16 +505,16 @@ export default function HomePage() {
                                 href={match.infoUrl ?? match.eventUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+                                className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20 md:text-sm"
                               >
                                 Matchsida
                               </Link>
                             </div>
 
                             {match.result && (
-                              <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-2 text-right">
+                              <div className="rounded-xl border border-white/20 bg-white/10 px-3 py-1.5 text-right">
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/70">Slutresultat</p>
-                                <p className="text-xl font-black md:text-2xl">{match.result}</p>
+                                <p className="text-lg font-black md:text-xl">{match.result}</p>
                               </div>
                             )}
                           </div>
