@@ -260,6 +260,22 @@ const formatCountdownLabel = (target: Date, hasResult: boolean) => {
   return "Strax"
 }
 
+const getMatchTeams = (match: UpcomingMatch) => {
+  const fallbackClubName = buildClubTeamName(match.teamType)
+  const homeName = match.homeTeam ?? (match.isHome ? fallbackClubName : match.opponent) ?? fallbackClubName
+  const awayName = match.awayTeam ?? (match.isHome ? match.opponent : fallbackClubName) ?? fallbackClubName
+
+  const clubTeamName = isClubTeamName(homeName) ? homeName : isClubTeamName(awayName) ? awayName : fallbackClubName
+  const opponentName = clubTeamName === homeName ? awayName : homeName
+
+  return {
+    homeName,
+    awayName,
+    clubTeamName,
+    opponentName,
+  }
+}
+
 const enrichMatchWithDetails = async (match: UpcomingMatch) => {
   if (typeof window === "undefined") {
     return match
@@ -342,7 +358,7 @@ export default function HomePage() {
 
   const [content] = useState<FullContent>(defaultContent)
   const [openTier, setOpenTier] = useState<string | null>("Diamantpartner")
-  const [upcomingMatch, setUpcomingMatch] = useState<UpcomingMatch | null>(null)
+  const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([])
   const [matchLoading, setMatchLoading] = useState(true)
   const [matchError, setMatchError] = useState(false)
 
@@ -372,36 +388,11 @@ export default function HomePage() {
   )
 
   const tierOrder = ["Diamantpartner", "Platinapartner", "Guldpartner", "Silverpartner", "Bronspartner"]
-  const matchTimestamp = upcomingMatch?.date?.getTime() ?? null
-  const matchTeams = upcomingMatch
-    ? (() => {
-        const fallbackClubName = buildClubTeamName(upcomingMatch.teamType)
-        const homeName =
-          upcomingMatch.homeTeam ??
-          (upcomingMatch.isHome ? fallbackClubName : upcomingMatch.opponent) ??
-          fallbackClubName
-        const awayName =
-          upcomingMatch.awayTeam ??
-          (upcomingMatch.isHome ? upcomingMatch.opponent : fallbackClubName) ??
-          fallbackClubName
-
-        const clubTeamName = isClubTeamName(homeName) ? homeName : isClubTeamName(awayName) ? awayName : fallbackClubName
-        const opponentName = clubTeamName === homeName ? awayName : homeName
-
-        return {
-          homeName,
-          awayName,
-          clubTeamName,
-          opponentName,
-        }
-      })()
-    : null
-  const countdownLabel = upcomingMatch ? formatCountdownLabel(upcomingMatch.date, Boolean(upcomingMatch.result)) : null
 
   useEffect(() => {
     let cancelled = false
 
-    const fetchUpcomingMatch = async () => {
+    const fetchUpcomingMatches = async () => {
       if (typeof window === "undefined") {
         return
       }
@@ -412,10 +403,13 @@ export default function HomePage() {
       try {
         const now = new Date()
         const maxMonthsAhead = 4
-
-        let locatedMatch = false
+        const candidateMatches: UpcomingMatch[] = []
 
         for (let offset = 0; offset < maxMonthsAhead; offset += 1) {
+          if (candidateMatches.length >= 4) {
+            break
+          }
+
           const searchDate = new Date(now.getFullYear(), now.getMonth() + offset, 1)
           const searchYear = searchDate.getFullYear()
           const searchMonth = searchDate.getMonth()
@@ -431,19 +425,45 @@ export default function HomePage() {
           const html = await response.text()
           const matches = parseMatchesFromHtml(html, searchYear, searchMonth, now)
 
-          if (matches.length > 0) {
-            const nextMatch = matches.sort((a, b) => a.date.getTime() - b.date.getTime())[0]
-            const enrichedMatch = await enrichMatchWithDetails(nextMatch)
-            if (!cancelled) {
-              setUpcomingMatch(enrichedMatch)
-            }
-            locatedMatch = true
-            break
+          candidateMatches.push(...matches)
+        }
+
+        const sortedCandidates = candidateMatches
+          .filter((match) => match.date.getTime() >= now.getTime())
+          .sort((a, b) => a.date.getTime() - b.date.getTime())
+
+        const selectedMatches: UpcomingMatch[] = []
+
+        if (sortedCandidates.length > 0) {
+          const firstMatch = sortedCandidates[0]
+          selectedMatches.push(firstMatch)
+
+          const twoHoursMs = 2 * 60 * 60 * 1000
+          const secondMatch = sortedCandidates.find(
+            (match) => match !== firstMatch && match.date.getTime() - firstMatch.date.getTime() <= twoHoursMs,
+          )
+
+          if (secondMatch) {
+            selectedMatches.push(secondMatch)
           }
         }
 
-        if (!cancelled && !locatedMatch) {
-          setUpcomingMatch(null)
+        if (!cancelled) {
+          if (selectedMatches.length === 0) {
+            setUpcomingMatches([])
+          } else {
+            const enrichedMatches: UpcomingMatch[] = []
+            for (const match of selectedMatches) {
+              if (cancelled) {
+                break
+              }
+              const enrichedMatch = await enrichMatchWithDetails(match)
+              enrichedMatches.push(enrichedMatch)
+            }
+            if (!cancelled) {
+              setUpcomingMatches(enrichedMatches)
+            }
+          }
         }
       } catch (error) {
         if (!cancelled) {
@@ -456,7 +476,7 @@ export default function HomePage() {
       }
     }
 
-    fetchUpcomingMatch()
+    fetchUpcomingMatches()
 
     return () => {
       cancelled = true
@@ -467,55 +487,86 @@ export default function HomePage() {
     if (typeof window === "undefined") {
       return undefined
     }
-    if (!upcomingMatch?.infoUrl) {
+    if (upcomingMatches.length === 0) {
       return undefined
     }
 
     let cancelled = false
     let intervalId: number | undefined
 
-    const pollMatch = async () => {
-      const refreshed = await refreshMatchResult(upcomingMatch)
+    const pollMatches = async () => {
+      const now = Date.now()
+      const matchesToRefresh = upcomingMatches.filter(
+        (match) =>
+          match.infoUrl &&
+          !match.result &&
+          match.date.getTime() - now <= 1000 * 60 * 60 * 12 &&
+          match.date.getTime() >= now - 1000 * 60 * 60 * 4,
+      )
+
+      if (matchesToRefresh.length === 0) {
+        return
+      }
+
+      const refreshedMatches = await Promise.all(matchesToRefresh.map((match) => refreshMatchResult(match)))
+
       if (cancelled) {
         return
       }
 
-      setUpcomingMatch((previous) => {
-        if (!previous) {
-          return previous
-        }
-        if (!refreshed.infoUrl || previous.infoUrl !== refreshed.infoUrl) {
+      setUpcomingMatches((previous) => {
+        if (previous.length === 0) {
           return previous
         }
 
-        const hasChanges =
-          previous.result !== refreshed.result ||
-          previous.time !== refreshed.time ||
-          previous.venue !== refreshed.venue ||
-          previous.fullDateText !== refreshed.fullDateText ||
-          previous.homeTeam !== refreshed.homeTeam ||
-          previous.awayTeam !== refreshed.awayTeam
+        let hasAnyChange = false
+        const updatedList = previous.map((prevMatch) => {
+          const refreshed =
+            refreshedMatches.find(
+              (item) => item.infoUrl && prevMatch.infoUrl && item.infoUrl === prevMatch.infoUrl,
+            ) ??
+            refreshedMatches.find((item) => item.eventUrl === prevMatch.eventUrl)
 
-        if (!hasChanges) {
-          return previous
-        }
+          if (!refreshed) {
+            return prevMatch
+          }
 
-        return {
-          ...previous,
-          ...refreshed,
-        }
+          const changed =
+            prevMatch.result !== refreshed.result ||
+            prevMatch.time !== refreshed.time ||
+            prevMatch.venue !== refreshed.venue ||
+            prevMatch.fullDateText !== refreshed.fullDateText ||
+            prevMatch.homeTeam !== refreshed.homeTeam ||
+            prevMatch.awayTeam !== refreshed.awayTeam
+
+          if (!changed) {
+            return prevMatch
+          }
+
+          hasAnyChange = true
+          return {
+            ...prevMatch,
+            ...refreshed,
+          }
+        })
+
+        return hasAnyChange ? updatedList : previous
       })
     }
 
-    void pollMatch()
+    void pollMatches()
 
-    const now = Date.now()
-    const shouldPoll =
-      !upcomingMatch.result && matchTimestamp !== null && matchTimestamp - now <= 1000 * 60 * 60 * 12
+    const shouldPoll = upcomingMatches.some((match) => {
+      if (match.result || !match.infoUrl) {
+        return false
+      }
+      const now = Date.now()
+      return match.date.getTime() - now <= 1000 * 60 * 60 * 12 && match.date.getTime() >= now - 1000 * 60 * 60 * 4
+    })
 
     if (shouldPoll) {
       intervalId = window.setInterval(() => {
-        void pollMatch()
+        void pollMatches()
       }, 10_000)
     }
 
@@ -525,7 +576,7 @@ export default function HomePage() {
         window.clearInterval(intervalId)
       }
     }
-  }, [upcomingMatch?.infoUrl, matchTimestamp, upcomingMatch?.result])
+  }, [upcomingMatches])
 
   return (
     <ErrorBoundary>
@@ -691,118 +742,128 @@ export default function HomePage() {
             </div>
           </section>
 
-          {(matchLoading || upcomingMatch || matchError) && (
+          {(matchLoading || upcomingMatches.length > 0 || matchError) && (
             <section className="bg-white py-12">
               <div className="container mx-auto px-4">
                 <div className="mx-auto max-w-4xl">
-                  <Card className="rounded-3xl border border-emerald-200 bg-emerald-700 text-white shadow-xl">
-                    <div className="flex flex-col gap-8 p-8 md:flex-row md:items-center md:justify-between">
+                  <Card className="rounded-3xl border border-orange-200 bg-emerald-700 text-white shadow-xl">
+                    <div className="flex flex-col gap-8 p-8">
+                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">Kommande matcher</p>
+                          <h3 className="text-2xl font-bold md:text-3xl">Härnösands HF</h3>
+                          <p className="text-sm text-white/80">Direkt från laget.se – uppdateras automatiskt.</p>
+                        </div>
+                        <div className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">
+                          Live-data
+                        </div>
+                      </div>
+
                       {matchLoading && (
-                        <div className="flex w-full flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                          <div className="flex-1 space-y-4">
-                            <div className="h-4 w-32 rounded-full bg-white/25 animate-pulse" />
-                            <div className="h-10 w-3/4 rounded-full bg-white/20 animate-pulse" />
-                            <div className="h-6 w-1/2 rounded-full bg-white/20 animate-pulse" />
-                          </div>
-                          <div className="w-full max-w-xs space-y-3 md:text-right">
-                            <div className="h-20 rounded-2xl bg-white/15 animate-pulse" />
-                            <div className="h-10 rounded-full bg-white/20 animate-pulse" />
-                          </div>
+                        <div className="grid gap-4">
+                          <div className="h-16 rounded-2xl bg-white/20 animate-pulse" />
+                          <div className="h-16 rounded-2xl bg-white/15 animate-pulse" />
                         </div>
                       )}
 
                       {!matchLoading && matchError && (
-                        <div className="flex w-full flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                          <div className="flex-1 space-y-3">
-                            <p className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">Nästa match</p>
-                            <h3 className="text-2xl font-semibold md:text-3xl">Kunde inte hämta matchinformationen.</h3>
-                            <p className="text-sm text-white/80">Testa igen eller öppna kalendern på laget.se.</p>
-                          </div>
-                          <div className="flex w-full max-w-xs flex-col gap-3 md:w-auto">
-                            <Link
-                              href="https://www.laget.se/HarnosandsHF"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center rounded-full border border-white/50 bg-white/10 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
-                            >
-                              Öppna kalendern på laget.se
-                            </Link>
-                          </div>
+                        <div className="rounded-2xl border border-white/20 bg-black/20 p-6">
+                          <h4 className="text-lg font-semibold md:text-xl">Kunde inte hämta matchinformationen.</h4>
+                          <p className="mt-2 text-sm text-white/80">Försök igen eller öppna kalendern på laget.se.</p>
+                          <Link
+                            href="https://www.laget.se/HarnosandsHF"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-4 inline-flex items-center justify-center rounded-full border border-white/40 bg-white/10 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+                          >
+                            Öppna kalendern på laget.se
+                          </Link>
                         </div>
                       )}
 
-                      {!matchLoading && !matchError && !upcomingMatch && (
-                        <div className="flex w-full flex-col gap-2 text-center">
-                          <p className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">Nästa match</p>
-                          <h3 className="text-2xl font-semibold md:text-3xl">Inga matcher publicerade ännu.</h3>
-                          <p className="text-sm text-white/80">
+                      {!matchLoading && !matchError && upcomingMatches.length === 0 && (
+                        <div className="rounded-2xl border border-white/15 bg-black/15 p-6 text-center">
+                          <h4 className="text-lg font-semibold md:text-xl">Inga matcher publicerade ännu.</h4>
+                          <p className="mt-2 text-sm text-white/80">
                             Nästa match från laget.se visas här så fort den läggs upp.
                           </p>
                         </div>
                       )}
 
-                      {!matchLoading && !matchError && upcomingMatch && matchTeams && (
-                        <>
-                          <div className="flex-1 space-y-6">
-                            <div>
-                              <p className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">Nästa match</p>
-                              <h3 className="mt-3 text-3xl font-bold md:text-4xl">{matchTeams.clubTeamName}</h3>
-                              <p className="text-lg text-white/80 md:text-xl">vs {matchTeams.opponentName}</p>
-                            </div>
-
-                            <div className="flex flex-wrap gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-white/70">
-                              <span className="rounded-full bg-white/15 px-3 py-1">{upcomingMatch.isHome ? "Hemma" : "Borta"}</span>
-                              {upcomingMatch.teamType && (
-                                <span className="rounded-full bg-white/10 px-3 py-1">{upcomingMatch.teamType}</span>
-                              )}
-                              {upcomingMatch.series && (
-                                <span className="rounded-full bg-white/10 px-3 py-1">{upcomingMatch.series}</span>
-                              )}
-                            </div>
-
-                            <div className="space-y-1 text-sm text-white/80">
-                              <p>{upcomingMatch.fullDateText ?? upcomingMatch.displayDate}</p>
-                              <p>Avkast {upcomingMatch.time}</p>
-                              {upcomingMatch.venue && <p>{upcomingMatch.venue}</p>}
-                            </div>
-                          </div>
-
-                          <div className="flex w-full flex-col gap-4 md:w-auto md:items-end">
-                            <div className="w-full rounded-2xl bg-black/20 px-6 py-5 text-center md:w-auto md:text-right">
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/60">
-                                {upcomingMatch.result ? "Resultat" : "Avkast"}
-                              </p>
-                              <p className="mt-2 text-4xl font-black md:text-5xl">{upcomingMatch.result ?? upcomingMatch.time}</p>
-                              {countdownLabel && (
-                                <p className="mt-2 text-sm text-white/80">{countdownLabel}</p>
-                              )}
-                            </div>
-
-                            <div className="flex w-full flex-col gap-2 md:w-auto">
-                              {upcomingMatch.isHome &&
-                                MATCH_TYPES_WITH_TICKETS.some((keyword) =>
-                                  upcomingMatch.teamType?.toLowerCase().includes(keyword),
-                                ) && (
-                                  <Link
-                                    href={TICKET_URL}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center justify-center rounded-full bg-orange-500 px-6 py-3 text-sm font-semibold text-white shadow transition hover:bg-orange-600"
-                                  >
-                                    Köp biljett
-                                  </Link>
-                                )}
-                              <Link
-                                href={upcomingMatch.infoUrl ?? upcomingMatch.eventUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center rounded-full border border-white/50 bg-white/10 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
+                      {!matchLoading && !matchError && upcomingMatches.length > 0 && (
+                        <div className="grid gap-4">
+                          {upcomingMatches.map((match, index) => {
+                            const teams = getMatchTeams(match)
+                            const countdownLabel = formatCountdownLabel(match.date, Boolean(match.result))
+                            const isTicketEligible =
+                              match.isHome &&
+                              MATCH_TYPES_WITH_TICKETS.some((keyword) => match.teamType?.toLowerCase().includes(keyword))
+                            return (
+                              <div
+                                key={`${match.eventUrl}-${index}`}
+                                className="rounded-2xl border border-white/20 bg-black/15 px-6 py-6"
                               >
-                                Matchsida på laget.se
-                              </Link>
-                            </div>
-                          </div>
-                        </>
+                                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                  <div className="space-y-4">
+                                    <div className="flex flex-wrap gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-white/70">
+                                      <span className="rounded-full border border-white/30 px-3 py-1">{match.isHome ? "Hemma" : "Borta"}</span>
+                                      {match.teamType && (
+                                        <span className="rounded-full border border-white/20 px-3 py-1">{match.teamType}</span>
+                                      )}
+                                      {match.series && (
+                                        <span className="rounded-full border border-white/20 px-3 py-1">{match.series}</span>
+                                      )}
+                                    </div>
+
+                                    <div>
+                                      <p className="text-xs font-semibold uppercase tracking-[0.35em] text-white/60">
+                                        {index === 0 ? "Nästa match" : "Strax efter"}
+                                      </p>
+                                      <h4 className="mt-2 text-2xl font-semibold md:text-3xl">{teams.clubTeamName}</h4>
+                                      <p className="text-lg text-white/85 md:text-xl">vs {teams.opponentName}</p>
+                                    </div>
+
+                                    <div className="space-y-1 text-sm text-white/80">
+                                      <p>{match.fullDateText ?? match.displayDate}</p>
+                                      <p>Avkast {match.time}</p>
+                                      {match.venue && <p>{match.venue}</p>}
+                                      {countdownLabel && <p>{countdownLabel}</p>}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex w-full flex-col gap-3 sm:w-52 sm:items-end">
+                                    <div className="w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-4 text-center text-sm font-semibold sm:text-right">
+                                      <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/65">
+                                        {match.result ? "Resultat" : "Avkast"}
+                                      </p>
+                                      <p className="mt-2 text-3xl font-black md:text-4xl">{match.result ?? match.time}</p>
+                                    </div>
+                                    <div className="flex w-full flex-col gap-2 sm:w-auto">
+                                      {isTicketEligible && (
+                                        <Link
+                                          href={TICKET_URL}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center justify-center rounded-full bg-orange-500 px-5 py-2 text-sm font-semibold text-white transition hover:bg-orange-600"
+                                        >
+                                          Köp biljett
+                                        </Link>
+                                      )}
+                                      <Link
+                                        href={match.infoUrl ?? match.eventUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center justify-center rounded-full border border-white/40 bg-white/10 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+                                      >
+                                        Matchsida på laget.se
+                                      </Link>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
                       )}
                     </div>
                   </Card>
