@@ -326,8 +326,9 @@ export const refreshMatchResult = async (match: UpcomingMatch) => {
 }
 
 type FetchOptions = {
-  limit?: number
+  limit?: number | null
   maxMonthsAhead?: number
+  onProgress?: (matches: UpcomingMatch[]) => void
 }
 
 export const fetchUpcomingMatches = async (options: FetchOptions = {}) => {
@@ -335,12 +336,13 @@ export const fetchUpcomingMatches = async (options: FetchOptions = {}) => {
     return [] as UpcomingMatch[]
   }
 
-  const { limit = 10, maxMonthsAhead = DEFAULT_MAX_MONTHS_AHEAD } = options
+  const { limit = 10, maxMonthsAhead = DEFAULT_MAX_MONTHS_AHEAD, onProgress } = options
   const now = new Date()
   const candidateMatches: UpcomingMatch[] = []
 
   for (let offset = 0; offset < maxMonthsAhead; offset += 1) {
-    if (candidateMatches.length >= limit * 2) {
+    const remainingSlots = typeof limit === "number" ? limit - candidateMatches.length : Number.POSITIVE_INFINITY
+    if (remainingSlots <= 0) {
       break
     }
 
@@ -358,19 +360,30 @@ export const fetchUpcomingMatches = async (options: FetchOptions = {}) => {
 
     const html = await response.text()
     const matches = parseMatchesFromHtml(html, searchYear, searchMonth, now)
-    candidateMatches.push(...matches)
+
+    const futureMatches = matches.filter((match) => match.date.getTime() >= now.getTime())
+    const trimmedMatches =
+      typeof limit === "number" ? futureMatches.slice(0, Math.max(remainingSlots, 0)) : futureMatches
+
+    const enrichedChunk: UpcomingMatch[] = []
+    for (const match of trimmedMatches) {
+      const enriched = await enrichMatchWithDetails(match)
+      enrichedChunk.push(enriched)
+      candidateMatches.push(enriched)
+      if (typeof limit === "number" && candidateMatches.length >= limit) {
+        break
+      }
+    }
+
+    if (enrichedChunk.length > 0 && typeof onProgress === "function") {
+      const snapshot = [...candidateMatches].sort((a, b) => a.date.getTime() - b.date.getTime())
+      onProgress(snapshot)
+    }
+
+    if (typeof limit === "number" && candidateMatches.length >= limit) {
+      break
+    }
   }
 
-  const sortedMatches = candidateMatches
-    .filter((match) => match.date.getTime() >= now.getTime())
-    .sort((a, b) => a.date.getTime() - b.date.getTime())
-    .slice(0, limit)
-
-  const enrichedMatches: UpcomingMatch[] = []
-  for (const match of sortedMatches) {
-    const enriched = await enrichMatchWithDetails(match)
-    enrichedMatches.push(enriched)
-  }
-
-  return enrichedMatches
+  return candidateMatches.sort((a, b) => a.date.getTime() - b.date.getTime())
 }

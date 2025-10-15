@@ -56,16 +56,25 @@ export default function MatchesPage() {
       setError(false)
 
       try {
-        const upcoming = await fetchUpcomingMatches({ limit: 20, maxMonthsAhead: 8 })
+        const result = await fetchUpcomingMatches({
+          limit: null,
+          maxMonthsAhead: 12,
+          onProgress: (current) => {
+            if (cancelled) {
+              return
+            }
+            setMatches(current)
+            setLoading(false)
+          },
+        })
+
         if (!cancelled) {
-          setMatches(upcoming)
+          setMatches(result)
+          setLoading(false)
         }
       } catch (_error) {
         if (!cancelled) {
           setError(true)
-        }
-      } finally {
-        if (!cancelled) {
           setLoading(false)
         }
       }
