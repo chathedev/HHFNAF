@@ -8,7 +8,6 @@ Allow: /
 Allow: /nyheter
 Allow: /lag
 Allow: /kontakt
-Allow: /matcher
 Allow: /kalender
 Allow: /partners
 

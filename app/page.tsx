@@ -75,6 +75,19 @@ export default function HomePage() {
   )
 
   const tierOrder = ["Diamantpartner", "Platinapartner", "Guldpartner", "Silverpartner", "Bronspartner"]
+  const matchesToDisplay = upcomingMatches.slice(0, 2)
+  const getMatchStatus = (match: UpcomingMatch) => {
+    if (match.result) {
+      return "result"
+    }
+    const now = Date.now()
+    const kickoff = match.date.getTime()
+    const liveWindowEnd = kickoff + 1000 * 60 * 60 * 2.5
+    if (now >= kickoff && now <= liveWindowEnd) {
+      return "live"
+    }
+    return "upcoming"
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -387,20 +400,19 @@ export default function HomePage() {
             </div>
           </section>
 
-          {(matchLoading || upcomingMatches.length > 0 || matchError) && (
+          {(matchLoading || matchesToDisplay.length > 0 || matchError) && (
             <section className="bg-white py-12">
               <div className="container mx-auto px-4">
-                <div className="mx-auto max-w-4xl">
-                  <Card className="rounded-3xl border border-orange-200 bg-emerald-700 text-white shadow-lg">
-                    <div className="flex flex-col gap-6 p-6 md:p-7">
-                      <h3 className="text-lg font-semibold text-white md:text-xl">Kommande matcher</h3>
+                <div className="mx-auto max-w-5xl space-y-6">
+                  <div className="space-y-4 rounded-3xl border border-emerald-100 bg-emerald-700 px-6 py-7 text-white shadow-lg">
+                    <h3 className="text-lg font-semibold text-white md:text-xl">Kommande matcher</h3>
 
-                      {matchLoading && (
-                        <div className="grid gap-4">
-                          <div className="h-16 rounded-2xl bg-white/20 animate-pulse" />
-                          <div className="h-16 rounded-2xl bg-white/15 animate-pulse" />
-                        </div>
-                      )}
+                    {matchLoading && matchesToDisplay.length === 0 && (
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="h-20 rounded-2xl bg-white/20 animate-pulse" />
+                        <div className="h-20 rounded-2xl bg-white/15 animate-pulse" />
+                      </div>
+                    )}
 
                       {!matchLoading && matchError && (
                         <div className="rounded-2xl border border-white/20 bg-black/15 p-5">
@@ -417,22 +429,23 @@ export default function HomePage() {
                         </div>
                       )}
 
-                      {!matchLoading && !matchError && upcomingMatches.length === 0 && (
+                      {!matchLoading && !matchError && matchesToDisplay.length === 0 && (
                         <div className="rounded-2xl border border-white/20 bg-black/15 p-5 text-center">
                           <h4 className="text-base font-semibold md:text-lg">Inga matcher publicerade ännu.</h4>
                           <p className="mt-2 text-sm text-white/80">Nästa match visas här så snart den finns tillgänglig.</p>
                         </div>
                       )}
 
-                      {!matchLoading && !matchError && upcomingMatches.length > 0 && (
+                      {!matchLoading && !matchError && matchesToDisplay.length > 0 && (
                         <div className="grid gap-4">
-                          {upcomingMatches.map((match, index) => {
+                          {matchesToDisplay.map((match, index) => {
                             const teams = getMatchTeams(match)
                             const countdownLabel = formatCountdownLabel(match.date, Boolean(match.result))
                             const venueName = match.venue?.toLowerCase() ?? ""
                             const isTicketEligible =
                               TICKET_VENUES.some((keyword) => venueName.includes(keyword)) &&
                               MATCH_TYPES_WITH_TICKETS.some((keyword) => match.teamType?.toLowerCase().includes(keyword))
+                            const status = getMatchStatus(match)
                             return (
                               <div
                                 key={`${match.eventUrl}-${index}`}
@@ -440,7 +453,9 @@ export default function HomePage() {
                               >
                                 <div className="flex flex-col gap-3">
                                   <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.35em] text-white/60">
-                                    <span>{index === 0 ? "Nästa match" : "Under dagen"}</span>
+                                    <span>
+                                      {status === "live" ? "Live" : status === "result" ? "Slut" : index === 0 ? "Nästa match" : "Kommande"}
+                                    </span>
                                     {countdownLabel && !match.result && <span className="text-white/70">{countdownLabel}</span>}
                                   </div>
 

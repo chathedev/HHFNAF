@@ -6,7 +6,6 @@ export async function GET() {
   const staticPages = [
     { url: "/", priority: "1.0", changefreq: "daily" },
     { url: "/nyheter", priority: "0.9", changefreq: "daily" },
-    { url: "/matcher", priority: "0.9", changefreq: "weekly" },
     { url: "/lag", priority: "0.8", changefreq: "monthly" },
     { url: "/kalender", priority: "0.8", changefreq: "weekly" },
     { url: "/kontakt", priority: "0.7", changefreq: "monthly" },

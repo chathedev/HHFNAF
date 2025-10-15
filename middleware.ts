@@ -19,8 +19,7 @@ export async function middleware(request: NextRequest) {
     pathname === "/partners" ||
     pathname === "/lag" ||
     pathname === "/kontakt" ||
-    pathname === "/kalender" ||
-    pathname === "/matcher"
+    pathname === "/kalender"
   ) {
     return NextResponse.next()
   }
