@@ -101,28 +101,21 @@ export default function HomePage() {
       setMatchError(false)
 
       try {
-        const matches = await fetchUpcomingMatches({ limit: 10 })
+        const matches = await fetchUpcomingMatches({
+          limit: 10,
+          onProgress: (current) => {
+            if (!cancelled && current.length > 0) {
+              setUpcomingMatches(current.slice(0, 3))
+              setMatchLoading(false)
+            }
+          },
+        })
+
         if (cancelled) {
           return
         }
 
-        if (matches.length === 0) {
-          setUpcomingMatches([])
-          return
-        }
-
-        const firstMatch = matches[0]
-        const twoHoursMs = 2 * 60 * 60 * 1000
-        const secondMatch = matches
-          .slice(1)
-          .find((match) => match.date.getTime() - firstMatch.date.getTime() <= twoHoursMs)
-
-        const selected: UpcomingMatch[] = [firstMatch]
-        if (secondMatch) {
-          selected.push(secondMatch)
-        }
-
-        setUpcomingMatches(selected)
+        setUpcomingMatches(matches.slice(0, 3))
       } catch (_error) {
         if (!cancelled) {
           setMatchError(true)
