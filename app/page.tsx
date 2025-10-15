@@ -435,92 +435,86 @@ export default function HomePage() {
                         const teams = getMatchTeams(match)
                         const countdownLabel = formatCountdownLabel(match.date, Boolean(match.result))
                         const venueName = match.venue?.toLowerCase() ?? ""
-                      const isTicketEligible =
-                        TICKET_VENUES.some((keyword) => venueName.includes(keyword)) &&
-                        MATCH_TYPES_WITH_TICKETS.some((keyword) => match.teamType?.toLowerCase().includes(keyword))
-                      const status = getMatchStatus(match)
+                        const scheduleInfo = [match.displayDate, match.time, match.venue]
+                          .filter((value): value is string => Boolean(value))
+                          .join(" • ")
+                        const isTicketEligible =
+                          TICKET_VENUES.some((keyword) => venueName.includes(keyword)) &&
+                          MATCH_TYPES_WITH_TICKETS.some((keyword) => match.teamType?.toLowerCase().includes(keyword))
+                        const status = getMatchStatus(match)
 
-                      return (
-                        <Card
-                          key={match.eventUrl}
-                          className="flex flex-col gap-4 rounded-2xl border border-white/20 bg-gradient-to-r from-white/15 via-white/5 to-transparent px-4 py-4 text-white/90 transition hover:border-white/35 hover:shadow-lg"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.35em] text-white">
-                                {match.teamType || "Härnösands HF"}
+                        return (
+                          <Card
+                            key={match.eventUrl}
+                            className="flex flex-col gap-3 rounded-xl border border-white/15 bg-white/10 px-3 py-3 text-white/90 transition hover:border-white/30 hover:shadow-lg"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em]">
+                                <span className="rounded-full bg-white/15 px-2 py-0.5 text-white">
+                                  {match.teamType || "Härnösands HF"}
+                                </span>
+                                {status === "live" && (
+                                  <span className="rounded-full bg-orange-500 px-2 py-0.5 text-white shadow">
+                                    Live
+                                  </span>
+                                )}
+                                {status === "result" && (
+                                  <span className="rounded-full bg-white/20 px-2 py-0.5 text-white">
+                                    Slut
+                                  </span>
+                                )}
+                                {status === "upcoming" && (
+                                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-white/70">
+                                    Kommande
+                                  </span>
+                                )}
                               </div>
-                              {status === "live" && (
-                                <span className="rounded-full bg-orange-500 px-3 py-1 text-xs font-semibold uppercase tracking-[0.35em] text-white shadow">
-                                  Live
-                                </span>
-                              )}
-                              {status === "result" && (
-                                <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.35em] text-white">
-                                  Slut
-                                </span>
-                              )}
-                              {status === "upcoming" && (
-                                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.35em] text-white/70">
-                                  Kommande
-                                </span>
-                              )}
+                              <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/50">
+                                {match.series || "Match"}
+                              </div>
                             </div>
-                            <div className="text-right text-xs font-semibold uppercase tracking-[0.35em] text-white/60">
-                              {match.series || "Match"}
-                            </div>
-                          </div>
 
-                          <div className="flex flex-wrap items-center gap-4">
-                            <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-white/15 text-xl font-black md:h-20 md:w-20 md:text-2xl">
-                              {match.time}
+                            <div className="flex flex-wrap items-center gap-2 text-sm text-white">
+                              <span className="font-semibold">{teams.clubTeamName}</span>
+                              <span className="text-white/70">vs {teams.opponentName}</span>
                             </div>
-                            <div className="space-y-1 text-sm text-white/80">
-                              <p className="text-white font-semibold">{match.fullDateText ?? match.displayDate}</p>
-                              {match.venue && <p>{match.venue}</p>}
+
+                            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-white/70">
+                              <span>{scheduleInfo}</span>
                               {status !== "result" && (
-                                <p className="text-white/60">{status === "live" ? "Match pågår" : countdownLabel}</p>
+                                <span className="text-white/60">{status === "live" ? "Match pågår" : countdownLabel}</span>
                               )}
                             </div>
-                          </div>
 
-                          <div className="space-y-2">
-                            <h4 className="text-xl font-semibold text-white md:text-2xl">{teams.clubTeamName}</h4>
-                            <p className="text-sm text-white/80 md:text-base">vs {teams.opponentName}</p>
-                          </div>
-
-                          <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div className="flex items-center gap-2">
-                              {isTicketEligible && (
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                {isTicketEligible && (
+                                  <Link
+                                    href={TICKET_URL}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center justify-center rounded-full bg-orange-500 px-3 py-1 text-[11px] font-semibold text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600"
+                                  >
+                                    Köp biljett
+                                  </Link>
+                                )}
                                 <Link
-                                  href={TICKET_URL}
+                                  href={match.infoUrl ?? match.eventUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center justify-center rounded-full bg-orange-500 px-4 py-1.5 text-xs font-semibold text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600 md:text-sm"
+                                  className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-semibold text-white transition hover:bg-white/20"
                                 >
-                                  Köp biljett
+                                  Matchsida
                                 </Link>
-                              )}
-                              <Link
-                                href={match.infoUrl ?? match.eventUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20 md:text-sm"
-                              >
-                                Matchsida
-                              </Link>
-                            </div>
-
-                            {match.result && (
-                              <div className="rounded-xl border border-white/20 bg-white/10 px-3 py-1.5 text-right">
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/70">Slutresultat</p>
-                                <p className="text-lg font-black md:text-xl">{match.result}</p>
                               </div>
-                            )}
-                          </div>
-                        </Card>
-                      )
-                    })}
+
+                              {match.result && (
+                                <span className="text-xs font-semibold text-white">Resultat {match.result}</span>
+                              )}
+                            </div>
+                          </Card>
+                        )
+                      })}
                   </div>
                 </div>
               </div>
