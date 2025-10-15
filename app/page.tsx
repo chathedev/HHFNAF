@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
@@ -28,12 +28,124 @@ import { ErrorBoundary } from "@/components/error-boundary"
 import { defaultContent } from "@/lib/default-content"
 import type { FullContent, Partner } from "@/lib/content-types"
 
+type UpcomingMatch = {
+  opponent: string
+  teamType: string
+  isHome: boolean
+  date: Date
+  time: string
+  displayDate: string
+  eventUrl: string
+}
+
+const LAGET_BASE_URL = "https://www.laget.se"
+const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/"
+const MATCH_TYPES_WITH_TICKETS = ["a-lag", "dam/utv"]
+
+const formatDateForDisplay = (date: Date) => {
+  const formatted = new Intl.DateTimeFormat("sv-SE", {
+    weekday: "short",
+    day: "numeric",
+    month: "long",
+  }).format(date)
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1)
+}
+
+const extractTextNodes = (element: Element) =>
+  Array.from(element.childNodes)
+    .filter((node) => node.nodeType === Node.TEXT_NODE)
+    .map((node) => node.textContent?.trim() ?? "")
+    .filter(Boolean)
+
+const parseMatchesFromHtml = (html: string, year: number, monthIndex: number, now: Date) => {
+  if (typeof window === "undefined") {
+    return []
+  }
+
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, "text/html")
+  const dayNodes = Array.from(doc.querySelectorAll("li.fullCalendar__day"))
+  const matches: UpcomingMatch[] = []
+
+  dayNodes.forEach((dayNode) => {
+    const dayAttr = dayNode.getAttribute("data-day")
+    if (!dayAttr) {
+      return
+    }
+    const day = Number.parseInt(dayAttr, 10)
+    if (!Number.isFinite(day)) {
+      return
+    }
+
+    const eventNodes = Array.from(dayNode.querySelectorAll("li.fullCalendar__item"))
+    eventNodes.forEach((eventNode) => {
+      const inner = eventNode.querySelector(".fullCalendar__itemInner")
+      if (!inner) {
+        return
+      }
+
+      const timeText = inner.querySelector(".fullCalendar__time")?.textContent?.trim()
+      if (!timeText) {
+        return
+      }
+
+      const [hourStr, minuteStr] = timeText.split(":")
+      const hours = Number.parseInt(hourStr, 10)
+      const minutes = Number.parseInt(minuteStr, 10)
+      if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+        return
+      }
+
+      const matchDate = new Date(year, monthIndex, day, hours, minutes)
+      if (matchDate.getTime() < now.getTime()) {
+        return
+      }
+
+      const descriptionElement = inner.querySelector(".fullCalendar__text")
+      if (!descriptionElement) {
+        return
+      }
+
+      const opponentParts = extractTextNodes(descriptionElement)
+      if (opponentParts.length === 0) {
+        return
+      }
+
+      const rawOpponent = opponentParts.join(" ").replace(/\s+/g, " ").trim()
+      if (!rawOpponent) {
+        return
+      }
+
+      const teamType = inner.querySelector(".fullCalendar__midText")?.textContent?.trim() ?? ""
+      const isHome = /hemma/i.test(rawOpponent)
+      const opponent = rawOpponent.replace(/\s*\((hemma|borta)\)\s*/i, "").trim()
+      const dataSrc = inner.getAttribute("data-src") ?? ""
+      const eventUrl = dataSrc ? new URL(dataSrc, LAGET_BASE_URL).toString() : LAGET_BASE_URL
+
+      matches.push({
+        opponent,
+        teamType,
+        isHome,
+        date: matchDate,
+        time: timeText,
+        displayDate: formatDateForDisplay(matchDate),
+        eventUrl,
+      })
+    })
+  })
+
+  return matches
+}
+
 export default function HomePage() {
   const searchParams = useSearchParams()
   const isEditorMode = searchParams?.get("editor") === "true"
 
   const [content] = useState<FullContent>(defaultContent)
   const [openTier, setOpenTier] = useState<string | null>("Diamantpartner")
+  const [upcomingMatch, setUpcomingMatch] = useState<UpcomingMatch | null>(null)
+  const [matchLoading, setMatchLoading] = useState(true)
+  const [matchError, setMatchError] = useState(false)
 
   const partnersForDisplay = Array.isArray(content.partners) ? content.partners.filter((p) => p.visibleInCarousel) : []
 
@@ -61,6 +173,63 @@ export default function HomePage() {
   )
 
   const tierOrder = ["Diamantpartner", "Platinapartner", "Guldpartner", "Silverpartner", "Bronspartner"]
+
+  useEffect(() => {
+    let cancelled = false
+
+    const fetchUpcomingMatch = async () => {
+      if (typeof window === "undefined") {
+        return
+      }
+
+      setMatchLoading(true)
+      setMatchError(false)
+
+      try {
+        const now = new Date()
+        const maxMonthsAhead = 4
+
+        for (let offset = 0; offset < maxMonthsAhead; offset += 1) {
+          const searchDate = new Date(now.getFullYear(), now.getMonth() + offset, 1)
+          const searchYear = searchDate.getFullYear()
+          const searchMonth = searchDate.getMonth()
+
+          const response = await fetch(
+            `https://www.laget.se/HarnosandsHF/Event/FilterEvents?Year=${searchYear}&Month=${searchMonth + 1}&PrintMode=False&SiteType=Club&Visibility=2&types=6`,
+          )
+
+          if (!response.ok) {
+            continue
+          }
+
+          const html = await response.text()
+          const matches = parseMatchesFromHtml(html, searchYear, searchMonth, now)
+
+          if (matches.length > 0) {
+            const nextMatch = matches.sort((a, b) => a.date.getTime() - b.date.getTime())[0]
+            if (!cancelled) {
+              setUpcomingMatch(nextMatch)
+            }
+            break
+          }
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setMatchError(true)
+        }
+      } finally {
+        if (!cancelled) {
+          setMatchLoading(false)
+        }
+      }
+    }
+
+    fetchUpcomingMatch()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <ErrorBoundary>
@@ -225,6 +394,110 @@ export default function HomePage() {
               </div>
             </div>
           </section>
+
+          {(matchLoading || upcomingMatch || matchError) && (
+            <section className="bg-white py-12">
+              <div className="container mx-auto px-4">
+                <div className="mx-auto max-w-4xl">
+                  <Card className="relative overflow-hidden rounded-3xl border border-emerald-100 bg-gradient-to-br from-emerald-600 via-emerald-500 to-orange-400 text-white shadow-xl">
+                    <div className="pointer-events-none absolute -left-16 top-10 h-40 w-40 rounded-full bg-white/20 blur-3xl" />
+                    <div className="pointer-events-none absolute right-[-60px] bottom-[-40px] h-48 w-48 rounded-full bg-emerald-900/20 blur-3xl" />
+                    <div className="relative flex flex-col gap-8 p-8 md:flex-row md:items-center md:justify-between">
+                      <div className="space-y-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.45em] text-white/70">Nästa match</p>
+                        {matchLoading && (
+                          <div className="space-y-3">
+                            <div className="h-8 w-24 rounded-full bg-white/30 animate-pulse" />
+                            <div className="h-6 w-48 rounded-full bg-white/20 animate-pulse" />
+                            <div className="h-5 w-32 rounded-full bg-white/20 animate-pulse" />
+                          </div>
+                        )}
+
+                        {!matchLoading && matchError && (
+                          <div className="space-y-2">
+                            <p className="text-lg font-semibold text-white">Vi kunde inte hämta matchinformationen.</p>
+                            <Link
+                              href="https://www.laget.se/HarnosandsHF"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center text-sm font-medium text-white/90 underline-offset-4 hover:underline"
+                            >
+                              Besök laget.se för att se kommande matcher
+                            </Link>
+                          </div>
+                        )}
+
+                        {!matchLoading && !matchError && !upcomingMatch && (
+                          <p className="text-lg font-semibold text-white">Inga kommande matcher just nu.</p>
+                        )}
+
+                        {!matchLoading && !matchError && upcomingMatch && (
+                          <div className="space-y-3">
+                            <div className="flex flex-wrap items-center gap-3 text-sm text-white/80">
+                              <span className="rounded-full bg-white/15 px-3 py-1 font-semibold uppercase tracking-[0.25em]">
+                                {upcomingMatch.teamType || "Kommande match"}
+                              </span>
+                              <span className="rounded-full bg-black/15 px-3 py-1 font-semibold uppercase tracking-[0.25em]">
+                                {upcomingMatch.isHome ? "Hemma" : "Borta"}
+                              </span>
+                              <span className="rounded-full bg-white/10 px-3 py-1 font-medium">{upcomingMatch.displayDate}</span>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                              <span className="text-4xl font-black tracking-tight md:text-5xl">{upcomingMatch.time}</span>
+                              <span className="text-xl font-semibold md:text-2xl">{upcomingMatch.opponent}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col gap-3 md:items-end">
+                        {matchLoading && (
+                          <div className="h-10 w-32 rounded-full bg-white/25 animate-pulse" />
+                        )}
+
+                        {!matchLoading && !matchError && upcomingMatch && (
+                          <>
+                            {upcomingMatch.isHome &&
+                              MATCH_TYPES_WITH_TICKETS.some((keyword) =>
+                                upcomingMatch.teamType?.toLowerCase().includes(keyword),
+                              ) && (
+                                <Link
+                                  href={TICKET_URL}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center justify-center rounded-full bg-orange-500 px-6 py-2 text-sm font-semibold text-white shadow transition hover:bg-orange-600"
+                                >
+                                  Köp biljett
+                                </Link>
+                              )}
+                            <Link
+                              href={upcomingMatch.eventUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center rounded-full border border-white/50 bg-white/10 px-6 py-2 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                            >
+                              Visa på laget.se
+                            </Link>
+                          </>
+                        )}
+
+                        {!matchLoading && matchError && (
+                          <Link
+                            href="https://www.laget.se/HarnosandsHF"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center rounded-full border border-white/50 bg-white/10 px-6 py-2 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                          >
+                            Visa kalender
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+              </div>
+            </section>
+          )}
 
           {/* Cards Section */}
           <section className="py-12 bg-white">
