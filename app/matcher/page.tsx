@@ -221,6 +221,10 @@ export default function MatchesPage() {
     })
   }, [matches, teamFilter, statusFilter, search])
 
+  const [displayCount, setDisplayCount] = useState(20)
+  const hasMoreMatches = filteredMatches.length > displayCount
+  const matchesToRender = filteredMatches.slice(0, displayCount)
+
   const statusLabelMap: Record<StatusFilter, string> = {
     alla: "Alla",
     kommande: "Kommande",
@@ -321,7 +325,7 @@ export default function MatchesPage() {
                 </div>
 
                 <div className="px-6 py-6">
-                  {loading && (
+                  {loading && matches.length === 0 && (
                     <div className="space-y-3">
                       <div className="h-20 rounded-2xl bg-emerald-50/70 animate-pulse" />
                       <div className="h-20 rounded-2xl bg-emerald-50/60 animate-pulse" />
@@ -341,9 +345,9 @@ export default function MatchesPage() {
                     </div>
                   )}
 
-                  {!loading && !error && filteredMatches.length > 0 && (
+                  {!loading && !error && matchesToRender.length > 0 && (
                     <div className="space-y-4">
-                      {filteredMatches.map((match) => {
+                      {matchesToRender.map((match) => {
                         const teams = getMatchTeams(match)
                         const countdown = formatCountdownLabel(match.date, Boolean(match.result))
                         const venueName = match.venue?.toLowerCase() ?? ""
@@ -438,6 +442,17 @@ export default function MatchesPage() {
                           </div>
                         )
                       })}
+                    </div>
+                  )}
+
+                  {hasMoreMatches && (
+                    <div className="mt-6 flex justify-center">
+                      <Button
+                        onClick={() => setDisplayCount((current) => current + 20)}
+                        className="rounded-full bg-emerald-600 px-6 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                      >
+                        Visa fler matcher
+                      </Button>
                     </div>
                   )}
                 </div>
