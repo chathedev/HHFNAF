@@ -1,6 +1,6 @@
 "use client"
 
-import { Calendar, Trophy, Zap, MapPin, Clock } from "lucide-react"
+import { Calendar, Trophy, Zap, Clock } from "lucide-react"
 import { useEffect, useState } from "react"
 
 interface Match {
@@ -85,17 +85,20 @@ export default function MatchCards() {
               ) : error ? (
                 <p className="text-red-600 text-sm">{error}</p>
               ) : upcomingMatches.length > 0 ? (
-                <div className="space-y-3 w-full">
+                <div className="space-y-2 w-full">
                   {upcomingMatches.slice(0, 3).map((match) => (
-                    <div key={match.id} className="border-l-4 border-orange-500 pl-3 text-left">
-                      <div className="font-semibold text-sm text-gray-800">{match.opponent}</div>
-                      <div className="flex items-center text-xs text-gray-600 mt-1">
-                        <Clock className="w-3 h-3 mr-1" />
-                        {formatDate(match.date)} {match.time}
-                      </div>
-                      <div className="flex items-center text-xs text-gray-600">
-                        <MapPin className="w-3 h-3 mr-1" />
-                        {match.isHome ? "Hemma" : "Borta"}
+                    <div key={match.id} className="border-l-4 border-orange-500 pl-3 text-left py-2">
+                      <div className="font-semibold text-sm text-gray-800 leading-tight">{match.opponent}</div>
+                      <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-gray-600">
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          <span>
+                            {formatDate(match.date)} {match.time}
+                          </span>
+                        </div>
+                        <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-orange-500">
+                          {match.isHome ? "Hemma" : "Borta"}
+                        </span>
                       </div>
                     </div>
                   ))}
