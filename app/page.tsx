@@ -792,58 +792,62 @@ export default function HomePage() {
                             return (
                               <div
                                 key={`${match.eventUrl}-${index}`}
-                                className="rounded-2xl border border-white/20 bg-black/15 p-5"
+                                className="rounded-2xl border border-white/25 bg-black/20 p-5"
                               >
-                                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                                  <div className="space-y-3">
-                                    <p className="text-xs font-semibold uppercase tracking-[0.35em] text-white/60">
-                                      {index === 0 ? "Nästa match" : "Efterföljande"}
-                                    </p>
-                                    <div>
-                                      <h4 className="text-xl font-semibold text-white md:text-2xl">{teams.clubTeamName}</h4>
-                                      <p className="text-base text-white/85 md:text-lg">vs {teams.opponentName}</p>
-                                    </div>
-                                    {match.teamType && (
-                                      <p className="text-xs font-semibold uppercase tracking-[0.25em] text-white/70">
-                                        {match.teamType}
-                                      </p>
-                                    )}
-                                    <div className="space-y-1 text-sm text-white/75">
-                                      <p>{match.fullDateText ?? match.displayDate}</p>
-                                      <p>{match.time}</p>
-                                      {match.venue && <p>{match.venue}</p>}
-                                      {!match.result && countdownLabel && <p className="text-white/60">{countdownLabel}</p>}
-                                    </div>
+                                <div className="flex flex-col gap-3">
+                                  <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.35em] text-white/60">
+                                    <span>{index === 0 ? "Nästa match" : "Under dagen"}</span>
+                                    {countdownLabel && !match.result && <span className="text-white/70">{countdownLabel}</span>}
                                   </div>
 
-                                  <div className="flex w-full flex-col items-end gap-3 sm:w-40">
-                                    <div className="w-full rounded-2xl border border-white/25 bg-white/10 px-4 py-4 text-center sm:text-right">
-                                      <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/65">
-                                        {match.result ? "Resultat" : "Avkast"}
-                                      </p>
-                                      <p className="mt-1 text-3xl font-black md:text-4xl">{match.result ?? match.time}</p>
-                                    </div>
-                                    <div className="flex w-full flex-wrap items-center justify-end gap-2">
-                                      {isTicketEligible && (
-                                        <Link
-                                          href={TICKET_URL}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="inline-flex items-center justify-center rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600"
-                                        >
-                                          Köp biljett
-                                        </Link>
-                                      )}
+                                  <div className="flex flex-col gap-1">
+                                    <h4 className="text-xl font-semibold text-white md:text-2xl">{teams.clubTeamName}</h4>
+                                    <p className="text-base text-white/85 md:text-lg">vs {teams.opponentName}</p>
+                                  </div>
+
+                                  <div className="flex flex-wrap gap-2 text-xs font-medium text-white/75">
+                                    <span>{match.fullDateText ?? match.displayDate}</span>
+                                    <span>•</span>
+                                    <span>{match.time}</span>
+                                    {match.venue && (
+                                      <>
+                                        <span>•</span>
+                                        <span>{match.venue}</span>
+                                      </>
+                                    )}
+                                  </div>
+
+                                  <div className="flex flex-wrap items-center justify-between gap-2">
+                                    {isTicketEligible && (
                                       <Link
-                                        href={match.infoUrl ?? match.eventUrl}
+                                        href={TICKET_URL}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+                                        className="inline-flex items-center justify-center rounded-full bg-orange-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-orange-900/40 transition hover:bg-orange-600"
                                       >
-                                        Matchsida
+                                        Köp biljett
                                       </Link>
-                                    </div>
+                                    )}
+                                    <Link
+                                      href={match.infoUrl ?? match.eventUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+                                    >
+                                      Matchsida
+                                    </Link>
                                   </div>
+                                  {match.result && (
+                                    <div className="flex items-center justify-between rounded-2xl border border-white/15 bg-white/10 px-4 py-3">
+                                      <div className="text-sm text-white/80">
+                                        <p>Slutsignal</p>
+                                      </div>
+                                      <div className="text-right">
+                                        <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/65">Resultat</p>
+                                        <p className="text-3xl font-black md:text-4xl">{match.result}</p>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             )
