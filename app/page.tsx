@@ -448,8 +448,8 @@ export default function HomePage() {
                             key={match.eventUrl}
                             className="flex flex-col gap-3 rounded-xl border border-white/15 bg-white/10 px-3 py-3 text-white/90 transition hover:border-white/30 hover:shadow-lg"
                           >
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em]">
+                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em]">
                                 <span className="rounded-full bg-white/15 px-2 py-0.5 text-white">
                                   {match.teamType || "Härnösands HF"}
                                 </span>
@@ -469,31 +469,33 @@ export default function HomePage() {
                                   </span>
                                 )}
                               </div>
-                              <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/50">
+                              <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/50 sm:text-right">
                                 {match.series || "Match"}
                               </div>
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-2 text-sm text-white">
+                            <div className="flex flex-wrap items-baseline gap-1 text-sm text-white">
                               <span className="font-semibold">{teams.clubTeamName}</span>
                               <span className="text-white/70">vs {teams.opponentName}</span>
                             </div>
 
-                            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-white/70">
-                              <span>{scheduleInfo}</span>
+                            <div className="flex flex-col gap-1 text-xs text-white/70 sm:flex-row sm:items-center sm:justify-between">
+                              <span className="text-white/80">{scheduleInfo}</span>
                               {status !== "result" && (
-                                <span className="text-white/60">{status === "live" ? "Match pågår" : countdownLabel}</span>
+                                <span className="text-white/60 sm:text-right">
+                                  {status === "live" ? "Match pågår" : countdownLabel}
+                                </span>
                               )}
                             </div>
 
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <div className="flex items-center gap-2">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
                                 {isTicketEligible && (
                                   <Link
                                     href={TICKET_URL}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center justify-center rounded-full bg-orange-500 px-3 py-1 text-[11px] font-semibold text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600"
+                                    className="inline-flex w-full items-center justify-center rounded-full bg-orange-500 px-3 py-1 text-[11px] font-semibold text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600 sm:w-auto"
                                   >
                                     Köp biljett
                                   </Link>
@@ -502,14 +504,16 @@ export default function HomePage() {
                                   href={match.infoUrl ?? match.eventUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-semibold text-white transition hover:bg-white/20"
+                                  className="inline-flex w-full items-center justify-center rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-semibold text-white transition hover:bg-white/20 sm:w-auto"
                                 >
                                   Matchsida
                                 </Link>
                               </div>
 
                               {match.result && (
-                                <span className="text-xs font-semibold text-white">Resultat {match.result}</span>
+                                <span className="text-center text-xs font-semibold text-white sm:text-right">
+                                  Resultat {match.result}
+                                </span>
                               )}
                             </div>
                           </Card>
