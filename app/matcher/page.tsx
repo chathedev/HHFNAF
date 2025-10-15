@@ -346,28 +346,30 @@ export default function MatchesPage() {
                         return (
                           <div
                             key={match.eventUrl}
-                            className="rounded-3xl border border-emerald-100 bg-gradient-to-r from-white via-white to-emerald-50/40 px-6 py-6 shadow-sm transition hover:border-emerald-200 hover:shadow-md"
+                            className="rounded-2xl border border-emerald-100 bg-white px-5 py-5 shadow-sm transition hover:border-emerald-200 hover:shadow-md"
                           >
-                            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                               <div className="space-y-3">
-                                <div className="flex flex-wrap items-center gap-3">
+                                <div className="flex flex-wrap items-center gap-2">
                                   {getStatusBadge(match)}
-                                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-emerald-700">
-                                    {match.teamType || "Härnösands HF"}
-                                  </span>
+                                  {match.teamType && (
+                                    <span className="rounded-full bg-emerald-600/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-emerald-700">
+                                      {match.teamType}
+                                    </span>
+                                  )}
                                   {match.series && (
-                                    <span className="rounded-full bg-white/60 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-emerald-700">
+                                    <span className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-400">
                                       {match.series}
                                     </span>
                                   )}
                                 </div>
 
-                                <div>
-                                  <h2 className="text-2xl font-bold text-emerald-900 md:text-3xl">{teams.clubTeamName}</h2>
-                                  <p className="text-base text-emerald-700 md:text-lg">vs {teams.opponentName}</p>
+                                <div className="space-y-1">
+                                  <h2 className="text-xl font-bold text-emerald-900 md:text-2xl">{teams.clubTeamName}</h2>
+                                  <p className="text-base text-emerald-700">vs {teams.opponentName}</p>
                                 </div>
 
-                                <div className="flex flex-wrap items-center gap-2 text-sm text-emerald-800">
+                                <div className="flex flex-wrap items-center gap-2 text-sm text-emerald-700">
                                   <span>{match.fullDateText ?? match.displayDate}</span>
                                   <span className="text-emerald-400">•</span>
                                   <span>{match.time}</span>
@@ -377,7 +379,13 @@ export default function MatchesPage() {
                                       <span>{match.venue}</span>
                                     </>
                                   )}
-                                  {status !== "resultat" && (
+                                  {status === "live" && (
+                                    <>
+                                      <span className="text-emerald-400">•</span>
+                                      <span className="text-orange-500 font-semibold">Match pågår</span>
+                                    </>
+                                  )}
+                                  {status === "kommande" && (
                                     <>
                                       <span className="text-emerald-400">•</span>
                                       <span>{countdown}</span>
@@ -386,7 +394,7 @@ export default function MatchesPage() {
                                 </div>
                               </div>
 
-                              <div className="flex w-full flex-col items-stretch gap-3 md:w-auto md:items-end">
+                              <div className="flex w-full flex-col items-end gap-2 md:w-auto">
                                 <div className="flex flex-wrap items-center justify-end gap-2">
                                   {isTicketEligible && (
                                     <Link
@@ -409,11 +417,11 @@ export default function MatchesPage() {
                                 </div>
 
                                 {match.result && (
-                                  <div className="rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-right">
+                                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-right">
                                     <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-500">
-                                      Slutsignal
+                                      Slutresultat
                                     </p>
-                                    <p className="text-3xl font-black text-emerald-700 md:text-4xl">{match.result}</p>
+                                    <p className="text-2xl font-black text-emerald-700 md:text-3xl">{match.result}</p>
                                   </div>
                                 )}
                               </div>
