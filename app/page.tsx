@@ -399,7 +399,10 @@ export default function HomePage() {
               </div>
             </div>
           </section>
-
+          {(matchLoading || matchesToDisplay.length > 0 || matchError) && (
+            <section className="bg-white py-12">
+              <div className="container mx-auto px-4">
+                <div className="mx-auto max-w-5xl space-y-6">
                   <div className="space-y-4 rounded-3xl border border-emerald-100 bg-emerald-700 px-6 py-7 text-white shadow-lg">
                     <h3 className="text-lg font-semibold text-white md:text-xl">Kommande matcher</h3>
 
