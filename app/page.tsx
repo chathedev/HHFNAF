@@ -400,10 +400,6 @@ export default function HomePage() {
             </div>
           </section>
 
-          {(matchLoading || matchesToDisplay.length > 0 || matchError) && (
-            <section className="bg-white py-12">
-              <div className="container mx-auto px-4">
-                <div className="mx-auto max-w-5xl space-y-6">
                   <div className="space-y-4 rounded-3xl border border-emerald-100 bg-emerald-700 px-6 py-7 text-white shadow-lg">
                     <h3 className="text-lg font-semibold text-white md:text-xl">Kommande matcher</h3>
 
@@ -414,107 +410,110 @@ export default function HomePage() {
                       </div>
                     )}
 
-                      {!matchLoading && matchError && (
-                        <div className="rounded-2xl border border-white/20 bg-black/15 p-5">
-                          <h4 className="text-base font-semibold md:text-lg">Kunde inte hämta matchinformationen.</h4>
-                          <p className="mt-2 text-sm text-white/80">Försök igen eller öppna kalendern.</p>
-                          <Link
-                            href="https://www.laget.se/HarnosandsHF"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="mt-4 inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
-                          >
-                            Visa kalender
-                          </Link>
-                        </div>
-                      )}
+                    {!matchLoading && matchError && (
+                      <div className="rounded-2xl border border-white/20 bg-black/15 p-5 text-sm">
+                        <h4 className="text-base font-semibold md:text-lg">Kunde inte hämta matchinformationen.</h4>
+                        <p className="mt-2 text-white/80">Försök igen eller öppna kalendern.</p>
+                        <Link
+                          href="https://www.laget.se/HarnosandsHF"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-4 inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+                        >
+                          Visa kalender
+                        </Link>
+                      </div>
+                    )}
 
-                      {!matchLoading && !matchError && matchesToDisplay.length === 0 && (
-                        <div className="rounded-2xl border border-white/20 bg-black/15 p-5 text-center">
-                          <h4 className="text-base font-semibold md:text-lg">Inga matcher publicerade ännu.</h4>
-                          <p className="mt-2 text-sm text-white/80">Nästa match visas här så snart den finns tillgänglig.</p>
-                        </div>
-                      )}
+                    {!matchLoading && !matchError && matchesToDisplay.length === 0 && (
+                      <div className="rounded-2xl border border-white/20 bg-black/15 p-5 text-center text-sm text-white/80">
+                        Inga matcher publicerade ännu. Nästa match visas här så snart den finns tillgänglig.
+                      </div>
+                    )}
 
-                      {!matchLoading && !matchError && matchesToDisplay.length > 0 && (
-                        <div className="grid gap-4">
-                          {matchesToDisplay.map((match, index) => {
-                            const teams = getMatchTeams(match)
-                            const countdownLabel = formatCountdownLabel(match.date, Boolean(match.result))
-                            const venueName = match.venue?.toLowerCase() ?? ""
-                            const isTicketEligible =
-                              TICKET_VENUES.some((keyword) => venueName.includes(keyword)) &&
-                              MATCH_TYPES_WITH_TICKETS.some((keyword) => match.teamType?.toLowerCase().includes(keyword))
-                            const status = getMatchStatus(match)
-                            return (
-                              <div
-                                key={`${match.eventUrl}-${index}`}
-                                className="rounded-2xl border border-white/25 bg-black/20 p-5"
-                              >
-                                <div className="flex flex-col gap-3">
-                                  <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.35em] text-white/60">
-                                    <span>
-                                      {status === "live" ? "Live" : status === "result" ? "Slut" : index === 0 ? "Nästa match" : "Kommande"}
-                                    </span>
-                                    {countdownLabel && !match.result && <span className="text-white/70">{countdownLabel}</span>}
-                                  </div>
+                    {!matchLoading && !matchError && matchesToDisplay.length > 0 && (
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {matchesToDisplay.map((match, index) => {
+                          const teams = getMatchTeams(match)
+                          const countdownLabel = formatCountdownLabel(match.date, Boolean(match.result))
+                          const venueName = match.venue?.toLowerCase() ?? ""
+                          const isTicketEligible =
+                            TICKET_VENUES.some((keyword) => venueName.includes(keyword)) &&
+                            MATCH_TYPES_WITH_TICKETS.some((keyword) => match.teamType?.toLowerCase().includes(keyword))
+                          const status = getMatchStatus(match)
 
-                                  <div className="flex flex-col gap-1">
-                                    <h4 className="text-xl font-semibold text-white md:text-2xl">{teams.clubTeamName}</h4>
-                                    <p className="text-base text-white/85 md:text-lg">vs {teams.opponentName}</p>
-                                  </div>
+                          return (
+                            <Card
+                              key={match.eventUrl}
+                              className="flex h-full flex-col justify-between rounded-3xl border border-white/20 bg-white/10 px-5 py-5 text-white transition hover:border-white/40 hover:shadow-md"
+                            >
+                              <div className="space-y-4">
+                                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.35em] text-white/70">
+                                  {status === "live" && (
+                                    <span className="rounded-full bg-orange-500/90 px-3 py-1 text-white shadow-sm">Live</span>
+                                  )}
+                                  {status === "result" && (
+                                    <span className="rounded-full bg-white/25 px-3 py-1 text-white shadow-sm">Slut</span>
+                                  )}
+                                  {status === "upcoming" && (
+                                    <span className="rounded-full bg-white/10 px-3 py-1 text-white">Kommande</span>
+                                  )}
+                                  {match.teamType && <span>{match.teamType}</span>}
+                                </div>
 
-                                  <div className="flex flex-wrap gap-2 text-xs font-medium text-white/75">
-                                    <span>{match.fullDateText ?? match.displayDate}</span>
-                                    <span>•</span>
-                                    <span>{match.time}</span>
-                                    {match.venue && (
-                                      <>
-                                        <span>•</span>
-                                        <span>{match.venue}</span>
-                                      </>
-                                    )}
-                                  </div>
+                                <div>
+                                  <h4 className="text-xl font-semibold md:text-2xl">{teams.clubTeamName}</h4>
+                                  <p className="text-base text-white/80 md:text-lg">vs {teams.opponentName}</p>
+                                  {match.series && (
+                                    <p className="mt-1 text-xs font-semibold uppercase tracking-[0.3em] text-white/60">{match.series}</p>
+                                  )}
+                                </div>
 
-                                  <div className="flex flex-wrap items-center justify-between gap-2">
-                                    {isTicketEligible && (
-                                      <Link
-                                        href={TICKET_URL}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center justify-center rounded-full bg-orange-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-orange-900/40 transition hover:bg-orange-600"
-                                      >
-                                        Köp biljett
-                                      </Link>
-                                    )}
-                                    <Link
-                                      href={match.infoUrl ?? match.eventUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
-                                    >
-                                      Matchsida
-                                    </Link>
-                                  </div>
-                                  {match.result && (
-                                    <div className="flex items-center justify-between rounded-2xl border border-white/15 bg-white/10 px-4 py-3">
-                                      <div className="text-sm text-white/80">
-                                        <p>Slutsignal</p>
-                                      </div>
-                                      <div className="text-right">
-                                        <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/65">Resultat</p>
-                                        <p className="text-3xl font-black md:text-4xl">{match.result}</p>
-                                      </div>
-                                    </div>
+                                <div className="space-y-1 text-sm text-white/80">
+                                  <p>{match.fullDateText ?? match.displayDate}</p>
+                                  <p>{match.time}</p>
+                                  {match.venue && <p>{match.venue}</p>}
+                                  {status !== "result" && (
+                                    <p className="text-white">{status === "live" ? "Match pågår" : countdownLabel}</p>
                                   )}
                                 </div>
                               </div>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </Card>
+
+                              <div className="mt-4 flex flex-col gap-2">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  {isTicketEligible && (
+                                    <Link
+                                      href={TICKET_URL}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center justify-center rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600"
+                                    >
+                                      Köp biljett
+                                    </Link>
+                                  )}
+                                  <Link
+                                    href={match.infoUrl ?? match.eventUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+                                  >
+                                    Matchsida
+                                  </Link>
+                                </div>
+
+                                {match.result && (
+                                  <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-right">
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/70">Slutresultat</p>
+                                    <p className="text-2xl font-black md:text-3xl">{match.result}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </Card>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </section>
