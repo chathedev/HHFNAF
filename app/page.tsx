@@ -692,119 +692,93 @@ export default function HomePage() {
           </section>
 
           {(matchLoading || upcomingMatch || matchError) && (
-            <section className="relative bg-white py-16">
+            <section className="bg-white py-12">
               <div className="container mx-auto px-4">
-                <div className="mx-auto max-w-5xl">
-                  <Card className="relative overflow-hidden rounded-[2.5rem] border border-emerald-100/80 bg-gradient-to-br from-emerald-600 via-emerald-500 to-orange-400 text-white shadow-[0_22px_60px_-18px_rgba(15,118,110,0.6)]">
-                    <div className="pointer-events-none absolute -left-20 top-16 h-52 w-52 rounded-full bg-white/25 blur-3xl" />
-                    <div className="pointer-events-none absolute right-[-80px] bottom-[-80px] h-72 w-72 rounded-full bg-emerald-900/20 blur-3xl" />
-                    <div className="relative grid gap-10 px-8 py-12 md:px-12 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.75fr)]">
+                <div className="mx-auto max-w-4xl">
+                  <Card className="rounded-3xl border border-emerald-200 bg-emerald-700 text-white shadow-xl">
+                    <div className="flex flex-col gap-8 p-8 md:flex-row md:items-center md:justify-between">
                       {matchLoading && (
-                        <div className="lg:col-span-2">
-                          <div className="grid gap-6 md:grid-cols-2">
-                            <div className="space-y-4">
-                              <div className="h-4 w-36 rounded-full bg-white/30 animate-pulse" />
-                              <div className="h-12 w-full rounded-2xl bg-white/25 animate-pulse" />
-                              <div className="h-12 w-3/4 rounded-2xl bg-white/20 animate-pulse" />
-                            </div>
-                            <div className="space-y-3">
-                              <div className="h-16 rounded-3xl bg-white/15 animate-pulse" />
-                              <div className="h-12 rounded-3xl bg-white/10 animate-pulse" />
-                              <div className="h-10 rounded-3xl bg-white/10 animate-pulse" />
-                            </div>
+                        <div className="flex w-full flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                          <div className="flex-1 space-y-4">
+                            <div className="h-4 w-32 rounded-full bg-white/25 animate-pulse" />
+                            <div className="h-10 w-3/4 rounded-full bg-white/20 animate-pulse" />
+                            <div className="h-6 w-1/2 rounded-full bg-white/20 animate-pulse" />
+                          </div>
+                          <div className="w-full max-w-xs space-y-3 md:text-right">
+                            <div className="h-20 rounded-2xl bg-white/15 animate-pulse" />
+                            <div className="h-10 rounded-full bg-white/20 animate-pulse" />
                           </div>
                         </div>
                       )}
 
                       {!matchLoading && matchError && (
-                        <div className="lg:col-span-2">
-                          <div className="flex flex-col gap-6 rounded-3xl border border-white/30 bg-white/10 p-8 backdrop-blur">
-                            <div>
-                              <p className="text-xs font-semibold uppercase tracking-[0.45em] text-white/70">Nästa match</p>
-                              <h3 className="mt-4 text-2xl font-bold">Vi kunde inte hämta matchinformationen just nu.</h3>
-                              <p className="mt-2 text-sm text-white/80">
-                                Försök igen om en liten stund eller följ länken nedan för att se klubbens kalender.
-                              </p>
-                            </div>
-                            <div>
-                              <Link
-                                href="https://www.laget.se/HarnosandsHF"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center rounded-full border border-white/60 bg-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/25"
-                              >
-                                Öppna kalendern på laget.se
-                              </Link>
-                            </div>
+                        <div className="flex w-full flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                          <div className="flex-1 space-y-3">
+                            <p className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">Nästa match</p>
+                            <h3 className="text-2xl font-semibold md:text-3xl">Kunde inte hämta matchinformationen.</h3>
+                            <p className="text-sm text-white/80">Testa igen eller öppna kalendern på laget.se.</p>
+                          </div>
+                          <div className="flex w-full max-w-xs flex-col gap-3 md:w-auto">
+                            <Link
+                              href="https://www.laget.se/HarnosandsHF"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center rounded-full border border-white/50 bg-white/10 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
+                            >
+                              Öppna kalendern på laget.se
+                            </Link>
                           </div>
                         </div>
                       )}
 
                       {!matchLoading && !matchError && !upcomingMatch && (
-                        <div className="lg:col-span-2">
-                          <div className="rounded-3xl border border-white/30 bg-white/10 p-8 text-center backdrop-blur">
-                            <p className="text-xs font-semibold uppercase tracking-[0.45em] text-white/70">Nästa match</p>
-                            <h3 className="mt-4 text-2xl font-bold">Just nu finns inga planerade matcher.</h3>
-                            <p className="mt-2 text-sm text-white/80">
-                              När nästa match publiceras på laget.se dyker den upp här automatiskt.
-                            </p>
-                          </div>
+                        <div className="flex w-full flex-col gap-2 text-center">
+                          <p className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">Nästa match</p>
+                          <h3 className="text-2xl font-semibold md:text-3xl">Inga matcher publicerade ännu.</h3>
+                          <p className="text-sm text-white/80">
+                            Nästa match från laget.se visas här så fort den läggs upp.
+                          </p>
                         </div>
                       )}
 
                       {!matchLoading && !matchError && upcomingMatch && matchTeams && (
                         <>
-                          <div className="space-y-7">
-                            <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.35em] text-white/70">
-                              <span className="rounded-full bg-white/15 px-3 py-1">Nästa match</span>
-                              <span className="rounded-full bg-black/20 px-3 py-1">{upcomingMatch.isHome ? "Hemma" : "Borta"}</span>
-                              <span className="rounded-full bg-white/12 px-3 py-1">
-                                {upcomingMatch.teamType || "Härnösands HF"}
-                              </span>
+                          <div className="flex-1 space-y-6">
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">Nästa match</p>
+                              <h3 className="mt-3 text-3xl font-bold md:text-4xl">{matchTeams.clubTeamName}</h3>
+                              <p className="text-lg text-white/80 md:text-xl">vs {matchTeams.opponentName}</p>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-white/70">
+                              <span className="rounded-full bg-white/15 px-3 py-1">{upcomingMatch.isHome ? "Hemma" : "Borta"}</span>
+                              {upcomingMatch.teamType && (
+                                <span className="rounded-full bg-white/10 px-3 py-1">{upcomingMatch.teamType}</span>
+                              )}
                               {upcomingMatch.series && (
                                 <span className="rounded-full bg-white/10 px-3 py-1">{upcomingMatch.series}</span>
                               )}
                             </div>
 
-                            <div className="space-y-4">
-                              <h3 className="text-3xl font-black leading-tight md:text-4xl">
-                                {matchTeams.clubTeamName}
-                                <span className="mx-2 text-white/60">vs</span>
-                                <span className="text-orange-100">{matchTeams.opponentName}</span>
-                              </h3>
-                              <p className="text-sm font-medium text-white/75">
-                                {upcomingMatch.fullDateText ?? upcomingMatch.displayDate} • {upcomingMatch.time}
-                              </p>
-                            </div>
-
-                            <div className="grid gap-4 sm:grid-cols-2">
-                              <div className="rounded-2xl border border-white/25 bg-white/10 p-5 backdrop-blur-sm">
-                                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">Arena</p>
-                                <p className="mt-2 text-lg font-semibold">
-                                  {upcomingMatch.venue ?? (upcomingMatch.isHome ? "Härnösand" : "Bekräftas")}
-                                </p>
-                              </div>
-                              <div className="rounded-2xl border border-white/25 bg-white/10 p-5 backdrop-blur-sm">
-                                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">Matchtyp</p>
-                                <p className="mt-2 text-lg font-semibold">{upcomingMatch.teamType}</p>
-                              </div>
+                            <div className="space-y-1 text-sm text-white/80">
+                              <p>{upcomingMatch.fullDateText ?? upcomingMatch.displayDate}</p>
+                              <p>Avkast {upcomingMatch.time}</p>
+                              {upcomingMatch.venue && <p>{upcomingMatch.venue}</p>}
                             </div>
                           </div>
 
-                          <div className="flex flex-col justify-between gap-6 rounded-3xl border border-white/30 bg-white/10 p-6 backdrop-blur md:items-end">
-                            <div className="w-full rounded-3xl border border-white/25 bg-black/20 px-6 py-6 text-center shadow-inner md:w-auto md:text-right">
-                              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-white/60">
+                          <div className="flex w-full flex-col gap-4 md:w-auto md:items-end">
+                            <div className="w-full rounded-2xl bg-black/20 px-6 py-5 text-center md:w-auto md:text-right">
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/60">
                                 {upcomingMatch.result ? "Resultat" : "Avkast"}
                               </p>
-                              <p className="mt-3 text-5xl font-black">
-                                {upcomingMatch.result ?? upcomingMatch.time}
-                              </p>
-                              <p className="mt-2 text-sm text-white/80">
-                                {upcomingMatch.result ? "Slutsignal" : countdownLabel}
-                              </p>
+                              <p className="mt-2 text-4xl font-black md:text-5xl">{upcomingMatch.result ?? upcomingMatch.time}</p>
+                              {countdownLabel && (
+                                <p className="mt-2 text-sm text-white/80">{countdownLabel}</p>
+                              )}
                             </div>
 
-                            <div className="flex w-full flex-col gap-3 md:w-auto">
+                            <div className="flex w-full flex-col gap-2 md:w-auto">
                               {upcomingMatch.isHome &&
                                 MATCH_TYPES_WITH_TICKETS.some((keyword) =>
                                   upcomingMatch.teamType?.toLowerCase().includes(keyword),
@@ -822,7 +796,7 @@ export default function HomePage() {
                                 href={upcomingMatch.infoUrl ?? upcomingMatch.eventUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center rounded-full border border-white/60 bg-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/25"
+                                className="inline-flex items-center justify-center rounded-full border border-white/50 bg-white/10 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
                               >
                                 Matchsida på laget.se
                               </Link>
