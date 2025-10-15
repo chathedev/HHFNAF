@@ -75,7 +75,7 @@ export default function HomePage() {
   )
 
   const tierOrder = ["Diamantpartner", "Platinapartner", "Guldpartner", "Silverpartner", "Bronspartner"]
-  const matchesToDisplay = upcomingMatches.slice(0, 1)
+  const matchesToDisplay = upcomingMatches.slice(0, 3)
   const getMatchStatus = (match: UpcomingMatch) => {
     if (match.result) {
       return "result"
@@ -407,9 +407,10 @@ export default function HomePage() {
                     <h3 className="text-lg font-semibold text-white md:text-xl">Kommande matcher</h3>
 
                     {matchLoading && matchesToDisplay.length === 0 && (
-                      <div className="flex flex-col gap-4 md:flex-row md:gap-6">
-                        <div className="h-32 flex-1 rounded-2xl bg-white/15 animate-pulse" />
-                        <div className="h-32 flex-1 rounded-2xl bg-white/10 animate-pulse" />
+                      <div className="space-y-4">
+                        {[0, 1, 2].map((item) => (
+                          <div key={item} className="h-24 rounded-2xl bg-white/15 animate-pulse" />
+                        ))}
                       </div>
                     )}
 
@@ -434,10 +435,13 @@ export default function HomePage() {
                       </div>
                     )}
 
-                    {!matchLoading && !matchError && matchesToDisplay.length > 0 && matchesToDisplay.map((match) => {
-                      const teams = getMatchTeams(match)
-                      const countdownLabel = formatCountdownLabel(match.date, Boolean(match.result))
-                      const venueName = match.venue?.toLowerCase() ?? ""
+                    {!matchLoading &&
+                      !matchError &&
+                      matchesToDisplay.length > 0 &&
+                      matchesToDisplay.map((match) => {
+                        const teams = getMatchTeams(match)
+                        const countdownLabel = formatCountdownLabel(match.date, Boolean(match.result))
+                        const venueName = match.venue?.toLowerCase() ?? ""
                       const isTicketEligible =
                         TICKET_VENUES.some((keyword) => venueName.includes(keyword)) &&
                         MATCH_TYPES_WITH_TICKETS.some((keyword) => match.teamType?.toLowerCase().includes(keyword))
@@ -446,47 +450,54 @@ export default function HomePage() {
                       return (
                         <Card
                           key={match.eventUrl}
-                          className="flex flex-col gap-6 rounded-3xl border border-white/25 bg-white/10 px-6 py-7 text-white transition hover:border-white/40 hover:shadow-xl md:flex-row md:items-center md:justify-between md:gap-10"
+                          className="flex flex-col gap-5 rounded-3xl border border-white/20 bg-gradient-to-r from-white/15 via-white/5 to-transparent px-6 py-6 text-white/90 transition hover:border-white/35 hover:shadow-xl"
                         >
-                          <div className="flex flex-col gap-4">
-                            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.35em] text-white/70">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.35em] text-white">
+                                {match.teamType || "Härnösands HF"}
+                              </div>
                               {status === "live" && (
-                                <span className="rounded-full bg-orange-500/90 px-3 py-1 text-white shadow-sm">Live</span>
+                                <span className="rounded-full bg-orange-500 px-3 py-1 text-xs font-semibold uppercase tracking-[0.35em] text-white shadow">
+                                  Live
+                                </span>
                               )}
                               {status === "result" && (
-                                <span className="rounded-full bg-white/25 px-3 py-1 text-white shadow-sm">Slut</span>
+                                <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.35em] text-white">
+                                  Slut
+                                </span>
                               )}
                               {status === "upcoming" && (
-                                <span className="rounded-full bg-white/10 px-3 py-1 text-white">Kommande</span>
+                                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.35em] text-white/70">
+                                  Kommande
+                                </span>
                               )}
-                              {match.teamType && <span>{match.teamType}</span>}
                             </div>
-
-                            <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-6">
-                              <div className="flex items-center gap-4 text-white">
-                                <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/15 text-2xl font-black md:h-24 md:w-24 md:text-3xl">
-                                  {match.time}
-                                </div>
-                                <div className="text-sm text-white/80">
-                                  <p className="font-semibold text-white">{match.fullDateText ?? match.displayDate}</p>
-                                  {match.venue && <p>{match.venue}</p>}
-                                  {status !== "result" && (
-                                    <p className="mt-1 text-white/60">{status === "live" ? "Match pågår" : countdownLabel}</p>
-                                  )}
-                                </div>
-                              </div>
-                              <div>
-                                <h4 className="text-xl font-semibold md:text-2xl">{teams.clubTeamName}</h4>
-                                <p className="text-base text-white/80 md:text-lg">vs {teams.opponentName}</p>
-                                {match.series && (
-                                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">{match.series}</p>
-                                )}
-                              </div>
+                            <div className="text-right text-xs font-semibold uppercase tracking-[0.35em] text-white/60">
+                              {match.series || "Match"}
                             </div>
                           </div>
 
-                          <div className="flex w-full flex-col gap-3 md:w-auto md:items-end">
-                            <div className="flex flex-wrap items-center justify-start gap-2 md:justify-end">
+                          <div className="flex flex-wrap items-center gap-6">
+                            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/15 text-2xl font-black md:h-24 md:w-24 md:text-3xl">
+                              {match.time}
+                            </div>
+                            <div className="space-y-1 text-sm text-white/80">
+                              <p className="text-white font-semibold">{match.fullDateText ?? match.displayDate}</p>
+                              {match.venue && <p>{match.venue}</p>}
+                              {status !== "result" && (
+                                <p className="text-white/60">{status === "live" ? "Match pågår" : countdownLabel}</p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <h4 className="text-2xl font-semibold text-white md:text-3xl">{teams.clubTeamName}</h4>
+                            <p className="text-base text-white/80 md:text-lg">vs {teams.opponentName}</p>
+                          </div>
+
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
                               {isTicketEligible && (
                                 <Link
                                   href={TICKET_URL}
@@ -508,9 +519,9 @@ export default function HomePage() {
                             </div>
 
                             {match.result && (
-                              <div className="w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-right md:w-auto">
+                              <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-2 text-right">
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/70">Slutresultat</p>
-                                <p className="text-2xl font-black md:text-3xl">{match.result}</p>
+                                <p className="text-xl font-black md:text-2xl">{match.result}</p>
                               </div>
                             )}
                           </div>
