@@ -10,25 +10,15 @@ export async function GET() {
     { url: "/matcher", priority: "0.8", changefreq: "daily" },
     { url: "/kop-biljett", priority: "0.8", changefreq: "daily" },
     { url: "/kontakt", priority: "0.7", changefreq: "monthly" },
-    { url: "/partners", priority: "0.7", changefreq: "monthly" },
     { url: "/links", priority: "0.6", changefreq: "monthly" },
-    { url: "/editor", priority: "0.5", changefreq: "monthly" },
-    { url: "/login", priority: "0.5", changefreq: "monthly" },
-    { url: "/instructions/clubmate-checkin", priority: "0.5", changefreq: "monthly" },
   ]
 
-  // Get all team IDs from the content
-  const teamsContent = await import('../../content/lag.json')
-    .then(module => module.default)
-    .catch(() => ({ teamCategories: [] }));
-    
-  const teamPages = teamsContent.teamCategories
-    .flatMap(category => category.teams || [])
-    .map(team => ({
-      url: `/lag/${encodeURIComponent(team.link)}`,
-      priority: "0.7",
-      changefreq: "weekly"
-    }));
+  // Add team pages
+  const teamPages = [
+    { url: "/lag/f19", priority: "0.7", changefreq: "weekly" },
+    { url: "/lag/dam", priority: "0.7", changefreq: "weekly" },
+    { url: "/lag/herr", priority: "0.7", changefreq: "weekly" },
+  ];
 
   // Combine static and dynamic pages
   const allPages = [...staticPages, ...teamPages];
