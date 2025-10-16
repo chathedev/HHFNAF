@@ -315,8 +315,10 @@ export default function HomePage() {
                           const formattedResult = formatTeamResult(match.result, match.isHome)
                           const isALagTeam =
                             match.normalizedTeam.includes("alag") || match.normalizedTeam.includes("damutv")
+                          const isFutureOrLive = match.date.getTime() >= Date.now() || status === "live"
                           const showTicket =
                             status !== "result" &&
+                            isFutureOrLive &&
                             isALagTeam &&
                             TICKET_VENUES.some((keyword) => venueName.includes(keyword))
 

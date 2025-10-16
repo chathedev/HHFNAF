@@ -84,7 +84,8 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   const isTicketEligibleBase =
     Boolean(ticketUrl) && isALagMatch && TICKET_VENUES.some((keyword) => venueName.includes(keyword))
   const formattedResult = formatTeamResult(nextMatch.result, nextMatch.isHome)
-  const showTicket = isTicketEligibleBase && !formattedResult
+  const isFutureOrLive = nextMatch.date.getTime() >= Date.now()
+  const showTicket = isTicketEligibleBase && !formattedResult && isFutureOrLive
 
   return (
     <Card className="flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-white p-6 shadow-md shadow-emerald-50">
