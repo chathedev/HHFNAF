@@ -12,7 +12,7 @@ type StatusFilter = "all" | "upcoming" | "live" | "result"
 
 type MatchOutcome = {
   text: string
-  label: "Vinst" | "Förlust" | "Oavgjort"
+  label: "Vinst" | "Förlust" | "Oavgjort" | "Ej publicerat"
 }
 
 const getMatchOutcome = (rawResult?: string, isHome?: boolean): MatchOutcome | null => {
@@ -267,12 +267,22 @@ export default function MatcherPage() {
                             ? "border-emerald-200 bg-emerald-100 text-emerald-800"
                             : outcomeInfo.label === "Förlust"
                               ? "border-red-200 bg-red-100 text-red-700"
-                              : "border-amber-200 bg-amber-100 text-amber-700"
+                              : outcomeInfo.label === "Ej publicerat"
+                                ? "border-slate-200 bg-slate-100 text-slate-700"
+                                : "border-amber-200 bg-amber-100 text-amber-700"
                         }`}
                       >
                         {outcomeInfo.label}
                       </span>
-                      <span className="text-3xl font-bold text-emerald-900 sm:text-4xl">{outcomeInfo.text}</span>
+                      <span
+                        className={
+                          outcomeInfo.label === "Ej publicerat"
+                            ? "text-sm font-semibold text-emerald-700"
+                            : "text-3xl font-bold text-emerald-900 sm:text-4xl"
+                        }
+                      >
+                        {outcomeInfo.text}
+                      </span>
                     </div>
                   )}
 

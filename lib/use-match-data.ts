@@ -72,7 +72,11 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
   const normalizedTeam = createNormalizedTeamKey(teamType)
   const id = [normalizedTeam, match.date, match.time ?? "", opponent, match.series ?? ""].join("|")
 
-  const isHome = typeof match.isHome === "boolean" ? match.isHome : undefined
+  let derivedIsHome = typeof match.isHome === "boolean" ? match.isHome : undefined
+  const homeAwaySuffix = opponent.match(/\((hemma|borta)\)\s*$/i)
+  if (homeAwaySuffix) {
+    derivedIsHome = homeAwaySuffix[1].toLowerCase() === "hemma"
+  }
 
   return {
     id,
@@ -86,7 +90,7 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     series: match.series ?? undefined,
     infoUrl: match.infoUrl ?? undefined,
     result: match.result ?? undefined,
-    isHome,
+    isHome: derivedIsHome,
   }
 }
 
