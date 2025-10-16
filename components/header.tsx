@@ -27,7 +27,7 @@ function Header() {
     }
   }, [])
 
-  const visiblePaths = ["/", "/nyheter", "/lag", "/kontakt", "/kop-biljett"]
+  const visiblePaths = ["/", "/nyheter", "/lag", "/matcher", "/kontakt", "/kop-biljett"]
 
   if (!visiblePaths.includes(pathname)) {
     return null
@@ -37,6 +37,7 @@ function Header() {
     { name: "Hem", href: "/" },
     { name: "Nyheter", href: "/nyheter" },
     { name: "Lag", href: "/lag" },
+    { name: "Matcher", href: "/matcher" },
     { name: "Köp biljett", href: "https://clubs.clubmate.se/harnosandshf/overview/" },
     { name: "Kontakt", href: "/kontakt" },
   ]
