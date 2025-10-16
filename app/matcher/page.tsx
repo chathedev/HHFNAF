@@ -202,16 +202,16 @@ export default function MatcherPage() {
                   ? statusBadgeStyles.result
                   : statusBadgeStyles.upcoming
 
-            const trimmedResult = typeof match.result === "string" ? match.result.replace(/\s+/g, "").replace(/-/g, "–") : null
+            const trimmedResult = typeof match.result === "string" ? match.result.trim() : null
             let outcomeInfo = getMatchOutcome(trimmedResult ?? undefined, match.isHome)
             const isPastMatch = match.date.getTime() < Date.now()
             if (!outcomeInfo && isPastMatch && status === "result") {
-              if (!trimmedResult || trimmedResult === "0–0") {
+              if (!trimmedResult || trimmedResult === "0-0" || trimmedResult === "00") {
                 outcomeInfo = {
                   label: "Ej publicerat",
                   text: "Resultat ej publicerat",
                 }
-              } else if (trimmedResult?.toLowerCase() === "intepublicerat") {
+              } else if (trimmedResult?.toLowerCase() === "inte publicerat" || trimmedResult?.toLowerCase() === "intepublicerat") {
                 outcomeInfo = {
                   label: "Ej publicerat",
                   text: "Resultat inte publicerat",
@@ -263,19 +263,19 @@ export default function MatcherPage() {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   {outcomeInfo && (
                     <div className="flex flex-col items-start gap-2 sm:items-end">
-                      <span
-                        className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] ${
-                          outcomeInfo.label === "Vinst"
-                            ? "border-emerald-200 bg-emerald-100 text-emerald-800"
-                            : outcomeInfo.label === "Förlust"
-                              ? "border-red-200 bg-red-100 text-red-700"
-                              : outcomeInfo.label === "Ej publicerat"
-                                ? "border-slate-200 bg-slate-100 text-slate-700"
+                      {outcomeInfo.label !== "Ej publicerat" && (
+                        <span
+                          className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] ${
+                            outcomeInfo.label === "Vinst"
+                              ? "border-emerald-200 bg-emerald-100 text-emerald-800"
+                              : outcomeInfo.label === "Förlust"
+                                ? "border-red-200 bg-red-100 text-red-700"
                                 : "border-amber-200 bg-amber-100 text-amber-700"
-                        }`}
-                      >
-                        {outcomeInfo.label}
-                      </span>
+                          }`}
+                        >
+                          {outcomeInfo.label}
+                        </span>
+                      )}
                       <span
                         className={
                           outcomeInfo.label === "Ej publicerat"
