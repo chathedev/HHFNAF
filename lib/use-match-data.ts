@@ -1,11 +1,11 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 type ApiMatch = {
-  teamType: string
-  opponent: string
-  date: string
+  teamType?: string | null
+  opponent?: string | null
+  date?: string | null
   time?: string | null
   venue?: string | null
   series?: string | null
@@ -31,7 +31,6 @@ const API_BASE_URL =
   (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
   "https://api.tivly.se/matcher"
 const DATA_ENDPOINT = `${API_BASE_URL}/data`
-const CACHE_KEY = "hhf-upcoming-matches"
 
 const createNormalizedTeamKey = (value: string) =>
   value
@@ -47,13 +46,12 @@ const formatDisplayDate = (date: Date) =>
     month: "long",
   }).format(date)
 
-const toDate = (dateString: string, timeString?: string | null) => {
+const toDate = (dateString?: string | null, timeString?: string | null) => {
   if (!dateString) {
     return null
   }
   const timePart = timeString && timeString.trim().length > 0 ? timeString.trim() : "00:00"
-  const isoCandidate = `${dateString}T${timePart}`
-  const parsed = new Date(isoCandidate)
+  const parsed = new Date(`${dateString}T${timePart}`)
   if (Number.isNaN(parsed.getTime())) {
     return null
   }
@@ -61,19 +59,21 @@ const toDate = (dateString: string, timeString?: string | null) => {
 }
 
 const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
+  const teamType = match.teamType?.trim()
+  const opponent = match.opponent?.trim()
   const parsedDate = toDate(match.date, match.time)
-  if (!parsedDate) {
+
+  if (!teamType || !opponent || !parsedDate) {
     return null
   }
 
-  const normalizedTeam = createNormalizedTeamKey(match.teamType || "")
-  const idParts = [normalizedTeam, match.date, match.time ?? "", match.opponent ?? "", match.series ?? ""]
-  const id = idParts.join("|")
+  const normalizedTeam = createNormalizedTeamKey(teamType)
+  const id = [normalizedTeam, match.date, match.time ?? "", opponent, match.series ?? ""].join("|")
 
   return {
     id,
-    teamType: match.teamType || "Härnösands HF",
-    opponent: match.opponent || "Motståndare",
+    teamType,
+    opponent,
     normalizedTeam,
     date: parsedDate,
     displayDate: formatDisplayDate(parsedDate),
@@ -92,71 +92,6 @@ const normalizeMatches = (matches: ApiMatch[]) =>
     .sort((a, b) => a.date.getTime() - b.date.getTime())
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
-const loadFromCache = () => {
-  if (typeof window === "undefined") {
-    return []
-  }
-
-  try {
-    const raw = sessionStorage.getItem(CACHE_KEY)
-    if (!raw) {
-      return []
-    }
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) {
-      return []
-    }
-    const withDates = parsed
-      .map((item) => {
-        const parsedDate = item.date ? new Date(item.date) : null
-        if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
-          return null
-        }
-        const teamType = typeof item.teamType === "string" ? item.teamType : ""
-        const normalizedTeam =
-          typeof item.normalizedTeam === "string" && item.normalizedTeam.length > 0
-            ? item.normalizedTeam
-            : createNormalizedTeamKey(teamType)
-
-        return {
-          id: typeof item.id === "string" ? item.id : `${normalizedTeam}|${item.date}|${item.opponent ?? ""}`,
-          teamType,
-          opponent: typeof item.opponent === "string" ? item.opponent : "Motståndare",
-          normalizedTeam,
-          date: parsedDate,
-          displayDate: typeof item.displayDate === "string" ? item.displayDate : formatDisplayDate(parsedDate),
-          time: typeof item.time === "string" ? item.time : undefined,
-          venue: typeof item.venue === "string" ? item.venue : undefined,
-          series: typeof item.series === "string" ? item.series : undefined,
-          infoUrl: typeof item.infoUrl === "string" ? item.infoUrl : undefined,
-          result: typeof item.result === "string" ? item.result : undefined,
-        } as NormalizedMatch
-      })
-      .filter((item): item is NormalizedMatch => Boolean(item))
-      .sort((a, b) => a.date.getTime() - b.date.getTime())
-
-    return withDates
-  } catch {
-    return []
-  }
-}
-
-const persistToCache = (matches: NormalizedMatch[]) => {
-  if (typeof window === "undefined") {
-    return
-  }
-
-  try {
-    const payload = matches.slice(0, 20).map((match) => ({
-      ...match,
-      date: match.date.toISOString(),
-    }))
-    sessionStorage.setItem(CACHE_KEY, JSON.stringify(payload))
-  } catch {
-    // ignore cache write failures
-  }
-}
 
 const fetchFromApi = async () => {
   let attempt = 0
@@ -188,18 +123,11 @@ export const useMatchData = (options?: { refreshIntervalMs?: number }) => {
   const [matches, setMatches] = useState<NormalizedMatch[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const cacheHydratedRef = useRef(false)
-
-  const applyMatches = useCallback((incoming: NormalizedMatch[]) => {
-    setMatches(incoming)
-    persistToCache(incoming)
-  }, [])
 
   const refresh = useCallback(async () => {
     try {
       const data = await fetchFromApi()
-      cacheHydratedRef.current = true
-      applyMatches(data)
+      setMatches(data)
       setError(null)
       setLoading(false)
       return data
@@ -210,30 +138,18 @@ export const useMatchData = (options?: { refreshIntervalMs?: number }) => {
       setLoading(false)
       throw caught
     }
-  }, [applyMatches])
-
-  useEffect(() => {
-    const cached = loadFromCache()
-    if (cached.length > 0) {
-      cacheHydratedRef.current = true
-      setMatches(cached)
-      setLoading(false)
-    }
   }, [])
 
   useEffect(() => {
     let isMounted = true
     const run = async () => {
-      if (!cacheHydratedRef.current) {
-        setLoading(true)
-      }
+      setLoading(true)
       try {
         const data = await fetchFromApi()
         if (!isMounted) {
           return
         }
-        cacheHydratedRef.current = true
-        applyMatches(data)
+        setMatches(data)
         setError(null)
       } catch (caught) {
         if (!isMounted) {
@@ -254,7 +170,7 @@ export const useMatchData = (options?: { refreshIntervalMs?: number }) => {
     return () => {
       isMounted = false
     }
-  }, [applyMatches])
+  }, [])
 
   useEffect(() => {
     if (!refreshIntervalMs || refreshIntervalMs <= 0) {
