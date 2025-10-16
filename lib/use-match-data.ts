@@ -11,6 +11,7 @@ type ApiMatch = {
   series?: string | null
   infoUrl?: string | null
   result?: string | null
+  isHome?: boolean | null
 }
 
 export type NormalizedMatch = {
@@ -25,6 +26,7 @@ export type NormalizedMatch = {
   series?: string
   infoUrl?: string
   result?: string
+  isHome?: boolean
 }
 
 const API_BASE_URL =
@@ -70,6 +72,8 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
   const normalizedTeam = createNormalizedTeamKey(teamType)
   const id = [normalizedTeam, match.date, match.time ?? "", opponent, match.series ?? ""].join("|")
 
+  const isHome = typeof match.isHome === "boolean" ? match.isHome : undefined
+
   return {
     id,
     teamType,
@@ -82,6 +86,7 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     series: match.series ?? undefined,
     infoUrl: match.infoUrl ?? undefined,
     result: match.result ?? undefined,
+    isHome,
   }
 }
 

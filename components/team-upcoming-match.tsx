@@ -19,6 +19,24 @@ type TeamUpcomingMatchProps = {
   ticketUrl?: string
 }
 
+const formatTeamResult = (rawResult?: string, isHome?: boolean) => {
+  if (!rawResult) {
+    return null
+  }
+  const scoreboardMatch = rawResult.match(/(\d+)\s*[–-]\s*(\d+)/)
+  if (!scoreboardMatch) {
+    return rawResult.trim()
+  }
+  const homeScore = Number.parseInt(scoreboardMatch[1], 10)
+  const awayScore = Number.parseInt(scoreboardMatch[2], 10)
+  if (Number.isNaN(homeScore) || Number.isNaN(awayScore)) {
+    return rawResult.trim()
+  }
+  const ourScore = isHome === false ? awayScore : homeScore
+  const opponentScore = isHome === false ? homeScore : awayScore
+  return `${ourScore}\u2013${opponentScore}`
+}
+
 export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchProps) {
   const { matches, loading, error } = useMatchData({ refreshIntervalMs: 60_000 })
 
@@ -63,8 +81,10 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   const isALagMatch =
     nextMatch.normalizedTeam.includes("alag") || nextMatch.normalizedTeam.includes("damutv")
   const venueName = nextMatch.venue?.toLowerCase() ?? ""
-  const shouldShowTicket =
+  const isTicketEligibleBase =
     Boolean(ticketUrl) && isALagMatch && TICKET_VENUES.some((keyword) => venueName.includes(keyword))
+  const formattedResult = formatTeamResult(nextMatch.result, nextMatch.isHome)
+  const showTicket = isTicketEligibleBase && !formattedResult
 
   return (
     <Card className="flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-white p-6 shadow-md shadow-emerald-50">
@@ -95,11 +115,14 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {nextMatch.result && (
-          <div className="text-sm font-semibold text-emerald-700 sm:text-right">Resultat {nextMatch.result}</div>
+        {formattedResult && (
+          <div className="flex flex-col items-start gap-1 sm:items-end">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-600">Slutresultat</span>
+            <span className="text-3xl font-bold text-emerald-900 sm:text-4xl">{formattedResult}</span>
+          </div>
         )}
 
-        {shouldShowTicket && (
+        {showTicket && (
           <Link
             href={ticketUrl}
             target="_blank"

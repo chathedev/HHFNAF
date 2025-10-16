@@ -31,6 +31,25 @@ import { TICKET_VENUES } from "@/lib/matches"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
+
+const formatTeamResult = (rawResult?: string, isHome?: boolean) => {
+  if (!rawResult) {
+    return null
+  }
+  const scoreboardMatch = rawResult.match(/(\d+)\s*[–-]\s*(\d+)/)
+  if (!scoreboardMatch) {
+    return rawResult.trim()
+  }
+  const homeScore = Number.parseInt(scoreboardMatch[1], 10)
+  const awayScore = Number.parseInt(scoreboardMatch[2], 10)
+  if (Number.isNaN(homeScore) || Number.isNaN(awayScore)) {
+    return rawResult.trim()
+  }
+  const ourScore = isHome === false ? awayScore : homeScore
+  const opponentScore = isHome === false ? homeScore : awayScore
+  return `${ourScore}\u2013${opponentScore}`
+}
+
 export default function HomePage() {
   const searchParams = useSearchParams()
   const isEditorMode = searchParams?.get("editor") === "true"
@@ -285,10 +304,6 @@ export default function HomePage() {
                             (value): value is string => Boolean(value),
                           )
                           const scheduleInfo = scheduleParts.join(" • ")
-                          const isALagTeam =
-                            match.normalizedTeam.includes("alag") || match.normalizedTeam.includes("damutv")
-                          const isTicketEligible =
-                            isALagTeam && TICKET_VENUES.some((keyword) => venueName.includes(keyword))
                           const status = getMatchStatus(match)
                           const statusStyles =
                             status === "live"
@@ -297,6 +312,13 @@ export default function HomePage() {
                                 ? "bg-emerald-100 text-emerald-900 border-emerald-200"
                                 : "bg-emerald-50 text-emerald-700 border-emerald-200"
                           const statusLabel = status === "live" ? "Live" : status === "result" ? "Slut" : "Kommande"
+                          const formattedResult = formatTeamResult(match.result, match.isHome)
+                          const isALagTeam =
+                            match.normalizedTeam.includes("alag") || match.normalizedTeam.includes("damutv")
+                          const showTicket =
+                            status !== "result" &&
+                            isALagTeam &&
+                            TICKET_VENUES.some((keyword) => venueName.includes(keyword))
 
                           return (
                             <li key={match.id}>
@@ -332,11 +354,16 @@ export default function HomePage() {
                                   </div>
 
                                   <div className="flex flex-col items-start gap-3 sm:w-64 sm:items-end">
-                                    {match.result && (
-                                      <div className="text-sm font-semibold text-emerald-700 sm:text-right">Resultat {match.result}</div>
+                                    {formattedResult && (
+                                      <div className="flex flex-col items-start gap-1 sm:items-end">
+                                        <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-600">
+                                          Slutresultat
+                                        </span>
+                                        <span className="text-3xl font-bold text-emerald-900 sm:text-4xl">{formattedResult}</span>
+                                      </div>
                                     )}
 
-                                    {isTicketEligible && (
+                                    {showTicket && (
                                       <Link
                                         href={TICKET_URL}
                                         target="_blank"
