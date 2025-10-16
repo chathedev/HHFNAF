@@ -4,7 +4,13 @@ import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 
 import { Card } from "@/components/ui/card"
-import { fetchUpcomingMatches, formatCountdownLabel, getMatchTeams, type UpcomingMatch } from "@/lib/matches"
+import {
+  fetchUpcomingMatches,
+  formatCountdownLabel,
+  getMatchTeams,
+  TICKET_VENUES,
+  type UpcomingMatch,
+} from "@/lib/matches"
 
 const normalizeTeamKey = (value: string) =>
   value
@@ -41,7 +47,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
       setLoading(true)
       setError(false)
       try {
-        const matches = await fetchUpcomingMatches({ limit: 12 })
+        const matches = await fetchUpcomingMatches({ limit: null, maxMonthsAhead: 12 })
         if (cancelled) {
           return
         }
@@ -119,6 +125,12 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
     .filter((item): item is string => Boolean(item))
     .join(" • ")
 
+  const normalizedTeamType = match.teamType?.toLowerCase() ?? ""
+  const isALagMatch = normalizedTeamType.includes("a-lag") || normalizedTeamType.includes("dam/utv")
+  const venueName = match.venue?.toLowerCase() ?? ""
+  const shouldShowTicket =
+    Boolean(ticketUrl) && isALagMatch && TICKET_VENUES.some((keyword) => venueName.includes(keyword))
+
   return (
     <Card className="flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-white p-6 shadow-md shadow-emerald-50">
       <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-600">
@@ -140,7 +152,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-          {ticketUrl && (
+          {shouldShowTicket && (
             <Link
               href={ticketUrl}
               target="_blank"

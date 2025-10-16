@@ -31,7 +31,6 @@ import {
   fetchUpcomingMatches,
   formatCountdownLabel,
   getMatchTeams,
-  MATCH_TYPES_WITH_TICKETS,
   TICKET_VENUES,
   refreshMatchResult,
   type UpcomingMatch,
@@ -448,9 +447,10 @@ export default function HomePage() {
                             match.venue,
                           ].filter((value): value is string => Boolean(value))
                           const scheduleInfo = scheduleParts.join(" • ")
-                          const isTicketEligible =
-                            TICKET_VENUES.some((keyword) => venueName.includes(keyword)) &&
-                            MATCH_TYPES_WITH_TICKETS.some((keyword) => match.teamType?.toLowerCase().includes(keyword))
+                          const normalizedTeamType = match.teamType?.toLowerCase() ?? ""
+                          const isALagTeam =
+                            normalizedTeamType.includes("a-lag") || normalizedTeamType.includes("dam/utv")
+                          const isTicketEligible = isALagTeam && TICKET_VENUES.some((keyword) => venueName.includes(keyword))
                           const status = getMatchStatus(match)
                           const statusStyles =
                             status === "live"
