@@ -204,16 +204,13 @@ export default function MatcherPage() {
 
             let outcomeInfo = getMatchOutcome(match.result, match.isHome)
             const isPastMatch = match.date.getTime() < Date.now()
-            if (
-              !outcomeInfo &&
-              isPastMatch &&
-              status === "result" &&
-              typeof match.result === "string" &&
-              match.result.trim() === "0-0"
-            ) {
-              outcomeInfo = {
-                label: "Ej publicerat",
-                text: "Resultat ej publicerat",
+            if (!outcomeInfo && isPastMatch && status === "result") {
+              const trimmed = typeof match.result === "string" ? match.result.trim() : null
+              if (trimmed === "0-0" || !trimmed) {
+                outcomeInfo = {
+                  label: "Ej publicerat",
+                  text: "Resultat ej publicerat",
+                }
               }
             }
             const isFutureOrLive = match.date.getTime() >= Date.now() || status === "live"
