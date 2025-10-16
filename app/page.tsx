@@ -69,6 +69,8 @@ export default function HomePage() {
     {} as Record<string, Partner[]>,
   )
 
+  const tierOrder = ["Diamantpartner", "Platinapartner", "Guldpartner", "Silverpartner", "Bronspartner"]
+
   const matchesToDisplay = upcomingMatches.slice(0, 2)
   const getMatchStatus = (match: NormalizedMatch) => {
     if (match.result) {
