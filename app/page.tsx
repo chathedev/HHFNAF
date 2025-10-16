@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
@@ -27,28 +27,22 @@ import Footer from "@/components/footer"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { defaultContent } from "@/lib/default-content"
 import type { FullContent, Partner } from "@/lib/content-types"
-import {
-  fetchUpcomingMatches,
-  formatCountdownLabel,
-  getMatchTeams,
-  TICKET_VENUES,
-  refreshMatchResult,
-  type UpcomingMatch,
-} from "@/lib/matches"
+import { formatCountdownLabel, TICKET_VENUES } from "@/lib/matches"
+import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
-const MATCH_CACHE_KEY = "hhf-upcoming-matches"
-
 export default function HomePage() {
   const searchParams = useSearchParams()
   const isEditorMode = searchParams?.get("editor") === "true"
 
   const [content] = useState<FullContent>(defaultContent)
   const [openTier, setOpenTier] = useState<string | null>("Diamantpartner")
-  const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([])
-  const [matchLoading, setMatchLoading] = useState(true)
-  const [matchError, setMatchError] = useState(false)
-  const cacheHydratedRef = useRef(false)
+  const {
+    matches: upcomingMatches,
+    loading: matchLoading,
+    error: matchErrorMessage,
+  } = useMatchData({ refreshIntervalMs: 30_000 })
+  const matchError = Boolean(matchErrorMessage)
 
   const partnersForDisplay = Array.isArray(content.partners) ? content.partners.filter((p) => p.visibleInCarousel) : []
 
@@ -75,71 +69,8 @@ export default function HomePage() {
     {} as Record<string, Partner[]>,
   )
 
-  const tierOrder = ["Diamantpartner", "Platinapartner", "Guldpartner", "Silverpartner", "Bronspartner"]
-  const persistMatches = (matches: UpcomingMatch[]) => {
-    if (typeof window === "undefined") {
-      return
-    }
-    try {
-      const payload = matches.slice(0, 20).flatMap((match) => {
-        const dateValue = match.date instanceof Date ? match.date : new Date(match.date)
-        if (Number.isNaN(dateValue.getTime())) {
-          return []
-        }
-        return [
-          {
-            ...match,
-            date: dateValue.toISOString(),
-          },
-        ]
-      })
-      sessionStorage.setItem(MATCH_CACHE_KEY, JSON.stringify(payload))
-    } catch {
-      // ignore storage errors
-    }
-  }
-
-  const applyMatches = (matches: UpcomingMatch[], options: { stopLoading?: boolean } = {}) => {
-    cacheHydratedRef.current = true
-    setUpcomingMatches(matches)
-    persistMatches(matches)
-    if (options.stopLoading) {
-      setMatchLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return
-    }
-    try {
-      const raw = sessionStorage.getItem(MATCH_CACHE_KEY)
-      if (!raw) {
-        return
-      }
-      const parsed = JSON.parse(raw)
-      if (!Array.isArray(parsed)) {
-        return
-      }
-      const hydrated = parsed
-        .map((item) => ({
-          ...item,
-          date: new Date(item.date),
-        }))
-        .filter((item) => item.date instanceof Date && !Number.isNaN(item.date.getTime()))
-        .sort((a, b) => a.date.getTime() - b.date.getTime())
-
-      if (hydrated.length > 0) {
-        cacheHydratedRef.current = true
-        setUpcomingMatches(hydrated)
-        setMatchLoading(false)
-      }
-    } catch {
-      // ignore cache issues
-    }
-  }, [])
   const matchesToDisplay = upcomingMatches.slice(0, 2)
-  const getMatchStatus = (match: UpcomingMatch) => {
+  const getMatchStatus = (match: NormalizedMatch) => {
     if (match.result) {
       return "result"
     }
@@ -151,150 +82,6 @@ export default function HomePage() {
     }
     return "upcoming"
   }
-
-  useEffect(() => {
-    let cancelled = false
-
-    const loadUpcomingMatches = async () => {
-      if (typeof window === "undefined") {
-        return
-      }
-
-      if (!cacheHydratedRef.current) {
-        setMatchLoading(true)
-      }
-      setMatchError(false)
-
-      try {
-        const matches = await fetchUpcomingMatches({
-          limit: 10,
-          onProgress: (current) => {
-            if (!cancelled && current.length > 0) {
-              applyMatches(current, { stopLoading: true })
-            }
-          },
-        })
-
-        if (cancelled) {
-          return
-        }
-
-        applyMatches(matches, { stopLoading: true })
-      } catch (_error) {
-        if (!cancelled) {
-          setMatchError(true)
-        }
-      } finally {
-        if (!cancelled) {
-          setMatchLoading(false)
-        }
-      }
-    }
-
-    void loadUpcomingMatches()
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return undefined
-    }
-    if (upcomingMatches.length === 0) {
-      return undefined
-    }
-
-    let cancelled = false
-    let intervalId: number | undefined
-
-    const pollMatches = async () => {
-      const now = Date.now()
-      const matchesToRefresh = upcomingMatches.filter(
-        (match) =>
-          match.infoUrl &&
-          !match.result &&
-          match.date.getTime() - now <= 1000 * 60 * 60 * 12 &&
-          match.date.getTime() >= now - 1000 * 60 * 60 * 4,
-      )
-
-      if (matchesToRefresh.length === 0) {
-        return
-      }
-
-      const refreshedMatches = await Promise.all(matchesToRefresh.map((match) => refreshMatchResult(match)))
-
-      if (cancelled) {
-        return
-      }
-
-      setUpcomingMatches((previous) => {
-        if (previous.length === 0) {
-          return previous
-        }
-
-        let hasAnyChange = false
-        const updatedList = previous.map((prevMatch) => {
-          const refreshed =
-            refreshedMatches.find(
-              (item) => item.infoUrl && prevMatch.infoUrl && item.infoUrl === prevMatch.infoUrl,
-            ) ??
-            refreshedMatches.find((item) => item.eventUrl === prevMatch.eventUrl)
-
-          if (!refreshed) {
-            return prevMatch
-          }
-
-          const changed =
-            prevMatch.result !== refreshed.result ||
-            prevMatch.time !== refreshed.time ||
-            prevMatch.venue !== refreshed.venue ||
-            prevMatch.fullDateText !== refreshed.fullDateText ||
-            prevMatch.homeTeam !== refreshed.homeTeam ||
-            prevMatch.awayTeam !== refreshed.awayTeam
-
-          if (!changed) {
-            return prevMatch
-          }
-
-          hasAnyChange = true
-          return {
-            ...prevMatch,
-            ...refreshed,
-          }
-        })
-
-        if (hasAnyChange) {
-          persistMatches(updatedList)
-        }
-        return hasAnyChange ? updatedList : previous
-      })
-    }
-
-    void pollMatches()
-
-    const shouldPoll = upcomingMatches.some((match) => {
-      if (match.result || !match.infoUrl) {
-        return false
-      }
-      const now = Date.now()
-      return match.date.getTime() - now <= 1000 * 60 * 60 * 12 && match.date.getTime() >= now - 1000 * 60 * 60 * 4
-    })
-
-    if (shouldPoll) {
-      intervalId = window.setInterval(() => {
-        void pollMatches()
-      }, 10_000)
-    }
-
-    return () => {
-      cancelled = true
-      if (intervalId) {
-        window.clearInterval(intervalId)
-      }
-    }
-  }, [upcomingMatches])
 
   return (
     <ErrorBoundary>
@@ -467,7 +254,7 @@ export default function HomePage() {
                     <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">Matcher</p>
                     <h3 className="text-2xl font-bold text-emerald-900 md:text-3xl">Kommande matcher</h3>
                     <p className="text-sm text-emerald-700">
-                      Här ser du de två nästa matcherna för våra lag, direkt från Laget.se.
+                      Här ser du de två nästa matcherna – listan uppdateras automatiskt under säsongen.
                     </p>
                   </div>
 
@@ -483,7 +270,9 @@ export default function HomePage() {
                     {!matchLoading && matchError && (
                       <div className="rounded-2xl border border-emerald-100 bg-emerald-50/80 p-5 text-sm text-emerald-900">
                         <h4 className="text-base font-semibold md:text-lg">Kunde inte hämta matchinformationen.</h4>
-                        <p className="mt-2 text-emerald-800">Försök igen eller öppna kalendern.</p>
+                        <p className="mt-2 text-emerald-800">
+                          {matchErrorMessage ?? "Försök igen eller öppna kalendern."}
+                        </p>
                         <Link
                           href="https://www.laget.se/HarnosandsHF"
                           target="_blank"
@@ -504,21 +293,18 @@ export default function HomePage() {
                     {!matchLoading && !matchError && matchesToDisplay.length > 0 && (
                       <ul className="grid gap-4">
                         {matchesToDisplay.map((match) => {
-                          const teams = getMatchTeams(match)
-                          const primaryTeamLabel = match.teamType?.trim() || teams.clubTeamName
-                          const opponentLabel = teams.opponentName
+                          const primaryTeamLabel = match.teamType?.trim() || "Härnösands HF"
+                          const opponentLabel = match.opponent
                           const countdownLabel = formatCountdownLabel(match.date, Boolean(match.result))
                           const venueName = match.venue?.toLowerCase() ?? ""
-                          const scheduleParts = [
-                            match.fullDateText ?? match.displayDate,
-                            match.time,
-                            match.venue,
-                          ].filter((value): value is string => Boolean(value))
+                          const scheduleParts = [match.displayDate, match.time, match.venue].filter(
+                            (value): value is string => Boolean(value),
+                          )
                           const scheduleInfo = scheduleParts.join(" • ")
-                          const normalizedTeamType = match.teamType?.toLowerCase() ?? ""
                           const isALagTeam =
-                            normalizedTeamType.includes("a-lag") || normalizedTeamType.includes("dam/utv")
-                          const isTicketEligible = isALagTeam && TICKET_VENUES.some((keyword) => venueName.includes(keyword))
+                            match.normalizedTeam.includes("alag") || match.normalizedTeam.includes("damutv")
+                          const isTicketEligible =
+                            isALagTeam && TICKET_VENUES.some((keyword) => venueName.includes(keyword))
                           const status = getMatchStatus(match)
                           const statusStyles =
                             status === "live"
@@ -529,7 +315,7 @@ export default function HomePage() {
                           const statusLabel = status === "live" ? "Live" : status === "result" ? "Slut" : "Kommande"
 
                           return (
-                            <li key={match.eventUrl}>
+                            <li key={match.id}>
                               <Card className="flex flex-col gap-5 rounded-2xl border border-emerald-100 bg-white/90 p-5 shadow-sm transition hover:border-emerald-200 hover:shadow-md">
                                 <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-600">
                                   <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700">
@@ -571,14 +357,16 @@ export default function HomePage() {
                                           Köp biljett
                                         </Link>
                                       )}
-                                      <Link
-                                        href={match.infoUrl ?? match.eventUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex w-full items-center justify-center rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 sm:w-auto"
-                                      >
-                                        Matchsida
-                                      </Link>
+                                      {match.infoUrl && (
+                                        <Link
+                                          href={match.infoUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex w-full items-center justify-center rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 sm:w-auto"
+                                        >
+                                          Matchsida
+                                        </Link>
+                                      )}
                                     </div>
                                   </div>
                                 </div>
