@@ -202,7 +202,20 @@ export default function MatcherPage() {
                   ? statusBadgeStyles.result
                   : statusBadgeStyles.upcoming
 
-            const outcomeInfo = getMatchOutcome(match.result, match.isHome)
+            let outcomeInfo = getMatchOutcome(match.result, match.isHome)
+            const isPastMatch = match.date.getTime() < Date.now()
+            if (
+              !outcomeInfo &&
+              isPastMatch &&
+              status === "result" &&
+              typeof match.result === "string" &&
+              match.result.trim() === "0-0"
+            ) {
+              outcomeInfo = {
+                label: "Oavgjort",
+                text: "Resultat ej publicerat",
+              }
+            }
             const isFutureOrLive = match.date.getTime() >= Date.now() || status === "live"
             const isTicketEligible =
               !outcomeInfo &&
