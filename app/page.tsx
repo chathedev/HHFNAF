@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
@@ -37,6 +37,7 @@ import {
 } from "@/lib/matches"
 
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
+const MATCH_CACHE_KEY = "hhf-upcoming-matches"
 
 export default function HomePage() {
   const searchParams = useSearchParams()
@@ -47,6 +48,7 @@ export default function HomePage() {
   const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([])
   const [matchLoading, setMatchLoading] = useState(true)
   const [matchError, setMatchError] = useState(false)
+  const cacheHydratedRef = useRef(false)
 
   const partnersForDisplay = Array.isArray(content.partners) ? content.partners.filter((p) => p.visibleInCarousel) : []
 
@@ -74,6 +76,68 @@ export default function HomePage() {
   )
 
   const tierOrder = ["Diamantpartner", "Platinapartner", "Guldpartner", "Silverpartner", "Bronspartner"]
+  const persistMatches = (matches: UpcomingMatch[]) => {
+    if (typeof window === "undefined") {
+      return
+    }
+    try {
+      const payload = matches.slice(0, 20).flatMap((match) => {
+        const dateValue = match.date instanceof Date ? match.date : new Date(match.date)
+        if (Number.isNaN(dateValue.getTime())) {
+          return []
+        }
+        return [
+          {
+            ...match,
+            date: dateValue.toISOString(),
+          },
+        ]
+      })
+      sessionStorage.setItem(MATCH_CACHE_KEY, JSON.stringify(payload))
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  const applyMatches = (matches: UpcomingMatch[], options: { stopLoading?: boolean } = {}) => {
+    cacheHydratedRef.current = true
+    setUpcomingMatches(matches)
+    persistMatches(matches)
+    if (options.stopLoading) {
+      setMatchLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return
+    }
+    try {
+      const raw = sessionStorage.getItem(MATCH_CACHE_KEY)
+      if (!raw) {
+        return
+      }
+      const parsed = JSON.parse(raw)
+      if (!Array.isArray(parsed)) {
+        return
+      }
+      const hydrated = parsed
+        .map((item) => ({
+          ...item,
+          date: new Date(item.date),
+        }))
+        .filter((item) => item.date instanceof Date && !Number.isNaN(item.date.getTime()))
+        .sort((a, b) => a.date.getTime() - b.date.getTime())
+
+      if (hydrated.length > 0) {
+        cacheHydratedRef.current = true
+        setUpcomingMatches(hydrated)
+        setMatchLoading(false)
+      }
+    } catch {
+      // ignore cache issues
+    }
+  }, [])
   const matchesToDisplay = upcomingMatches.slice(0, 2)
   const getMatchStatus = (match: UpcomingMatch) => {
     if (match.result) {
@@ -96,7 +160,9 @@ export default function HomePage() {
         return
       }
 
-      setMatchLoading(true)
+      if (!cacheHydratedRef.current) {
+        setMatchLoading(true)
+      }
       setMatchError(false)
 
       try {
@@ -104,8 +170,7 @@ export default function HomePage() {
           limit: 10,
           onProgress: (current) => {
             if (!cancelled && current.length > 0) {
-              setUpcomingMatches(current)
-              setMatchLoading(false)
+              applyMatches(current, { stopLoading: true })
             }
           },
         })
@@ -114,7 +179,7 @@ export default function HomePage() {
           return
         }
 
-        setUpcomingMatches(matches)
+        applyMatches(matches, { stopLoading: true })
       } catch (_error) {
         if (!cancelled) {
           setMatchError(true)
@@ -200,6 +265,9 @@ export default function HomePage() {
           }
         })
 
+        if (hasAnyChange) {
+          persistMatches(updatedList)
+        }
         return hasAnyChange ? updatedList : previous
       })
     }

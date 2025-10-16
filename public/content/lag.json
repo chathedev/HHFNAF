@@ -198,7 +198,7 @@
       "teams": [
         {
           "name": "F19",
-          "link": "",
+          "link": "https://www.laget.se/HarnosandsHF-F19-senior",
           "instagramLink": "",
           "heroImage": "/HarnosandsHF/Gruppfoto/Härnösands HF - F19.jpg",
           "heroImageAlt": "Lagfoto F19",
@@ -301,7 +301,8 @@
         },
         {
           "name": "F-12",
-          "link": "https://www.laget.se/HHK-F12",
+          "link": "https://www.laget.se/HHK-F13",
+          "instagramLink": "https://www.instagram.com/harnosandshff2012/",
           "heroImage": "/placeholder.jpg",
           "heroImageAlt": "Lagbild F-12",
           "description": "",

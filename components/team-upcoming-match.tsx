@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 
 import { Card } from "@/components/ui/card"
@@ -19,6 +19,8 @@ const normalizeTeamKey = (value: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]/g, "")
 
+const MATCH_CACHE_KEY = "hhf-upcoming-matches"
+
 type TeamUpcomingMatchProps = {
   teamLabels: string | string[]
   ticketUrl?: string
@@ -28,11 +30,56 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   const [match, setMatch] = useState<UpcomingMatch | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const cachePrefillRef = useRef(false)
 
   const teamKeys = useMemo(() => {
     const labels = Array.isArray(teamLabels) ? teamLabels : [teamLabels]
     return labels.map((label) => normalizeTeamKey(label)).filter(Boolean)
   }, [teamLabels])
+
+  const selectMatch = useCallback(
+    (items: UpcomingMatch[]) =>
+      items
+        .filter((item) => {
+          const normalized = normalizeTeamKey(item.teamType || "")
+          return normalized.length > 0 && teamKeys.includes(normalized)
+        })
+        .sort((a, b) => a.date.getTime() - b.date.getTime())[0] ?? null,
+    [teamKeys],
+  )
+
+  useEffect(() => {
+    cachePrefillRef.current = false
+    if (typeof window === "undefined") {
+      return
+    }
+
+    try {
+      const raw = sessionStorage.getItem(MATCH_CACHE_KEY)
+      if (!raw) {
+        return
+      }
+      const parsed = JSON.parse(raw)
+      if (!Array.isArray(parsed)) {
+        return
+      }
+      const hydrated: UpcomingMatch[] = parsed
+        .map((item) => ({
+          ...item,
+          date: new Date(item.date),
+        }))
+        .filter((item) => item.date instanceof Date && !Number.isNaN(item.date.getTime()))
+
+      const cachedMatch = selectMatch(hydrated)
+      if (cachedMatch) {
+        cachePrefillRef.current = true
+        setMatch(cachedMatch)
+        setLoading(false)
+      }
+    } catch {
+      // ignore cache errors
+    }
+  }, [selectMatch])
 
   useEffect(() => {
     let cancelled = false
@@ -45,17 +92,11 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
         setLoading(false)
         return
       }
-      setLoading(true)
+      if (!cachePrefillRef.current) {
+        setLoading(true)
+      }
       setError(false)
       try {
-        const selectMatch = (items: UpcomingMatch[]) =>
-          items
-            .filter((item) => {
-              const normalized = normalizeTeamKey(item.teamType || "")
-              return normalized.length > 0 && teamKeys.includes(normalized)
-            })
-            .sort((a, b) => a.date.getTime() - b.date.getTime())[0] ?? null
-
         const matches = await fetchUpcomingMatches({
           limit: null,
           maxMonthsAhead: 12,
@@ -66,6 +107,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
             const candidate = selectMatch(current)
             if (candidate) {
               settled = true
+              cachePrefillRef.current = true
               setMatch(candidate)
               setLoading(false)
             }
@@ -77,6 +119,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
 
         const nextMatch = selectMatch(matches)
         settled = true
+        cachePrefillRef.current = Boolean(nextMatch)
         setMatch(nextMatch)
       } catch (_error) {
         if (!cancelled) {
@@ -96,7 +139,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
     return () => {
       cancelled = true
     }
-  }, [teamKeys])
+  }, [selectMatch, teamKeys])
 
   if (loading) {
     return (
@@ -113,16 +156,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
       <Card className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-6 shadow-sm">
         <p className="text-sm font-semibold text-emerald-900">Kunde inte hämta matchinformation just nu.</p>
         <p className="mt-2 text-sm text-emerald-800">
-          Prova att uppdatera sidan eller besök lagets kalender på{" "}
-          <Link
-            href="https://www.laget.se/HarnosandsHF"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-semibold text-emerald-700 underline"
-          >
-            Laget.se
-          </Link>
-          .
+          Prova att uppdatera sidan eller gå till lagets ordinarie kalender för det senaste spelschemat.
         </p>
       </Card>
     )
