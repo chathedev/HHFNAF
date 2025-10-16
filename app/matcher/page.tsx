@@ -211,6 +211,11 @@ export default function MatcherPage() {
                   label: "Ej publicerat",
                   text: "Resultat ej publicerat",
                 }
+              } else if (trimmedResult?.toLowerCase() === "intepublicerat") {
+                outcomeInfo = {
+                  label: "Ej publicerat",
+                  text: "Resultat inte publicerat",
+                }
               }
             }
             const isFutureOrLive = match.date.getTime() >= Date.now() || status === "live"
