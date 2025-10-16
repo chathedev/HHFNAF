@@ -28,7 +28,7 @@ const getMatchStatus = (match: NormalizedMatch): StatusFilter => {
 export default function MatcherPage() {
   const { matches, loading, error, refresh } = useMatchData({ refreshIntervalMs: 60_000 })
   const [selectedTeam, setSelectedTeam] = useState<string>("all")
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("upcoming")
 
   const teamOptions = useMemo(() => {
     const unique = new Map<string, string>()
