@@ -27,7 +27,7 @@ import Footer from "@/components/footer"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { defaultContent } from "@/lib/default-content"
 import type { FullContent, Partner } from "@/lib/content-types"
-import { formatCountdownLabel, TICKET_VENUES } from "@/lib/matches"
+import { TICKET_VENUES } from "@/lib/matches"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
@@ -295,14 +295,27 @@ export default function HomePage() {
                           return (
                             <li key={match.id}>
                               <Card className="flex flex-col gap-5 rounded-2xl border border-emerald-100 bg-white/90 p-5 shadow-sm transition hover:border-emerald-200 hover:shadow-md">
-                                <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-600">
-                                  <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700">
-                                    {primaryTeamLabel}
-                                  </span>
-                                  <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-600">
-                                    {match.series || "Match"}
-                                  </span>
-                                  <span className={`rounded-full border px-3 py-1 ${statusStyles}`}>{statusLabel}</span>
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                  <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-600">
+                                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700">
+                                      {primaryTeamLabel}
+                                    </span>
+                                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-600">
+                                      {match.series || "Match"}
+                                    </span>
+                                    <span className={`rounded-full border px-3 py-1 ${statusStyles}`}>{statusLabel}</span>
+                                  </div>
+
+                                  {match.infoUrl && (
+                                    <Link
+                                      href={match.infoUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center justify-center rounded-full border border-emerald-200 bg-white px-4 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50"
+                                    >
+                                      Matchsida
+                                    </Link>
+                                  )}
                                 </div>
 
                                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -312,38 +325,21 @@ export default function HomePage() {
                                     {scheduleInfo && <p className="text-sm text-emerald-600">{scheduleInfo}</p>}
                                   </div>
 
-                                  <div className="flex flex-col items-stretch gap-3 sm:w-64">
-                                    {status === "result" ? (
-                                      <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center sm:text-right">
-                                        <p className="text-[10px] uppercase tracking-[0.3em] text-emerald-600">Slutresultat</p>
-                                        <p className="text-2xl font-bold text-emerald-900">{match.result}</p>
-                                      </div>
-                                    ) : (
-                                      <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-center text-sm text-emerald-700 sm:text-right" />
+                                  <div className="flex flex-col items-start gap-3 sm:w-64 sm:items-end">
+                                    {match.result && (
+                                      <div className="text-sm font-semibold text-emerald-700 sm:text-right">Resultat {match.result}</div>
                                     )}
 
-                                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                                      {isTicketEligible && (
-                                        <Link
-                                          href={TICKET_URL}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="inline-flex w-full items-center justify-center rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-orange-600 sm:w-auto"
-                                        >
-                                          Köp biljett
-                                        </Link>
-                                      )}
-                                      {match.infoUrl && (
-                                        <Link
-                                          href={match.infoUrl}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="inline-flex w-full items-center justify-center rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 sm:w-auto"
-                                        >
-                                          Matchsida
-                                        </Link>
-                                      )}
-                                    </div>
+                                    {isTicketEligible && (
+                                      <Link
+                                        href={TICKET_URL}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center justify-center rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-orange-600"
+                                      >
+                                        Köp biljett
+                                      </Link>
+                                    )}
                                   </div>
                                 </div>
                               </Card>

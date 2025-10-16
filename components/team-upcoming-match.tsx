@@ -4,7 +4,7 @@ import { useMemo } from "react"
 import Link from "next/link"
 
 import { Card } from "@/components/ui/card"
-import { formatCountdownLabel, TICKET_VENUES } from "@/lib/matches"
+import { TICKET_VENUES } from "@/lib/matches"
 import { useMatchData } from "@/lib/use-match-data"
 
 const normalizeTeamKey = (value: string) =>
@@ -62,10 +62,23 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
 
   return (
     <Card className="flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-white p-6 shadow-md shadow-emerald-50">
-      <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-600">
-        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700">{nextMatch.teamType}</span>
-        {nextMatch.series && (
-          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-600">{nextMatch.series}</span>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-600">
+          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700">{nextMatch.teamType}</span>
+          {nextMatch.series && (
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-600">{nextMatch.series}</span>
+          )}
+        </div>
+
+        {nextMatch.infoUrl && (
+          <Link
+            href={nextMatch.infoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center rounded-full border border-emerald-200 bg-white px-4 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50"
+          >
+            Matchsida
+          </Link>
         )}
       </div>
 
@@ -76,32 +89,20 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-center text-sm text-emerald-700 sm:text-right">
-          {nextMatch.result ? `Resultat ${nextMatch.result}` : ""}
-        </div>
+        {nextMatch.result && (
+          <div className="text-sm font-semibold text-emerald-700 sm:text-right">Resultat {nextMatch.result}</div>
+        )}
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-          {shouldShowTicket && (
-            <Link
-              href={ticketUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex w-full items-center justify-center rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-orange-600 sm:w-auto"
-            >
-              Köp biljett
-            </Link>
-          )}
-          {nextMatch.infoUrl && (
-            <Link
-              href={nextMatch.infoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex w-full items-center justify-center rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 sm:w-auto"
-            >
-              Matchsida
-            </Link>
-          )}
-        </div>
+        {shouldShowTicket && (
+          <Link
+            href={ticketUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex w-full items-center justify-center rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-orange-600 sm:w-auto"
+          >
+            Köp biljett
+          </Link>
+        )}
       </div>
     </Card>
   )
