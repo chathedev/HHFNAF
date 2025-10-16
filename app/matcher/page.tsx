@@ -202,11 +202,11 @@ export default function MatcherPage() {
                   ? statusBadgeStyles.result
                   : statusBadgeStyles.upcoming
 
-            let outcomeInfo = getMatchOutcome(match.result, match.isHome)
+            const trimmedResult = typeof match.result === "string" ? match.result.trim() : null
+            let outcomeInfo = getMatchOutcome(trimmedResult ?? undefined, match.isHome)
             const isPastMatch = match.date.getTime() < Date.now()
             if (!outcomeInfo && isPastMatch && status === "result") {
-              const trimmed = typeof match.result === "string" ? match.result.trim() : null
-              if (trimmed === "0-0" || !trimmed) {
+              if (trimmedResult === "0-0" || !trimmedResult) {
                 outcomeInfo = {
                   label: "Ej publicerat",
                   text: "Resultat ej publicerat",
