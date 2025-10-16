@@ -212,7 +212,7 @@ export default function MatcherPage() {
               match.result.trim() === "0-0"
             ) {
               outcomeInfo = {
-                label: "Oavgjort",
+                label: "Ej publicerat",
                 text: "Resultat ej publicerat",
               }
             }
