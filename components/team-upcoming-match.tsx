@@ -27,16 +27,22 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
     return labels.map((label) => normalizeTeamKey(label)).filter(Boolean)
   }, [teamLabels])
 
+  const upcomingMatches = useMemo(() => {
+    const startOfToday = new Date()
+    startOfToday.setHours(0, 0, 0, 0)
+    return matches.filter((match) => match.date.getTime() >= startOfToday.getTime())
+  }, [matches])
+
   const nextMatch = useMemo(() => {
     if (teamKeys.length === 0) {
       return null
     }
     return (
-      matches
+      upcomingMatches
         .filter((match) => teamKeys.includes(match.normalizedTeam))
         .sort((a, b) => a.date.getTime() - b.date.getTime())[0] ?? null
     )
-  }, [matches, teamKeys])
+  }, [upcomingMatches, teamKeys])
 
   if (!loading && !nextMatch) {
     return null

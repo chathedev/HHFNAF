@@ -206,13 +206,8 @@ export const useMatchData = (options?: { refreshIntervalMs?: number }) => {
     }
   }, [refresh])
 
-  const upcomingMatches = useMemo(() => {
-    const now = Date.now()
-    return matches.filter((match) => match.date.getTime() >= now - 1000 * 60 * 60 * 4)
-  }, [matches])
-
   return {
-    matches: upcomingMatches,
+    matches,
     loading,
     error,
     refresh,

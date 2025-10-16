@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
@@ -71,7 +71,13 @@ export default function HomePage() {
 
   const tierOrder = ["Diamantpartner", "Platinapartner", "Guldpartner", "Silverpartner", "Bronspartner"]
 
-  const matchesToDisplay = upcomingMatches.slice(0, 2)
+  const matchesTodayForward = useMemo(() => {
+    const startOfToday = new Date()
+    startOfToday.setHours(0, 0, 0, 0)
+    return upcomingMatches.filter((match) => match.date.getTime() >= startOfToday.getTime())
+  }, [upcomingMatches])
+
+  const matchesToDisplay = matchesTodayForward.slice(0, 2)
   const getMatchStatus = (match: NormalizedMatch) => {
     if (match.result) {
       return "result"
@@ -353,6 +359,74 @@ export default function HomePage() {
               </div>
             </section>
           )}
+
+          {/* Cards Section */}
+          <section className="py-12 bg-white">
+            <div className="container mx-auto px-4">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                  Upplev <span className="text-orange-500">Handboll</span> Live
+                </h2>
+                <p className="text-gray-600 max-w-xl mx-auto">
+                  Följ våra matcher och stötta laget. Varje match är en upplevelse värd att dela.
+                </p>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+                {/* Se Matcher Card */}
+                <div className="group bg-white rounded-lg border border-gray-200 hover:border-green-300 transition-all duration-200 overflow-hidden">
+                  <div className="p-6">
+                    <div className="flex items-center mb-4">
+                      <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                        <Trophy className="w-5 h-5 text-green-600" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900">Se Matcher</h3>
+                    </div>
+
+                    <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+                      Följ våra kommande matcher och upplev spänningen live. Stötta laget och var en del av vår
+                      handbollsfamilj.
+                    </p>
+
+                    <Link
+                      href="/matcher"
+                      className="inline-flex items-center text-green-600 hover:text-green-700 font-medium text-sm group-hover:translate-x-1 transition-transform"
+                    >
+                      Se Alla Matcher
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Köp Biljetter Card */}
+                <div className="group bg-white rounded-lg border border-gray-200 hover:border-orange-300 transition-all duration-200 overflow-hidden">
+                  <div className="p-6">
+                    <div className="flex items-center mb-4">
+                      <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                        <Star className="w-5 h-5 text-orange-600" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900">Köp Biljetter</h3>
+                    </div>
+
+                    <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+                      Säkra din plats på läktaren och upplev handboll på nära håll. Varje biljett stödjer vårt lag och
+                      vår utveckling.
+                    </p>
+
+                    <Link
+                      href="https://clubs.clubmate.se/harnosandshf/overview/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center text-orange-600 hover:text-orange-700 font-medium text-sm group-hover:translate-x-1 transition-transform"
+                    >
+                      Köp Biljetter Nu
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
 
 
           {/* About Club Section */}
