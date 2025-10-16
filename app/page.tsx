@@ -320,6 +320,7 @@ export default function HomePage() {
                             status !== "result" &&
                             isFutureOrLive &&
                             isALagTeam &&
+                            !formattedResult &&
                             TICKET_VENUES.some((keyword) => venueName.includes(keyword))
 
                           return (
