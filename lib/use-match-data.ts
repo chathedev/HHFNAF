@@ -27,7 +27,9 @@ export type NormalizedMatch = {
   result?: string
 }
 
-const API_BASE_URL = "https://api.tivly.se/matcher"
+const API_BASE_URL =
+  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
+  "https://api.tivly.se/matcher"
 const DATA_ENDPOINT = `${API_BASE_URL}/data`
 const CACHE_KEY = "hhf-upcoming-matches"
 
@@ -252,6 +254,26 @@ export const useMatchData = (options?: { refreshIntervalMs?: number }) => {
       window.clearInterval(id)
     }
   }, [refresh, refreshIntervalMs])
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void refresh()
+      }
+    }
+
+    const handleFocus = () => {
+      void refresh()
+    }
+
+    window.addEventListener("focus", handleFocus)
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener("focus", handleFocus)
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+    }
+  }, [refresh])
 
   const upcomingMatches = useMemo(() => {
     const now = Date.now()
