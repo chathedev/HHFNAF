@@ -113,10 +113,25 @@ const loadFromCache = () => {
         if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
           return null
         }
+        const teamType = typeof item.teamType === "string" ? item.teamType : ""
+        const normalizedTeam =
+          typeof item.normalizedTeam === "string" && item.normalizedTeam.length > 0
+            ? item.normalizedTeam
+            : createNormalizedTeamKey(teamType)
+
         return {
-          ...item,
+          id: typeof item.id === "string" ? item.id : `${normalizedTeam}|${item.date}|${item.opponent ?? ""}`,
+          teamType,
+          opponent: typeof item.opponent === "string" ? item.opponent : "Motståndare",
+          normalizedTeam,
           date: parsedDate,
-        }
+          displayDate: typeof item.displayDate === "string" ? item.displayDate : formatDisplayDate(parsedDate),
+          time: typeof item.time === "string" ? item.time : undefined,
+          venue: typeof item.venue === "string" ? item.venue : undefined,
+          series: typeof item.series === "string" ? item.series : undefined,
+          infoUrl: typeof item.infoUrl === "string" ? item.infoUrl : undefined,
+          result: typeof item.result === "string" ? item.result : undefined,
+        } as NormalizedMatch
       })
       .filter((item): item is NormalizedMatch => Boolean(item))
       .sort((a, b) => a.date.getTime() - b.date.getTime())
