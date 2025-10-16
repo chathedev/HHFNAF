@@ -148,9 +148,7 @@ export default function TeamPage({ params }: TeamPageProps) {
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">Nästa match</p>
                 <h2 className="text-2xl font-bold text-emerald-900">{team.displayName}</h2>
-                <p className="text-sm text-emerald-700">
-                  Kommande matchinformation hämtas automatiskt från Laget.se och uppdateras löpande.
-                </p>
+                <p className="text-sm text-emerald-700">Vi uppdaterar matchlistan löpande med det senaste spelschemat.</p>
               </div>
               <TeamUpcomingMatch teamLabels={[team.name, team.displayName]} ticketUrl={TICKET_URL} />
             </div>

@@ -36,6 +36,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
 
   useEffect(() => {
     let cancelled = false
+    let settled = false
 
     const loadMatch = async () => {
       if (teamKeys.length === 0) {
@@ -47,19 +48,35 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
       setLoading(true)
       setError(false)
       try {
-        const matches = await fetchUpcomingMatches({ limit: null, maxMonthsAhead: 12 })
-        if (cancelled) {
-          return
-        }
-
-        const nextMatch =
-          matches
+        const selectMatch = (items: UpcomingMatch[]) =>
+          items
             .filter((item) => {
               const normalized = normalizeTeamKey(item.teamType || "")
               return normalized.length > 0 && teamKeys.includes(normalized)
             })
             .sort((a, b) => a.date.getTime() - b.date.getTime())[0] ?? null
 
+        const matches = await fetchUpcomingMatches({
+          limit: null,
+          maxMonthsAhead: 12,
+          onProgress: (current) => {
+            if (cancelled || settled) {
+              return
+            }
+            const candidate = selectMatch(current)
+            if (candidate) {
+              settled = true
+              setMatch(candidate)
+              setLoading(false)
+            }
+          },
+        })
+        if (cancelled || settled) {
+          return
+        }
+
+        const nextMatch = selectMatch(matches)
+        settled = true
         setMatch(nextMatch)
       } catch (_error) {
         if (!cancelled) {
@@ -67,7 +84,8 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
           setMatch(null)
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && !settled) {
+          settled = true
           setLoading(false)
         }
       }
