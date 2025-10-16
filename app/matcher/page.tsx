@@ -66,7 +66,15 @@ export default function MatcherPage() {
   return (
     <main className="min-h-screen bg-white py-28">
       <div className="container mx-auto px-4">
-        <div className="max-w-4xl mx-auto mb-12 text-center">
+        <div className="max-w-4xl mx-auto mb-12 text-center space-y-4">
+          <div className="flex justify-center">
+            <Link
+              href="/"
+              className="inline-flex items-center rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50"
+            >
+              ← Tillbaka till startsidan
+            </Link>
+          </div>
           <h1 className="text-4xl font-bold text-emerald-900 md:text-5xl">Matcher</h1>
           <p className="mt-3 text-base text-emerald-700 md:text-lg">
             Här hittar du de senaste uppdateringarna direkt från vår matchtjänst. Filtrera efter lag och status för att
