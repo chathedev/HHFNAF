@@ -32,22 +32,39 @@ import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 
-const formatTeamResult = (rawResult?: string, isHome?: boolean) => {
+type MatchOutcome = {
+  text: string
+  label: "Vinst" | "Förlust" | "Oavgjort"
+}
+
+const getMatchOutcome = (rawResult?: string, isHome?: boolean): MatchOutcome | null => {
   if (!rawResult) {
     return null
   }
   const scoreboardMatch = rawResult.match(/(\d+)\s*[–-]\s*(\d+)/)
   if (!scoreboardMatch) {
-    return rawResult.trim()
+    return null
   }
   const homeScore = Number.parseInt(scoreboardMatch[1], 10)
   const awayScore = Number.parseInt(scoreboardMatch[2], 10)
   if (Number.isNaN(homeScore) || Number.isNaN(awayScore)) {
-    return rawResult.trim()
+    return null
   }
-  const ourScore = isHome === false ? awayScore : homeScore
-  const opponentScore = isHome === false ? homeScore : awayScore
-  return `${ourScore}\u2013${opponentScore}`
+  const isAway = isHome === false
+  const ourScore = isAway ? awayScore : homeScore
+  const opponentScore = isAway ? homeScore : awayScore
+
+  let label: MatchOutcome["label"] = "Oavgjort"
+  if (ourScore > opponentScore) {
+    label = "Vinst"
+  } else if (ourScore < opponentScore) {
+    label = "Förlust"
+  }
+
+  return {
+    text: `${ourScore}\u2013${opponentScore}`,
+    label,
+  }
 }
 
 export default function HomePage() {
@@ -312,7 +329,7 @@ export default function HomePage() {
                                 ? "bg-emerald-100 text-emerald-900 border-emerald-200"
                                 : "bg-emerald-50 text-emerald-700 border-emerald-200"
                           const statusLabel = status === "live" ? "Live" : status === "result" ? "Slut" : "Kommande"
-                          const formattedResult = formatTeamResult(match.result, match.isHome)
+                          const outcomeInfo = getMatchOutcome(match.result, match.isHome)
                           const isALagTeam =
                             match.normalizedTeam.includes("alag") || match.normalizedTeam.includes("damutv")
                           const isFutureOrLive = match.date.getTime() >= Date.now() || status === "live"
@@ -320,7 +337,7 @@ export default function HomePage() {
                             status !== "result" &&
                             isFutureOrLive &&
                             isALagTeam &&
-                            !formattedResult &&
+                            !outcomeInfo &&
                             TICKET_VENUES.some((keyword) => venueName.includes(keyword))
 
                           return (
@@ -357,12 +374,20 @@ export default function HomePage() {
                                   </div>
 
                                   <div className="flex flex-col items-start gap-3 sm:w-64 sm:items-end">
-                                    {formattedResult && (
-                                      <div className="flex flex-col items-start gap-1 sm:items-end">
-                                        <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-600">
-                                          Slutresultat
+                                    {outcomeInfo && (
+                                      <div className="flex flex-col items-start gap-2 sm:items-end">
+                                        <span
+                                          className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] ${
+                                            outcomeInfo.label === "Vinst"
+                                              ? "border-emerald-200 bg-emerald-100 text-emerald-800"
+                                              : outcomeInfo.label === "Förlust"
+                                                ? "border-red-200 bg-red-100 text-red-700"
+                                                : "border-amber-200 bg-amber-100 text-amber-700"
+                                          }`}
+                                        >
+                                          {outcomeInfo.label}
                                         </span>
-                                        <span className="text-3xl font-bold text-emerald-900 sm:text-4xl">{formattedResult}</span>
+                                        <span className="text-3xl font-bold text-emerald-900 sm:text-4xl">{outcomeInfo.text}</span>
                                       </div>
                                     )}
 

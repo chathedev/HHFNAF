@@ -14,27 +14,44 @@ const normalizeTeamKey = (value: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]/g, "")
 
-type TeamUpcomingMatchProps = {
-  teamLabels: string | string[]
-  ticketUrl?: string
+type MatchOutcome = {
+  text: string
+  label: "Vinst" | "Förlust" | "Oavgjort"
 }
 
-const formatTeamResult = (rawResult?: string, isHome?: boolean) => {
+const getMatchOutcome = (rawResult?: string, isHome?: boolean): MatchOutcome | null => {
   if (!rawResult) {
     return null
   }
   const scoreboardMatch = rawResult.match(/(\d+)\s*[–-]\s*(\d+)/)
   if (!scoreboardMatch) {
-    return rawResult.trim()
+    return null
   }
   const homeScore = Number.parseInt(scoreboardMatch[1], 10)
   const awayScore = Number.parseInt(scoreboardMatch[2], 10)
   if (Number.isNaN(homeScore) || Number.isNaN(awayScore)) {
-    return rawResult.trim()
+    return null
   }
-  const ourScore = isHome === false ? awayScore : homeScore
-  const opponentScore = isHome === false ? homeScore : awayScore
-  return `${ourScore}\u2013${opponentScore}`
+  const isAway = isHome === false
+  const ourScore = isAway ? awayScore : homeScore
+  const opponentScore = isAway ? homeScore : awayScore
+
+  let label: MatchOutcome["label"] = "Oavgjort"
+  if (ourScore > opponentScore) {
+    label = "Vinst"
+  } else if (ourScore < opponentScore) {
+    label = "Förlust"
+  }
+
+  return {
+    text: `${ourScore}\u2013${opponentScore}`,
+    label,
+  }
+}
+
+type TeamUpcomingMatchProps = {
+  teamLabels: string | string[]
+  ticketUrl?: string
 }
 
 export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchProps) {
@@ -83,9 +100,9 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   const venueName = nextMatch.venue?.toLowerCase() ?? ""
   const isTicketEligibleBase =
     Boolean(ticketUrl) && isALagMatch && TICKET_VENUES.some((keyword) => venueName.includes(keyword))
-  const formattedResult = formatTeamResult(nextMatch.result, nextMatch.isHome)
+  const outcomeInfo = getMatchOutcome(nextMatch.result, nextMatch.isHome)
   const isFutureOrLive = nextMatch.date.getTime() >= Date.now()
-  const showTicket = isTicketEligibleBase && !formattedResult && isFutureOrLive
+  const showTicket = isTicketEligibleBase && !outcomeInfo && isFutureOrLive
 
   return (
     <Card className="flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-white p-6 shadow-md shadow-emerald-50">
@@ -116,10 +133,20 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {formattedResult && (
-          <div className="flex flex-col items-start gap-1 sm:items-end">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-600">Slutresultat</span>
-            <span className="text-3xl font-bold text-emerald-900 sm:text-4xl">{formattedResult}</span>
+        {outcomeInfo && (
+          <div className="flex flex-col items-start gap-2 sm:items-end">
+            <span
+              className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] ${
+                outcomeInfo.label === "Vinst"
+                  ? "border-emerald-200 bg-emerald-100 text-emerald-800"
+                  : outcomeInfo.label === "Förlust"
+                    ? "border-red-200 bg-red-100 text-red-700"
+                    : "border-amber-200 bg-amber-100 text-amber-700"
+              }`}
+            >
+              {outcomeInfo.label}
+            </span>
+            <span className="text-3xl font-bold text-emerald-900 sm:text-4xl">{outcomeInfo.text}</span>
           </div>
         )}
 
