@@ -38,40 +38,18 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
     )
   }, [matches, teamKeys])
 
-  const isLoading = loading && !nextMatch
-  const hasError = Boolean(error) && !nextMatch
-
-  if (isLoading) {
-    return (
-      <Card className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-6 shadow-sm">
-        <div className="flex h-28 items-center justify-center text-sm font-semibold uppercase tracking-[0.3em] text-emerald-600">
-          Laddar match...
-        </div>
-      </Card>
-    )
+  if (!loading && !nextMatch) {
+    return null
   }
 
-  if (hasError) {
-    return (
-      <Card className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-6 shadow-sm">
-        <p className="text-sm font-semibold text-emerald-900">Kunde inte hämta matchinformation just nu.</p>
-        <p className="mt-2 text-sm text-emerald-800">
-          {error ?? "Prova att uppdatera sidan eller gå till lagets ordinarie kalender för det senaste spelschemat."}
-        </p>
-      </Card>
-    )
+  if (error) {
+    return null
   }
 
   if (!nextMatch) {
-    return (
-      <Card className="rounded-2xl border border-emerald-100 bg-white p-6 shadow-sm">
-        <p className="text-sm font-semibold text-emerald-900">Inga kommande matcher</p>
-        <p className="mt-2 text-sm text-emerald-700">Nästa match publiceras så snart den finns tillgänglig.</p>
-      </Card>
-    )
+    return null
   }
 
-  const countdownLabel = formatCountdownLabel(nextMatch.date, Boolean(nextMatch.result))
   const scheduleParts = [nextMatch.displayDate, nextMatch.time, nextMatch.venue]
     .filter((item): item is string => Boolean(item))
     .join(" • ")
@@ -99,7 +77,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-center text-sm text-emerald-700 sm:text-right">
-          {nextMatch.result ? `Resultat ${nextMatch.result}` : countdownLabel}
+          {nextMatch.result ? `Resultat ${nextMatch.result}` : ""}
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">

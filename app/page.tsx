@@ -261,34 +261,11 @@ export default function HomePage() {
                   </div>
 
                   <div className="mt-6 space-y-4">
-                    {matchLoading && matchesToDisplay.length === 0 && (
+                    {matchLoading && (
                       <div className="grid gap-4">
                         {[0, 1].map((item) => (
                           <div key={item} className="h-28 rounded-2xl border border-emerald-100 bg-emerald-50 animate-pulse" />
                         ))}
-                      </div>
-                    )}
-
-                    {!matchLoading && matchError && (
-                      <div className="rounded-2xl border border-emerald-100 bg-emerald-50/80 p-5 text-sm text-emerald-900">
-                        <h4 className="text-base font-semibold md:text-lg">Kunde inte hämta matchinformationen.</h4>
-                        <p className="mt-2 text-emerald-800">
-                          {matchErrorMessage ?? "Försök igen eller öppna kalendern."}
-                        </p>
-                        <Link
-                          href="https://www.laget.se/HarnosandsHF"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-4 inline-flex items-center justify-center rounded-full border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50"
-                        >
-                          Visa kalender
-                        </Link>
-                      </div>
-                    )}
-
-                    {!matchLoading && !matchError && matchesToDisplay.length === 0 && (
-                      <div className="rounded-2xl border border-emerald-100 bg-emerald-50/80 p-5 text-center text-sm text-emerald-800">
-                        Inga matcher publicerade ännu. Nästa match visas här så snart den finns tillgänglig.
                       </div>
                     )}
 
@@ -297,7 +274,6 @@ export default function HomePage() {
                         {matchesToDisplay.map((match) => {
                           const primaryTeamLabel = match.teamType?.trim() || "Härnösands HF"
                           const opponentLabel = match.opponent
-                          const countdownLabel = formatCountdownLabel(match.date, Boolean(match.result))
                           const venueName = match.venue?.toLowerCase() ?? ""
                           const scheduleParts = [match.displayDate, match.time, match.venue].filter(
                             (value): value is string => Boolean(value),
@@ -343,9 +319,7 @@ export default function HomePage() {
                                         <p className="text-2xl font-bold text-emerald-900">{match.result}</p>
                                       </div>
                                     ) : (
-                                      <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-center text-sm text-emerald-700 sm:text-right">
-                                        {status === "live" ? "Match pågår" : countdownLabel}
-                                      </div>
+                                      <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-center text-sm text-emerald-700 sm:text-right" />
                                     )}
 
                                     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
