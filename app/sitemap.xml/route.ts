@@ -15,9 +15,30 @@ export async function GET() {
 
   // Add team pages
   const teamPages = [
-    { url: "/lag/f19", priority: "0.7", changefreq: "weekly" },
-    { url: "/lag/dam", priority: "0.7", changefreq: "weekly" },
-    { url: "/lag/herr", priority: "0.7", changefreq: "weekly" },
+    { url: "/lag/dam-utv", priority: "0.9", changefreq: "weekly" },
+    { url: "/lag/a-lag-herrar", priority: "0.9", changefreq: "weekly" },
+    { url: "/lag/f19", priority: "0.85", changefreq: "weekly" },
+    { url: "/lag/fritids-teknikskola", priority: "0.6", changefreq: "monthly" },
+    { url: "/lag/flickor-16-f08-09", priority: "0.8", changefreq: "weekly" },
+    { url: "/lag/f-10", priority: "0.7", changefreq: "weekly" },
+    { url: "/lag/f-11", priority: "0.7", changefreq: "weekly" },
+    { url: "/lag/f-12", priority: "0.7", changefreq: "weekly" },
+    { url: "/lag/f-13", priority: "0.7", changefreq: "weekly" },
+    { url: "/lag/f-14", priority: "0.7", changefreq: "weekly" },
+    { url: "/lag/f-15", priority: "0.7", changefreq: "weekly" },
+    { url: "/lag/f-16", priority: "0.7", changefreq: "weekly" },
+    { url: "/lag/f-17", priority: "0.7", changefreq: "weekly" },
+    { url: "/lag/f-18", priority: "0.7", changefreq: "weekly" },
+    { url: "/lag/pojkar-16-p08-09", priority: "0.8", changefreq: "weekly" },
+    { url: "/lag/p16-09-10", priority: "0.85", changefreq: "weekly" },
+    { url: "/lag/p-11", priority: "0.7", changefreq: "weekly" },
+    { url: "/lag/p-12", priority: "0.7", changefreq: "weekly" },
+    { url: "/lag/p-13", priority: "0.7", changefreq: "weekly" },
+    { url: "/lag/p-14", priority: "0.7", changefreq: "weekly" },
+    { url: "/lag/p-15", priority: "0.7", changefreq: "weekly" },
+    { url: "/lag/p-16", priority: "0.7", changefreq: "weekly" },
+    { url: "/lag/p-17", priority: "0.7", changefreq: "weekly" },
+    { url: "/lag/p-18", priority: "0.7", changefreq: "weekly" }
   ];
 
   // Combine static and dynamic pages
