@@ -4,10 +4,12 @@ import { notFound } from "next/navigation"
 import lagContent from "@/public/content/lag.json"
 import Footer from "@/components/footer"
 import { Card } from "@/components/ui/card"
+import { TeamUpcomingMatch } from "@/components/team-upcoming-match"
 
 type RawTeam = (typeof lagContent)["teamCategories"][number]["teams"][number]
 
 const PLACEHOLDER_HERO = "/placeholder.jpg"
+const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 
 const encodeAssetPath = (path: string) => {
   if (!path) {
@@ -140,6 +142,17 @@ export default function TeamPage({ params }: TeamPageProps) {
                   Kontakta föreningen
                 </Link>
               </Card>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">Nästa match</p>
+                <h2 className="text-2xl font-bold text-emerald-900">{team.displayName}</h2>
+                <p className="text-sm text-emerald-700">
+                  Kommande matchinformation hämtas automatiskt från Laget.se och uppdateras löpande.
+                </p>
+              </div>
+              <TeamUpcomingMatch teamLabels={[team.name, team.displayName]} ticketUrl={TICKET_URL} />
             </div>
 
             <Card className="overflow-hidden rounded-2xl border border-emerald-100/70 bg-white shadow-lg shadow-emerald-50">
