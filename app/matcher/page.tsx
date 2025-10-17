@@ -64,7 +64,6 @@ const getMatchStatus = (match: NormalizedMatch): StatusFilter => {
 
 export default function MatcherPage() {
   const [selectedTeam, setSelectedTeam] = useState<string>("all")
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("upcoming")
   const [dataTypeFilter, setDataTypeFilter] = useState<DataTypeFilter>("current")
   
   const { matches, loading, error, refresh } = useMatchData({ 
@@ -90,13 +89,9 @@ export default function MatcherPage() {
       if (selectedTeam !== "all" && match.normalizedTeam !== selectedTeam) {
         return false
       }
-      const status = getMatchStatus(match)
-      if (statusFilter !== "all" && status !== statusFilter) {
-        return false
-      }
       return true
     })
-  }, [matches, selectedTeam, statusFilter])
+  }, [matches, selectedTeam])
 
   const statusBadgeStyles: Record<StatusFilter, string> = {
     all: "",
@@ -137,7 +132,7 @@ export default function MatcherPage() {
           </div>
         </div>
 
-        <div className="max-w-5xl mx-auto mb-10 grid gap-4 md:grid-cols-3">
+        <div className="max-w-5xl mx-auto mb-10 grid gap-4 md:grid-cols-2">
           <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.25em] text-emerald-700">
             Lag
             <select
@@ -166,31 +161,6 @@ export default function MatcherPage() {
               <option value="old">Gamla matcher</option>
             </select>
           </label>
-
-          <div className="md:col-span-1">
-            <div className="flex flex-wrap gap-2">
-              {(["all", "upcoming", "live", "result"] as StatusFilter[]).map((status) => (
-                <button
-                  key={status}
-                  type="button"
-                  onClick={() => setStatusFilter(status)}
-                  className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-                    statusFilter === status
-                      ? "border-emerald-500 bg-emerald-500 text-white"
-                      : "border-emerald-200 bg-white text-emerald-700 hover:bg-emerald-50"
-                  }`}
-                >
-                  {status === "all"
-                    ? "Alla"
-                    : status === "upcoming"
-                      ? "Kommande"
-                      : status === "live"
-                        ? "Live"
-                        : "Resultat"}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         {error && (
