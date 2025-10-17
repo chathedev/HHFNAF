@@ -300,9 +300,6 @@ export default function HomePage() {
                     <p className="text-sm text-emerald-700">
                       Här ser du de två nästa matcherna – listan uppdateras automatiskt under säsongen.
                     </p>
-                    <p className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 inline-block">
-                      ℹ️ Endast seriematcher visas
-                    </p>
                   </div>
 
                   <div className="mt-6 space-y-4">

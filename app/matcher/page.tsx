@@ -117,9 +117,6 @@ export default function MatcherPage() {
             Här hittar du de senaste uppdateringarna direkt från vår matchtjänst. Filtrera efter lag och status för att
             hitta det du söker.
           </p>
-          <p className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 inline-block">
-            ℹ️ Observera: Vi visar endast seriematcher här. Cupmatcher och träningsmatcher visas inte i listan.
-          </p>
         </div>
 
         <div className="max-w-5xl mx-auto mb-10 grid gap-4 md:grid-cols-2">
