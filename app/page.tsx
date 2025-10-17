@@ -322,13 +322,6 @@ export default function HomePage() {
                           )
                           const scheduleInfo = scheduleParts.join(" • ")
                           const status = getMatchStatus(match)
-                          const statusStyles =
-                            status === "live"
-                              ? "bg-orange-500/10 text-orange-600 border-orange-200"
-                              : status === "result"
-                                ? "bg-emerald-100 text-emerald-900 border-emerald-200"
-                                : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          const statusLabel = status === "live" ? "Live" : status === "result" ? "Slut" : "Kommande"
                           const outcomeInfo = getMatchOutcome(match.result, match.isHome)
                           const isALagTeam =
                             match.normalizedTeam.includes("alag") || match.normalizedTeam.includes("damutv")
@@ -342,78 +335,104 @@ export default function HomePage() {
 
                           return (
                             <li key={match.id}>
-                              <Card className="flex flex-col gap-5 rounded-2xl border border-emerald-100 bg-white/90 p-5 shadow-sm transition hover:border-emerald-200 hover:shadow-md">
-                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                  <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-600">
-                                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700">
-                                      {primaryTeamLabel}
-                                    </span>
-                                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-600">
-                                      {match.series || "Match"}
-                                    </span>
-                                    <span className={`rounded-full border px-3 py-1 ${statusStyles}`}>{statusLabel}</span>
+                              <div className="bg-white rounded-lg border border-gray-200 hover:border-emerald-300 hover:shadow-md transition-all p-6">
+                                {/* Header */}
+                                <div className="flex items-start justify-between mb-4">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-3 mb-2">
+                                      <span className="text-sm font-semibold text-emerald-700">
+                                        {primaryTeamLabel}
+                                      </span>
+                                      {status === "live" && (
+                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded">
+                                          <span className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse"></span>
+                                          LIVE
+                                        </span>
+                                      )}
+                                    </div>
+                                    <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                                      vs {opponentLabel}
+                                    </h3>
+                                    {scheduleInfo && (
+                                      <p className="text-sm text-gray-600">{scheduleInfo}</p>
+                                    )}
+                                    {match.series && (
+                                      <p className="text-xs text-gray-500 mt-1">{match.series}</p>
+                                    )}
                                   </div>
-
+                                  
                                   {match.infoUrl && (
                                     <Link
                                       href={match.infoUrl}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="inline-flex items-center justify-center rounded-full border border-emerald-200 bg-white px-4 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50"
+                                      className="text-emerald-600 hover:text-emerald-700 transition-colors"
+                                      title="Matchsida"
                                     >
-                                      Matchsida
+                                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                      </svg>
                                     </Link>
                                   )}
                                 </div>
 
-                                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                                  <div className="space-y-2">
-                                    <h4 className="text-xl font-semibold text-emerald-900 sm:text-2xl">{primaryTeamLabel}</h4>
-                                    <p className="text-sm text-emerald-700">vs {opponentLabel}</p>
-                                    {scheduleInfo && <p className="text-sm text-emerald-600">{scheduleInfo}</p>}
-                                  </div>
-
-                                  <div className="flex flex-col items-start gap-3 sm:w-64 sm:items-end">
+                                {/* Result or Actions */}
+                                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                                  <div className="flex items-center gap-4">
                                     {outcomeInfo && (
-                                      <div className="flex flex-col items-start gap-2 sm:items-end">
-                                        <span
-                                          className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] ${
-                                            outcomeInfo.label === "Vinst"
-                                              ? "border-emerald-200 bg-emerald-100 text-emerald-800"
-                                              : outcomeInfo.label === "Förlust"
-                                                ? "border-red-200 bg-red-100 text-red-700"
-                                                : outcomeInfo.label === "Ej publicerat"
-                                                  ? "border-slate-200 bg-slate-100 text-slate-700"
-                                                  : "border-amber-200 bg-amber-100 text-amber-700"
-                                          }`}
-                                        >
-                                          {outcomeInfo.label}
-                                        </span>
-                                        <span
-                                          className={
-                                            outcomeInfo.label === "Ej publicerat"
-                                              ? "text-sm font-semibold text-emerald-700"
-                                              : "text-3xl font-bold text-emerald-900 sm:text-4xl"
-                                          }
-                                        >
+                                      <div className="flex items-center gap-3">
+                                        {outcomeInfo.label !== "Ej publicerat" && (
+                                          <span
+                                            className={`text-xs font-semibold px-2.5 py-1 rounded ${
+                                              outcomeInfo.label === "Vinst"
+                                                ? "bg-green-100 text-green-800"
+                                                : outcomeInfo.label === "Förlust"
+                                                  ? "bg-red-100 text-red-800"
+                                                  : "bg-gray-100 text-gray-800"
+                                            }`}
+                                          >
+                                            {outcomeInfo.label}
+                                          </span>
+                                        )}
+                                        <span className={outcomeInfo.label === "Ej publicerat" ? "text-sm text-gray-600" : "text-2xl font-bold text-gray-900"}>
                                           {outcomeInfo.text}
                                         </span>
                                       </div>
                                     )}
 
-                                    {showTicket && (
-                                      <Link
-                                        href={TICKET_URL}
+                                    {match.playUrl && match.playUrl !== "null" && (
+                                      <a
+                                        href={match.playUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="inline-flex items-center justify-center rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-orange-600"
+                                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                                        title="Se matchen live"
                                       >
-                                        Köp biljett
-                                      </Link>
+                                        <img
+                                          src="/handbollplay_mini.png"
+                                          alt=""
+                                          className="h-4 w-4 brightness-0 invert"
+                                        />
+                                        Se live
+                                      </a>
                                     )}
                                   </div>
+
+                                  {showTicket && (
+                                    <Link
+                                      href={TICKET_URL}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                      </svg>
+                                      Köp biljett
+                                    </Link>
+                                  )}
                                 </div>
-                              </Card>
+                              </div>
                             </li>
                           )
                         })}
