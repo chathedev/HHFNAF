@@ -11,6 +11,7 @@ interface Match {
   opponent: string
   location: string
   isHome: boolean
+  playUrl?: string
 }
 
 export default function MatchCards() {
@@ -96,9 +97,27 @@ export default function MatchCards() {
                             {formatDate(match.date)} {match.time}
                           </span>
                         </div>
-                        <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-orange-500">
-                          {match.isHome ? "Hemma" : "Borta"}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {match.playUrl && (
+                            <a
+                              href={match.playUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 hover:opacity-80 transition-opacity"
+                              title="Se matchen live på handbollplay.se"
+                            >
+                              <img
+                                src="/handbollplay_mini.png"
+                                alt="Handboll Play"
+                                className="w-4 h-4 object-contain"
+                              />
+                              <span className="text-[10px] font-medium text-blue-600">Live</span>
+                            </a>
+                          )}
+                          <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-orange-500">
+                            {match.isHome ? "Hemma" : "Borta"}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ))}
