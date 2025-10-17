@@ -103,43 +103,41 @@ export default function MatchCards() {
               ) : upcomingMatches.length > 0 ? (
                 <div className="space-y-3 w-full">
                   {upcomingMatches.map((match, index) => (
-                    <div key={index} className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors">
-                      <div className="font-bold text-base text-gray-900 mb-1">
+                    <div key={index} className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors text-left">
+                      <div className="font-bold text-base text-gray-900 mb-2">
                         vs {match.opponent || 'TBA'}
                       </div>
                       <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
                         <span className="font-medium">{match.teamType}</span>
                         <span>{formatDate(match.date)} {match.time || ''}</span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          {match.venue && (
-                            <span className="text-[11px] text-gray-500">{match.venue}</span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {match.playUrl && match.playUrl !== "null" && (
-                            <a
-                              href={match.playUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-semibold rounded transition-colors"
-                              title="Se matchen live"
-                            >
-                              <img
-                                src="/handbollplay_mini.png"
-                                alt=""
-                                className="w-3 h-3 brightness-0 invert"
-                              />
-                              Live
-                            </a>
-                          )}
-                          {match.isHome !== undefined && (
-                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-semibold rounded">
-                              {match.isHome ? "Hemma" : "Borta"}
-                            </span>
-                          )}
-                        </div>
+                      {match.venue && (
+                        <p className="text-[11px] text-gray-500 mb-2">{match.venue}</p>
+                      )}
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                        {match.playUrl && match.playUrl !== "null" ? (
+                          <a
+                            href={match.playUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded transition-colors"
+                            title="Se matchen live"
+                          >
+                            <img
+                              src="/handbollplay_mini.png"
+                              alt=""
+                              className="w-3.5 h-3.5 brightness-0 invert"
+                            />
+                            Se live
+                          </a>
+                        ) : (
+                          <div></div>
+                        )}
+                        {match.isHome !== undefined && (
+                          <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded">
+                            {match.isHome ? "Hemma" : "Borta"}
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}
