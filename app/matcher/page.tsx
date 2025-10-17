@@ -65,7 +65,7 @@ const getMatchStatus = (match: NormalizedMatch): StatusFilter => {
 export default function MatcherPage() {
   const [selectedTeam, setSelectedTeam] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("upcoming")
-  const [dataTypeFilter, setDataTypeFilter] = useState<DataTypeFilter>("both")
+  const [dataTypeFilter, setDataTypeFilter] = useState<DataTypeFilter>("current")
   
   const { matches, loading, error, refresh } = useMatchData({ 
     refreshIntervalMs: 60_000,
@@ -161,8 +161,8 @@ export default function MatcherPage() {
               value={dataTypeFilter}
               onChange={(event) => setDataTypeFilter(event.target.value as DataTypeFilter)}
             >
-              <option value="both">Alla matcher</option>
               <option value="current">Aktuella & kommande</option>
+              <option value="both">Alla matcher</option>
               <option value="old">Gamla matcher</option>
             </select>
           </label>

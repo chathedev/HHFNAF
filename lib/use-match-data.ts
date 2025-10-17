@@ -138,8 +138,24 @@ const fetchFromApi = async (dataType: DataType = "both") => {
 
     const payload = await response.json()
     
-    // Handle both array and object responses
-    const matches = Array.isArray(payload) ? payload : []
+    // Handle different response structures based on endpoint
+    let matches: ApiMatch[] = []
+    
+    if (dataType === "current" && payload.current) {
+      // /data/current returns { current: [...] }
+      matches = Array.isArray(payload.current) ? payload.current : []
+    } else if (dataType === "old" && payload.old) {
+      // /data/old returns { old: [...] }
+      matches = Array.isArray(payload.old) ? payload.old : []
+    } else if (dataType === "both") {
+      // /data returns { current: [...], old: [...] }
+      const current = Array.isArray(payload.current) ? payload.current : []
+      const old = Array.isArray(payload.old) ? payload.old : []
+      matches = [...current, ...old]
+    } else {
+      // Fallback: check if payload itself is an array
+      matches = Array.isArray(payload) ? payload : []
+    }
     
     return normalizeMatches(matches)
   }

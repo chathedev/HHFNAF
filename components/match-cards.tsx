@@ -44,7 +44,15 @@ export default function MatchCards() {
         }
 
         const data = await response.json()
-        const matches = Array.isArray(data) ? data : []
+        
+        // Handle response structure: { current: [...] } or just [...]
+        let matches: Match[] = []
+        if (data.current && Array.isArray(data.current)) {
+          matches = data.current
+        } else if (Array.isArray(data)) {
+          matches = data
+        }
+        
         setUpcomingMatches(matches.slice(0, 3))
         setError(null)
       } catch (error) {
