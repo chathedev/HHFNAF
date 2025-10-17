@@ -149,6 +149,9 @@ export default function TeamPage({ params }: TeamPageProps) {
                 <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">Nästa match</p>
                 <h2 className="text-2xl font-bold text-emerald-900">{team.displayName}</h2>
                 <p className="text-sm text-emerald-700">Vi uppdaterar matchlistan löpande med det senaste spelschemat.</p>
+                <p className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 inline-block mt-2">
+                  ℹ️ Endast seriematcher visas
+                </p>
               </div>
               <TeamUpcomingMatch teamLabels={[team.name, team.displayName]} ticketUrl={TICKET_URL} />
             </div>
