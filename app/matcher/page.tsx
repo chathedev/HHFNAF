@@ -67,7 +67,7 @@ export default function MatcherPage() {
   const [dataTypeFilter, setDataTypeFilter] = useState<DataTypeFilter>("current")
   
   const { matches, loading, error, refresh } = useMatchData({ 
-    refreshIntervalMs: 60_000,
+    refreshIntervalMs: 10_000,
     dataType: dataTypeFilter
   })
 
@@ -117,19 +117,6 @@ export default function MatcherPage() {
             Här hittar du de senaste uppdateringarna direkt från vår matchtjänst. Filtrera efter lag och status för att
             hitta det du söker.
           </p>
-          <div className="mt-3 text-sm text-emerald-600">
-            <button
-              type="button"
-              onClick={() => {
-                void refresh()
-              }}
-              className="font-semibold underline underline-offset-4"
-            >
-              Uppdatera matcherna manuellt
-            </button>
-            <span className="mx-2">·</span>
-            <span>Uppdateras automatiskt varje minut</span>
-          </div>
         </div>
 
         <div className="max-w-5xl mx-auto mb-10 grid gap-4 md:grid-cols-2">
