@@ -101,16 +101,21 @@ export default function MatchCards() {
               ) : error ? (
                 <p className="text-red-600 text-sm">{error}</p>
               ) : upcomingMatches.length > 0 ? (
-                <div className="space-y-2 w-full">
+                <div className="space-y-3 w-full">
                   {upcomingMatches.map((match, index) => (
-                    <div key={index} className="border-l-4 border-orange-500 pl-3 text-left py-2">
-                      <div className="font-semibold text-sm text-gray-800 leading-tight">{match.opponent || 'TBA'}</div>
-                      <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-gray-600">
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          <span>
-                            {formatDate(match.date)} {match.time || ''}
-                          </span>
+                    <div key={index} className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors">
+                      <div className="font-bold text-base text-gray-900 mb-1">
+                        vs {match.opponent || 'TBA'}
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
+                        <span className="font-medium">{match.teamType}</span>
+                        <span>{formatDate(match.date)} {match.time || ''}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {match.venue && (
+                            <span className="text-[11px] text-gray-500">{match.venue}</span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           {match.playUrl && match.playUrl !== "null" && (
@@ -118,19 +123,19 @@ export default function MatchCards() {
                               href={match.playUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex items-center gap-1 hover:opacity-80 transition-opacity"
-                              title="Se matchen live på handbollplay.se"
+                              className="inline-flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-semibold rounded transition-colors"
+                              title="Se matchen live"
                             >
                               <img
                                 src="/handbollplay_mini.png"
-                                alt="Handboll Play"
-                                className="w-4 h-4 object-contain"
+                                alt=""
+                                className="w-3 h-3 brightness-0 invert"
                               />
-                              <span className="text-[10px] font-medium text-blue-600">Live</span>
+                              Live
                             </a>
                           )}
                           {match.isHome !== undefined && (
-                            <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-orange-500">
+                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-semibold rounded">
                               {match.isHome ? "Hemma" : "Borta"}
                             </span>
                           )}
