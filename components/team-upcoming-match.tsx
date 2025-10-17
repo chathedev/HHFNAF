@@ -55,7 +55,10 @@ type TeamUpcomingMatchProps = {
 }
 
 export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchProps) {
-  const { matches, loading, error } = useMatchData({ refreshIntervalMs: 60_000 })
+  const { matches, loading, error } = useMatchData({ 
+    refreshIntervalMs: 60_000,
+    dataType: "current"
+  })
 
   const teamKeys = useMemo(() => {
     const labels = Array.isArray(teamLabels) ? teamLabels : [teamLabels]
@@ -133,22 +136,41 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {outcomeInfo && (
-          <div className="flex flex-col items-start gap-2 sm:items-end">
-            <span
-              className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] ${
-                outcomeInfo.label === "Vinst"
-                  ? "border-emerald-200 bg-emerald-100 text-emerald-800"
-                  : outcomeInfo.label === "Förlust"
-                    ? "border-red-200 bg-red-100 text-red-700"
-                    : "border-amber-200 bg-amber-100 text-amber-700"
-              }`}
+        <div className="flex flex-wrap items-center gap-3">
+          {outcomeInfo && (
+            <div className="flex flex-col items-start gap-2 sm:items-end">
+              <span
+                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] ${
+                  outcomeInfo.label === "Vinst"
+                    ? "border-emerald-200 bg-emerald-100 text-emerald-800"
+                    : outcomeInfo.label === "Förlust"
+                      ? "border-red-200 bg-red-100 text-red-700"
+                      : "border-amber-200 bg-amber-100 text-amber-700"
+                }`}
+              >
+                {outcomeInfo.label}
+              </span>
+              <span className="text-3xl font-bold text-emerald-900 sm:text-4xl">{outcomeInfo.text}</span>
+            </div>
+          )}
+
+          {nextMatch.playUrl && nextMatch.playUrl !== "null" && (
+            <a
+              href={nextMatch.playUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
+              title="Se matchen live på handbollplay.se"
             >
-              {outcomeInfo.label}
-            </span>
-            <span className="text-3xl font-bold text-emerald-900 sm:text-4xl">{outcomeInfo.text}</span>
-          </div>
-        )}
+              <img
+                src="/handbollplay_mini.png"
+                alt="Handboll Play"
+                className="h-5 w-5 object-contain"
+              />
+              <span>Se live</span>
+            </a>
+          )}
+        </div>
 
         {showTicket && (
           <Link

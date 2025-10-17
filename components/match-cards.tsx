@@ -4,15 +4,19 @@ import { Calendar, Trophy, Zap, Clock } from "lucide-react"
 import { useEffect, useState } from "react"
 
 interface Match {
-  id: string
-  title: string
-  date: string
-  time: string
-  opponent: string
-  location: string
-  isHome: boolean
+  teamType?: string
+  opponent?: string
+  date?: string
+  time?: string
+  venue?: string
+  series?: string
+  infoUrl?: string
+  result?: string
+  isHome?: boolean
   playUrl?: string
 }
+
+const API_BASE_URL = "https://api.tivly.se/matcher"
 
 export default function MatchCards() {
   const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([])
@@ -25,11 +29,12 @@ export default function MatchCards() {
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
 
-        const response = await fetch("/api/matches", {
+        const response = await fetch(`${API_BASE_URL}/data/current`, {
           signal: controller.signal,
           headers: {
             Accept: "application/json",
           },
+          cache: "no-store",
         })
 
         clearTimeout(timeoutId)
@@ -38,8 +43,9 @@ export default function MatchCards() {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`)
         }
 
-        const matches = await response.json()
-        setUpcomingMatches(Array.isArray(matches) ? matches : [])
+        const data = await response.json()
+        const matches = Array.isArray(data) ? data : []
+        setUpcomingMatches(matches.slice(0, 3))
         setError(null)
       } catch (error) {
         console.error("Error fetching matches:", error)
@@ -57,7 +63,8 @@ export default function MatchCards() {
     fetchMatches()
   }, [])
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return ""
     try {
       const date = new Date(dateString)
       if (isNaN(date.getTime())) return dateString
@@ -87,18 +94,18 @@ export default function MatchCards() {
                 <p className="text-red-600 text-sm">{error}</p>
               ) : upcomingMatches.length > 0 ? (
                 <div className="space-y-2 w-full">
-                  {upcomingMatches.slice(0, 3).map((match) => (
-                    <div key={match.id} className="border-l-4 border-orange-500 pl-3 text-left py-2">
-                      <div className="font-semibold text-sm text-gray-800 leading-tight">{match.opponent}</div>
+                  {upcomingMatches.map((match, index) => (
+                    <div key={index} className="border-l-4 border-orange-500 pl-3 text-left py-2">
+                      <div className="font-semibold text-sm text-gray-800 leading-tight">{match.opponent || 'TBA'}</div>
                       <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-gray-600">
                         <div className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
                           <span>
-                            {formatDate(match.date)} {match.time}
+                            {formatDate(match.date)} {match.time || ''}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          {match.playUrl && (
+                          {match.playUrl && match.playUrl !== "null" && (
                             <a
                               href={match.playUrl}
                               target="_blank"
@@ -114,9 +121,11 @@ export default function MatchCards() {
                               <span className="text-[10px] font-medium text-blue-600">Live</span>
                             </a>
                           )}
-                          <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-orange-500">
-                            {match.isHome ? "Hemma" : "Borta"}
-                          </span>
+                          {match.isHome !== undefined && (
+                            <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-orange-500">
+                              {match.isHome ? "Hemma" : "Borta"}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>

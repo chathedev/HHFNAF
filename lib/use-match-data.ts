@@ -12,6 +12,7 @@ type ApiMatch = {
   infoUrl?: string | null
   result?: string | null
   isHome?: boolean | null
+  playUrl?: string | null
 }
 
 export type NormalizedMatch = {
@@ -27,12 +28,26 @@ export type NormalizedMatch = {
   infoUrl?: string
   result?: string
   isHome?: boolean
+  playUrl?: string
 }
 
 const API_BASE_URL =
   (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
   "https://api.tivly.se/matcher"
-const DATA_ENDPOINT = `${API_BASE_URL}/data`
+
+type DataType = "current" | "old" | "both"
+
+const getDataEndpoint = (type: DataType) => {
+  switch (type) {
+    case "current":
+      return `${API_BASE_URL}/data/current`
+    case "old":
+      return `${API_BASE_URL}/data/old`
+    case "both":
+    default:
+      return `${API_BASE_URL}/data`
+  }
+}
 
 const createNormalizedTeamKey = (value: string) =>
   value
@@ -91,6 +106,7 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     infoUrl: match.infoUrl ?? undefined,
     result: match.result ?? undefined,
     isHome: derivedIsHome,
+    playUrl: match.playUrl && match.playUrl !== "null" ? match.playUrl : undefined,
   }
 }
 
@@ -102,12 +118,13 @@ const normalizeMatches = (matches: ApiMatch[]) =>
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const fetchFromApi = async () => {
+const fetchFromApi = async (dataType: DataType = "both") => {
+  const endpoint = getDataEndpoint(dataType)
   let attempt = 0
   let delay = 2000
 
   while (attempt < 3) {
-    const response = await fetch(DATA_ENDPOINT, { cache: "no-store" })
+    const response = await fetch(endpoint, { cache: "no-store" })
     if (response.status === 503) {
       attempt += 1
       await sleep(delay)
@@ -119,15 +136,20 @@ const fetchFromApi = async () => {
       throw new Error(`Kunde inte hämta matcher (HTTP ${response.status})`)
     }
 
-    const payload = (await response.json()) as ApiMatch[]
-    return normalizeMatches(payload)
+    const payload = await response.json()
+    
+    // Handle both array and object responses
+    const matches = Array.isArray(payload) ? payload : []
+    
+    return normalizeMatches(matches)
   }
 
   throw new Error("Matchdata är inte tillgänglig just nu")
 }
 
-export const useMatchData = (options?: { refreshIntervalMs?: number }) => {
+export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: DataType }) => {
   const refreshIntervalMs = options?.refreshIntervalMs ?? 30_000
+  const dataType = options?.dataType ?? "both"
 
   const [matches, setMatches] = useState<NormalizedMatch[]>([])
   const [loading, setLoading] = useState(true)
@@ -135,7 +157,7 @@ export const useMatchData = (options?: { refreshIntervalMs?: number }) => {
 
   const refresh = useCallback(async () => {
     try {
-      const data = await fetchFromApi()
+      const data = await fetchFromApi(dataType)
       setMatches(data)
       setError(null)
       setLoading(false)
@@ -147,14 +169,14 @@ export const useMatchData = (options?: { refreshIntervalMs?: number }) => {
       setLoading(false)
       throw caught
     }
-  }, [])
+  }, [dataType])
 
   useEffect(() => {
     let isMounted = true
     const run = async () => {
       setLoading(true)
       try {
-        const data = await fetchFromApi()
+        const data = await fetchFromApi(dataType)
         if (!isMounted) {
           return
         }
@@ -179,7 +201,7 @@ export const useMatchData = (options?: { refreshIntervalMs?: number }) => {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [dataType])
 
   useEffect(() => {
     if (!refreshIntervalMs || refreshIntervalMs <= 0) {
