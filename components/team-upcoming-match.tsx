@@ -1,12 +1,13 @@
 "use client"
 
-import { useMemo, useEffect, useRef } from "react"
+import { useMemo, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import confetti from "canvas-confetti"
 
 import { Card } from "@/components/ui/card"
 import { TICKET_VENUES } from "@/lib/matches"
-import { useMatchData } from "@/lib/use-match-data"
+import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
+import { MatchFeedModal } from "@/components/match-feed-modal"
 
 const normalizeTeamKey = (value: string) =>
   value
@@ -86,6 +87,8 @@ type TeamUpcomingMatchProps = {
 }
 
 export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchProps) {
+  const [selectedMatch, setSelectedMatch] = useState<NormalizedMatch | null>(null)
+  
   const { matches, loading, error } = useMatchData({ 
     refreshIntervalMs: 1_000,
     dataType: "current"
@@ -297,7 +300,30 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   }, [nextMatch.result, nextMatch.id, nextMatch.isHome, status])
 
   return (
-    <div ref={cardRef} className="bg-white rounded-lg border border-gray-200 hover:border-emerald-300 hover:shadow-md transition-all p-6">
+    <>
+      <div 
+        ref={cardRef} 
+        className="bg-white rounded-lg border border-gray-200 hover:border-emerald-400 hover:shadow-lg transition-all p-6 cursor-pointer group relative"
+        onClick={() => setSelectedMatch(nextMatch)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault()
+            setSelectedMatch(nextMatch)
+          }
+        }}
+      >
+      {/* Click hint badge */}
+      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+        <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded flex items-center gap-1">
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Se matchhändelser
+        </span>
+      </div>
+      
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
@@ -401,7 +427,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
           )}
         </div>
 
-        {showTicket && (
+        {showTicket && ticketUrl && (
           <Link
             href={ticketUrl}
             target="_blank"
@@ -416,5 +442,19 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
         )}
       </div>
     </div>
+    
+    {/* Match Feed Modal */}
+    {selectedMatch && (
+      <MatchFeedModal
+        isOpen={true}
+        onClose={() => setSelectedMatch(null)}
+        matchFeed={selectedMatch.matchFeed || []}
+        homeTeam={selectedMatch.homeTeam}
+        awayTeam={selectedMatch.awayTeam}
+        finalScore={selectedMatch.result}
+        matchStatus={selectedMatch.matchStatus}
+      />
+    )}
+    </>
   )
 }

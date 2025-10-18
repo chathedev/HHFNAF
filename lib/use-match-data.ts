@@ -2,35 +2,56 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 
+type MatchFeedEvent = {
+  time: string
+  type: string
+  team?: string
+  description: string
+  homeScore?: number
+  awayScore?: number
+  period?: number
+}
+
 type ApiMatch = {
-  teamType?: string | null
-  opponent?: string | null
-  date?: string | null
-  time?: string | null
+  id: string
+  home: string
+  away: string
+  date: string // ISO string
+  time?: string
+  homeImg?: string | null
+  awayImg?: string | null
+  result?: string | null
   venue?: string | null
   series?: string | null
-  infoUrl?: string | null
-  result?: string | null
-  isHome?: boolean | null
   playUrl?: string | null
+  infoUrl?: string | null
   matchStatus?: "live" | "finished" | "upcoming" | null
+  matchFeed?: MatchFeedEvent[]
+  teamType?: string
+  opponent?: string
+  isHome?: boolean
 }
+
+export type { MatchFeedEvent }
 
 export type NormalizedMatch = {
   id: string
-  teamType: string
-  opponent: string
+  homeTeam: string
+  awayTeam: string
+  opponent: string // "Opponent (hemma)" or "Opponent (borta)"
+  isHome?: boolean
   normalizedTeam: string
   date: Date
   displayDate: string
   time?: string
   venue?: string
   series?: string
-  infoUrl?: string
   result?: string
-  isHome?: boolean
   playUrl?: string
+  infoUrl?: string
+  teamType: string
   matchStatus?: "live" | "finished" | "upcoming"
+  matchFeed?: MatchFeedEvent[]
 }
 
 const API_BASE_URL =
@@ -97,6 +118,8 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
 
   return {
     id,
+    homeTeam: match.home,
+    awayTeam: match.away,
     teamType,
     opponent,
     normalizedTeam,
@@ -110,6 +133,7 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     isHome: derivedIsHome,
     playUrl: match.playUrl && match.playUrl !== "null" ? match.playUrl : undefined,
     matchStatus: match.matchStatus ?? undefined,
+    matchFeed: match.matchFeed ?? undefined,
   }
 }
 
