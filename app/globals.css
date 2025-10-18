@@ -208,7 +208,6 @@ body {
     word-break: break-word;
     overflow-wrap: anywhere;
   }
-}
 
 @layer base {
   * {
