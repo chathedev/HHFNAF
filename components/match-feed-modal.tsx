@@ -168,71 +168,79 @@ export function MatchFeedModal({
     .sort((a, b) => b - a) // Reverse order to show latest first
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
       <div
         ref={modalRef}
-        className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col"
+        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-3xl max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex-1">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-2xl font-bold text-gray-900">
-                {homeTeam}
-                <span className="text-gray-400 mx-3">vs</span>
-                {awayTeam}
-              </h2>
+        <div className="flex-shrink-0 p-4 sm:p-6 border-b border-gray-200 bg-gradient-to-b from-white to-gray-50">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2 mb-3">
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg sm:text-2xl font-bold text-gray-900 leading-tight">
+                  <span className="block sm:inline">{homeTeam}</span>
+                  <span className="text-gray-400 mx-2 hidden sm:inline">vs</span>
+                  <span className="block sm:inline text-gray-400 sm:hidden text-sm">vs</span>
+                  <span className="block sm:inline">{awayTeam}</span>
+                </h2>
+              </div>
               {matchStatus === "live" && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-100 text-red-700 text-sm font-semibold rounded">
-                  <span className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 bg-red-100 text-red-700 text-xs sm:text-sm font-bold rounded-full flex-shrink-0">
+                  <span className="w-1.5 sm:w-2 h-1.5 sm:h-2 bg-red-600 rounded-full animate-pulse"></span>
                   LIVE
                 </span>
               )}
             </div>
-            {finalScore && (
-              <p className="text-3xl font-bold text-emerald-600">{finalScore}</p>
-            )}
-            <p className="text-sm text-gray-500 mt-1">
-              {matchFeed.length} händelse{matchFeed.length !== 1 ? "r" : ""}
-            </p>
+            <div className="flex items-center gap-4">
+              {finalScore && (
+                <p className="text-2xl sm:text-3xl font-bold text-emerald-600">{finalScore}</p>
+              )}
+              <p className="text-xs sm:text-sm text-gray-500">
+                {matchFeed.length} händelse{matchFeed.length !== 1 ? "r" : ""}
+              </p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="ml-4 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="ml-2 sm:ml-4 p-2 sm:p-2.5 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
             aria-label="Stäng"
           >
-            <X className="w-6 h-6 text-gray-500" />
+            <X className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500" />
           </button>
         </div>
 
         {/* Top Scorers Section */}
         {Object.keys(topScorersByTeam).length > 0 && (
-          <div className="px-6 pb-4 border-b border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
-              🏆 Målskyttar
+          <div className="flex-shrink-0 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50">
+            <h3 className="text-xs sm:text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide flex items-center gap-2">
+              <span className="text-base sm:text-lg">🏆</span>
+              Målskyttar
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {Object.entries(topScorersByTeam).map(([team, scorers]) => (
-                <div key={team} className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-lg p-3 border border-emerald-200">
-                  <h4 className="text-xs font-semibold text-emerald-800 mb-2 truncate" title={team}>
+                <div key={team} className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-3 sm:p-4 border-2 border-emerald-200 shadow-sm">
+                  <h4 className="text-xs sm:text-sm font-bold text-emerald-800 mb-2 truncate" title={team}>
                     {team}
                   </h4>
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     {scorers.map((scorer, idx) => (
-                      <div key={idx} className="flex items-center justify-between bg-white rounded px-2.5 py-1.5 shadow-sm">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-lg">{idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉"}</span>
-                          <span className="text-sm font-medium text-gray-900 truncate">
-                            {scorer.player}
-                          </span>
-                          {scorer.playerNumber && (
-                            <span className="text-xs text-gray-500 font-mono flex-shrink-0">
-                              #{scorer.playerNumber}
+                      <div key={idx} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 shadow-sm">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <span className="text-lg sm:text-xl flex-shrink-0">{idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉"}</span>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-xs sm:text-sm font-semibold text-gray-900 block truncate">
+                              {scorer.player}
                             </span>
-                          )}
+                            {scorer.playerNumber && (
+                              <span className="text-xs text-gray-500 font-mono">
+                                #{scorer.playerNumber}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <span className="text-sm font-bold text-emerald-700 flex-shrink-0 ml-2">
-                          {scorer.goals} {scorer.goals === 1 ? "mål" : "mål"}
+                        <span className="text-sm sm:text-base font-bold text-emerald-700 flex-shrink-0 ml-2">
+                          {scorer.goals}
                         </span>
                       </div>
                     ))}
@@ -244,74 +252,79 @@ export function MatchFeedModal({
         )}
 
         {/* Timeline */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 sm:px-6 py-4 sm:py-6">
           {matchFeed.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500">Inga händelser att visa än</p>
+              <div className="text-4xl mb-3">📋</div>
+              <p className="text-gray-500 text-sm">Inga händelser att visa än</p>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-6 sm:space-y-8">
               {periods.map((period) => (
                 <div key={period}>
                   {period > 0 && (
-                    <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
                       <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
-                      <span className="text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                      <span className="text-xs sm:text-sm font-bold text-gray-600 uppercase tracking-wider px-2 py-1 bg-gray-100 rounded-full">
                         {period === 1 ? "Första halvlek" : period === 2 ? "Andra halvlek" : `Period ${period}`}
                       </span>
                       <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
                     </div>
                   )}
                   
-                  <div className="relative space-y-4">
+                  <div className="relative space-y-4 sm:space-y-5">
                     {/* Timeline line */}
-                    <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-emerald-200 via-emerald-300 to-transparent"></div>
+                    <div className="absolute left-5 sm:left-7 top-0 bottom-0 w-0.5 bg-gradient-to-b from-emerald-300 via-emerald-400 to-transparent"></div>
                     
                     {eventsByPeriod[period].map((event, idx) => (
-                      <div key={idx} className="relative flex gap-4">
+                      <div key={idx} className="relative flex gap-3 sm:gap-4">
                         {/* Timeline dot with icon */}
                         <div className="relative flex-shrink-0">
-                          <div className="w-12 h-12 rounded-full bg-white border-2 border-emerald-400 flex items-center justify-center text-xl shadow-md z-10">
+                          <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-white border-2 sm:border-3 border-emerald-400 flex items-center justify-center text-lg sm:text-2xl shadow-lg z-10">
                             {getEventIcon(event.type)}
                           </div>
                         </div>
                         
                         {/* Event card */}
-                        <div className={`flex-1 rounded-lg border-2 p-4 ${getEventColor(event.type)} transition-all hover:shadow-md`}>
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-xs font-bold px-2 py-0.5 bg-white/70 rounded">
+                        <div className={`flex-1 rounded-xl border-2 p-3 sm:p-4 ${getEventColor(event.type)} transition-all active:scale-98 min-w-0`}>
+                          <div className="flex items-start justify-between gap-2 sm:gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 mb-2">
+                                <span className="text-xs sm:text-sm font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 bg-white/80 rounded-md shadow-sm">
                                   {event.time}
                                 </span>
-                                <span className="text-sm font-semibold">
+                                <span className="text-xs sm:text-sm font-bold">
                                   {event.type}
                                 </span>
                               </div>
                               
                               {event.team && (
-                                <p className="text-sm font-medium mb-1">{event.team}</p>
-                              )}
-                              
-                              {event.player && (
-                                <p className="text-sm font-semibold text-gray-900 mb-1">
-                                  {event.player}
-                                  {event.playerNumber && (
-                                    <span className="ml-2 text-xs font-mono bg-white/70 px-1.5 py-0.5 rounded">
-                                      #{event.playerNumber}
-                                    </span>
-                                  )}
+                                <p className="text-xs sm:text-sm font-semibold mb-1 truncate" title={event.team}>
+                                  {event.team}
                                 </p>
                               )}
                               
+                              {event.player && (
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="text-sm sm:text-base font-bold text-gray-900 truncate" title={event.player}>
+                                    {event.player}
+                                  </p>
+                                  {event.playerNumber && (
+                                    <span className="text-xs sm:text-sm font-mono bg-white/80 px-1.5 sm:px-2 py-0.5 rounded shadow-sm flex-shrink-0">
+                                      #{event.playerNumber}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                              
                               {event.description && event.description !== event.type && !event.player && (
-                                <p className="text-sm opacity-90">{event.description}</p>
+                                <p className="text-xs sm:text-sm opacity-90 mt-1">{event.description}</p>
                               )}
                             </div>
                             
                             {(event.homeScore !== undefined || event.awayScore !== undefined) && (
-                              <div className="text-right">
-                                <div className="text-2xl font-bold whitespace-nowrap">
+                              <div className="text-right flex-shrink-0">
+                                <div className="text-xl sm:text-2xl font-bold whitespace-nowrap">
                                   {event.homeScore ?? 0}–{event.awayScore ?? 0}
                                 </div>
                               </div>
@@ -328,10 +341,10 @@ export function MatchFeedModal({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+        <div className="flex-shrink-0 p-3 sm:p-4 border-t-2 border-gray-200 bg-gradient-to-t from-gray-50 to-white">
           <button
             onClick={onClose}
-            className="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition-colors"
+            className="w-full px-4 py-3 sm:py-3.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-base sm:text-lg font-bold rounded-xl transition-all shadow-lg hover:shadow-xl active:scale-98"
           >
             Stäng
           </button>
