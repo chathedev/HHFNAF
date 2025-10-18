@@ -1,7 +1,8 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useEffect, useRef } from "react"
 import Link from "next/link"
+import confetti from "canvas-confetti"
 
 import { Card } from "@/components/ui/card"
 import { TICKET_VENUES } from "@/lib/matches"
@@ -86,7 +87,7 @@ type TeamUpcomingMatchProps = {
 
 export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchProps) {
   const { matches, loading, error } = useMatchData({ 
-    refreshIntervalMs: 10_000,
+    refreshIntervalMs: 1_000,
     dataType: "current"
   })
 
@@ -185,8 +186,87 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   const isFutureOrLive = nextMatch.date.getTime() >= Date.now() || status === "live"
   const showTicket = isTicketEligibleBase && !outcomeInfo && isFutureOrLive
 
+  // Track previous score to detect when Härnösands HF scores
+  const prevScoreRef = useRef<{ home: number; away: number; matchId: string } | null>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!nextMatch.result || status !== "live") {
+      return
+    }
+
+    const scoreMatch = nextMatch.result.match(/(\d+)\s*[–-]\s*(\d+)/)
+    if (!scoreMatch) return
+
+    const currentHomeScore = Number.parseInt(scoreMatch[1], 10)
+    const currentAwayScore = Number.parseInt(scoreMatch[2], 10)
+
+    if (Number.isNaN(currentHomeScore) || Number.isNaN(currentAwayScore)) {
+      return
+    }
+
+    // Check if we have a previous score for this match
+    if (prevScoreRef.current && prevScoreRef.current.matchId === nextMatch.id) {
+      const prevHome = prevScoreRef.current.home
+      const prevAway = prevScoreRef.current.away
+
+      // Determine if Härnösands HF scored
+      let hhfScored = false
+      if (nextMatch.isHome !== false) {
+        // We're home team - check if home score increased
+        hhfScored = currentHomeScore > prevHome
+      } else {
+        // We're away team - check if away score increased
+        hhfScored = currentAwayScore > prevAway
+      }
+
+      // Trigger confetti if Härnösands HF scored
+      if (hhfScored && cardRef.current) {
+        const rect = cardRef.current.getBoundingClientRect()
+        const x = (rect.left + rect.width / 2) / window.innerWidth
+        const y = (rect.top + rect.height / 2) / window.innerHeight
+
+        // Celebration confetti burst
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { x, y },
+          colors: ['#10b981', '#f97316', '#ffffff'],
+          startVelocity: 45,
+          gravity: 1.2,
+          ticks: 200
+        })
+
+        // Additional side bursts
+        setTimeout(() => {
+          confetti({
+            particleCount: 50,
+            angle: 60,
+            spread: 55,
+            origin: { x: x - 0.1, y },
+            colors: ['#10b981', '#f97316']
+          })
+          confetti({
+            particleCount: 50,
+            angle: 120,
+            spread: 55,
+            origin: { x: x + 0.1, y },
+            colors: ['#10b981', '#f97316']
+          })
+        }, 200)
+      }
+    }
+
+    // Update the previous score
+    prevScoreRef.current = {
+      home: currentHomeScore,
+      away: currentAwayScore,
+      matchId: nextMatch.id
+    }
+  }, [nextMatch.result, nextMatch.id, nextMatch.isHome, status])
+
   return (
-    <div className="bg-white rounded-lg border border-gray-200 hover:border-emerald-300 hover:shadow-md transition-all p-6">
+    <div ref={cardRef} className="bg-white rounded-lg border border-gray-200 hover:border-emerald-300 hover:shadow-md transition-all p-6">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
