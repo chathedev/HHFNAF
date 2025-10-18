@@ -134,6 +134,77 @@ export default function MatcherPage() {
     result: "bg-emerald-100 text-emerald-900 border-emerald-200",
   }
 
+  // Confetti effect for all live matches
+  useEffect(() => {
+    filteredMatches.forEach((match) => {
+      const status = getMatchStatus(match)
+      if (!match.result || status !== "live") {
+        return
+      }
+
+      const scoreMatch = match.result.match(/(\d+)\s*[–-]\s*(\d+)/)
+      if (!scoreMatch) return
+
+      const currentHomeScore = Number.parseInt(scoreMatch[1], 10)
+      const currentAwayScore = Number.parseInt(scoreMatch[2], 10)
+
+      if (Number.isNaN(currentHomeScore) || Number.isNaN(currentAwayScore)) {
+        return
+      }
+
+      const prevScore = prevScoresRef.current.get(match.id)
+      if (prevScore) {
+        let hhfScored = false
+        if (match.isHome !== false) {
+          hhfScored = currentHomeScore > prevScore.home
+        } else {
+          hhfScored = currentAwayScore > prevScore.away
+        }
+
+        if (hhfScored) {
+          const matchCard = document.getElementById(`match-card-${match.id}`)
+          if (matchCard) {
+            const rect = matchCard.getBoundingClientRect()
+            const x = (rect.left + rect.width / 2) / window.innerWidth
+            const y = (rect.top + rect.height / 2) / window.innerHeight
+
+            confetti({
+              particleCount: 100,
+              spread: 70,
+              origin: { x, y },
+              colors: ['#10b981', '#f97316', '#ffffff'],
+              startVelocity: 45,
+              gravity: 1.2,
+              ticks: 200
+            })
+
+            setTimeout(() => {
+              confetti({
+                particleCount: 50,
+                angle: 60,
+                spread: 55,
+                origin: { x: x - 0.1, y },
+                colors: ['#10b981', '#f97316']
+              })
+              confetti({
+                particleCount: 50,
+                angle: 120,
+                spread: 55,
+                origin: { x: x + 0.1, y },
+                colors: ['#10b981', '#f97316']
+              })
+            }, 200)
+          }
+        }
+      }
+
+      prevScoresRef.current.set(match.id, {
+        home: currentHomeScore,
+        away: currentAwayScore
+      })
+    })
+  }, [filteredMatches])
+
   return (
     <main className="min-h-screen bg-white py-28">
       <div className="container mx-auto px-4">
@@ -253,74 +324,6 @@ export default function MatcherPage() {
               isFutureOrLive &&
               (match.normalizedTeam.includes("alag") || match.normalizedTeam.includes("damutv")) &&
               Boolean(match.venue && match.venue.toLowerCase().includes("öbacka sc"))
-
-            // Confetti logic for this match
-            useEffect(() => {
-              if (!match.result || status !== "live") {
-                return
-              }
-
-              const scoreMatch = match.result.match(/(\d+)\s*[–-]\s*(\d+)/)
-              if (!scoreMatch) return
-
-              const currentHomeScore = Number.parseInt(scoreMatch[1], 10)
-              const currentAwayScore = Number.parseInt(scoreMatch[2], 10)
-
-              if (Number.isNaN(currentHomeScore) || Number.isNaN(currentAwayScore)) {
-                return
-              }
-
-              const prevScore = prevScoresRef.current.get(match.id)
-              if (prevScore) {
-                let hhfScored = false
-                if (match.isHome !== false) {
-                  hhfScored = currentHomeScore > prevScore.home
-                } else {
-                  hhfScored = currentAwayScore > prevScore.away
-                }
-
-                if (hhfScored) {
-                  const matchCard = document.getElementById(`match-card-${match.id}`)
-                  if (matchCard) {
-                    const rect = matchCard.getBoundingClientRect()
-                    const x = (rect.left + rect.width / 2) / window.innerWidth
-                    const y = (rect.top + rect.height / 2) / window.innerHeight
-
-                    confetti({
-                      particleCount: 100,
-                      spread: 70,
-                      origin: { x, y },
-                      colors: ['#10b981', '#f97316', '#ffffff'],
-                      startVelocity: 45,
-                      gravity: 1.2,
-                      ticks: 200
-                    })
-
-                    setTimeout(() => {
-                      confetti({
-                        particleCount: 50,
-                        angle: 60,
-                        spread: 55,
-                        origin: { x: x - 0.1, y },
-                        colors: ['#10b981', '#f97316']
-                      })
-                      confetti({
-                        particleCount: 50,
-                        angle: 120,
-                        spread: 55,
-                        origin: { x: x + 0.1, y },
-                        colors: ['#10b981', '#f97316']
-                      })
-                    }, 200)
-                  }
-                }
-              }
-
-              prevScoresRef.current.set(match.id, {
-                home: currentHomeScore,
-                away: currentAwayScore
-              })
-            }, [match.result, match.id, match.isHome, status])
 
             return (
               <div id={`match-card-${match.id}`} key={match.id} className="bg-white rounded-lg border border-gray-200 hover:border-emerald-300 hover:shadow-md transition-all p-6">
