@@ -55,7 +55,9 @@ const getMatchOutcome = (rawResult?: string, isHome?: boolean, status?: string):
   }
 }
 
-// Helper to get score in correct display order (always Härnösands HF score first)
+// Helper to get score in correct display order matching team display
+// For home matches: Härnösands HF vs Opponent → HHF score - Opponent score
+// For away matches: Opponent vs Härnösands HF → Opponent score - HHF score
 const getDisplayScore = (rawResult?: string, isHome?: boolean): string | null => {
   if (!rawResult) {
     return null
@@ -70,14 +72,10 @@ const getDisplayScore = (rawResult?: string, isHome?: boolean): string | null =>
     return null
   }
   
-  // Always show Härnösands HF score first
-  // If we're home, our score is homeScore (first)
-  // If we're away, our score is awayScore (second), so reverse
-  if (isHome === false) {
-    return `${awayScore}\u2013${homeScore}`
-  }
-  
-  // For home matches, show as is (our score first)
+  // Match the team display order:
+  // If we're home: "Härnösands HF vs Opponent" → show homeScore–awayScore
+  // If we're away: "Opponent vs Härnösands HF" → show homeScore–awayScore (opponent is home)
+  // The API always returns homeScore–awayScore, so we keep it as is
   return `${homeScore}\u2013${awayScore}`
 }
 

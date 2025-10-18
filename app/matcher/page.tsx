@@ -68,11 +68,10 @@ const getDisplayScore = (rawResult?: string, isHome?: boolean): string | null =>
     return null
   }
   
-  // Always show Härnösands HF score first
-  if (isHome === false) {
-    return `${awayScore}\u2013${homeScore}`
-  }
-  
+  // Match the team display order:
+  // If we're home: "Härnösands HF vs Opponent" → show homeScore–awayScore
+  // If we're away: "Opponent vs Härnösands HF" → show homeScore–awayScore (opponent is home)
+  // The API always returns homeScore–awayScore, so we keep it as is
   return `${homeScore}\u2013${awayScore}`
 }
 
