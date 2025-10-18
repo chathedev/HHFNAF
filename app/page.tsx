@@ -37,7 +37,7 @@ type MatchOutcome = {
   label: "Vinst" | "Förlust" | "Oavgjort" | "Ej publicerat"
 }
 
-const getMatchOutcome = (rawResult?: string, isHome?: boolean): MatchOutcome | null => {
+const getMatchOutcome = (rawResult?: string, isHome?: boolean, status?: string): MatchOutcome | null => {
   if (!rawResult) {
     return null
   }
@@ -50,6 +50,12 @@ const getMatchOutcome = (rawResult?: string, isHome?: boolean): MatchOutcome | n
   if (Number.isNaN(homeScore) || Number.isNaN(awayScore)) {
     return null
   }
+  
+  // Don't show 0-0 as "Oavgjort" for live matches (match hasn't finished yet)
+  if (status === "live" && homeScore === 0 && awayScore === 0) {
+    return null
+  }
+  
   const isAway = isHome === false
   const ourScore = isAway ? awayScore : homeScore
   const opponentScore = isAway ? homeScore : awayScore
@@ -115,15 +121,19 @@ export default function HomePage() {
 
   const matchesToDisplay = matchesTodayForward.slice(0, 2)
   const getMatchStatus = (match: NormalizedMatch) => {
-    if (match.result) {
-      return "result"
-    }
     const now = Date.now()
     const kickoff = match.date.getTime()
     const liveWindowEnd = kickoff + 1000 * 60 * 60 * 2.5
+    
+    // Check if match is currently in the live window (regardless of result)
     if (now >= kickoff && now <= liveWindowEnd) {
       return "live"
     }
+    
+    if (match.result) {
+      return "result"
+    }
+    
     return "upcoming"
   }
 
@@ -322,7 +332,14 @@ export default function HomePage() {
                           )
                           const scheduleInfo = scheduleParts.join(" • ")
                           const status = getMatchStatus(match)
-                          const outcomeInfo = getMatchOutcome(match.result, match.isHome)
+                          const outcomeInfo = getMatchOutcome(match.result, match.isHome, status)
+                          
+                          // Check if result is stale (0-0 shown when match should be live)
+                          const now = Date.now()
+                          const minutesSinceKickoff = (now - match.date.getTime()) / (1000 * 60)
+                          const trimmedResult = typeof match.result === "string" ? match.result.trim() : null
+                          const isStaleZeroResult = trimmedResult === "0-0" && minutesSinceKickoff > 3 && status === "live"
+                          
                           const isALagTeam =
                             match.normalizedTeam.includes("alag") || match.normalizedTeam.includes("damutv")
                           const isFutureOrLive = match.date.getTime() >= Date.now() || status === "live"
@@ -379,7 +396,21 @@ export default function HomePage() {
                                 {/* Result or Actions */}
                                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                                   <div className="flex items-center gap-4">
-                                    {outcomeInfo && (
+                                    {/* Show warning for stale 0-0 results */}
+                                    {isStaleZeroResult && (
+                                      <div className="flex items-center gap-3">
+                                        <span className="text-2xl font-bold text-gray-900">0–0</span>
+                                        <div className="flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 px-2.5 py-1 rounded border border-amber-200">
+                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                          </svg>
+                                          <span>Resultat uppdateras ej</span>
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Show normal results for non-stale matches */}
+                                    {!isStaleZeroResult && outcomeInfo && (
                                       <div className="flex items-center gap-3">
                                         {outcomeInfo.label !== "Ej publicerat" && (
                                           <span
