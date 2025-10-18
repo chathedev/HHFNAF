@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { X } from "lucide-react"
 
 type MatchFeedEvent = {
@@ -92,6 +92,7 @@ export function MatchFeedModal({
   matchStatus,
 }: MatchFeedModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
+  const [activeTab, setActiveTab] = useState<"timeline" | "scorers">("timeline")
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -210,50 +211,59 @@ export function MatchFeedModal({
           </button>
         </div>
 
-        {/* Top Scorers Section */}
-        {Object.keys(topScorersByTeam).length > 0 && (
-          <div className="flex-shrink-0 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50">
-            <h3 className="text-xs sm:text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide flex items-center gap-2">
-              <span className="text-base sm:text-lg">🏆</span>
-              Målskyttar
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {Object.entries(topScorersByTeam).map(([team, scorers]) => (
-                <div key={team} className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-3 sm:p-4 border-2 border-emerald-200 shadow-sm">
-                  <h4 className="text-xs sm:text-sm font-bold text-emerald-800 mb-2 truncate" title={team}>
-                    {team}
-                  </h4>
-                  <div className="space-y-2">
-                    {scorers.map((scorer, idx) => (
-                      <div key={idx} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 shadow-sm">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <span className="text-lg sm:text-xl flex-shrink-0">{idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉"}</span>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 block truncate">
-                              {scorer.player}
-                            </span>
-                            {scorer.playerNumber && (
-                              <span className="text-xs text-gray-500 font-mono">
-                                #{scorer.playerNumber}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <span className="text-sm sm:text-base font-bold text-emerald-700 flex-shrink-0 ml-2">
-                          {scorer.goals}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+        {/* Tab Navigation */}
+        <div className="flex-shrink-0 border-b-2 border-gray-200 bg-white">
+          <div className="flex">
+            <button
+              onClick={() => setActiveTab("timeline")}
+              className={`flex-1 px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base font-bold transition-all relative ${
+                activeTab === "timeline"
+                  ? "text-emerald-600"
+                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              <span className="flex items-center justify-center gap-2">
+                <span className="text-lg sm:text-xl">📋</span>
+                Tidslinje
+                <span className="text-xs sm:text-sm font-semibold px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
+                  {matchFeed.length}
+                </span>
+              </span>
+              {activeTab === "timeline" && (
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-600"></div>
+              )}
+            </button>
+            
+            {Object.keys(topScorersByTeam).length > 0 && (
+              <button
+                onClick={() => setActiveTab("scorers")}
+                className={`flex-1 px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base font-bold transition-all relative ${
+                  activeTab === "scorers"
+                    ? "text-emerald-600"
+                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <span className="text-lg sm:text-xl">🏆</span>
+                  Målskyttar
+                  <span className="text-xs sm:text-sm font-semibold px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
+                    {Object.values(topScorersByTeam).reduce((sum, scorers) => sum + scorers.length, 0)}
+                  </span>
+                </span>
+                {activeTab === "scorers" && (
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-600"></div>
+                )}
+              </button>
+            )}
           </div>
-        )}
+        </div>
 
-        {/* Timeline */}
+        {/* Content Area */}
         <div className="flex-1 overflow-y-auto overscroll-contain px-4 sm:px-6 py-4 sm:py-6">
-          {matchFeed.length === 0 ? (
+          {/* Timeline Tab */}
+          {activeTab === "timeline" && (
+            <>
+              {matchFeed.length === 0 ? (
             <div className="text-center py-12">
               <div className="text-4xl mb-3">📋</div>
               <p className="text-gray-500 text-sm">Inga händelser att visa än</p>
@@ -336,6 +346,59 @@ export function MatchFeedModal({
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+            </>
+          )}
+
+          {/* Top Scorers Tab */}
+          {activeTab === "scorers" && Object.keys(topScorersByTeam).length > 0 && (
+            <div className="space-y-4 sm:space-y-6">
+              <div className="text-center mb-6">
+                <div className="text-4xl sm:text-5xl mb-2">🏆</div>
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900">Målskyttar</h3>
+                <p className="text-sm text-gray-500 mt-1">Topp 3 målgörare per lag</p>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-4 sm:gap-6">
+                {Object.entries(topScorersByTeam).map(([team, scorers]) => (
+                  <div key={team} className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-2xl p-4 sm:p-6 border-2 border-emerald-200 shadow-lg">
+                    <h4 className="text-base sm:text-lg font-bold text-emerald-800 mb-4 flex items-center gap-2">
+                      <span className="text-xl sm:text-2xl">⚽</span>
+                      {team}
+                    </h4>
+                    <div className="space-y-3 sm:space-y-4">
+                      {scorers.map((scorer, idx) => (
+                        <div key={idx} className="flex items-center justify-between bg-white rounded-xl px-4 sm:px-5 py-3 sm:py-4 shadow-md hover:shadow-lg transition-shadow">
+                          <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                            <span className="text-2xl sm:text-3xl flex-shrink-0">
+                              {idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉"}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm sm:text-lg font-bold text-gray-900 truncate" title={scorer.player}>
+                                {scorer.player}
+                              </p>
+                              {scorer.playerNumber && (
+                                <p className="text-xs sm:text-sm text-gray-500 font-mono mt-0.5">
+                                  Tröja #{scorer.playerNumber}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                            <span className="text-2xl sm:text-3xl font-black text-emerald-700">
+                              {scorer.goals}
+                            </span>
+                            <span className="text-xs sm:text-sm font-semibold text-gray-600">
+                              {scorer.goals === 1 ? "mål" : "mål"}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
