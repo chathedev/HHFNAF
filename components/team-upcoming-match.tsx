@@ -55,6 +55,30 @@ const getMatchOutcome = (rawResult?: string, isHome?: boolean, status?: string):
   }
 }
 
+// Helper to get score in correct display order (always show in match order, not our score first)
+const getDisplayScore = (rawResult?: string, isHome?: boolean): string | null => {
+  if (!rawResult) {
+    return null
+  }
+  const scoreboardMatch = rawResult.match(/(\d+)\s*[–-]\s*(\d+)/)
+  if (!scoreboardMatch) {
+    return null
+  }
+  const homeScore = Number.parseInt(scoreboardMatch[1], 10)
+  const awayScore = Number.parseInt(scoreboardMatch[2], 10)
+  if (Number.isNaN(homeScore) || Number.isNaN(awayScore)) {
+    return null
+  }
+  
+  // For away matches, reverse the score to match the opponent vs us display order
+  if (isHome === false) {
+    return `${homeScore}\u2013${awayScore}`
+  }
+  
+  // For home matches, show our score first (home-away order)
+  return `${homeScore}\u2013${awayScore}`
+}
+
 type TeamUpcomingMatchProps = {
   teamLabels: string | string[]
   ticketUrl?: string
@@ -133,12 +157,20 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   const liveWindowEnd = kickoff + 1000 * 60 * 60 * 2.5
   const status = now >= kickoff && now <= liveWindowEnd ? "live" : nextMatch.result ? "result" : "upcoming"
   
+  // Extract opponent name without (hemma)/(borta) suffix for display
+  const opponentName = nextMatch.opponent.replace(/\s*\((hemma|borta)\)\s*$/i, '').trim()
+  const homeAwayText = nextMatch.opponent.match(/\((hemma|borta)\)/i)?.[1] || ''
+  
+  // Determine team name (could be extracted from teamType or use a constant)
+  const ownTeamName = "Härnösands HF"
+  
   const isALagMatch =
     nextMatch.normalizedTeam.includes("alag") || nextMatch.normalizedTeam.includes("damutv")
   const venueName = nextMatch.venue?.toLowerCase() ?? ""
   const isTicketEligibleBase =
     Boolean(ticketUrl) && isALagMatch && TICKET_VENUES.some((keyword) => venueName.includes(keyword))
   const outcomeInfo = getMatchOutcome(nextMatch.result, nextMatch.isHome, status)
+  const displayScore = getDisplayScore(nextMatch.result, nextMatch.isHome)
   
   // Check if result is stale (0-0 shown when match should be live)
   const minutesSinceKickoff = (now - kickoff) / (1000 * 60)
@@ -172,7 +204,15 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
             )}
           </div>
           <h3 className="text-2xl font-bold text-gray-900 mb-2">
-            vs {nextMatch.opponent}
+            {nextMatch.isHome === false ? (
+              <>
+                {opponentName} ({homeAwayText}) <span className="text-gray-400">vs</span> {ownTeamName}
+              </>
+            ) : (
+              <>
+                {ownTeamName} <span className="text-gray-400">vs</span> {opponentName} {homeAwayText && `(${homeAwayText})`}
+              </>
+            )}
           </h3>
           {scheduleParts && (
             <p className="text-sm text-gray-600">{scheduleParts}</p>
@@ -201,10 +241,10 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
       <div className="flex items-center justify-between pt-4 border-t border-gray-100">
         <div className="flex items-center gap-4">
           {/* Show live scores without outcome badge */}
-          {status === "live" && outcomeInfo && (
+          {status === "live" && outcomeInfo && displayScore && (
             <div className="flex items-center gap-3">
               <span className="text-2xl font-bold text-gray-900">
-                {outcomeInfo.text}
+                {displayScore}
               </span>
               {outcomeInfo.label === "Vinst" && (
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-green-700">
@@ -241,7 +281,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
           )}
           
           {/* Show results with outcome badge only for finished matches */}
-          {status !== "live" && outcomeInfo && (
+          {status !== "live" && outcomeInfo && displayScore && (
             <div className="flex items-center gap-3">
               <span className={`text-xs font-semibold px-2.5 py-1 rounded ${
                 outcomeInfo.label === "Vinst"
@@ -253,7 +293,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
                 {outcomeInfo.label}
               </span>
               <span className="text-2xl font-bold text-gray-900">
-                {outcomeInfo.text}
+                {displayScore}
               </span>
             </div>
           )}
