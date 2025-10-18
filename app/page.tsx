@@ -499,7 +499,7 @@ export default function HomePage() {
                           // Normalize the result to check for any variation of 0-0
                           const normalizedResult = trimmedResult?.replace(/[–-]/g, '-').toLowerCase()
                           const isZeroZero = normalizedResult === "0-0" || normalizedResult === "00" || trimmedResult === "0-0" || trimmedResult === "0–0"
-                          const isStaleZeroResult = isZeroZero && minutesSinceKickoff > 3 && status === "live"
+                          const isStaleZeroResult = isZeroZero && minutesSinceKickoff > 3 && (status === "live" || status === "finished")
                           
                           // Don't show LIVE badge if match has been 0-0 for more than 60 minutes (likely stale data)
                           const shouldShowLive = status === "live" && !(isZeroZero && minutesSinceKickoff > 60)
@@ -565,12 +565,12 @@ export default function HomePage() {
                                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                                   <div className="flex items-center gap-4">
                                     {/* Show live scores - just the score, no badges */}
-                                    {status === "live" && outcomeInfo && displayScore && (
+                                    {status === "live" && outcomeInfo && displayScore && !isStaleZeroResult && (
                                       <span className="text-2xl font-bold text-gray-900">{displayScore}</span>
                                     )}
                                     
-                                    {/* Show 0-0 for live matches with warning if stale */}
-                                    {status === "live" && !outcomeInfo && isZeroZero && (
+                                    {/* Show 0-0 for live or finished matches with warning if stale */}
+                                    {((status === "live" && !outcomeInfo && isZeroZero) || (status === "finished" && isZeroZero && isStaleZeroResult)) && (
                                       <div className="flex items-center gap-3">
                                         <span className="text-2xl font-bold text-gray-900">0–0</span>
                                         {isStaleZeroResult && (
@@ -584,8 +584,8 @@ export default function HomePage() {
                                       </div>
                                     )}
                                     
-                                    {/* Show results with outcome badge only for finished matches */}
-                                    {status !== "live" && outcomeInfo && displayScore && (
+                                    {/* Show results with outcome badge only for finished matches (but not stale 0-0) */}
+                                    {status !== "live" && outcomeInfo && displayScore && !isStaleZeroResult && (
                                       <div className="flex items-center gap-3">
                                         {outcomeInfo.label !== "Ej publicerat" && (
                                           <span
