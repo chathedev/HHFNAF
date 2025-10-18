@@ -73,8 +73,10 @@ export default function MatcherPage() {
         return false
       }
       
+      // Only apply 3-hour window when showing "all" matches
+      // When explicitly filtering for "finished", show all finished matches
       const kickoff = match.date.getTime()
-      if (status === "finished" && kickoff < threeHoursAgo) {
+      if (status === "finished" && statusFilter === "all" && kickoff < threeHoursAgo) {
         return false
       }
       
