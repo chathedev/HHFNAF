@@ -195,6 +195,9 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   const isFutureOrLive = nextMatch.date.getTime() >= Date.now() || status === "live"
   const showTicket = isTicketEligibleBase && !outcomeInfo && isFutureOrLive
 
+  // Only allow clicking timeline for live or finished matches
+  const canOpenTimeline = status === "live" || status === "finished"
+
   // Track previous score to detect when Härnösands HF scores
   const prevScoreRef = useRef<{ home: number; away: number; matchId: string } | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -329,26 +332,30 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
     <>
       <div 
         ref={cardRef} 
-        className="bg-white rounded-lg border border-gray-200 hover:border-emerald-400 hover:shadow-lg transition-all p-6 cursor-pointer group relative"
-        onClick={() => setSelectedMatch(nextMatch)}
-        role="button"
-        tabIndex={0}
+        className={`bg-white rounded-lg border border-gray-200 hover:border-emerald-400 hover:shadow-lg transition-all p-6 group relative ${
+          canOpenTimeline ? "cursor-pointer" : ""
+        }`}
+        onClick={() => canOpenTimeline && setSelectedMatch(nextMatch)}
+        role={canOpenTimeline ? "button" : undefined}
+        tabIndex={canOpenTimeline ? 0 : undefined}
         onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
+          if (canOpenTimeline && (e.key === "Enter" || e.key === " ")) {
             e.preventDefault()
             setSelectedMatch(nextMatch)
           }
         }}
       >
-      {/* Click hint badge */}
-      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-        <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded flex items-center gap-1">
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          Se matchhändelser
-        </span>
-      </div>
+      {/* Click hint badge - only show if timeline is clickable */}
+      {canOpenTimeline && (
+        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+          <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded flex items-center gap-1">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Se matchhändelser
+          </span>
+        </div>
+      )}
       
       {/* Header */}
       <div className="flex items-start justify-between mb-4">

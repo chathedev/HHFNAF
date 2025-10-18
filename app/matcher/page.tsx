@@ -112,15 +112,20 @@ export default function MatcherPage() {
     
     const hasValidResult = match.result && match.result !== "Inte publicerat" && match.result !== "0-0" && match.result.trim() !== ""
     
+    // Only allow clicking timeline for live or finished matches
+    const canOpenTimeline = status === "live" || status === "finished"
+    
     return (
       <div
         key={match.id}
-        className="bg-white rounded-xl border-2 border-gray-100 hover:border-emerald-300 hover:shadow-lg transition-all p-6 cursor-pointer group relative"
-        onClick={() => setSelectedMatch(match)}
-        role="button"
-        tabIndex={0}
+        className={`bg-white rounded-xl border-2 border-gray-100 hover:border-emerald-300 hover:shadow-lg transition-all p-6 group relative ${
+          canOpenTimeline ? "cursor-pointer" : ""
+        }`}
+        onClick={() => canOpenTimeline && setSelectedMatch(match)}
+        role={canOpenTimeline ? "button" : undefined}
+        tabIndex={canOpenTimeline ? 0 : undefined}
         onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
+          if (canOpenTimeline && (e.key === "Enter" || e.key === " ")) {
             e.preventDefault()
             setSelectedMatch(match)
           }
@@ -171,39 +176,79 @@ export default function MatcherPage() {
         )}
 
         {/* Result or Status */}
-        <div className="pt-4 border-t border-gray-100">
-          {hasValidResult ? (
-            <div className="flex items-center justify-between">
-              <span className="text-3xl font-bold text-gray-900">{match.result}</span>
-              {match.matchFeed && match.matchFeed.length > 0 && (
-                <span className="text-xs text-emerald-600 font-medium">
-                  {match.matchFeed.length} händelser →
-                </span>
-              )}
-            </div>
-          ) : status === "finished" ? (
-            <div className="flex items-center gap-2 text-amber-700">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="text-sm font-medium">Resultat publiceras snart</span>
-            </div>
-          ) : status === "live" ? (
-            <div className="flex items-center gap-2 text-red-600">
-              <span className="text-lg font-bold">Pågår nu</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-gray-500">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="text-sm">Kommande match</span>
-            </div>
-          )}
+        <div className="pt-4 border-t border-gray-100 space-y-3">
+          {/* Score/Status Row */}
+          <div className="flex items-center justify-between">
+            {hasValidResult ? (
+              <>
+                <span className="text-3xl font-bold text-gray-900">{match.result}</span>
+                {canOpenTimeline && match.matchFeed && match.matchFeed.length > 0 && (
+                  <span className="text-xs text-emerald-600 font-medium">
+                    {match.matchFeed.length} händelser →
+                  </span>
+                )}
+              </>
+            ) : status === "finished" ? (
+              <div className="flex items-center gap-2 text-amber-700">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-sm font-medium">Resultat publiceras snart</span>
+              </div>
+            ) : status === "live" ? (
+              <div className="flex items-center gap-2 text-red-600">
+                <span className="text-lg font-bold">Pågår nu</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-gray-500">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-sm">Kommande match</span>
+              </div>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            {/* Play URL Button */}
+            {match.playUrl && match.playUrl !== "null" && (
+              <a
+                href={match.playUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-bold rounded-lg transition-all shadow-md hover:shadow-lg"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+                Se live
+              </a>
+            )}
+            
+            {/* Ticket Button - Show for upcoming matches */}
+            {status === "upcoming" && (
+              <Link
+                href={TICKET_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white text-sm font-bold rounded-lg transition-all shadow-md hover:shadow-lg"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                </svg>
+                Köp biljett
+              </Link>
+            )}
+          </div>
         </div>
 
-        {/* Hover hint */}
-        <div className="absolute inset-0 bg-emerald-50 opacity-0 group-hover:opacity-10 transition-opacity rounded-xl pointer-events-none"></div>
+        {/* Hover hint - only show if timeline is clickable */}
+        {canOpenTimeline && (
+          <div className="absolute inset-0 bg-emerald-50 opacity-0 group-hover:opacity-10 transition-opacity rounded-xl pointer-events-none"></div>
+        )}
       </div>
     )
   }
