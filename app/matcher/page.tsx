@@ -149,7 +149,7 @@ export default function MatcherPage() {
               LIVE
             </span>
           )}
-          {status === "finished" && hasValidResult && (
+          {status === "finished" && (
             <span className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-gray-700 to-gray-800 text-white text-xs font-bold rounded-full shadow-md">
               <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
@@ -248,7 +248,7 @@ export default function MatcherPage() {
                   <span className="text-4xl font-black bg-gradient-to-br from-gray-900 to-gray-700 bg-clip-text text-transparent">
                     {match.result}
                   </span>
-                  {canOpenTimeline && match.matchFeed && match.matchFeed.length > 0 && (
+                  {status !== "upcoming" && canOpenTimeline && match.matchFeed && match.matchFeed.length > 0 && (
                     <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-bold bg-emerald-50 px-2 py-1 rounded-full">
                       <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/>
@@ -259,11 +259,11 @@ export default function MatcherPage() {
                 </div>
               </>
             ) : status === "finished" ? (
-              <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
+              <div className="flex items-center gap-2 text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span className="text-sm font-bold">Resultat publiceras snart</span>
+                <span className="text-sm font-bold">Resultat ej publicerat</span>
               </div>
             ) : status === "live" ? (
               <div className="flex items-center gap-2 text-red-600 bg-red-50 px-3 py-2 rounded-lg">
@@ -288,7 +288,7 @@ export default function MatcherPage() {
                   <svg className="w-4 h-4 group-hover/btn:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M8 5v14l11-7z"/>
                   </svg>
-                  Se live
+                  {status === "finished" ? "Se repris" : "Se live"}
                 </a>
               )}
               

@@ -451,14 +451,14 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
-              title="Se matchen live"
+              title={status === "finished" ? "Se repris" : "Se matchen live"}
             >
               <img
                 src="/handbollplay_mini.png"
                 alt=""
                 className="h-4 w-4 brightness-0 invert"
               />
-              Se live
+              {status === "finished" ? "Se repris" : "Se live"}
             </a>
           )}
         </div>
