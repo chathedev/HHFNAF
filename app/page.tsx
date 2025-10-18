@@ -648,6 +648,23 @@ export default function HomePage() {
                         })}
                       </ul>
                     )}
+
+                    {!matchLoading && !matchError && matchesToDisplay.length === 0 && (
+                      <div className="text-center py-8 px-4 bg-emerald-50 rounded-lg border border-emerald-100">
+                        <p className="text-emerald-700 mb-4">
+                          Inga kommande matcher just nu.
+                        </p>
+                        <Link
+                          href="/matcher"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                        >
+                          Se Tidigare Matcher
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

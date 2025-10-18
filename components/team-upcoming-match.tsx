@@ -121,7 +121,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
         return true
       }
       
-      // Fallback for matches without matchStatus: include if kickoff is in the future
+      // Fallback for matches without matchStatus: only show if kickoff is in the future
       if (kickoff >= now) {
         return true
       }
