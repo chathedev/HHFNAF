@@ -119,7 +119,11 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   // Check if result is stale (0-0 shown when match should be live)
   const minutesSinceKickoff = (now - kickoff) / (1000 * 60)
   const trimmedResult = typeof nextMatch.result === "string" ? nextMatch.result.trim() : null
-  const isStaleZeroResult = trimmedResult === "0-0" && minutesSinceKickoff > 3 && status === "live"
+  
+  // Normalize the result to check for any variation of 0-0
+  const normalizedResult = trimmedResult?.replace(/[–-]/g, '-').toLowerCase()
+  const isZeroZero = normalizedResult === "0-0" || normalizedResult === "00" || trimmedResult === "0-0" || trimmedResult === "0–0"
+  const isStaleZeroResult = isZeroZero && minutesSinceKickoff > 3 && status === "live"
   
   const isFutureOrLive = nextMatch.date.getTime() >= Date.now() || status === "live"
   const showTicket = isTicketEligibleBase && !outcomeInfo && isFutureOrLive
@@ -170,7 +174,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
       <div className="flex items-center justify-between pt-4 border-t border-gray-100">
         <div className="flex items-center gap-4">
           {/* Show 0-0 score for live matches with warning if stale */}
-          {status === "live" && trimmedResult === "0-0" && (
+          {status === "live" && isZeroZero && (
             <div className="flex items-center gap-3">
               <span className="text-2xl font-bold text-gray-900">0–0</span>
               {isStaleZeroResult && (
@@ -185,7 +189,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
           )}
           
           {/* Show normal results for non-live or non-0-0 matches */}
-          {!(status === "live" && trimmedResult === "0-0") && outcomeInfo && (
+          {!(status === "live" && isZeroZero) && outcomeInfo && (
             <div className="flex items-center gap-3">
               <span className={`text-xs font-semibold px-2.5 py-1 rounded ${
                 outcomeInfo.label === "Vinst"
