@@ -151,9 +151,9 @@ export default function MatcherPage() {
         {/* Match info */}
         <h3 className="text-xl font-bold text-gray-900 mb-2">
           {isHome ? (
-            <>{opponentName} <span className="text-emerald-600">({homeAwayLabel})</span></>
+            <>Härnösands HF <span className="text-gray-400">vs</span> {opponentName} <span className="text-emerald-600">({homeAwayLabel})</span></>
           ) : (
-            <>{opponentName} <span className="text-emerald-600">({homeAwayLabel})</span></>
+            <>{opponentName} <span className="text-gray-400">vs</span> Härnösands HF <span className="text-emerald-600">({homeAwayLabel})</span></>
           )}
         </h3>
 
