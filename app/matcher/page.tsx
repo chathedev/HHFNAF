@@ -12,6 +12,47 @@ const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 type StatusFilter = "all" | "upcoming" | "live" | "finished"
 type DataTypeFilter = "both" | "current" | "old"
 
+type MatchOutcome = {
+  text: string
+  label: "Vinst" | "Förlust" | "Oavgjort" | "Ej publicerat"
+}
+
+const getMatchOutcome = (rawResult?: string, isHome?: boolean, status?: string): MatchOutcome | null => {
+  if (!rawResult) {
+    return null
+  }
+  const scoreboardMatch = rawResult.match(/(\d+)\s*[–-]\s*(\d+)/)
+  if (!scoreboardMatch) {
+    return null
+  }
+  const homeScore = Number.parseInt(scoreboardMatch[1], 10)
+  const awayScore = Number.parseInt(scoreboardMatch[2], 10)
+  if (Number.isNaN(homeScore) || Number.isNaN(awayScore)) {
+    return null
+  }
+  
+  // Don't show 0-0 as "Oavgjort" for live matches (match hasn't finished yet)
+  if (status === "live" && homeScore === 0 && awayScore === 0) {
+    return null
+  }
+  
+  const isAway = isHome === false
+  const ourScore = isAway ? awayScore : homeScore
+  const opponentScore = isAway ? homeScore : awayScore
+
+  let label: MatchOutcome["label"] = "Oavgjort"
+  if (ourScore > opponentScore) {
+    label = "Vinst"
+  } else if (ourScore < opponentScore) {
+    label = "Förlust"
+  }
+
+  return {
+    text: `${ourScore}\u2013${opponentScore}`,
+    label,
+  }
+}
+
 const getMatchStatus = (match: NormalizedMatch): StatusFilter => {
   if (match.matchStatus) {
     return match.matchStatus
@@ -113,6 +154,7 @@ export default function MatcherPage() {
     const status = getMatchStatus(match)
     
     const hasValidResult = match.result && match.result !== "Inte publicerat" && match.result !== "0-0" && match.result.trim() !== ""
+    const outcomeInfo = getMatchOutcome(match.result, match.isHome, status)
     
     // Only allow clicking timeline for live or finished matches
     const canOpenTimeline = status === "live" || status === "finished"
@@ -125,7 +167,7 @@ export default function MatcherPage() {
     return (
       <article
         key={match.id}
-        className={`bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200/60 hover:border-emerald-400/50 hover:shadow-xl transition-all duration-300 p-6 group relative overflow-hidden backdrop-blur-sm ${
+        className={`bg-white rounded-lg border border-gray-200 hover:border-emerald-400 hover:shadow-lg transition-all p-6 group relative ${
           canOpenTimeline ? "cursor-pointer" : ""
         }`}
         onClick={() => canOpenTimeline && setSelectedMatch(match)}
@@ -138,184 +180,135 @@ export default function MatcherPage() {
           }
         }}
       >
-        {/* Decorative gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.02] via-transparent to-blue-500/[0.02] pointer-events-none" />
-        
-        {/* Status badge */}
-        <div className="absolute top-4 right-4 z-10">
-          {status === "live" && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-black rounded-full shadow-lg shadow-red-500/30 animate-pulse">
-              <span className="w-2 h-2 bg-white rounded-full"></span>
-              LIVE
-            </span>
-          )}
-          {status === "finished" && (
-            <span className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-gray-700 to-gray-800 text-white text-xs font-bold rounded-full shadow-md">
-              <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
-              </svg>
-              AVSLUTAD
-            </span>
-          )}
-          {status === "upcoming" && (
-            <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-xs font-bold rounded-full shadow-md shadow-emerald-500/20">
+        {/* Click hint badge - only show if timeline is clickable */}
+        {canOpenTimeline && (
+          <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+            <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded flex items-center gap-1">
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              KOMMANDE
-            </span>
-          )}
-        </div>
-
-        {/* Team name badge */}
-        <div className="mb-4 relative z-10">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-50 to-emerald-100/80 text-emerald-700 text-xs font-bold rounded-full border border-emerald-200/50 shadow-sm">
-            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
-            </svg>
-            {match.teamType}
-          </span>
-        </div>
-
-        {/* Match info */}
-        <div className="relative z-10">
-          <h3 className="text-xl font-black text-gray-900 mb-3 leading-tight">
-            {isHome ? (
-              <>
-                <span className="text-emerald-600">Härnösands HF</span> 
-                <span className="text-gray-300 font-normal mx-2">vs</span> 
-                <span className="text-gray-700">{opponentName}</span>
-              </>
-            ) : (
-              <>
-                <span className="text-gray-700">{opponentName}</span>
-                <span className="text-gray-300 font-normal mx-2">vs</span>
-                <span className="text-emerald-600">Härnösands HF</span>
-              </>
-            )}
-          </h3>
-          
-          <div className="flex items-center gap-2 mb-2">
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded ${
-              isHome 
-                ? "bg-emerald-100 text-emerald-700" 
-                : "bg-blue-100 text-blue-700"
-            }`}>
-              {isHome ? (
-                <>
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
-                  </svg>
-                  Hemmamatch
-                </>
-              ) : (
-                <>
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-                  </svg>
-                  Bortamatch
-                </>
-              )}
+              Se matchhändelser
             </span>
           </div>
-
-          {scheduleLine && (
-            <p className="text-sm text-gray-600 mb-1 flex items-center gap-2 font-medium">
-              <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              {scheduleLine}
-            </p>
-          )}
-
-          {match.series && (
-            <p className="text-xs text-gray-500 font-semibold mb-4 flex items-center gap-1">
-              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"/>
-              </svg>
-              {match.series}
-            </p>
-          )}
-        </div>
-
-        {/* Result or Status */}
-        <div className="pt-4 mt-4 border-t border-gray-200/60 space-y-3 relative z-10">
-          {/* Score/Status Row */}
-          <div className="flex items-center justify-between">
-            {hasValidResult ? (
-              <span className="text-4xl font-black bg-gradient-to-br from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                {match.result}
+        )}
+        
+        {/* Header */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-sm font-semibold text-emerald-700">
+                {match.teamType}
               </span>
-            ) : status === "finished" ? (
-              <div className="flex items-center gap-2 text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-sm font-bold">Resultat ej publicerat</span>
-              </div>
-            ) : status === "live" ? (
-              <div className="flex items-center gap-2 text-red-600 bg-red-50 px-3 py-2 rounded-lg">
-                <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></div>
-                <span className="text-lg font-black">Pågår nu!</span>
-              </div>
-            ) : null}
-          </div>
-
-          {/* Action Buttons */}
-          {(match.playUrl && match.playUrl !== "null") || showTicket ? (
-            <div className="flex items-center gap-2">
-              {/* Play URL Button */}
-              {match.playUrl && match.playUrl !== "null" && (
-                <a
-                  href={match.playUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex-1 group/btn inline-flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 via-blue-700 to-blue-600 hover:from-blue-700 hover:via-blue-800 hover:to-blue-700 text-white text-sm font-black rounded-xl transition-all duration-200 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <svg className="w-4 h-4 group-hover/btn:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z"/>
-                  </svg>
-                  {status === "finished" ? "Se repris" : "Se live"}
-                </a>
-              )}
-              
-              {/* Ticket Button - Only for home matches, A-lag herr/dam */}
-              {showTicket && (
-                <Link
-                  href={TICKET_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex-1 group/btn inline-flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-orange-500 via-orange-600 to-orange-500 hover:from-orange-600 hover:via-orange-700 hover:to-orange-600 text-white text-sm font-black rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <svg className="w-4 h-4 group-hover/btn:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                  </svg>
-                  Köp biljett
-                </Link>
+              {status === "live" && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded">
+                  <span className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse"></span>
+                  LIVE
+                </span>
               )}
             </div>
-          ) : null}
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              {isHome ? (
+                <>Härnösands HF <span className="text-gray-400">vs</span> {opponentName} ({homeAwayLabel})</>
+              ) : (
+                <>{opponentName} <span className="text-gray-400">vs</span> Härnösands HF ({homeAwayLabel})</>
+              )}
+            </h3>
+
+            {scheduleLine && (
+              <p className="text-sm text-gray-600">{scheduleLine}</p>
+            )}
+            {match.series && (
+              <p className="text-xs text-gray-500 mt-1">{match.series}</p>
+            )}
+          </div>
+          
+          {match.infoUrl && (
+            <Link
+              href={match.infoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-600 hover:text-emerald-700 transition-colors"
+              title="Matchsida"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </Link>
+          )}
         </div>
 
-        {/* Hover hint - only show if timeline is clickable */}
-        {canOpenTimeline && (
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-2xl pointer-events-none" />
-        )}
-        
-        {/* Click indicator */}
-        {canOpenTimeline && (
-          <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
-            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full shadow-md">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-              </svg>
-              Klicka för detaljer
-            </span>
+        {/* Result or Actions */}
+        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+          <div className="flex items-center gap-4">
+            {hasValidResult ? (
+              status === "finished" ? (
+                <div className="flex items-center gap-3">
+                  {outcomeInfo?.label && outcomeInfo.label !== "Ej publicerat" && (
+                    <span
+                      className={`text-xs font-semibold px-2.5 py-1 rounded ${
+                        outcomeInfo.label === "Vinst"
+                          ? "bg-green-100 text-green-800"
+                          : outcomeInfo.label === "Förlust"
+                            ? "bg-red-100 text-red-800"
+                            : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {outcomeInfo.label}
+                    </span>
+                  )}
+                  <span className="text-2xl font-bold text-gray-900">
+                    {match.result}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-2xl font-bold text-gray-900">{match.result}</span>
+              )
+            ) : status === "finished" ? (
+              <div className="flex items-center gap-3">
+                <span className="text-2xl font-bold text-gray-900">0–0</span>
+                <div className="flex items-center gap-1.5 text-xs text-gray-600 bg-gray-50 px-2.5 py-1 rounded border border-gray-200">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Resultat ej publicerat</span>
+                </div>
+              </div>
+            ) : null}
+
+            {match.playUrl && match.playUrl !== "null" && (
+              <a
+                href={match.playUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                title={status === "finished" ? "Se repris" : "Se matchen live"}
+              >
+                <img
+                  src="/handbollplay_mini.png"
+                  alt=""
+                  className="h-4 w-4 brightness-0 invert"
+                />
+                {status === "finished" ? "Se repris" : "Se live"}
+              </a>
+            )}
           </div>
-        )}
+
+          {showTicket && (
+            <Link
+              href={TICKET_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+              </svg>
+              Köp biljett
+            </Link>
+          )}
+        </div>
       </article>
     )
   }
