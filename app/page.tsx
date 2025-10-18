@@ -114,9 +114,33 @@ export default function HomePage() {
   const tierOrder = ["Diamantpartner", "Platinapartner", "Guldpartner", "Silverpartner", "Bronspartner"]
 
   const matchesTodayForward = useMemo(() => {
-    const startOfToday = new Date()
-    startOfToday.setHours(0, 0, 0, 0)
-    return upcomingMatches.filter((match) => match.date.getTime() >= startOfToday.getTime())
+    const now = Date.now()
+    // Only show truly upcoming matches (not started yet or currently live with real scores)
+    return upcomingMatches.filter((match) => {
+      const kickoff = match.date.getTime()
+      const minutesSinceKickoff = (now - kickoff) / (1000 * 60)
+      const trimmedResult = typeof match.result === "string" ? match.result.trim() : null
+      const normalizedResult = trimmedResult?.replace(/[–-]/g, '-').toLowerCase()
+      const isZeroZero = normalizedResult === "0-0" || normalizedResult === "00" || trimmedResult === "0-0" || trimmedResult === "0–0"
+      
+      // Exclude matches that started more than 60 minutes ago with 0-0 (stale data)
+      if (isZeroZero && minutesSinceKickoff > 60) {
+        return false
+      }
+      
+      // Include future matches
+      if (kickoff > now) {
+        return true
+      }
+      
+      // Include live matches (within 2.5 hours and not stale 0-0)
+      const liveWindowEnd = kickoff + 1000 * 60 * 60 * 2.5
+      if (now >= kickoff && now <= liveWindowEnd && !isZeroZero) {
+        return true
+      }
+      
+      return false
+    })
   }, [upcomingMatches])
 
   const matchesToDisplay = matchesTodayForward.slice(0, 2)
