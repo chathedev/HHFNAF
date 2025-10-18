@@ -198,9 +198,12 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   // Track previous score to detect when Härnösands HF scores
   const prevScoreRef = useRef<{ home: number; away: number; matchId: string } | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
+  const confettiTriggeredRef = useRef(false)
 
   useEffect(() => {
     if (!nextMatch.result || status !== "live") {
+      // Reset confetti trigger when match is not live
+      confettiTriggeredRef.current = false
       return
     }
 
@@ -214,23 +217,34 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
       return
     }
 
-    // Check if we have a previous score for this match
-    if (prevScoreRef.current && prevScoreRef.current.matchId === nextMatch.id) {
-      const prevHome = prevScoreRef.current.home
-      const prevAway = prevScoreRef.current.away
-
-      // Determine if Härnösands HF scored
-      let hhfScored = false
-      if (nextMatch.isHome !== false) {
-        // We're home team - check if home score increased
-        hhfScored = currentHomeScore > prevHome
-      } else {
-        // We're away team - check if away score increased
-        hhfScored = currentAwayScore > prevAway
+    // Initialize previous score on first load (don't trigger confetti)
+    if (!prevScoreRef.current || prevScoreRef.current.matchId !== nextMatch.id) {
+      prevScoreRef.current = {
+        home: currentHomeScore,
+        away: currentAwayScore,
+        matchId: nextMatch.id
       }
+      confettiTriggeredRef.current = false
+      return
+    }
 
-      // Trigger confetti if Härnösands HF scored
-      if (hhfScored && cardRef.current) {
+    // Check if we have a previous score for this match
+    const prevHome = prevScoreRef.current.home
+    const prevAway = prevScoreRef.current.away
+
+    // Determine if Härnösands HF scored
+    let hhfScored = false
+    if (nextMatch.isHome !== false) {
+      // We're home team - check if home score increased
+      hhfScored = currentHomeScore > prevHome
+    } else {
+      // We're away team - check if away score increased
+      hhfScored = currentAwayScore > prevAway
+    }
+
+    // Trigger confetti if Härnösands HF scored AND we haven't triggered for this score yet
+    if (hhfScored && cardRef.current && !confettiTriggeredRef.current) {
+      confettiTriggeredRef.current = true
         // Add celebration animation to the card
         cardRef.current.classList.add('goal-celebration')
         setTimeout(() => cardRef.current?.classList.remove('goal-celebration'), 2000)
@@ -288,14 +302,26 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
             gravity: 1.3
           })
         }, 250)
+      
+      // Update the previous score after confetti
+      prevScoreRef.current = {
+        home: currentHomeScore,
+        away: currentAwayScore,
+        matchId: nextMatch.id
       }
-    }
-
-    // Update the previous score
-    prevScoreRef.current = {
-      home: currentHomeScore,
-      away: currentAwayScore,
-      matchId: nextMatch.id
+      
+      // Reset confetti flag after a delay to allow for next goal
+      setTimeout(() => {
+        confettiTriggeredRef.current = false
+      }, 3000)
+    } else if (!hhfScored && (currentHomeScore !== prevHome || currentAwayScore !== prevAway)) {
+      // Score changed but not our goal - update ref and reset confetti flag
+      prevScoreRef.current = {
+        home: currentHomeScore,
+        away: currentAwayScore,
+        matchId: nextMatch.id
+      }
+      confettiTriggeredRef.current = false
     }
   }, [nextMatch.result, nextMatch.id, nextMatch.isHome, status])
 
