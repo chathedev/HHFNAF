@@ -55,7 +55,7 @@ const getMatchOutcome = (rawResult?: string, isHome?: boolean, status?: string):
   }
 }
 
-// Helper to get score in correct display order (always show in match order, not our score first)
+// Helper to get score in correct display order (always Härnösands HF score first)
 const getDisplayScore = (rawResult?: string, isHome?: boolean): string | null => {
   if (!rawResult) {
     return null
@@ -70,12 +70,14 @@ const getDisplayScore = (rawResult?: string, isHome?: boolean): string | null =>
     return null
   }
   
-  // For away matches, reverse the score to match the opponent vs us display order
+  // Always show Härnösands HF score first
+  // If we're home, our score is homeScore (first)
+  // If we're away, our score is awayScore (second), so reverse
   if (isHome === false) {
-    return `${homeScore}\u2013${awayScore}`
+    return `${awayScore}\u2013${homeScore}`
   }
   
-  // For home matches, show our score first (home-away order)
+  // For home matches, show as is (our score first)
   return `${homeScore}\u2013${awayScore}`
 }
 
@@ -159,10 +161,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   
   // Extract opponent name without (hemma)/(borta) suffix for display
   const opponentName = nextMatch.opponent.replace(/\s*\((hemma|borta)\)\s*$/i, '').trim()
-  const homeAwayText = nextMatch.opponent.match(/\((hemma|borta)\)/i)?.[1] || ''
-  
-  // Determine team name (could be extracted from teamType or use a constant)
-  const ownTeamName = "Härnösands HF"
+  const homeAwayLabel = nextMatch.isHome === false ? 'borta' : 'hemma'
   
   const isALagMatch =
     nextMatch.normalizedTeam.includes("alag") || nextMatch.normalizedTeam.includes("damutv")
@@ -204,15 +203,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
             )}
           </div>
           <h3 className="text-2xl font-bold text-gray-900 mb-2">
-            {nextMatch.isHome === false ? (
-              <>
-                {opponentName} ({homeAwayText}) <span className="text-gray-400">vs</span> {ownTeamName}
-              </>
-            ) : (
-              <>
-                {ownTeamName} <span className="text-gray-400">vs</span> {opponentName} {homeAwayText && `(${homeAwayText})`}
-              </>
-            )}
+            Härnösands HF <span className="text-gray-400">vs</span> {opponentName} ({homeAwayLabel})
           </h3>
           {scheduleParts && (
             <p className="text-sm text-gray-600">{scheduleParts}</p>
@@ -240,29 +231,9 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
       {/* Result or Actions */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-100">
         <div className="flex items-center gap-4">
-          {/* Show live scores without outcome badge */}
+          {/* Show live scores - just the score, no badges */}
           {status === "live" && outcomeInfo && displayScore && (
-            <div className="flex items-center gap-3">
-              <span className="text-2xl font-bold text-gray-900">
-                {displayScore}
-              </span>
-              {outcomeInfo.label === "Vinst" && (
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-green-700">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  Leder
-                </div>
-              )}
-              {outcomeInfo.label === "Förlust" && (
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-red-700">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                  Ligger under
-                </div>
-              )}
-            </div>
+            <span className="text-2xl font-bold text-gray-900">{displayScore}</span>
           )}
           
           {/* Show 0-0 for live matches with warning if stale */}
