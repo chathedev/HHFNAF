@@ -125,6 +125,9 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   const isZeroZero = normalizedResult === "0-0" || normalizedResult === "00" || trimmedResult === "0-0" || trimmedResult === "0–0"
   const isStaleZeroResult = isZeroZero && minutesSinceKickoff > 3 && status === "live"
   
+  // Don't show LIVE badge if match has been 0-0 for more than 60 minutes (likely stale data)
+  const shouldShowLive = status === "live" && !(isZeroZero && minutesSinceKickoff > 60)
+  
   const isFutureOrLive = nextMatch.date.getTime() >= Date.now() || status === "live"
   const showTicket = isTicketEligibleBase && !outcomeInfo && isFutureOrLive
 
@@ -137,7 +140,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
             <span className="text-sm font-semibold text-emerald-700">
               {nextMatch.teamType}
             </span>
-            {status === "live" && (
+            {shouldShowLive && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded">
                 <span className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse"></span>
                 LIVE
