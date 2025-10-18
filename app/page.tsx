@@ -511,8 +511,11 @@ export default function HomePage() {
                           // Don't show LIVE badge if match has been 0-0 for more than 60 minutes (likely stale data)
                           const shouldShowLive = status === "live" && !(isZeroZero && minutesSinceKickoff > 60)
                           
+                          // Check if team is A-lag (herr or dam/utv)
+                          const normalizedTeamType = match.teamType.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "")
                           const isALagTeam =
-                            match.normalizedTeam.includes("alag") || match.normalizedTeam.includes("damutv")
+                            (normalizedTeamType.includes("alag") && normalizedTeamType.includes("herr")) || 
+                            (normalizedTeamType.includes("alag") && (normalizedTeamType.includes("dam") || normalizedTeamType.includes("utv")))
                           const isFutureOrLive = match.date.getTime() >= Date.now() || status === "live"
                           const showTicket =
                             status !== "finished" &&

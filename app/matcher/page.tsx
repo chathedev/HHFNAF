@@ -161,8 +161,8 @@ export default function MatcherPage() {
     const canOpenTimeline = status === "live" || status === "finished"
     
     // Ticket button logic: only for home matches, A-lag herr and dam/utv, upcoming matches, and eligible venues
-    const normalizedTeamType = match.teamType.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    const isALagHerrOrDam = normalizedTeamType.includes("a lag") && (normalizedTeamType.includes("herr") || normalizedTeamType.includes("dam") || normalizedTeamType.includes("utv"))
+    const normalizedTeamType = match.teamType.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "")
+    const isALagHerrOrDam = normalizedTeamType.includes("alag") && (normalizedTeamType.includes("herr") || normalizedTeamType.includes("dam") || normalizedTeamType.includes("utv"))
     const venueName = match.venue?.toLowerCase() ?? ""
     const showTicket = status === "upcoming" && isHome && isALagHerrOrDam && TICKET_VENUES.some((keyword) => venueName.includes(keyword))
     

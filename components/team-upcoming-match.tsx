@@ -172,8 +172,11 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   const homeAwayLabel = nextMatch.isHome === false ? 'borta' : 'hemma'
   const isHome = nextMatch.isHome !== false
   
+  // Check if team is A-lag (herr or dam/utv)
+  const normalizedTeamType = nextMatch.teamType.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "")
   const isALagMatch =
-    nextMatch.normalizedTeam.includes("alag") || nextMatch.normalizedTeam.includes("damutv")
+    (normalizedTeamType.includes("alag") && normalizedTeamType.includes("herr")) || 
+    (normalizedTeamType.includes("alag") && (normalizedTeamType.includes("dam") || normalizedTeamType.includes("utv")))
   const venueName = nextMatch.venue?.toLowerCase() ?? ""
   const isTicketEligibleBase =
     Boolean(ticketUrl) && isHome && isALagMatch && TICKET_VENUES.some((keyword) => venueName.includes(keyword))
