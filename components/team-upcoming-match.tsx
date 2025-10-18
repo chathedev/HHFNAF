@@ -176,7 +176,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
     nextMatch.normalizedTeam.includes("alag") || nextMatch.normalizedTeam.includes("damutv")
   const venueName = nextMatch.venue?.toLowerCase() ?? ""
   const isTicketEligibleBase =
-    Boolean(ticketUrl) && isALagMatch && TICKET_VENUES.some((keyword) => venueName.includes(keyword))
+    Boolean(ticketUrl) && isHome && isALagMatch && TICKET_VENUES.some((keyword) => venueName.includes(keyword))
   const outcomeInfo = getMatchOutcome(nextMatch.result, nextMatch.isHome, status)
   const displayScore = getDisplayScore(nextMatch.result, nextMatch.isHome)
   

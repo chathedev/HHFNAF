@@ -517,6 +517,7 @@ export default function HomePage() {
                           const showTicket =
                             status !== "finished" &&
                             isFutureOrLive &&
+                            isHome &&
                             isALagTeam &&
                             !outcomeInfo &&
                             TICKET_VENUES.some((keyword) => venueName.includes(keyword))

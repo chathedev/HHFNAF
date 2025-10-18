@@ -6,6 +6,7 @@ import confetti from "canvas-confetti"
 
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
+import { TICKET_VENUES } from "@/lib/matches"
 
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 
@@ -159,10 +160,11 @@ export default function MatcherPage() {
     // Only allow clicking timeline for live or finished matches
     const canOpenTimeline = status === "live" || status === "finished"
     
-    // Ticket button logic: only for home matches, A-lag herr and dam/utv, upcoming matches
+    // Ticket button logic: only for home matches, A-lag herr and dam/utv, upcoming matches, and eligible venues
     const normalizedTeamType = match.teamType.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     const isALagHerrOrDam = normalizedTeamType.includes("a lag") && (normalizedTeamType.includes("herr") || normalizedTeamType.includes("dam") || normalizedTeamType.includes("utv"))
-    const showTicket = status === "upcoming" && isHome && isALagHerrOrDam
+    const venueName = match.venue?.toLowerCase() ?? ""
+    const showTicket = status === "upcoming" && isHome && isALagHerrOrDam && TICKET_VENUES.some((keyword) => venueName.includes(keyword))
     
     return (
       <article
