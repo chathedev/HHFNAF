@@ -13,6 +13,7 @@ type ApiMatch = {
   result?: string | null
   isHome?: boolean | null
   playUrl?: string | null
+  matchStatus?: "live" | "finished" | "upcoming" | null
 }
 
 export type NormalizedMatch = {
@@ -29,6 +30,7 @@ export type NormalizedMatch = {
   result?: string
   isHome?: boolean
   playUrl?: string
+  matchStatus?: "live" | "finished" | "upcoming"
 }
 
 const API_BASE_URL =
@@ -107,6 +109,7 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     result: match.result ?? undefined,
     isHome: derivedIsHome,
     playUrl: match.playUrl && match.playUrl !== "null" ? match.playUrl : undefined,
+    matchStatus: match.matchStatus ?? undefined,
   }
 }
 

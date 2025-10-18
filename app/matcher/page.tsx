@@ -10,7 +10,7 @@ import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 
-type StatusFilter = "all" | "upcoming" | "live" | "result"
+type StatusFilter = "all" | "upcoming" | "live" | "finished"
 type DataTypeFilter = "both" | "current" | "old"
 
 type MatchOutcome = {
@@ -77,6 +77,12 @@ const getDisplayScore = (rawResult?: string, isHome?: boolean): string | null =>
 }
 
 const getMatchStatus = (match: NormalizedMatch): StatusFilter => {
+  // Use matchStatus from backend if available
+  if (match.matchStatus) {
+    return match.matchStatus
+  }
+  
+  // Fallback to calculated status if backend doesn't provide it
   const now = Date.now()
   const kickoff = match.date.getTime()
   const liveWindowEnd = kickoff + 1000 * 60 * 60 * 2.5
@@ -87,7 +93,7 @@ const getMatchStatus = (match: NormalizedMatch): StatusFilter => {
   }
   
   if (match.result) {
-    return "result"
+    return "finished"
   }
 
   return "upcoming"
@@ -131,7 +137,7 @@ export default function MatcherPage() {
     all: "",
     upcoming: "bg-emerald-50 text-emerald-700 border-emerald-200",
     live: "bg-orange-500/10 text-orange-600 border-orange-200",
-    result: "bg-emerald-100 text-emerald-900 border-emerald-200",
+    finished: "bg-emerald-100 text-emerald-900 border-emerald-200",
   }
 
   // Confetti effect for all live matches
@@ -310,8 +316,8 @@ export default function MatcherPage() {
             const statusClasses =
               status === "live"
                 ? statusBadgeStyles.live
-                : status === "result"
-                  ? statusBadgeStyles.result
+                : status === "finished"
+                  ? statusBadgeStyles.finished
                   : statusBadgeStyles.upcoming
 
             const trimmedResult = typeof match.result === "string" ? match.result.trim() : null

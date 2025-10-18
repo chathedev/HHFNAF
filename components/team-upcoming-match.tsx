@@ -153,10 +153,12 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
     .filter((item): item is string => Boolean(item))
     .join(" • ")
     
+  // Use matchStatus from backend if available, otherwise calculate it
   const now = Date.now()
   const kickoff = nextMatch.date.getTime()
   const liveWindowEnd = kickoff + 1000 * 60 * 60 * 2.5
-  const status = now >= kickoff && now <= liveWindowEnd ? "live" : nextMatch.result ? "result" : "upcoming"
+  const calculatedStatus = now >= kickoff && now <= liveWindowEnd ? "live" : nextMatch.result ? "finished" : "upcoming"
+  const status = nextMatch.matchStatus ?? calculatedStatus
   
   // Extract opponent name without (hemma)/(borta) suffix for display
   const opponentName = nextMatch.opponent.replace(/\s*\((hemma|borta)\)\s*$/i, '').trim()
