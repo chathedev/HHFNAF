@@ -37,9 +37,12 @@ export default function MatcherPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const [selectedMatch, setSelectedMatch] = useState<NormalizedMatch | null>(null)
   
+  // Use "old" endpoint when viewing only finished matches, otherwise use "current"
+  const dataType: "current" | "old" | "both" = statusFilter === "finished" ? "old" : "current"
+  
   const { matches, loading, error } = useMatchData({ 
     refreshIntervalMs: 1_000,
-    dataType: "current"
+    dataType
   })
 
   const teamOptions = useMemo(() => {
