@@ -7,10 +7,19 @@ type MatchFeedEvent = {
   time: string
   type: string
   team?: string
+  player?: string
+  playerNumber?: string
+  playerId?: number
   description: string
   homeScore?: number
   awayScore?: number
   period?: number
+  eventTypeId?: number
+  teamId?: number
+  isTeamEvent?: boolean
+  score?: string
+  scoringTeam?: string
+  isHomeGoal?: boolean
 }
 
 type MatchFeedModalProps = {
@@ -112,6 +121,38 @@ export function MatchFeedModal({
 
   if (!isOpen) return null
 
+  // Calculate top scorers for each team
+  const goalEvents = matchFeed.filter((event) => 
+    event.type.toLowerCase().includes("mål") && event.player
+  )
+
+  const scorersByTeam = goalEvents.reduce((acc, event) => {
+    const team = event.team || "Okänt lag"
+    if (!acc[team]) {
+      acc[team] = {}
+    }
+    
+    const playerKey = `${event.player}${event.playerNumber ? ` (#${event.playerNumber})` : ""}`
+    if (!acc[team][playerKey]) {
+      acc[team][playerKey] = {
+        player: event.player!,
+        playerNumber: event.playerNumber,
+        goals: 0
+      }
+    }
+    acc[team][playerKey].goals++
+    
+    return acc
+  }, {} as Record<string, Record<string, { player: string; playerNumber?: string; goals: number }>>)
+
+  // Get top 3 scorers for each team
+  const topScorersByTeam = Object.entries(scorersByTeam).reduce((acc, [team, scorers]) => {
+    acc[team] = Object.values(scorers)
+      .sort((a, b) => b.goals - a.goals)
+      .slice(0, 3)
+    return acc
+  }, {} as Record<string, Array<{ player: string; playerNumber?: string; goals: number }>>)
+
   // Group events by period
   const eventsByPeriod = matchFeed.reduce((acc, event) => {
     const period = event.period || 0
@@ -164,6 +205,44 @@ export function MatchFeedModal({
           </button>
         </div>
 
+        {/* Top Scorers Section */}
+        {Object.keys(topScorersByTeam).length > 0 && (
+          <div className="px-6 pb-4 border-b border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
+              🏆 Målskyttar
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {Object.entries(topScorersByTeam).map(([team, scorers]) => (
+                <div key={team} className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-lg p-3 border border-emerald-200">
+                  <h4 className="text-xs font-semibold text-emerald-800 mb-2 truncate" title={team}>
+                    {team}
+                  </h4>
+                  <div className="space-y-1.5">
+                    {scorers.map((scorer, idx) => (
+                      <div key={idx} className="flex items-center justify-between bg-white rounded px-2.5 py-1.5 shadow-sm">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-lg">{idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉"}</span>
+                          <span className="text-sm font-medium text-gray-900 truncate">
+                            {scorer.player}
+                          </span>
+                          {scorer.playerNumber && (
+                            <span className="text-xs text-gray-500 font-mono flex-shrink-0">
+                              #{scorer.playerNumber}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-sm font-bold text-emerald-700 flex-shrink-0 ml-2">
+                          {scorer.goals} {scorer.goals === 1 ? "mål" : "mål"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Timeline */}
         <div className="flex-1 overflow-y-auto p-6">
           {matchFeed.length === 0 ? (
@@ -214,7 +293,18 @@ export function MatchFeedModal({
                                 <p className="text-sm font-medium mb-1">{event.team}</p>
                               )}
                               
-                              {event.description && event.description !== event.type && (
+                              {event.player && (
+                                <p className="text-sm font-semibold text-gray-900 mb-1">
+                                  {event.player}
+                                  {event.playerNumber && (
+                                    <span className="ml-2 text-xs font-mono bg-white/70 px-1.5 py-0.5 rounded">
+                                      #{event.playerNumber}
+                                    </span>
+                                  )}
+                                </p>
+                              )}
+                              
+                              {event.description && event.description !== event.type && !event.player && (
                                 <p className="text-sm opacity-90">{event.description}</p>
                               )}
                             </div>

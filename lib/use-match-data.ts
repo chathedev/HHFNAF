@@ -2,14 +2,23 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-type MatchFeedEvent = {
+export type MatchFeedEvent = {
   time: string
   type: string
   team?: string
+  player?: string
+  playerNumber?: string
+  playerId?: number
   description: string
   homeScore?: number
   awayScore?: number
   period?: number
+  eventTypeId?: number
+  teamId?: number
+  isTeamEvent?: boolean
+  score?: string
+  scoringTeam?: string
+  isHomeGoal?: boolean
 }
 
 type ApiMatch = {
@@ -31,8 +40,6 @@ type ApiMatch = {
   opponent?: string
   isHome?: boolean
 }
-
-export type { MatchFeedEvent }
 
 export type NormalizedMatch = {
   id: string
