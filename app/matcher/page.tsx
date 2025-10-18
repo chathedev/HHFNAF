@@ -269,8 +269,17 @@ export default function MatcherPage() {
                 {/* Result or Actions */}
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                   <div className="flex items-center gap-4">
-                    {/* Show 0-0 score for live matches with warning if stale */}
-                    {status === "live" && isZeroZero && (
+                    {/* Show live scores without outcome badge */}
+                    {status === "live" && outcomeInfo && (
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl font-bold text-gray-900">
+                          {outcomeInfo.text}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Show 0-0 for live matches with warning if stale */}
+                    {status === "live" && !outcomeInfo && isZeroZero && (
                       <div className="flex items-center gap-3">
                         <span className="text-2xl font-bold text-gray-900">0–0</span>
                         {isStaleZeroResult && (
@@ -284,8 +293,8 @@ export default function MatcherPage() {
                       </div>
                     )}
                     
-                    {/* Show normal results for non-live or non-0-0 matches */}
-                    {!(status === "live" && isZeroZero) && outcomeInfo && (
+                    {/* Show results with outcome badge only for finished matches */}
+                    {status !== "live" && outcomeInfo && (
                       <div className="flex items-center gap-3">
                         {outcomeInfo.label !== "Ej publicerat" && (
                           <span className={`text-xs font-semibold px-2.5 py-1 rounded ${

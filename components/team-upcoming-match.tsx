@@ -62,7 +62,7 @@ type TeamUpcomingMatchProps = {
 
 export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchProps) {
   const { matches, loading, error } = useMatchData({ 
-    refreshIntervalMs: 60_000,
+    refreshIntervalMs: 10_000,
     dataType: "current"
   })
 
@@ -72,9 +72,33 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   }, [teamLabels])
 
   const upcomingMatches = useMemo(() => {
-    const startOfToday = new Date()
-    startOfToday.setHours(0, 0, 0, 0)
-    return matches.filter((match) => match.date.getTime() >= startOfToday.getTime())
+    const now = Date.now()
+    // Show upcoming matches and live matches
+    return matches.filter((match) => {
+      const kickoff = match.date.getTime()
+      const minutesSinceKickoff = (now - kickoff) / (1000 * 60)
+      const trimmedResult = typeof match.result === "string" ? match.result.trim() : null
+      const normalizedResult = trimmedResult?.replace(/[–-]/g, '-').toLowerCase()
+      const isZeroZero = normalizedResult === "0-0" || normalizedResult === "00" || trimmedResult === "0-0" || trimmedResult === "0–0"
+      
+      // Exclude matches that started more than 60 minutes ago with stale 0-0 (likely finished but no score)
+      if (isZeroZero && minutesSinceKickoff > 60) {
+        return false
+      }
+      
+      // Include future matches
+      if (kickoff > now) {
+        return true
+      }
+      
+      // Include live matches (within 2.5 hours of kickoff)
+      const liveWindowEnd = kickoff + 1000 * 60 * 60 * 2.5
+      if (now >= kickoff && now <= liveWindowEnd) {
+        return true
+      }
+      
+      return false
+    })
   }, [matches])
 
   const nextMatch = useMemo(() => {
@@ -176,8 +200,17 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
       {/* Result or Actions */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-100">
         <div className="flex items-center gap-4">
-          {/* Show 0-0 score for live matches with warning if stale */}
-          {status === "live" && isZeroZero && (
+          {/* Show live scores without outcome badge */}
+          {status === "live" && outcomeInfo && (
+            <div className="flex items-center gap-3">
+              <span className="text-2xl font-bold text-gray-900">
+                {outcomeInfo.text}
+              </span>
+            </div>
+          )}
+          
+          {/* Show 0-0 for live matches with warning if stale */}
+          {status === "live" && !outcomeInfo && isZeroZero && (
             <div className="flex items-center gap-3">
               <span className="text-2xl font-bold text-gray-900">0–0</span>
               {isStaleZeroResult && (
@@ -191,8 +224,8 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
             </div>
           )}
           
-          {/* Show normal results for non-live or non-0-0 matches */}
-          {!(status === "live" && isZeroZero) && outcomeInfo && (
+          {/* Show results with outcome badge only for finished matches */}
+          {status !== "live" && outcomeInfo && (
             <div className="flex items-center gap-3">
               <span className={`text-xs font-semibold px-2.5 py-1 rounded ${
                 outcomeInfo.label === "Vinst"
