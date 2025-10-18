@@ -125,10 +125,25 @@ export default function MatcherPage() {
   }, [matches])
 
   const filteredMatches = useMemo(() => {
+    const now = Date.now()
+    const threeHoursAgo = now - (1000 * 60 * 60 * 3) // 3 hours ago
+    
     return matches.filter((match) => {
+      // Team filter
       if (selectedTeam !== "all" && match.normalizedTeam !== selectedTeam) {
         return false
       }
+      
+      // Time filter: For finished matches, only show those from the last 3 hours
+      const kickoff = match.date.getTime()
+      const status = match.matchStatus
+      
+      if (status === "finished") {
+        // Only show finished matches if they started within the last 3 hours
+        return kickoff >= threeHoursAgo
+      }
+      
+      // Include all upcoming and live matches
       return true
     })
   }, [matches, selectedTeam])

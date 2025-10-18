@@ -98,27 +98,31 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
 
   const upcomingMatches = useMemo(() => {
     const now = Date.now()
-    // Show upcoming matches and live matches
+    
+    // Team component: Show only upcoming and live matches (no finished matches)
     return matches.filter((match) => {
       const kickoff = match.date.getTime()
-      const minutesSinceKickoff = (now - kickoff) / (1000 * 60)
-      const trimmedResult = typeof match.result === "string" ? match.result.trim() : null
-      const normalizedResult = trimmedResult?.replace(/[–-]/g, '-').toLowerCase()
-      const isZeroZero = normalizedResult === "0-0" || normalizedResult === "00" || trimmedResult === "0-0" || trimmedResult === "0–0"
       
-      // Exclude matches that started more than 60 minutes ago with stale 0-0 (likely finished but no score)
-      if (isZeroZero && minutesSinceKickoff > 60) {
+      // Use backend matchStatus if available
+      const status = match.matchStatus
+      
+      // Exclude finished matches from team upcoming component
+      if (status === "finished") {
         return false
       }
       
-      // Include future matches
-      if (kickoff > now) {
+      // Include all future matches (upcoming)
+      if (kickoff > now || status === "upcoming") {
         return true
       }
       
-      // Include live matches (within 2.5 hours of kickoff)
-      const liveWindowEnd = kickoff + 1000 * 60 * 60 * 2.5
-      if (now >= kickoff && now <= liveWindowEnd) {
+      // Include live matches
+      if (status === "live") {
+        return true
+      }
+      
+      // Fallback for matches without matchStatus: include if kickoff is in the future
+      if (kickoff >= now) {
         return true
       }
       

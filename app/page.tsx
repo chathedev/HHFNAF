@@ -141,27 +141,31 @@ export default function HomePage() {
 
   const matchesTodayForward = useMemo(() => {
     const now = Date.now()
-    // Show upcoming matches and live matches
+    
+    // Home page: Show only upcoming and live matches (no finished matches)
     return upcomingMatches.filter((match) => {
       const kickoff = match.date.getTime()
-      const minutesSinceKickoff = (now - kickoff) / (1000 * 60)
-      const trimmedResult = typeof match.result === "string" ? match.result.trim() : null
-      const normalizedResult = trimmedResult?.replace(/[–-]/g, '-').toLowerCase()
-      const isZeroZero = normalizedResult === "0-0" || normalizedResult === "00" || trimmedResult === "0-0" || trimmedResult === "0–0"
       
-      // Exclude matches that started more than 60 minutes ago with stale 0-0 (likely finished but no score)
-      if (isZeroZero && minutesSinceKickoff > 60) {
+      // Use backend matchStatus if available
+      const status = match.matchStatus
+      
+      // Exclude finished matches from home page
+      if (status === "finished") {
         return false
       }
       
-      // Include future matches
-      if (kickoff > now) {
+      // Include all future matches (upcoming)
+      if (kickoff > now || status === "upcoming") {
         return true
       }
       
-      // Include live matches (within 2.5 hours of kickoff)
-      const liveWindowEnd = kickoff + 1000 * 60 * 60 * 2.5
-      if (now >= kickoff && now <= liveWindowEnd) {
+      // Include live matches
+      if (status === "live") {
+        return true
+      }
+      
+      // Fallback for matches without matchStatus: include if kickoff is in the future
+      if (kickoff >= now) {
         return true
       }
       
@@ -462,7 +466,7 @@ export default function HomePage() {
                     <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">Matcher</p>
                     <h3 className="text-2xl font-bold text-emerald-900 md:text-3xl">Kommande matcher</h3>
                     <p className="text-sm text-emerald-700">
-                      Här ser du de två nästa matcherna – listan uppdateras automatiskt under säsongen.
+                      Här ser du de 10 kommande matcherna – listan uppdateras automatiskt under säsongen.
                     </p>
                   </div>
 
