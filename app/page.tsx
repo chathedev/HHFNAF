@@ -374,6 +374,7 @@ export default function HomePage() {
                           const primaryTeamLabel = match.teamType?.trim() || "Härnösands HF"
                           const opponentName = match.opponent.replace(/\s*\((hemma|borta)\)\s*$/i, '').trim()
                           const homeAwayLabel = match.isHome === false ? 'borta' : 'hemma'
+                          const isHome = match.isHome !== false
                           const venueName = match.venue?.toLowerCase() ?? ""
                           const scheduleParts = [match.displayDate, match.time, match.venue].filter(
                             (value): value is string => Boolean(value),
@@ -424,7 +425,11 @@ export default function HomePage() {
                                       )}
                                     </div>
                                     <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                                      Härnösands HF <span className="text-gray-400">vs</span> {opponentName} ({homeAwayLabel})
+                                      {isHome ? (
+                                        <>Härnösands HF <span className="text-gray-400">vs</span> {opponentName} ({homeAwayLabel})</>
+                                      ) : (
+                                        <>{opponentName} <span className="text-gray-400">vs</span> Härnösands HF ({homeAwayLabel})</>
+                                      )}
                                     </h3>
                                     {scheduleInfo && (
                                       <p className="text-sm text-gray-600">{scheduleInfo}</p>

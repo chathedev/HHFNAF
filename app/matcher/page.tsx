@@ -203,6 +203,7 @@ export default function MatcherPage() {
           {filteredMatches.map((match) => {
             const opponentName = match.opponent.replace(/\s*\((hemma|borta)\)\s*$/i, '').trim()
             const homeAwayLabel = match.isHome === false ? 'borta' : 'hemma'
+            const isHome = match.isHome !== false
             const scheduleLine = [match.displayDate, match.time, match.venue].filter(Boolean).join(" • ")
             const status = getMatchStatus(match)
             const statusClasses =
@@ -267,7 +268,11 @@ export default function MatcherPage() {
                       )}
                     </div>
                     <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                      Härnösands HF <span className="text-gray-400">vs</span> {opponentName} ({homeAwayLabel})
+                      {isHome ? (
+                        <>Härnösands HF <span className="text-gray-400">vs</span> {opponentName} ({homeAwayLabel})</>
+                      ) : (
+                        <>{opponentName} <span className="text-gray-400">vs</span> Härnösands HF ({homeAwayLabel})</>
+                      )}
                     </h3>
                     {scheduleLine && (
                       <p className="text-sm text-gray-600">{scheduleLine}</p>

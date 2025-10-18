@@ -162,6 +162,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   // Extract opponent name without (hemma)/(borta) suffix for display
   const opponentName = nextMatch.opponent.replace(/\s*\((hemma|borta)\)\s*$/i, '').trim()
   const homeAwayLabel = nextMatch.isHome === false ? 'borta' : 'hemma'
+  const isHome = nextMatch.isHome !== false
   
   const isALagMatch =
     nextMatch.normalizedTeam.includes("alag") || nextMatch.normalizedTeam.includes("damutv")
@@ -203,7 +204,11 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
             )}
           </div>
           <h3 className="text-2xl font-bold text-gray-900 mb-2">
-            Härnösands HF <span className="text-gray-400">vs</span> {opponentName} ({homeAwayLabel})
+            {isHome ? (
+              <>Härnösands HF <span className="text-gray-400">vs</span> {opponentName} ({homeAwayLabel})</>
+            ) : (
+              <>{opponentName} <span className="text-gray-400">vs</span> Härnösands HF ({homeAwayLabel})</>
+            )}
           </h3>
           {scheduleParts && (
             <p className="text-sm text-gray-600">{scheduleParts}</p>
