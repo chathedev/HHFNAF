@@ -90,9 +90,106 @@ body {
     text-wrap: balance;
   }
   /* Custom text shadow for readability */
-  .text-shadow-lg {
-    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
+    text-shadow: 0px 0px 10px rgba(0, 0, 0, 0.8);
+}
+
+/* Goal Celebration Animation */
+@keyframes goal-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   }
+  25% {
+    transform: scale(1.02);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.5), 0 0 40px rgba(249, 115, 22, 0.3);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.6), 0 0 60px rgba(249, 115, 22, 0.4);
+  }
+  75% {
+    transform: scale(1.02);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.5), 0 0 40px rgba(249, 115, 22, 0.3);
+  }
+}
+
+@keyframes goal-glow {
+  0%, 100% {
+    border-color: rgb(229, 231, 235);
+  }
+  50% {
+    border-color: rgb(16, 185, 129);
+  }
+}
+
+@keyframes goal-bg-flash {
+  0%, 100% {
+    background-color: white;
+  }
+  25% {
+    background-color: rgba(16, 185, 129, 0.05);
+  }
+  50% {
+    background-color: rgba(249, 115, 22, 0.05);
+  }
+  75% {
+    background-color: rgba(16, 185, 129, 0.05);
+  }
+}
+
+.goal-celebration {
+  animation: goal-pulse 0.8s ease-in-out, 
+             goal-glow 0.8s ease-in-out,
+             goal-bg-flash 1.5s ease-in-out;
+  position: relative;
+  overflow: visible !important;
+}
+
+.goal-celebration::before {
+  content: '🎉';
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 3rem;
+  animation: goal-emoji-bounce 0.8s ease-out;
+  pointer-events: none;
+  z-index: 100;
+}
+
+@keyframes goal-emoji-bounce {
+  0% {
+    transform: translateX(-50%) translateY(50px) scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: translateX(-50%) translateY(-10px) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-50%) translateY(-20px) scale(1);
+    opacity: 0;
+  }
+}
+
+/* Score update pulse animation */
+@keyframes score-update {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+    color: rgb(16, 185, 129);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.score-updated {
+  animation: score-update 0.4s ease-out;
+}
+
   .text-shadow-md {
     text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.6);
   }

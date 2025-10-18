@@ -164,36 +164,63 @@ export default function MatcherPage() {
         if (hhfScored) {
           const matchCard = document.getElementById(`match-card-${match.id}`)
           if (matchCard) {
+            // Add celebration animation to the card
+            matchCard.classList.add('goal-celebration')
+            setTimeout(() => matchCard.classList.remove('goal-celebration'), 2000)
+
             const rect = matchCard.getBoundingClientRect()
             const x = (rect.left + rect.width / 2) / window.innerWidth
             const y = (rect.top + rect.height / 2) / window.innerHeight
 
+            // Main celebration burst
             confetti({
-              particleCount: 100,
-              spread: 70,
+              particleCount: 150,
+              spread: 90,
               origin: { x, y },
-              colors: ['#10b981', '#f97316', '#ffffff'],
-              startVelocity: 45,
-              gravity: 1.2,
-              ticks: 200
+              colors: ['#10b981', '#f97316', '#ffffff', '#fbbf24', '#34d399'],
+              startVelocity: 50,
+              gravity: 1.5,
+              ticks: 250,
+              scalar: 1.2,
+              shapes: ['circle', 'square'],
+              drift: 0
             })
 
+            // Sparkle effect
             setTimeout(() => {
               confetti({
-                particleCount: 50,
+                particleCount: 80,
+                spread: 120,
+                origin: { x, y },
+                colors: ['#fbbf24', '#f97316', '#10b981'],
+                startVelocity: 35,
+                gravity: 0.8,
+                ticks: 180,
+                scalar: 0.8
+              })
+            }, 150)
+
+            // Side bursts with team colors
+            setTimeout(() => {
+              confetti({
+                particleCount: 60,
                 angle: 60,
-                spread: 55,
-                origin: { x: x - 0.1, y },
-                colors: ['#10b981', '#f97316']
+                spread: 60,
+                origin: { x: x - 0.08, y },
+                colors: ['#10b981', '#34d399', '#ffffff'],
+                startVelocity: 40,
+                gravity: 1.3
               })
               confetti({
-                particleCount: 50,
+                particleCount: 60,
                 angle: 120,
-                spread: 55,
-                origin: { x: x + 0.1, y },
-                colors: ['#10b981', '#f97316']
+                spread: 60,
+                origin: { x: x + 0.08, y },
+                colors: ['#f97316', '#fbbf24', '#ffffff'],
+                startVelocity: 40,
+                gravity: 1.3
               })
-            }, 200)
+            }, 250)
           }
         }
       }
