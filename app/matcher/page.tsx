@@ -54,15 +54,17 @@ const getMatchOutcome = (rawResult?: string, isHome?: boolean, status?: StatusFi
 }
 
 const getMatchStatus = (match: NormalizedMatch): StatusFilter => {
-  if (match.result) {
-    return "result"
-  }
   const now = Date.now()
   const kickoff = match.date.getTime()
   const liveWindowEnd = kickoff + 1000 * 60 * 60 * 2.5
-
+  
+  // Check if match is currently in the live window (regardless of result)
   if (now >= kickoff && now <= liveWindowEnd) {
     return "live"
+  }
+  
+  if (match.result) {
+    return "result"
   }
 
   return "upcoming"
@@ -189,12 +191,13 @@ export default function MatcherPage() {
             let outcomeInfo = getMatchOutcome(trimmedResult ?? undefined, match.isHome, status)
             const isPastMatch = match.date.getTime() < Date.now()
             
-            // Check if result is stale (0-0 shown long after match should have ended)
+            // Check if result is stale (0-0 shown long after match has been ongoing)
+            // Matches are typically 60 minutes, show warning if 0-0 persists after 3 minutes
             const now = Date.now()
             const minutesSinceKickoff = (now - match.date.getTime()) / (1000 * 60)
-            const isStaleZeroResult = trimmedResult === "0-0" && minutesSinceKickoff > 150 // 2.5 hours after kickoff
+            const isStaleZeroResult = trimmedResult === "0-0" && minutesSinceKickoff > 3 && status === "live"
             
-            if (!outcomeInfo && isPastMatch && status === "result") {
+            if (!outcomeInfo && isPastMatch && status !== "live") {
               if (!trimmedResult || trimmedResult === "0-0" || trimmedResult === "00") {
                 outcomeInfo = {
                   label: "Ej publicerat",
