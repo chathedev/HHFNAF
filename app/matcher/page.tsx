@@ -17,7 +17,7 @@ type MatchOutcome = {
   label: "Vinst" | "Förlust" | "Oavgjort" | "Ej publicerat"
 }
 
-const getMatchOutcome = (rawResult?: string, isHome?: boolean): MatchOutcome | null => {
+const getMatchOutcome = (rawResult?: string, isHome?: boolean, status?: StatusFilter): MatchOutcome | null => {
   if (!rawResult) {
     return null
   }
@@ -30,6 +30,12 @@ const getMatchOutcome = (rawResult?: string, isHome?: boolean): MatchOutcome | n
   if (Number.isNaN(homeScore) || Number.isNaN(awayScore)) {
     return null
   }
+  
+  // Don't show 0-0 as "Oavgjort" for live matches (match hasn't finished yet)
+  if (status === "live" && homeScore === 0 && awayScore === 0) {
+    return null
+  }
+  
   const isAway = isHome === false
   const ourScore = isAway ? awayScore : homeScore
   const opponentScore = isAway ? homeScore : awayScore
@@ -180,8 +186,14 @@ export default function MatcherPage() {
                   : statusBadgeStyles.upcoming
 
             const trimmedResult = typeof match.result === "string" ? match.result.trim() : null
-            let outcomeInfo = getMatchOutcome(trimmedResult ?? undefined, match.isHome)
+            let outcomeInfo = getMatchOutcome(trimmedResult ?? undefined, match.isHome, status)
             const isPastMatch = match.date.getTime() < Date.now()
+            
+            // Check if result is stale (0-0 shown long after match should have ended)
+            const now = Date.now()
+            const minutesSinceKickoff = (now - match.date.getTime()) / (1000 * 60)
+            const isStaleZeroResult = trimmedResult === "0-0" && minutesSinceKickoff > 150 // 2.5 hours after kickoff
+            
             if (!outcomeInfo && isPastMatch && status === "result") {
               if (!trimmedResult || trimmedResult === "0-0" || trimmedResult === "00") {
                 outcomeInfo = {
@@ -247,6 +259,15 @@ export default function MatcherPage() {
                 {/* Result or Actions */}
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                   <div className="flex items-center gap-4">
+                    {isStaleZeroResult && (
+                      <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 px-3 py-1.5 rounded border border-amber-200">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <span>Resultat uppdateras ej längre</span>
+                      </div>
+                    )}
+                    
                     {outcomeInfo && (
                       <div className="flex items-center gap-3">
                         {outcomeInfo.label !== "Ej publicerat" && (
