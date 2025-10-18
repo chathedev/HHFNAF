@@ -53,6 +53,29 @@ const getMatchOutcome = (rawResult?: string, isHome?: boolean, status?: StatusFi
   }
 }
 
+// Helper to get score in correct display order (always Härnösands HF score first)
+const getDisplayScore = (rawResult?: string, isHome?: boolean): string | null => {
+  if (!rawResult) {
+    return null
+  }
+  const scoreboardMatch = rawResult.match(/(\d+)\s*[–-]\s*(\d+)/)
+  if (!scoreboardMatch) {
+    return null
+  }
+  const homeScore = Number.parseInt(scoreboardMatch[1], 10)
+  const awayScore = Number.parseInt(scoreboardMatch[2], 10)
+  if (Number.isNaN(homeScore) || Number.isNaN(awayScore)) {
+    return null
+  }
+  
+  // Always show Härnösands HF score first
+  if (isHome === false) {
+    return `${awayScore}\u2013${homeScore}`
+  }
+  
+  return `${homeScore}\u2013${awayScore}`
+}
+
 const getMatchStatus = (match: NormalizedMatch): StatusFilter => {
   const now = Date.now()
   const kickoff = match.date.getTime()
@@ -178,6 +201,8 @@ export default function MatcherPage() {
 
         <div className="max-w-5xl mx-auto space-y-4">
           {filteredMatches.map((match) => {
+            const opponentName = match.opponent.replace(/\s*\((hemma|borta)\)\s*$/i, '').trim()
+            const homeAwayLabel = match.isHome === false ? 'borta' : 'hemma'
             const scheduleLine = [match.displayDate, match.time, match.venue].filter(Boolean).join(" • ")
             const status = getMatchStatus(match)
             const statusClasses =
@@ -189,6 +214,7 @@ export default function MatcherPage() {
 
             const trimmedResult = typeof match.result === "string" ? match.result.trim() : null
             let outcomeInfo = getMatchOutcome(trimmedResult ?? undefined, match.isHome, status)
+            const displayScore = getDisplayScore(trimmedResult ?? undefined, match.isHome)
             const isPastMatch = match.date.getTime() < Date.now()
             
             // Check if result is stale (0-0 shown long after match has been ongoing)
@@ -241,7 +267,7 @@ export default function MatcherPage() {
                       )}
                     </div>
                     <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                      vs {match.opponent}
+                      Härnösands HF <span className="text-gray-400">vs</span> {opponentName} ({homeAwayLabel})
                     </h3>
                     {scheduleLine && (
                       <p className="text-sm text-gray-600">{scheduleLine}</p>
@@ -269,29 +295,9 @@ export default function MatcherPage() {
                 {/* Result or Actions */}
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                   <div className="flex items-center gap-4">
-                    {/* Show live scores without outcome badge */}
-                    {status === "live" && outcomeInfo && (
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl font-bold text-gray-900">
-                          {outcomeInfo.text}
-                        </span>
-                        {outcomeInfo.label === "Vinst" && (
-                          <div className="flex items-center gap-1.5 text-xs font-semibold text-green-700">
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
-                            Leder
-                          </div>
-                        )}
-                        {outcomeInfo.label === "Förlust" && (
-                          <div className="flex items-center gap-1.5 text-xs font-semibold text-red-700">
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                            </svg>
-                            Ligger under
-                          </div>
-                        )}
-                      </div>
+                    {/* Show live scores - just the score, no badges */}
+                    {status === "live" && outcomeInfo && displayScore && (
+                      <span className="text-2xl font-bold text-gray-900">{displayScore}</span>
                     )}
                     
                     {/* Show 0-0 for live matches with warning if stale */}
@@ -310,7 +316,7 @@ export default function MatcherPage() {
                     )}
                     
                     {/* Show results with outcome badge only for finished matches */}
-                    {status !== "live" && outcomeInfo && (
+                    {status !== "live" && outcomeInfo && displayScore && (
                       <div className="flex items-center gap-3">
                         {outcomeInfo.label !== "Ej publicerat" && (
                           <span className={`text-xs font-semibold px-2.5 py-1 rounded ${
@@ -324,7 +330,7 @@ export default function MatcherPage() {
                           </span>
                         )}
                         <span className={outcomeInfo.label === "Ej publicerat" ? "text-sm text-gray-600" : "text-2xl font-bold text-gray-900"}>
-                          {outcomeInfo.text}
+                          {displayScore}
                         </span>
                       </div>
                     )}
