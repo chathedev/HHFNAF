@@ -10,9 +10,11 @@ export default function Footer() {
           {/* Club Info */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center">
-                <span className="text-2xl font-bold">HHF</span>
-              </div>
+              <img 
+                src="/logo.png" 
+                alt="Härnösands HF Logo" 
+                className="w-12 h-12 object-contain"
+              />
               <h3 className="text-xl font-bold">Härnösands HF</h3>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed">
