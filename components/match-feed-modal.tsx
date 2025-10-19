@@ -179,7 +179,7 @@ export function MatchFeedModal({
     return acc
   }, {} as Record<number, MatchFeedEvent[]>)
 
-  // Sort events within each period by time (ascending - chronological order, oldest first)
+  // Sort events within each period by time (descending - most recent first)
   Object.keys(eventsByPeriod).forEach((periodKey) => {
     const period = Number(periodKey)
     eventsByPeriod[period].sort((a, b) => {
@@ -188,14 +188,14 @@ export function MatchFeedModal({
         const parts = timeStr.split(':')
         return parseInt(parts[0]) * 60 + parseInt(parts[1])
       }
-      return parseTime(a.time) - parseTime(b.time) // Chronological: 0:00 → 60:00
+      return parseTime(b.time) - parseTime(a.time) // Reverse: 60:00 → 0:00
     })
   })
 
   const periods = Object.keys(eventsByPeriod)
     .map(Number)
     .filter(p => p > 0) // Only show actual periods (not period 0)
-    .sort((a, b) => a - b) // Chronological order: Period 1, then Period 2
+    .sort((a, b) => b - a) // Reverse order: Period 2 first, then Period 1
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
