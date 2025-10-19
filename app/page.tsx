@@ -1122,17 +1122,24 @@ export default function HomePage() {
         <Footer />
         
         {/* Match Feed Modal */}
-        {selectedMatch && (
-          <MatchFeedModal
-            isOpen={true}
-            onClose={() => setSelectedMatch(null)}
-            matchFeed={selectedMatch.matchFeed || []}
-            homeTeam={selectedMatch.homeTeam}
-            awayTeam={selectedMatch.awayTeam}
-            finalScore={selectedMatch.result}
-            matchStatus={selectedMatch.matchStatus}
-          />
-        )}
+        {selectedMatch && (() => {
+          // Use the actual display names from the match card
+          const displayOpponentName = selectedMatch.opponent.replace(/\s*\((hemma|borta)\)\s*$/i, '').trim()
+          const displayHomeTeam = selectedMatch.isHome !== false ? "Härnösands HF" : displayOpponentName
+          const displayAwayTeam = selectedMatch.isHome !== false ? displayOpponentName : "Härnösands HF"
+          
+          return (
+            <MatchFeedModal
+              isOpen={true}
+              onClose={() => setSelectedMatch(null)}
+              matchFeed={selectedMatch.matchFeed || []}
+              homeTeam={displayHomeTeam}
+              awayTeam={displayAwayTeam}
+              finalScore={selectedMatch.result}
+              matchStatus={selectedMatch.matchStatus}
+            />
+          )
+        })()}
       </div>
     </ErrorBoundary>
   )
