@@ -30,6 +30,8 @@ type MatchFeedModalProps = {
   awayTeam: string
   finalScore?: string
   matchStatus?: "live" | "finished" | "upcoming"
+  matchId?: string
+  onRefresh?: () => Promise<void>
 }
 
 const getEventIcon = (type: string) => {
@@ -90,9 +92,22 @@ export function MatchFeedModal({
   awayTeam,
   finalScore,
   matchStatus,
+  onRefresh,
 }: MatchFeedModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
   const [activeTab, setActiveTab] = useState<"timeline" | "scorers">("timeline")
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  // The modal displays data that's already being refreshed by parent components
+  // (useMatchData refreshes every 1 second). This indicator just shows when data changes.
+  useEffect(() => {
+    if (!isOpen) return
+    
+    // Show refresh indicator briefly when match feed updates
+    setIsRefreshing(true)
+    const timer = setTimeout(() => setIsRefreshing(false), 500)
+    return () => clearTimeout(timer)
+  }, [matchFeed.length, isOpen])
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -176,39 +191,54 @@ export function MatchFeedModal({
       >
         {/* Header */}
         <div className="flex-shrink-0 p-4 sm:p-6 border-b border-gray-200 bg-gradient-to-b from-white to-gray-50">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2 mb-3">
-              <div className="flex-1 min-w-0">
-                <h2 className="text-lg sm:text-2xl font-bold text-gray-900 leading-tight">
-                  <span className="block sm:inline">{homeTeam}</span>
-                  <span className="text-gray-400 mx-2 hidden sm:inline">vs</span>
-                  <span className="block sm:inline text-gray-400 sm:hidden text-sm">vs</span>
-                  <span className="block sm:inline">{awayTeam}</span>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3 mb-3">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+                  Matchhändelser
                 </h2>
+                {matchStatus === "live" && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 bg-red-100 text-red-700 text-xs sm:text-sm font-bold rounded-full">
+                    <span className="w-1.5 sm:w-2 h-1.5 sm:h-2 bg-red-600 rounded-full animate-pulse"></span>
+                    LIVE
+                  </span>
+                )}
+                {isRefreshing && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
+                    <svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Uppdaterar
+                  </span>
+                )}
               </div>
-              {matchStatus === "live" && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 bg-red-100 text-red-700 text-xs sm:text-sm font-bold rounded-full flex-shrink-0">
-                  <span className="w-1.5 sm:w-2 h-1.5 sm:h-2 bg-red-600 rounded-full animate-pulse"></span>
-                  LIVE
-                </span>
-              )}
+              
+              {/* Team Names and Score */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4 flex-1">
+                  {finalScore && (
+                    <div className="text-3xl sm:text-4xl font-black text-emerald-600">{finalScore}</div>
+                  )}
+                  <div className="text-sm text-gray-500">
+                    {matchFeed.length} händelse{matchFeed.length !== 1 ? "r" : ""}
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <div className="text-sm sm:text-base font-bold text-gray-900 text-right">{homeTeam}</div>
+                  <div className="text-xs text-gray-400">vs</div>
+                  <div className="text-sm sm:text-base font-bold text-gray-900 text-right">{awayTeam}</div>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-4">
-              {finalScore && (
-                <p className="text-2xl sm:text-3xl font-bold text-emerald-600">{finalScore}</p>
-              )}
-              <p className="text-xs sm:text-sm text-gray-500">
-                {matchFeed.length} händelse{matchFeed.length !== 1 ? "r" : ""}
-              </p>
-            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+              aria-label="Stäng"
+            >
+              <X className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500" />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="ml-2 sm:ml-4 p-2 sm:p-2.5 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
-            aria-label="Stäng"
-          >
-            <X className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500" />
-          </button>
         </div>
 
         {/* Tab Navigation */}
@@ -275,74 +305,137 @@ export function MatchFeedModal({
                   {period > 0 && (
                     <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
                       <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
-                      <span className="text-xs sm:text-sm font-bold text-gray-600 uppercase tracking-wider px-2 py-1 bg-gray-100 rounded-full">
+                      <span className="text-xs sm:text-sm font-bold text-gray-600 uppercase tracking-wider px-3 py-1.5 bg-gray-100 rounded-full">
                         {period === 1 ? "Första halvlek" : period === 2 ? "Andra halvlek" : `Period ${period}`}
                       </span>
                       <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
                     </div>
                   )}
                   
-                  <div className="relative space-y-4 sm:space-y-5">
-                    {/* Timeline line */}
-                    <div className="absolute left-5 sm:left-7 top-0 bottom-0 w-0.5 bg-gradient-to-b from-emerald-300 via-emerald-400 to-transparent"></div>
-                    
-                    {eventsByPeriod[period].map((event, idx) => (
-                      <div key={idx} className="relative flex gap-3 sm:gap-4">
-                        {/* Timeline dot with icon */}
-                        <div className="relative flex-shrink-0">
-                          <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-white border-2 sm:border-3 border-emerald-400 flex items-center justify-center text-lg sm:text-2xl shadow-lg z-10">
-                            {getEventIcon(event.type)}
-                          </div>
-                        </div>
-                        
-                        {/* Event card */}
-                        <div className={`flex-1 rounded-xl border-2 p-3 sm:p-4 ${getEventColor(event.type)} transition-all active:scale-98 min-w-0`}>
-                          <div className="flex items-start justify-between gap-2 sm:gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-wrap items-center gap-2 mb-2">
-                                <span className="text-xs sm:text-sm font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 bg-white/80 rounded-md shadow-sm">
-                                  {event.time}
-                                </span>
-                                <span className="text-xs sm:text-sm font-bold">
-                                  {event.type}
-                                </span>
-                              </div>
-                              
-                              {event.team && (
-                                <p className="text-xs sm:text-sm font-semibold mb-1 truncate" title={event.team}>
-                                  {event.team}
-                                </p>
-                              )}
-                              
-                              {event.player && (
-                                <div className="flex items-center gap-2 mb-1">
-                                  <p className="text-sm sm:text-base font-bold text-gray-900 truncate" title={event.player}>
-                                    {event.player}
-                                  </p>
-                                  {event.playerNumber && (
-                                    <span className="text-xs sm:text-sm font-mono bg-white/80 px-1.5 sm:px-2 py-0.5 rounded shadow-sm flex-shrink-0">
-                                      #{event.playerNumber}
-                                    </span>
-                                  )}
+                  <div className="relative space-y-3">
+                    {eventsByPeriod[period].map((event, idx) => {
+                      // Determine if event is for home or away team
+                      const isHomeEvent = event.team?.toLowerCase().includes(homeTeam.toLowerCase().split(' ')[0]) || event.isHomeGoal
+                      const isGoal = event.type.toLowerCase().includes("mål")
+                      
+                      return (
+                        <div key={idx} className="relative">
+                          {/* Desktop: Side-by-side layout */}
+                          <div className="hidden sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-4 items-center">
+                            {/* Home team event (left side) */}
+                            {isHomeEvent ? (
+                              <div className={`rounded-xl border-2 p-4 ${getEventColor(event.type)} transition-all hover:shadow-lg`}>
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex-1">
+                                    {event.player && (
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <p className="text-base font-bold text-gray-900">{event.player}</p>
+                                        {event.playerNumber && (
+                                          <span className="text-sm font-mono bg-white/80 px-2 py-0.5 rounded">
+                                            #{event.playerNumber}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                    <span className="text-sm font-bold">{event.type}</span>
+                                    {event.description && event.description !== event.type && !event.player && (
+                                      <p className="text-sm opacity-90 mt-1">{event.description}</p>
+                                    )}
+                                  </div>
+                                  <span className="text-2xl">{getEventIcon(event.type)}</span>
                                 </div>
-                              )}
-                              
-                              {event.description && event.description !== event.type && !event.player && (
-                                <p className="text-xs sm:text-sm opacity-90 mt-1">{event.description}</p>
+                              </div>
+                            ) : (
+                              <div></div>
+                            )}
+                            
+                            {/* Center timeline */}
+                            <div className="flex flex-col items-center">
+                              <div className="w-16 h-16 rounded-full bg-white border-3 border-emerald-400 flex items-center justify-center shadow-lg">
+                                <span className="text-sm font-bold text-emerald-700">{event.time}</span>
+                              </div>
+                              {idx < eventsByPeriod[period].length - 1 && (
+                                <div className="w-0.5 h-8 bg-emerald-300"></div>
                               )}
                             </div>
                             
-                            {(event.homeScore !== undefined || event.awayScore !== undefined) && (
-                              <div className="text-right flex-shrink-0">
-                                <div className="text-xl sm:text-2xl font-bold whitespace-nowrap">
-                                  {event.homeScore ?? 0}–{event.awayScore ?? 0}
+                            {/* Away team event (right side) */}
+                            {!isHomeEvent ? (
+                              <div className={`rounded-xl border-2 p-4 ${getEventColor(event.type)} transition-all hover:shadow-lg`}>
+                                <div className="flex items-start justify-between gap-3">
+                                  <span className="text-2xl">{getEventIcon(event.type)}</span>
+                                  <div className="flex-1 text-right">
+                                    {event.player && (
+                                      <div className="flex items-center justify-end gap-2 mb-2">
+                                        {event.playerNumber && (
+                                          <span className="text-sm font-mono bg-white/80 px-2 py-0.5 rounded">
+                                            #{event.playerNumber}
+                                          </span>
+                                        )}
+                                        <p className="text-base font-bold text-gray-900">{event.player}</p>
+                                      </div>
+                                    )}
+                                    <span className="text-sm font-bold">{event.type}</span>
+                                    {event.description && event.description !== event.type && !event.player && (
+                                      <p className="text-sm opacity-90 mt-1">{event.description}</p>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
+                            ) : (
+                              <div></div>
                             )}
                           </div>
+                          
+                          {/* Mobile: Single column with team indicator */}
+                          <div className="sm:hidden flex gap-3">
+                            <div className="flex flex-col items-center">
+                              <div className="w-12 h-12 rounded-full bg-white border-2 border-emerald-400 flex items-center justify-center shadow-lg">
+                                <span className="text-xs font-bold text-emerald-700">{event.time}</span>
+                              </div>
+                              {idx < eventsByPeriod[period].length - 1 && (
+                                <div className="w-0.5 flex-1 min-h-[20px] bg-emerald-300"></div>
+                              )}
+                            </div>
+                            
+                            <div className={`flex-1 rounded-xl border-2 p-3 ${getEventColor(event.type)}`}>
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xs font-semibold px-2 py-0.5 bg-white/80 rounded">
+                                      {isHomeEvent ? homeTeam.split(' ')[0] : awayTeam.split(' ')[0]}
+                                    </span>
+                                    <span className="text-sm font-bold">{event.type}</span>
+                                  </div>
+                                  {event.player && (
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <p className="text-sm font-bold text-gray-900">{event.player}</p>
+                                      {event.playerNumber && (
+                                        <span className="text-xs font-mono bg-white/80 px-1.5 py-0.5 rounded">
+                                          #{event.playerNumber}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                                <span className="text-xl">{getEventIcon(event.type)}</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Score display */}
+                          {(event.homeScore !== undefined || event.awayScore !== undefined) && (
+                            <div className="text-center mt-2">
+                              <div className="inline-block px-4 py-1 bg-gray-100 rounded-full">
+                                <span className="text-lg font-bold text-gray-900">
+                                  {event.homeScore ?? 0}–{event.awayScore ?? 0}
+                                </span>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               ))}
