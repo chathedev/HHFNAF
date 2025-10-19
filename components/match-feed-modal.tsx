@@ -472,6 +472,25 @@ export function MatchFeedModal({
                   </div>
                 </div>
               ))}
+              
+              {/* End of Match Marker - centered */}
+              {matchFeed.length > 0 && (
+                <div className="flex justify-center items-center py-8">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg border-4 border-white">
+                      <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-gray-900">Slut</p>
+                      {finalScore && (
+                        <p className="text-sm text-gray-500 mt-1">Slutresultat: {finalScore}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
             </>
