@@ -53,8 +53,8 @@ const getMatchOutcome = (rawResult?: string, isHome?: boolean, status?: string):
     return null
   }
   
-  // Don't show 0-0 as "Oavgjort" for live matches (match hasn't finished yet)
-  if (status === "live" && homeScore === 0 && awayScore === 0) {
+  // Don't show outcome badges for live matches - only show for finished matches
+  if (status === "live") {
     return null
   }
   

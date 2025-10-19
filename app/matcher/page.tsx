@@ -32,8 +32,8 @@ const getMatchOutcome = (rawResult?: string, isHome?: boolean, status?: string):
     return null
   }
   
-  // Don't show 0-0 as "Oavgjort" for live matches (match hasn't finished yet)
-  if (status === "live" && homeScore === 0 && awayScore === 0) {
+  // Don't show outcome badges for live matches - only show for finished matches
+  if (status === "live") {
     return null
   }
   
@@ -83,8 +83,8 @@ export default function MatcherPage() {
   const prevScoresRef = useRef<Map<string, { home: number; away: number }>>(new Map())
   const confettiTriggeredRef = useRef<Set<string>>(new Set())
   
-  // Use "enhanced" endpoint for better performance and grouped data
-  const dataType: "current" | "old" | "both" | "enhanced" = "enhanced"
+  // Use "both" endpoint to get current + old matches (unified endpoint)
+  const dataType: "current" | "old" | "both" | "enhanced" = "both"
   
   const { matches, metadata, grouped, loading, error } = useMatchData({ 
     refreshIntervalMs: 1_000,
@@ -105,9 +105,6 @@ export default function MatcherPage() {
   }, [matches])
 
   const filteredMatches = useMemo(() => {
-    const now = Date.now()
-    const threeHoursAgo = now - (1000 * 60 * 60 * 3)
-    
     return matches.filter((match) => {
       if (selectedTeam !== "all" && match.normalizedTeam !== selectedTeam) {
         return false
@@ -116,13 +113,6 @@ export default function MatcherPage() {
       const status = getMatchStatus(match)
       
       if (statusFilter !== "all" && status !== statusFilter) {
-        return false
-      }
-      
-      // Only apply 3-hour window when showing "all" matches
-      // When explicitly filtering for "finished", show all finished matches
-      const kickoff = match.date.getTime()
-      if (status === "finished" && statusFilter === "all" && kickoff < threeHoursAgo) {
         return false
       }
       
