@@ -315,8 +315,10 @@ export function MatchFeedModal({
                   <div className="relative space-y-3">
                     {eventsByPeriod[period].map((event, idx) => {
                       // Determine if event is for home or away team
-                      const isHomeEvent = event.team?.toLowerCase().includes(homeTeam.toLowerCase().split(' ')[0]) || event.isHomeGoal
-                      const isGoal = event.type.toLowerCase().includes("mål")
+                      const homeTeamFirstWord = homeTeam?.toLowerCase().split(' ')[0] || ''
+                      const eventTeamLower = event.team?.toLowerCase() || ''
+                      const isHomeEvent = (homeTeamFirstWord && eventTeamLower.includes(homeTeamFirstWord)) || event.isHomeGoal
+                      const isGoal = event.type?.toLowerCase().includes("mål")
                       
                       return (
                         <div key={idx} className="relative">
@@ -403,7 +405,7 @@ export function MatchFeedModal({
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-2">
                                     <span className="text-xs font-semibold px-2 py-0.5 bg-white/80 rounded">
-                                      {isHomeEvent ? homeTeam.split(' ')[0] : awayTeam.split(' ')[0]}
+                                      {isHomeEvent ? (homeTeam?.split(' ')[0] || 'Hemma') : (awayTeam?.split(' ')[0] || 'Borta')}
                                     </span>
                                     <span className="text-sm font-bold">{event.type}</span>
                                   </div>
