@@ -492,7 +492,7 @@ export function MatchFeedModal({
                               </p>
                               {scorer.playerNumber && (
                                 <p className="text-xs sm:text-sm text-gray-500 font-mono mt-0.5">
-                                  Tröja #{scorer.playerNumber}
+                                  Nummer #{scorer.playerNumber}
                                 </p>
                               )}
                             </div>
