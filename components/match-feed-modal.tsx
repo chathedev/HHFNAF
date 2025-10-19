@@ -169,7 +169,7 @@ export function MatchFeedModal({
     return acc
   }, {} as Record<string, Array<{ player: string; playerNumber?: string; goals: number }>>)
 
-  // Group events by period
+  // Group events by period and sort events within each period by time
   const eventsByPeriod = matchFeed.reduce((acc, event) => {
     const period = event.period || 0
     if (!acc[period]) {
@@ -179,9 +179,23 @@ export function MatchFeedModal({
     return acc
   }, {} as Record<number, MatchFeedEvent[]>)
 
+  // Sort events within each period by time (ascending - chronological order, oldest first)
+  Object.keys(eventsByPeriod).forEach((periodKey) => {
+    const period = Number(periodKey)
+    eventsByPeriod[period].sort((a, b) => {
+      // Parse time strings (format: "MM:SS" or "M:SS")
+      const parseTime = (timeStr: string) => {
+        const parts = timeStr.split(':')
+        return parseInt(parts[0]) * 60 + parseInt(parts[1])
+      }
+      return parseTime(a.time) - parseTime(b.time) // Chronological: 0:00 → 60:00
+    })
+  })
+
   const periods = Object.keys(eventsByPeriod)
     .map(Number)
-    .sort((a, b) => b - a) // Reverse order to show latest first
+    .filter(p => p > 0) // Only show actual periods (not period 0)
+    .sort((a, b) => a - b) // Chronological order: Period 1, then Period 2
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
