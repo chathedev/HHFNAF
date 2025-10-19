@@ -113,6 +113,7 @@ export default function HomePage() {
 
   // Track previous scores for confetti animation
   const prevScoresRef = useRef<Map<string, { home: number; away: number }>>(new Map())
+  const confettiTriggeredRef = useRef<Set<string>>(new Set())
 
   const partnersForDisplay = Array.isArray(content.partners) ? content.partners.filter((p) => p.visibleInCarousel) : []
 
@@ -218,110 +219,123 @@ export default function HomePage() {
         return
       }
 
+      // Initialize previous score on first load
       const prevScore = prevScoresRef.current.get(match.id)
-      if (prevScore) {
-        let hhfScored = false
-        if (match.isHome !== false) {
-          hhfScored = currentHomeScore > prevScore.home
-        } else {
-          hhfScored = currentAwayScore > prevScore.away
-        }
+      if (!prevScore) {
+        prevScoresRef.current.set(match.id, {
+          home: currentHomeScore,
+          away: currentAwayScore
+        })
+        return
+      }
 
-        if (hhfScored) {
-          const matchCard = document.getElementById(`match-card-${match.id}`)
-          if (matchCard) {
-            // Add celebration animation to the card
-            matchCard.classList.add('goal-celebration')
-            setTimeout(() => matchCard.classList.remove('goal-celebration'), 2000)
+      // Check if Härnösands HF scored
+      let hhfScored = false
+      if (match.isHome !== false) {
+        hhfScored = currentHomeScore > prevScore.home
+      } else {
+        hhfScored = currentAwayScore > prevScore.away
+      }
 
-            const rect = matchCard.getBoundingClientRect()
-            // Calculate position relative to the card's center
-            const x = (rect.left + rect.width / 2) / window.innerWidth
-            const y = (rect.top + rect.height / 2) / window.innerHeight
+      // Trigger confetti if HHF scored and not already triggered for this score
+      const scoreKey = `${match.id}-${currentHomeScore}-${currentAwayScore}`
+      if (hhfScored && !confettiTriggeredRef.current.has(scoreKey)) {
+        confettiTriggeredRef.current.add(scoreKey)
+        
+        const matchCard = document.getElementById(`match-card-${match.id}`)
+        if (matchCard) {
+          // Add celebration animation to the card
+          matchCard.classList.add('goal-celebration')
+          setTimeout(() => matchCard.classList.remove('goal-celebration'), 2000)
 
-            // Main celebration burst from center - contained within card
+          const rect = matchCard.getBoundingClientRect()
+          // Calculate position relative to the card's center
+          const x = (rect.left + rect.width / 2) / window.innerWidth
+          const y = (rect.top + rect.height / 2) / window.innerHeight
+
+          // Main celebration burst from center - contained within card
+          confetti({
+            particleCount: 120,
+            spread: 70,
+            origin: { x, y },
+            colors: ['#10b981', '#34d399', '#6ee7b7', '#ffffff', '#d1fae5'],
+            startVelocity: 25,
+            gravity: 1.2,
+            ticks: 200,
+            scalar: 0.9,
+            shapes: ['circle'],
+            drift: 0,
+            decay: 0.92
+          })
+
+          // Sparkle effect - tighter spread
+          setTimeout(() => {
             confetti({
-              particleCount: 120,
-              spread: 70,
+              particleCount: 60,
+              spread: 60,
               origin: { x, y },
-              colors: ['#10b981', '#34d399', '#6ee7b7', '#ffffff', '#d1fae5'],
-              startVelocity: 25,
-              gravity: 1.2,
-              ticks: 200,
-              scalar: 0.9,
+              colors: ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0'],
+              startVelocity: 20,
+              gravity: 1.0,
+              ticks: 150,
+              scalar: 0.7,
               shapes: ['circle'],
-              drift: 0,
-              decay: 0.92
+              decay: 0.93
             })
+          }, 100)
 
-            // Sparkle effect - tighter spread
-            setTimeout(() => {
-              confetti({
-                particleCount: 60,
-                spread: 60,
-                origin: { x, y },
-                colors: ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0'],
-                startVelocity: 20,
-                gravity: 1.0,
-                ticks: 150,
-                scalar: 0.7,
-                shapes: ['circle'],
-                decay: 0.93
-              })
-            }, 100)
-
-            // Gentle side bursts - emerald theme
-            setTimeout(() => {
-              // Left burst
-              confetti({
-                particleCount: 40,
-                angle: 70,
-                spread: 45,
-                origin: { x: x - 0.05, y },
-                colors: ['#10b981', '#34d399', '#ffffff'],
-                startVelocity: 20,
-                gravity: 1.1,
-                ticks: 180,
-                scalar: 0.8,
-                shapes: ['circle'],
-                decay: 0.91
-              })
-              // Right burst
-              confetti({
-                particleCount: 40,
-                angle: 110,
-                spread: 45,
-                origin: { x: x + 0.05, y },
-                colors: ['#10b981', '#34d399', '#ffffff'],
-                startVelocity: 20,
-                gravity: 1.1,
-                ticks: 180,
-                scalar: 0.8,
-                shapes: ['circle'],
-                decay: 0.91
-              })
-            }, 200)
-            
-            // Top celebration - raining effect
-            setTimeout(() => {
-              confetti({
-                particleCount: 50,
-                angle: 90,
-                spread: 80,
-                origin: { x, y: y - 0.1 },
-                colors: ['#10b981', '#6ee7b7', '#ffffff'],
-                startVelocity: 15,
-                gravity: 0.8,
-                ticks: 220,
-                scalar: 0.6,
-                shapes: ['circle'],
-                decay: 0.94
-              })
-            }, 300)
-          }
+          // Gentle side bursts - emerald theme
+          setTimeout(() => {
+            // Left burst
+            confetti({
+              particleCount: 40,
+              angle: 70,
+              spread: 45,
+              origin: { x: x - 0.05, y },
+              colors: ['#10b981', '#34d399', '#ffffff'],
+              startVelocity: 20,
+              gravity: 1.1,
+              ticks: 180,
+              scalar: 0.8,
+              shapes: ['circle'],
+              decay: 0.91
+            })
+            // Right burst
+            confetti({
+              particleCount: 40,
+              angle: 110,
+              spread: 45,
+              origin: { x: x + 0.05, y },
+              colors: ['#10b981', '#34d399', '#ffffff'],
+              startVelocity: 20,
+              gravity: 1.1,
+              ticks: 180,
+              scalar: 0.8,
+              shapes: ['circle'],
+              decay: 0.91
+            })
+          }, 200)
+          
+          // Top celebration - raining effect
+          setTimeout(() => {
+            confetti({
+              particleCount: 50,
+              angle: 90,
+              spread: 80,
+              origin: { x, y: y - 0.1 },
+              colors: ['#10b981', '#6ee7b7', '#ffffff'],
+              startVelocity: 15,
+              gravity: 0.8,
+              ticks: 220,
+              scalar: 0.6,
+              shapes: ['circle'],
+              decay: 0.94
+            })
+          }, 300)
         }
       }
 
+      // Update previous score
       prevScoresRef.current.set(match.id, {
         home: currentHomeScore,
         away: currentAwayScore
