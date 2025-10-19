@@ -316,13 +316,15 @@ export function MatchFeedModal({
                   <div className="hidden sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-4 items-center mb-6">
                     <div className="text-center">
                       <div className="inline-block px-5 py-2.5 bg-emerald-100 border-2 border-emerald-300 rounded-lg">
-                        <span className="text-base font-bold text-emerald-800">{homeTeam}</span>
+                        <span className="text-base font-bold text-emerald-800">{homeTeam || 'Hemmalag'}</span>
                       </div>
                     </div>
-                    <div className="w-16"></div>
+                    <div className="w-16 text-center">
+                      <span className="text-gray-400 font-bold">VS</span>
+                    </div>
                     <div className="text-center">
                       <div className="inline-block px-5 py-2.5 bg-blue-100 border-2 border-blue-300 rounded-lg">
-                        <span className="text-base font-bold text-blue-800">{awayTeam}</span>
+                        <span className="text-base font-bold text-blue-800">{awayTeam || 'Bortalag'}</span>
                       </div>
                     </div>
                   </div>
