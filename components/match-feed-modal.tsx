@@ -315,16 +315,14 @@ export function MatchFeedModal({
                   {/* Desktop: Team Headers */}
                   <div className="hidden sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-4 items-center mb-6">
                     <div className="text-center">
-                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100 border-2 border-emerald-300 rounded-lg">
-                        <span className="text-lg">🏠</span>
-                        <span className="font-bold text-emerald-800">{homeTeam}</span>
+                      <div className="inline-block px-5 py-2.5 bg-emerald-100 border-2 border-emerald-300 rounded-lg">
+                        <span className="text-base font-bold text-emerald-800">{homeTeam}</span>
                       </div>
                     </div>
                     <div className="w-16"></div>
                     <div className="text-center">
-                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 border-2 border-blue-300 rounded-lg">
-                        <span className="font-bold text-blue-800">{awayTeam}</span>
-                        <span className="text-lg">✈️</span>
+                      <div className="inline-block px-5 py-2.5 bg-blue-100 border-2 border-blue-300 rounded-lg">
+                        <span className="text-base font-bold text-blue-800">{awayTeam}</span>
                       </div>
                     </div>
                   </div>
