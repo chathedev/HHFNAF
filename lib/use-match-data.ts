@@ -61,21 +61,43 @@ export type NormalizedMatch = {
   matchFeed?: MatchFeedEvent[]
 }
 
+export type EnhancedMatchData = {
+  matches: NormalizedMatch[]
+  metadata?: {
+    totalMatches: number
+    liveMatches: number
+    upcomingMatches: number
+    finishedMatches: number
+    lastUpdated: string
+  }
+  grouped?: {
+    byTeam: Record<string, NormalizedMatch[]>
+    byStatus: {
+      live: NormalizedMatch[]
+      upcoming: NormalizedMatch[]
+      finished: NormalizedMatch[]
+    }
+    bySeries: Record<string, NormalizedMatch[]>
+  }
+}
+
 const API_BASE_URL =
   (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
-  "https://api.tivly.se/matcher"
+  "https://api.tivly.se"
 
-type DataType = "current" | "old" | "both"
+type DataType = "current" | "old" | "both" | "enhanced"
 
 const getDataEndpoint = (type: DataType) => {
   switch (type) {
     case "current":
-      return `${API_BASE_URL}/data/current`
+      return `${API_BASE_URL}/matcher/data/current`
     case "old":
-      return `${API_BASE_URL}/data/old`
+      return `${API_BASE_URL}/matcher/data/old`
+    case "enhanced":
+      return `${API_BASE_URL}/matcher/data/enhanced`
     case "both":
     default:
-      return `${API_BASE_URL}/data`
+      return `${API_BASE_URL}/matcher/data`
   }
 }
 
@@ -152,46 +174,85 @@ const normalizeMatches = (matches: ApiMatch[]) =>
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const fetchFromApi = async (dataType: DataType = "both") => {
+const fetchFromApi = async (dataType: DataType = "both"): Promise<EnhancedMatchData> => {
   const endpoint = getDataEndpoint(dataType)
   let attempt = 0
   let delay = 2000
 
   while (attempt < 3) {
-    const response = await fetch(endpoint, { cache: "no-store" })
-    if (response.status === 503) {
-      attempt += 1
-      await sleep(delay)
-      delay = Math.min(delay * 1.5, 8000)
-      continue
-    }
+    try {
+      const response = await fetch(endpoint, { 
+        cache: "no-store",
+        headers: {
+          'Accept': 'application/json',
+        }
+      })
+      
+      if (response.status === 503) {
+        attempt += 1
+        await sleep(delay)
+        delay = Math.min(delay * 1.5, 8000)
+        continue
+      }
 
-    if (!response.ok) {
-      throw new Error(`Kunde inte hämta matcher (HTTP ${response.status})`)
-    }
+      if (!response.ok) {
+        throw new Error(`Kunde inte hämta matcher (HTTP ${response.status})`)
+      }
 
-    const payload = await response.json()
-    
-    // Handle different response structures based on endpoint
-    let matches: ApiMatch[] = []
-    
-    if (dataType === "current" && payload.current) {
-      // /data/current returns { current: [...] }
-      matches = Array.isArray(payload.current) ? payload.current : []
-    } else if (dataType === "old" && payload.old) {
-      // /data/old returns { old: [...] }
-      matches = Array.isArray(payload.old) ? payload.old : []
-    } else if (dataType === "both") {
-      // /data returns { current: [...], old: [...] }
-      const current = Array.isArray(payload.current) ? payload.current : []
-      const old = Array.isArray(payload.old) ? payload.old : []
-      matches = [...current, ...old]
-    } else {
-      // Fallback: check if payload itself is an array
-      matches = Array.isArray(payload) ? payload : []
+      const payload = await response.json()
+      
+      // Handle different response structures based on endpoint
+      let matches: ApiMatch[] = []
+      let metadata = undefined
+      let grouped = undefined
+      
+      if (dataType === "enhanced") {
+        // /matcher/data/enhanced returns { matches: [...], metadata: {...}, grouped: {...} }
+        matches = Array.isArray(payload.matches) ? payload.matches : []
+        metadata = payload.metadata
+        
+        // If grouped data exists, normalize the matches in it
+        if (payload.grouped) {
+          grouped = {
+            byTeam: payload.grouped.byTeam || {},
+            byStatus: {
+              live: normalizeMatches(payload.grouped.byStatus?.live || []),
+              upcoming: normalizeMatches(payload.grouped.byStatus?.upcoming || []),
+              finished: normalizeMatches(payload.grouped.byStatus?.finished || []),
+            },
+            bySeries: payload.grouped.bySeries || {},
+          }
+        }
+      } else if (dataType === "current" && payload.current) {
+        // /matcher/data/current returns { current: [...] }
+        matches = Array.isArray(payload.current) ? payload.current : []
+      } else if (dataType === "old" && payload.old) {
+        // /matcher/data/old returns { old: [...] }
+        matches = Array.isArray(payload.old) ? payload.old : []
+      } else if (dataType === "both") {
+        // /matcher/data returns { current: [...], old: [...] }
+        const current = Array.isArray(payload.current) ? payload.current : []
+        const old = Array.isArray(payload.old) ? payload.old : []
+        matches = [...current, ...old]
+      } else {
+        // Fallback: check if payload itself is an array
+        matches = Array.isArray(payload) ? payload : []
+      }
+      
+      return {
+        matches: normalizeMatches(matches),
+        metadata,
+        grouped,
+      }
+    } catch (error) {
+      if (attempt < 2) {
+        attempt += 1
+        await sleep(delay)
+        delay = Math.min(delay * 1.5, 8000)
+        continue
+      }
+      throw error
     }
-    
-    return normalizeMatches(matches)
   }
 
   throw new Error("Matchdata är inte tillgänglig just nu")
@@ -202,13 +263,17 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
   const dataType = options?.dataType ?? "both"
 
   const [matches, setMatches] = useState<NormalizedMatch[]>([])
+  const [metadata, setMetadata] = useState<EnhancedMatchData['metadata']>()
+  const [grouped, setGrouped] = useState<EnhancedMatchData['grouped']>()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
     try {
       const data = await fetchFromApi(dataType)
-      setMatches(data)
+      setMatches(data.matches)
+      setMetadata(data.metadata)
+      setGrouped(data.grouped)
       setError(null)
       setLoading(false)
       return data
@@ -230,7 +295,9 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
         if (!isMounted) {
           return
         }
-        setMatches(data)
+        setMatches(data.matches)
+        setMetadata(data.metadata)
+        setGrouped(data.grouped)
         setError(null)
       } catch (caught) {
         if (!isMounted) {
@@ -289,6 +356,8 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
 
   return {
     matches,
+    metadata,
+    grouped,
     loading,
     error,
     refresh,

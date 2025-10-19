@@ -79,10 +79,10 @@ export default function MatcherPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const [selectedMatch, setSelectedMatch] = useState<NormalizedMatch | null>(null)
   
-  // Use "old" endpoint when viewing only finished matches, otherwise use "current"
-  const dataType: "current" | "old" | "both" = statusFilter === "finished" ? "old" : "current"
+  // Use "enhanced" endpoint for better performance and grouped data
+  const dataType: "current" | "old" | "both" | "enhanced" = "enhanced"
   
-  const { matches, loading, error } = useMatchData({ 
+  const { matches, metadata, grouped, loading, error } = useMatchData({ 
     refreshIntervalMs: 1_000,
     dataType
   })
@@ -126,8 +126,18 @@ export default function MatcherPage() {
     })
   }, [matches, selectedTeam, statusFilter])
 
-  // Group matches by status
+  // Group matches by status - use server-provided grouped data when available
   const groupedMatches = useMemo(() => {
+    // If we have pre-grouped data from the enhanced endpoint, use it and filter
+    if (grouped?.byStatus && statusFilter === "all" && selectedTeam === "all") {
+      return {
+        live: grouped.byStatus.live,
+        upcoming: grouped.byStatus.upcoming,
+        finished: grouped.byStatus.finished,
+      }
+    }
+    
+    // Otherwise, group client-side
     const live: NormalizedMatch[] = []
     const upcoming: NormalizedMatch[] = []
     const finished: NormalizedMatch[] = []
@@ -145,7 +155,7 @@ export default function MatcherPage() {
     finished.sort((a, b) => b.date.getTime() - a.date.getTime()) // Most recent first
     
     return { live, upcoming, finished }
-  }, [filteredMatches])
+  }, [filteredMatches, grouped, statusFilter, selectedTeam])
 
   const renderMatchCard = (match: NormalizedMatch) => {
     const opponentName = match.opponent.replace(/\s*\((hemma|borta)\)\s*$/i, '').trim()
@@ -335,6 +345,28 @@ export default function MatcherPage() {
             Följ alla våra lag live och se resultat från senaste matcherna
           </p>
         </div>
+
+        {/* Metadata Stats */}
+        {metadata && (
+          <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-4 border-2 border-emerald-200">
+              <div className="text-sm font-semibold text-emerald-700 mb-1">Totalt</div>
+              <div className="text-2xl font-black text-emerald-900">{metadata.totalMatches}</div>
+            </div>
+            <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-xl p-4 border-2 border-red-200">
+              <div className="text-sm font-semibold text-red-700 mb-1">Live nu</div>
+              <div className="text-2xl font-black text-red-900">{metadata.liveMatches}</div>
+            </div>
+            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-4 border-2 border-blue-200">
+              <div className="text-sm font-semibold text-blue-700 mb-1">Kommande</div>
+              <div className="text-2xl font-black text-blue-900">{metadata.upcomingMatches}</div>
+            </div>
+            <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-xl p-4 border-2 border-gray-200">
+              <div className="text-sm font-semibold text-gray-700 mb-1">Avslutade</div>
+              <div className="text-2xl font-black text-gray-900">{metadata.finishedMatches}</div>
+            </div>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="mb-8 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
