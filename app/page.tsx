@@ -235,58 +235,89 @@ export default function HomePage() {
             setTimeout(() => matchCard.classList.remove('goal-celebration'), 2000)
 
             const rect = matchCard.getBoundingClientRect()
+            // Calculate position relative to the card's center
             const x = (rect.left + rect.width / 2) / window.innerWidth
             const y = (rect.top + rect.height / 2) / window.innerHeight
 
-            // Main celebration burst
+            // Main celebration burst from center - contained within card
             confetti({
-              particleCount: 150,
-              spread: 90,
+              particleCount: 120,
+              spread: 70,
               origin: { x, y },
-              colors: ['#10b981', '#f97316', '#ffffff', '#fbbf24', '#34d399'],
-              startVelocity: 50,
-              gravity: 1.5,
-              ticks: 250,
-              scalar: 1.2,
-              shapes: ['circle', 'square'],
-              drift: 0
+              colors: ['#10b981', '#34d399', '#6ee7b7', '#ffffff', '#d1fae5'],
+              startVelocity: 25,
+              gravity: 1.2,
+              ticks: 200,
+              scalar: 0.9,
+              shapes: ['circle'],
+              drift: 0,
+              decay: 0.92
             })
 
-            // Sparkle effect
+            // Sparkle effect - tighter spread
             setTimeout(() => {
               confetti({
-                particleCount: 80,
-                spread: 120,
+                particleCount: 60,
+                spread: 60,
                 origin: { x, y },
-                colors: ['#fbbf24', '#f97316', '#10b981'],
-                startVelocity: 35,
-                gravity: 0.8,
-                ticks: 180,
-                scalar: 0.8
+                colors: ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0'],
+                startVelocity: 20,
+                gravity: 1.0,
+                ticks: 150,
+                scalar: 0.7,
+                shapes: ['circle'],
+                decay: 0.93
               })
-            }, 150)
+            }, 100)
 
-            // Side bursts with team colors
+            // Gentle side bursts - emerald theme
+            setTimeout(() => {
+              // Left burst
+              confetti({
+                particleCount: 40,
+                angle: 70,
+                spread: 45,
+                origin: { x: x - 0.05, y },
+                colors: ['#10b981', '#34d399', '#ffffff'],
+                startVelocity: 20,
+                gravity: 1.1,
+                ticks: 180,
+                scalar: 0.8,
+                shapes: ['circle'],
+                decay: 0.91
+              })
+              // Right burst
+              confetti({
+                particleCount: 40,
+                angle: 110,
+                spread: 45,
+                origin: { x: x + 0.05, y },
+                colors: ['#10b981', '#34d399', '#ffffff'],
+                startVelocity: 20,
+                gravity: 1.1,
+                ticks: 180,
+                scalar: 0.8,
+                shapes: ['circle'],
+                decay: 0.91
+              })
+            }, 200)
+            
+            // Top celebration - raining effect
             setTimeout(() => {
               confetti({
-                particleCount: 60,
-                angle: 60,
-                spread: 60,
-                origin: { x: x - 0.08, y },
-                colors: ['#10b981', '#34d399', '#ffffff'],
-                startVelocity: 40,
-                gravity: 1.3
+                particleCount: 50,
+                angle: 90,
+                spread: 80,
+                origin: { x, y: y - 0.1 },
+                colors: ['#10b981', '#6ee7b7', '#ffffff'],
+                startVelocity: 15,
+                gravity: 0.8,
+                ticks: 220,
+                scalar: 0.6,
+                shapes: ['circle'],
+                decay: 0.94
               })
-              confetti({
-                particleCount: 60,
-                angle: 120,
-                spread: 60,
-                origin: { x: x + 0.08, y },
-                colors: ['#f97316', '#fbbf24', '#ffffff'],
-                startVelocity: 40,
-                gravity: 1.3
-              })
-            }, 250)
+            }, 300)
           }
         }
       }
