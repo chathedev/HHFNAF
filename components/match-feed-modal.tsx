@@ -220,12 +220,12 @@ export function MatchFeedModal({
                 <div className="space-y-6">
                   {/* End of Match Marker - at the top */}
                   {matchFeed.length > 0 && (
-                    <div className="flex justify-center py-6">
+                    <div className="flex justify-center py-6 animate-in fade-in duration-500">
                       <div className="relative">
-                        <div className="absolute inset-0 bg-emerald-200 blur-xl opacity-50"></div>
+                        <div className="absolute inset-0 bg-emerald-200 blur-xl opacity-50 animate-pulse"></div>
                         <div className="relative bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 text-white px-8 py-4 rounded-2xl shadow-xl">
                           <div className="flex items-center justify-center gap-3">
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-6 h-6 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                             </svg>
                             <div>

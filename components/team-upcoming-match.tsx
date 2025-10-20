@@ -57,7 +57,7 @@ const getMatchOutcome = (rawResult?: string, isHome?: boolean, status?: string):
   }
 }
 
-// Helper to get score in correct display order matching team display
+// Helper to get score in correct display order matching team display 
 // For home matches: Härnösands HF vs Opponent → HHF score - Opponent score
 // For away matches: Opponent vs Härnösands HF → Opponent score - HHF score
 const getDisplayScore = (rawResult?: string, isHome?: boolean): string | null => {
