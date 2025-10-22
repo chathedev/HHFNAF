@@ -31,6 +31,7 @@ import type { FullContent, Partner } from "@/lib/content-types"
 import { TICKET_VENUES } from "@/lib/matches"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
+import { InstagramFeed } from "@/components/instagram-feed"
 
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 
@@ -820,6 +821,8 @@ export default function HomePage() {
             </div>
           </section>
 
+          {/* Instagram Feed Section */}
+          <InstagramFeed />
 
           {/* About Club Section */}
           <section className="py-16">
