@@ -89,6 +89,7 @@ type TeamUpcomingMatchProps = {
 export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchProps) {
   const [selectedMatch, setSelectedMatch] = useState<NormalizedMatch | null>(null)
   
+  // ALL HOOKS MUST BE AT THE TOP - before any conditional returns
   const { matches, loading, error } = useMatchData({ 
     refreshIntervalMs: 1_000,
     dataType: "current"
@@ -144,70 +145,26 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
     )
   }, [upcomingMatches, teamKeys])
 
-  if (!loading && !nextMatch) {
-    return null
-  }
-
-  if (error) {
-    return null
-  }
-
-  if (!nextMatch) {
-    return null
-  }
-
-  const scheduleParts = [nextMatch.displayDate, nextMatch.time, nextMatch.venue]
-    .filter((item): item is string => Boolean(item))
-    .join(" • ")
-    
-  // Use matchStatus from backend if available, otherwise calculate it
-  const now = Date.now()
-  const kickoff = nextMatch.date.getTime()
-  const liveWindowEnd = kickoff + 1000 * 60 * 60 * 2.5
-  const calculatedStatus = now >= kickoff && now <= liveWindowEnd ? "live" : nextMatch.result ? "finished" : "upcoming"
-  const status = nextMatch.matchStatus ?? calculatedStatus
-  
-  // Extract opponent name without (hemma)/(borta) suffix for display
-  const opponentName = nextMatch.opponent.replace(/\s*\((hemma|borta)\)\s*$/i, '').trim()
-  const homeAwayLabel = nextMatch.isHome === false ? 'borta' : 'hemma'
-  const isHome = nextMatch.isHome !== false
-  
-  // Check if team is A-lag (herr or dam/utv)
-  const normalizedTeamType = nextMatch.teamType.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "")
-  const isALagMatch =
-    (normalizedTeamType.includes("alag") && normalizedTeamType.includes("herr")) || 
-    (normalizedTeamType.includes("alag") && (normalizedTeamType.includes("dam") || normalizedTeamType.includes("utv")))
-  const venueName = nextMatch.venue?.toLowerCase() ?? ""
-  const isTicketEligibleBase =
-    Boolean(ticketUrl) && isHome && isALagMatch && TICKET_VENUES.some((keyword) => venueName.includes(keyword))
-  const outcomeInfo = getMatchOutcome(nextMatch.result, nextMatch.isHome, status)
-  const displayScore = getDisplayScore(nextMatch.result, nextMatch.isHome)
-  
-  // Check if result is stale (0-0 shown when match should be live or finished)
-  const minutesSinceKickoff = (now - kickoff) / (1000 * 60)
-  const trimmedResult = typeof nextMatch.result === "string" ? nextMatch.result.trim() : null
-  
-  // Normalize the result to check for any variation of 0-0
-  const normalizedResult = trimmedResult?.replace(/[–-]/g, '-').toLowerCase()
-  const isZeroZero = normalizedResult === "0-0" || normalizedResult === "00" || trimmedResult === "0-0" || trimmedResult === "0–0"
-  const isStaleZeroResult = isZeroZero && minutesSinceKickoff > 3 && (status === "live" || status === "finished")
-  
-  // Don't show LIVE badge if match has been 0-0 for more than 60 minutes (likely stale data)
-  const shouldShowLive = status === "live" && !(isZeroZero && minutesSinceKickoff > 60)
-  
-  const isFutureOrLive = nextMatch.date.getTime() >= Date.now() || status === "live"
-  const showTicket = isTicketEligibleBase && !outcomeInfo && isFutureOrLive
-
-  // Only allow clicking timeline for live or finished matches
-  const canOpenTimeline = status === "live" || status === "finished"
-
-  // Track previous score to detect when Härnösands HF scores
+  // Track previous score to detect when Härnösands HF scores - MUST be before any returns
   const prevScoreRef = useRef<{ home: number; away: number; matchId: string } | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
   const confettiTriggeredRef = useRef(false)
 
+  // Confetti effect - MUST be before any returns
   useEffect(() => {
-    if (!nextMatch.result || status !== "live") {
+    if (!nextMatch || !nextMatch.result) {
+      // Reset confetti trigger when no match or no result
+      confettiTriggeredRef.current = false
+      return
+    }
+
+    const now = Date.now()
+    const kickoff = nextMatch.date.getTime()
+    const liveWindowEnd = kickoff + 1000 * 60 * 60 * 2.5
+    const calculatedStatus = now >= kickoff && now <= liveWindowEnd ? "live" : nextMatch.result ? "finished" : "upcoming"
+    const status = nextMatch.matchStatus ?? calculatedStatus
+
+    if (status !== "live") {
       // Reset confetti trigger when match is not live
       confettiTriggeredRef.current = false
       return
@@ -364,7 +321,65 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
       }
       confettiTriggeredRef.current = false
     }
-  }, [nextMatch.result, nextMatch.id, nextMatch.isHome, status])
+  }, [nextMatch])
+
+  // NOW we can do conditional returns AFTER all hooks
+  if (!loading && !nextMatch) {
+    return null
+  }
+
+  if (error) {
+    return null
+  }
+
+  if (!nextMatch) {
+    return null
+  }
+
+  const scheduleParts = [nextMatch.displayDate, nextMatch.time, nextMatch.venue]
+    .filter((item): item is string => Boolean(item))
+    .join(" • ")
+    
+  // Use matchStatus from backend if available, otherwise calculate it
+  const now = Date.now()
+  const kickoff = nextMatch.date.getTime()
+  const liveWindowEnd = kickoff + 1000 * 60 * 60 * 2.5
+  const calculatedStatus = now >= kickoff && now <= liveWindowEnd ? "live" : nextMatch.result ? "finished" : "upcoming"
+  const status = nextMatch.matchStatus ?? calculatedStatus
+  
+  // Extract opponent name without (hemma)/(borta) suffix for display
+  const opponentName = nextMatch.opponent.replace(/\s*\((hemma|borta)\)\s*$/i, '').trim()
+  const homeAwayLabel = nextMatch.isHome === false ? 'borta' : 'hemma'
+  const isHome = nextMatch.isHome !== false
+  
+  // Check if team is A-lag (herr or dam/utv)
+  const normalizedTeamType = nextMatch.teamType.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "")
+  const isALagMatch =
+    (normalizedTeamType.includes("alag") && normalizedTeamType.includes("herr")) || 
+    (normalizedTeamType.includes("alag") && (normalizedTeamType.includes("dam") || normalizedTeamType.includes("utv")))
+  const venueName = nextMatch.venue?.toLowerCase() ?? ""
+  const isTicketEligibleBase =
+    Boolean(ticketUrl) && isHome && isALagMatch && TICKET_VENUES.some((keyword) => venueName.includes(keyword))
+  const outcomeInfo = getMatchOutcome(nextMatch.result, nextMatch.isHome, status)
+  const displayScore = getDisplayScore(nextMatch.result, nextMatch.isHome)
+  
+  // Check if result is stale (0-0 shown when match should be live or finished)
+  const minutesSinceKickoff = (now - kickoff) / (1000 * 60)
+  const trimmedResult = typeof nextMatch.result === "string" ? nextMatch.result.trim() : null
+  
+  // Normalize the result to check for any variation of 0-0
+  const normalizedResult = trimmedResult?.replace(/[–-]/g, '-').toLowerCase()
+  const isZeroZero = normalizedResult === "0-0" || normalizedResult === "00" || trimmedResult === "0-0" || trimmedResult === "0–0"
+  const isStaleZeroResult = isZeroZero && minutesSinceKickoff > 3 && (status === "live" || status === "finished")
+  
+  // Don't show LIVE badge if match has been 0-0 for more than 60 minutes (likely stale data)
+  const shouldShowLive = status === "live" && !(isZeroZero && minutesSinceKickoff > 60)
+  
+  const isFutureOrLive = nextMatch.date.getTime() >= Date.now() || status === "live"
+  const showTicket = isTicketEligibleBase && !outcomeInfo && isFutureOrLive
+
+  // Only allow clicking timeline for live or finished matches
+  const canOpenTimeline = status === "live" || status === "finished"
 
   return (
     <>
