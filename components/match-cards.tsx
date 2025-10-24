@@ -16,7 +16,7 @@ interface Match {
   playUrl?: string
 }
 
-const API_BASE_URL = "https://api.tivly.se/matcher"
+const API_BASE_URL = "https://harnosandshf.api.wby.se/matcher"
 
 export default function MatchCards() {
   const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([])

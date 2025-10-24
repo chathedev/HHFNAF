@@ -83,7 +83,7 @@ export type EnhancedMatchData = {
 
 const API_BASE_URL =
   (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
-  "https://api.tivly.se"
+  "https://harnosandshf.api.wby.se"
 
 type DataType = "current" | "old" | "both" | "enhanced"
 
