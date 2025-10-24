@@ -294,7 +294,12 @@ export function MatchFeedModal({
                                           ? "bg-emerald-500 text-white" 
                                           : "bg-blue-500 text-white"
                                       }`}>
-                                        {isHHF ? '🟢 Härnösands HF' : '🔵 ' + (awayTeam.split(' ').slice(0, 2).join(' '))}
+                                        {isHHF 
+                                          ? '🟢 Härnösands HF' 
+                                          : homeTeam.toLowerCase().includes('härnösand')
+                                            ? '🔵 ' + awayTeam
+                                            : '🔵 ' + homeTeam
+                                        }
                                       </span>
                                       <span className="text-sm font-semibold text-gray-700">
                                         {event.type}
