@@ -217,20 +217,23 @@ export function MatchFeedModal({
                   Inga händelser att visa
                 </div>
               ) : (
-                <div className="space-y-8">
+                <div className="space-y-6">
                   {periods.map((period) => (
                     <div key={period}>
-                      {/* Period Header - Simple */}
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="h-px flex-1 bg-gray-200"></div>
-                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide px-2">
-                          {period === 1 ? "Första halvlek" : period === 2 ? "Andra halvlek" : `Period ${period}`}
-                        </span>
-                        <div className="h-px flex-1 bg-gray-200"></div>
+                      {/* Period Header - Enhanced */}
+                      <div className="relative mb-5">
+                        <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                          <div className="w-full border-t border-gray-300"></div>
+                        </div>
+                        <div className="relative flex justify-center">
+                          <span className="bg-gray-900 text-white px-5 py-2 text-xs font-bold uppercase tracking-wider rounded-full">
+                            {period === 1 ? "Första halvlek" : period === 2 ? "Andra halvlek" : `Period ${period}`}
+                          </span>
+                        </div>
                       </div>
                       
-                      {/* Events - Minimalistic */}
-                      <div className="space-y-2">
+                      {/* Events - Enhanced */}
+                      <div className="space-y-2.5">
                         {eventsByPeriod[period].map((event, idx) => {
                           // Determine if this is Härnösands HF
                           const homeTeamLower = homeTeam?.toLowerCase() || ''
@@ -245,41 +248,84 @@ export function MatchFeedModal({
                           return (
                             <div 
                               key={idx} 
-                              className="bg-white rounded-lg border border-gray-200 p-3 hover:border-gray-300 transition-colors"
+                              className={`relative bg-white rounded-xl border-2 transition-all hover:shadow-md ${
+                                isGoal
+                                  ? isHHF 
+                                    ? "border-emerald-200 hover:border-emerald-300" 
+                                    : "border-blue-200 hover:border-blue-300"
+                                  : "border-gray-200 hover:border-gray-300"
+                              }`}
                             >
-                              <div className="flex items-center gap-3">
-                                {/* Time */}
-                                <div className="flex-shrink-0 w-12 text-right">
-                                  <span className="text-sm font-medium text-gray-900">
-                                    {event.time.split(':')[0]}'
-                                  </span>
-                                </div>
-                                
-                                {/* Team indicator */}
-                                <div className="flex-shrink-0">
-                                  <div className={`w-1 h-8 rounded-full ${
-                                    isHHF ? "bg-emerald-500" : "bg-blue-500"
-                                  }`}></div>
-                                </div>
-                                
-                                {/* Event Details */}
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-baseline gap-2 mb-0.5">
-                                    <span className="text-sm font-medium text-gray-900">{event.type}</span>
-                                    {(event.homeScore !== undefined || event.awayScore !== undefined) && (
-                                      <span className="text-sm font-bold text-gray-900 tabular-nums">
-                                        {event.homeScore ?? 0}–{event.awayScore ?? 0}
-                                      </span>
-                                    )}
+                              {/* Team color bar - more prominent */}
+                              <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-xl ${
+                                isHHF ? "bg-emerald-500" : "bg-blue-500"
+                              }`}></div>
+                              
+                              <div className="pl-4 pr-4 py-3.5">
+                                <div className="flex items-center gap-4">
+                                  {/* Time Badge - Enhanced */}
+                                  <div className="flex-shrink-0">
+                                    <div className={`w-16 h-16 rounded-xl flex flex-col items-center justify-center shadow-sm border-2 ${
+                                      isGoal
+                                        ? isHHF 
+                                          ? "bg-emerald-50 border-emerald-200" 
+                                          : "bg-blue-50 border-blue-200"
+                                        : "bg-gray-50 border-gray-200"
+                                    }`}>
+                                      <span className={`text-xs font-medium ${
+                                        isGoal
+                                          ? isHHF ? "text-emerald-600" : "text-blue-600"
+                                          : "text-gray-500"
+                                      }`}>MIN</span>
+                                      <span className={`text-xl font-bold ${
+                                        isGoal
+                                          ? isHHF ? "text-emerald-700" : "text-blue-700"
+                                          : "text-gray-700"
+                                      }`}>{event.time.split(':')[0]}</span>
+                                    </div>
                                   </div>
-                                  {event.player && (
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="text-xs text-gray-600">{event.player}</span>
-                                      {event.playerNumber && (
-                                        <span className="text-xs text-gray-400">#{event.playerNumber}</span>
+                                  
+                                  {/* Event Details */}
+                                  <div className="flex-1 min-w-0">
+                                    {/* Team Badge + Event Type */}
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold ${
+                                        isHHF 
+                                          ? "bg-emerald-500 text-white" 
+                                          : "bg-blue-500 text-white"
+                                      }`}>
+                                        {isHHF ? '🟢 Härnösands HF' : '🔵 ' + (awayTeam.split(' ').slice(0, 2).join(' '))}
+                                      </span>
+                                      <span className="text-sm font-semibold text-gray-700">
+                                        {event.type}
+                                      </span>
+                                    </div>
+                                    
+                                    {/* Player + Score Row */}
+                                    <div className="flex items-center justify-between gap-3">
+                                      {event.player && (
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-sm font-medium text-gray-900">{event.player}</span>
+                                          {event.playerNumber && (
+                                            <span className="inline-flex items-center justify-center min-w-[24px] h-6 bg-gray-800 text-white text-xs font-bold rounded px-1.5">
+                                              {event.playerNumber}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                      
+                                      {/* Score Display - Enhanced */}
+                                      {(event.homeScore !== undefined || event.awayScore !== undefined) && (
+                                        <div className="flex-shrink-0">
+                                          <div className="bg-gray-900 text-white px-3 py-1.5 rounded-lg">
+                                            <span className="text-base font-bold tabular-nums">
+                                              {event.homeScore ?? 0}–{event.awayScore ?? 0}
+                                            </span>
+                                          </div>
+                                        </div>
                                       )}
                                     </div>
-                                  )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
