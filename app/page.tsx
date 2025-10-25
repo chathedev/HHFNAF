@@ -150,7 +150,9 @@ export default function HomePage() {
     const liveLookbackMs = 1000 * 60 * 60 * 6
     
     // Home page: Show upcoming, live (within window), and recently finished matches
-    return upcomingMatches.filter((match) => {
+    const statusOrder: Record<string, number> = { live: 0, upcoming: 1, finished: 2 }
+    
+    const matchesInWindow = upcomingMatches.filter((match) => {
       const kickoff = match.date.getTime()
       const status = match.matchStatus
       
@@ -168,6 +170,21 @@ export default function HomePage() {
       
       return kickoff >= now
     })
+
+    matchesInWindow.sort((a, b) => {
+      const statusA = getMatchStatus(a)
+      const statusB = getMatchStatus(b)
+      const statusDiff = (statusOrder[statusA] ?? 3) - (statusOrder[statusB] ?? 3)
+      if (statusDiff !== 0) {
+        return statusDiff
+      }
+      if (statusA === "finished") {
+        return b.date.getTime() - a.date.getTime()
+      }
+      return a.date.getTime() - b.date.getTime()
+    })
+
+    return matchesInWindow
   }, [upcomingMatches])
 
   const matchesToDisplay = matchesTodayForward.slice(0, 10)

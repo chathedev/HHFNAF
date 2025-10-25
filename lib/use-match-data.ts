@@ -158,6 +158,11 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
   }
 
   const timeline = match.matchFeed ?? []
+  const now = Date.now()
+  const kickoffMs = parsedDate.getTime()
+  const hasExplicitTime = Boolean(match.time && match.time.trim().length > 0)
+  const finishBufferMs = hasExplicitTime ? 1000 * 60 * 60 * 3 : 1000 * 60 * 60 * 24
+  const finishThreshold = kickoffMs + finishBufferMs
   const hasTimelineEvents = timeline.some((event) => Boolean(event?.type || event?.description))
   const timelineEnded = timeline.some((event) => {
     const type = event.type?.toLowerCase() ?? ""
@@ -178,11 +183,27 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     derivedStatus = "finished"
   } else if (hasTimelineEvents) {
     derivedStatus = "live"
-  } else if (derivedStatus === "finished") {
-    // Without timeline confirmation we consider the match still ongoing/upcoming.
-    derivedStatus = "upcoming"
-  } else if (derivedStatus === "live" && !hasTimelineEvents) {
-    derivedStatus = "upcoming"
+  } else {
+    if (derivedStatus === "finished" && now < finishThreshold) {
+      derivedStatus = "upcoming"
+    }
+
+    if (derivedStatus === "live") {
+      if (now > finishThreshold) {
+        derivedStatus = "finished"
+      } else {
+        // Without timeline activity we keep it as upcoming until events arrive.
+        derivedStatus = "upcoming"
+      }
+    }
+
+    if ((!derivedStatus || derivedStatus === "upcoming") && now > finishThreshold) {
+      derivedStatus = "finished"
+    }
+
+    if (!derivedStatus) {
+      derivedStatus = now > finishThreshold ? "finished" : "upcoming"
+    }
   }
 
   return {
@@ -280,10 +301,38 @@ const fetchFromApi = async (dataType: DataType = "both"): Promise<EnhancedMatchD
         matches = Array.isArray(payload) ? payload : []
       }
       
+      const normalizedMatches = normalizeMatches(matches)
+
+      const statusBuckets: NonNullable<EnhancedMatchData['grouped']>['byStatus'] = {
+        live: [],
+        upcoming: [],
+        finished: [],
+      }
+
+      normalizedMatches.forEach((normalizedMatch) => {
+        if (normalizedMatch.matchStatus === "live") {
+          statusBuckets.live.push(normalizedMatch)
+        } else if (normalizedMatch.matchStatus === "finished") {
+          statusBuckets.finished.push(normalizedMatch)
+        } else {
+          statusBuckets.upcoming.push(normalizedMatch)
+        }
+      })
+
+      statusBuckets.live.sort((a, b) => a.date.getTime() - b.date.getTime())
+      statusBuckets.upcoming.sort((a, b) => a.date.getTime() - b.date.getTime())
+      statusBuckets.finished.sort((a, b) => b.date.getTime() - a.date.getTime())
+
+      const normalizedGrouped: EnhancedMatchData['grouped'] | undefined = {
+        byTeam: grouped?.byTeam ?? {},
+        byStatus: statusBuckets,
+        bySeries: grouped?.bySeries ?? {},
+      }
+
       return {
-        matches: normalizeMatches(matches),
+        matches: normalizedMatches,
         metadata,
-        grouped,
+        grouped: normalizedGrouped,
       }
     } catch (error) {
       if (attempt < 2) {
