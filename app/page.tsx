@@ -144,6 +144,26 @@ export default function HomePage() {
 
   const tierOrder = ["Diamantpartner", "Platinapartner", "Guldpartner", "Silverpartner", "Bronspartner"]
 
+  function getMatchStatus(match: NormalizedMatch): "live" | "finished" | "upcoming" {
+    if (match.matchStatus) {
+      return match.matchStatus
+    }
+    
+    const now = Date.now()
+    const kickoff = match.date.getTime()
+    const liveWindowEnd = kickoff + 1000 * 60 * 60 * 2.5
+    
+    if (now >= kickoff && now <= liveWindowEnd) {
+      return "live"
+    }
+    
+    if (match.result) {
+      return "finished"
+    }
+    
+    return "upcoming"
+  }
+
   const matchesTodayForward = useMemo(() => {
     const now = Date.now()
     const twoHoursAgo = now - 1000 * 60 * 60 * 2
@@ -188,28 +208,6 @@ export default function HomePage() {
   }, [upcomingMatches])
 
   const matchesToDisplay = matchesTodayForward.slice(0, 10)
-  const getMatchStatus = (match: NormalizedMatch) => {
-    // Use matchStatus from backend if available
-    if (match.matchStatus) {
-      return match.matchStatus
-    }
-    
-    // Fallback to calculated status if backend doesn't provide it
-    const now = Date.now()
-    const kickoff = match.date.getTime()
-    const liveWindowEnd = kickoff + 1000 * 60 * 60 * 2.5
-    
-    // Check if match is currently in the live window (regardless of result)
-    if (now >= kickoff && now <= liveWindowEnd) {
-      return "live"
-    }
-    
-    if (match.result) {
-      return "finished"
-    }
-    
-    return "upcoming"
-  }
 
   // Confetti effect for all live matches
   useEffect(() => {
