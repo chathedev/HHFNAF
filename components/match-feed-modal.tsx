@@ -234,17 +234,17 @@ export function MatchFeedModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-3 py-6 sm:px-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-2 py-4 sm:px-6">
       <div
-        className="relative flex h-full w-full max-h-[90vh] max-w-3xl flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.25)] sm:h-auto sm:max-h-[85vh]"
+        className="relative flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.3)] md:h-[90vh]"
         ref={modalRef}
       >
-        <header className="border-b border-slate-200 px-6 py-6 sm:px-8">
+        <header className="border-b border-slate-200 px-6 py-6 sm:px-10">
           <div className="flex items-start justify-between gap-6">
             <div className="space-y-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Matchuppföljning</p>
-                <h2 className="mt-2 text-xl font-semibold text-slate-900 sm:text-2xl">
+                <h2 className="mt-2 text-xl font-semibold text-slate-900 sm:text-3xl">
                   {homeTeam} <span className="text-slate-300">vs</span> {awayTeam}
                 </h2>
               </div>
@@ -268,7 +268,7 @@ export function MatchFeedModal({
 
               <div className="text-right">
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Resultat</p>
-                <div className="mt-1 inline-flex min-w-[120px] items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 text-2xl font-semibold text-white">
+                <div className="mt-1 inline-flex min-w-[120px] items-center justify-center rounded-3xl bg-slate-900 px-6 py-4 text-3xl font-semibold text-white">
                   {finalScore ?? "—"}
                 </div>
               </div>
@@ -276,12 +276,12 @@ export function MatchFeedModal({
           </div>
         </header>
 
-        <nav className="grid grid-cols-2 border-b border-slate-200 bg-slate-50/60 text-sm font-semibold">
+        <nav className="grid grid-cols-2 border-b border-slate-200 bg-slate-50/70 text-sm font-semibold">
           <button
             onClick={() => setActiveTab("timeline")}
-            className={`px-5 py-3 transition ${
+            className={`px-6 py-4 transition ${
               activeTab === "timeline"
-                ? "bg-white text-slate-900 shadow-inner"
+                ? "bg-white text-slate-900 shadow-[inset_0_-2px_0_rgba(15,23,42,0.08)]"
                 : "text-slate-500 hover:text-slate-800"
             }`}
           >
@@ -289,9 +289,9 @@ export function MatchFeedModal({
           </button>
           <button
             onClick={() => setActiveTab("scorers")}
-            className={`px-5 py-3 transition ${
+            className={`px-6 py-4 transition ${
               activeTab === "scorers"
-                ? "bg-white text-slate-900 shadow-inner"
+                ? "bg-white text-slate-900 shadow-[inset_0_-2px_0_rgba(15,23,42,0.08)]"
                 : "text-slate-500 hover:text-slate-800"
             } disabled:cursor-not-allowed disabled:opacity-40`}
             disabled={!hasScorers}
@@ -303,13 +303,13 @@ export function MatchFeedModal({
         <div className="flex-1 min-h-0 bg-slate-50">
           {activeTab === "timeline" && (
             <div className="relative h-full">
-              <div className="absolute inset-0 overflow-y-auto px-6 pb-24 pt-6 sm:px-8">
+              <div className="absolute inset-0 overflow-y-auto px-6 pb-10 pt-8 sm:px-10">
                 {matchFeed.length === 0 ? (
                   <div className="flex h-full items-center justify-center text-sm text-slate-500">
                     Inga händelser ännu.
                   </div>
                 ) : (
-                  <div className="space-y-10">
+                  <div className="space-y-12 pb-12">
                     {periods.map((period) => (
                       <section key={period} className="space-y-4">
                         <div>
@@ -317,7 +317,7 @@ export function MatchFeedModal({
                             {formatPeriodLabel(period)}
                           </p>
                         </div>
-                        <ul className="space-y-3 border-l border-slate-200 pl-6">
+                        <ul className="space-y-4 border-l border-slate-200 pl-7">
                           {eventsByPeriod[period].map((event, index) => {
                             const type = event.type?.toLowerCase() ?? ""
                             const isGoal = type.includes("mål")
@@ -336,9 +336,9 @@ export function MatchFeedModal({
 
                             return (
                               <li key={`${event.time}-${index}`} className="relative">
-                                <span className={`absolute -left-[11px] top-5 h-2.5 w-2.5 rounded-full ${dotTone}`} />
+                                <span className={`absolute -left-[12px] top-5 h-3 w-3 rounded-full ${dotTone}`} />
                                 <div
-                                  className={`rounded-2xl border px-4 py-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${tone}`}
+                                  className={`rounded-[26px] border px-5 py-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg ${tone}`}
                                 >
                                   <div className="flex flex-wrap items-start gap-4">
                                     <span className="rounded-full bg-white/70 px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-slate-600 shadow-sm">
@@ -386,7 +386,7 @@ export function MatchFeedModal({
 
           {activeTab === "scorers" && (
             <div className="relative h-full">
-              <div className="absolute inset-0 overflow-y-auto px-6 pb-24 pt-6 sm:px-8">
+              <div className="absolute inset-0 overflow-y-auto px-6 pb-10 pt-8 sm:px-10">
                 {Object.keys(topScorersByTeam).length === 0 ? (
                   <div className="flex h-full items-center justify-center text-sm text-slate-500">
                     Inga noterade målskyttar.
@@ -394,13 +394,13 @@ export function MatchFeedModal({
                 ) : (
                   <div className="space-y-4">
                     {Object.entries(topScorersByTeam).map(([team, scorers]) => (
-                      <section key={team} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                      <section key={team} className="rounded-[26px] border border-slate-200 bg-white p-6 shadow-sm">
                         <h3 className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">{team}</h3>
                         <ul className="mt-3 space-y-2">
                           {scorers.map((scorer, index) => (
                             <li
                               key={`${scorer.player}-${index}`}
-                              className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 text-sm"
+                              className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm"
                             >
                               <div className="flex items-center gap-3">
                                 <span className="text-lg">{index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}</span>
@@ -425,15 +425,6 @@ export function MatchFeedModal({
             </div>
           )}
         </div>
-
-        <footer className="border-t border-slate-200 bg-white px-6 py-5 sm:px-8">
-          <button
-            onClick={onClose}
-            className="w-full rounded-full bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-          >
-            Stäng
-          </button>
-        </footer>
       </div>
     </div>
   )
