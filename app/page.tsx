@@ -651,28 +651,41 @@ export default function HomePage() {
                                 {/* Result or Actions */}
                                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                                   <div className="flex items-center gap-4">
-                                    {/* Show live scores - just the score, no badges */}
-                                    {status === "live" && outcomeInfo && displayScore && !isStaleZeroResult && (
-                                      <span className="text-2xl font-bold text-gray-900">{displayScore}</span>
-                                    )}
-                                    
-                                    {/* Show 0-0 for live or finished matches with warning if stale */}
-                                    {((status === "live" && !outcomeInfo && isZeroZero) || (status === "finished" && isZeroZero && isStaleZeroResult)) && (
+                                    {/* Show live scores with LIVE indicator */}
+                                    {status === "live" && displayScore && !isStaleZeroResult && (
                                       <div className="flex items-center gap-3">
-                                        <span className="text-2xl font-bold text-gray-900">0–0</span>
-                                        {isStaleZeroResult && (
-                                          <div className="flex items-center gap-1.5 text-xs text-gray-600 bg-gray-50 px-2.5 py-1 rounded border border-gray-200">
-                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                            <span>Resultat ej tillgängligt</span>
-                                          </div>
-                                        )}
+                                        <span className="text-2xl font-bold text-gray-900">{displayScore}</span>
+                                        <span className="text-xs font-semibold px-2.5 py-1 rounded bg-red-100 text-red-700">
+                                          PÅGÅR
+                                        </span>
                                       </div>
                                     )}
                                     
-                                    {/* Show results with outcome badge only for finished matches (but not stale 0-0) */}
-                                    {status !== "live" && outcomeInfo && displayScore && !isStaleZeroResult && (
+                                    {/* Show 0-0 for live matches without score yet */}
+                                    {status === "live" && (!displayScore || (isZeroZero && !isStaleZeroResult)) && !isStaleZeroResult && (
+                                      <div className="flex items-center gap-3">
+                                        <span className="text-2xl font-bold text-gray-900">0–0</span>
+                                        <span className="text-xs font-semibold px-2.5 py-1 rounded bg-red-100 text-red-700">
+                                          PÅGÅR
+                                        </span>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Show stale result warning */}
+                                    {status === "live" && isStaleZeroResult && (
+                                      <div className="flex items-center gap-3">
+                                        <span className="text-2xl font-bold text-gray-900">0–0</span>
+                                        <div className="flex items-center gap-1.5 text-xs text-gray-600 bg-gray-50 px-2.5 py-1 rounded border border-gray-200">
+                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                          </svg>
+                                          <span>Resultat ej tillgängligt</span>
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Show results with outcome badge only for finished matches */}
+                                    {status === "finished" && outcomeInfo && displayScore && !isStaleZeroResult && (
                                       <div className="flex items-center gap-3">
                                         {outcomeInfo.label !== "Ej publicerat" && (
                                           <span
@@ -690,6 +703,19 @@ export default function HomePage() {
                                         <span className={outcomeInfo.label === "Ej publicerat" ? "text-sm text-gray-600" : "text-2xl font-bold text-gray-900"}>
                                           {displayScore}
                                         </span>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Show stale 0-0 for finished matches */}
+                                    {status === "finished" && isZeroZero && isStaleZeroResult && (
+                                      <div className="flex items-center gap-3">
+                                        <span className="text-2xl font-bold text-gray-900">0–0</span>
+                                        <div className="flex items-center gap-1.5 text-xs text-gray-600 bg-gray-50 px-2.5 py-1 rounded border border-gray-200">
+                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                          </svg>
+                                          <span>Resultat ej tillgängligt</span>
+                                        </div>
                                       </div>
                                     )}
 
