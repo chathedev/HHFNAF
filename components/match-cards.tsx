@@ -1,7 +1,8 @@
 "use client"
 
-import { Calendar, Trophy, Zap, Clock } from "lucide-react"
+import { Calendar, Trophy, Zap } from "lucide-react"
 import { useEffect, useState } from "react"
+import type { ReactNode } from "react"
 
 interface Match {
   teamType?: string
@@ -18,6 +19,23 @@ interface Match {
 
 const API_BASE_URL = "https://harnosandshf.api.wby.se/matcher"
 
+const removeHomeAwaySuffix = (value?: string) => {
+  if (!value) return ""
+  return value.replace(/\s*\((hemma|borta)\)\s*$/i, "").trim()
+}
+
+const InfoCard = ({ icon, title, description }: { icon: ReactNode; title: string; description: string }) => (
+  <div className="rounded-3xl border border-gray-200 bg-white/80 p-6 shadow-sm backdrop-blur">
+    <div className="flex items-start gap-4">
+      <div className="rounded-2xl bg-gray-100 p-2 text-gray-600">{icon}</div>
+      <div>
+        <h3 className="text-base font-semibold text-gray-900">{title}</h3>
+        <p className="mt-1 text-sm text-gray-600">{description}</p>
+      </div>
+    </div>
+  </div>
+)
+
 export default function MatchCards() {
   const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([])
   const [loading, setLoading] = useState(true)
@@ -27,42 +45,38 @@ export default function MatchCards() {
     const fetchMatches = async () => {
       try {
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
+        const timeoutId = window.setTimeout(() => controller.abort(), 5000)
 
         const response = await fetch(`${API_BASE_URL}/data/current`, {
           signal: controller.signal,
-          headers: {
-            Accept: "application/json",
-          },
+          headers: { Accept: "application/json" },
           cache: "no-store",
         })
 
-        clearTimeout(timeoutId)
+        window.clearTimeout(timeoutId)
 
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`)
         }
 
         const data = await response.json()
-        
-        // Handle response structure: { current: [...] } or just [...]
         let matches: Match[] = []
         if (data.current && Array.isArray(data.current)) {
           matches = data.current
         } else if (Array.isArray(data)) {
           matches = data
         }
-        
+
         setUpcomingMatches(matches.slice(0, 3))
         setError(null)
-      } catch (error) {
-        console.error("Error fetching matches:", error)
-        if (error instanceof Error && error.name === "AbortError") {
+      } catch (caught) {
+        console.error("Error fetching matches:", caught)
+        if (caught instanceof Error && caught.name === "AbortError") {
           setError("Timeout - kunde inte ladda matcher")
         } else {
           setError("Kunde inte ladda matcher just nu")
         }
-        setUpcomingMatches([]) // Ensure we have an empty array
+        setUpcomingMatches([])
       } finally {
         setLoading(false)
       }
@@ -73,97 +87,120 @@ export default function MatchCards() {
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return ""
-    try {
-      const date = new Date(dateString)
-      if (isNaN(date.getTime())) return dateString
-      return date.toLocaleDateString("sv-SE", {
-        weekday: "short",
-        day: "numeric",
-        month: "short",
-      })
-    } catch {
+    const date = new Date(dateString)
+    if (Number.isNaN(date.getTime())) {
       return dateString
     }
+    return date.toLocaleDateString("sv-SE", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+    })
   }
 
   return (
     <section className="py-16">
       <div className="container mx-auto px-4">
-        <div className="grid md:grid-cols-3 gap-6">
-          {/* Kommande Matcher */}
-          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-            <div className="p-6 flex flex-col items-center text-center">
-              <Calendar className="w-12 h-12 text-orange-500 mb-4" />
-              <h3 className="text-xl font-bold text-orange-500 mb-4">KOMMANDE MATCHER</h3>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <div className="rounded-3xl border border-gray-200 bg-white/80 p-6 shadow-sm backdrop-blur">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Kommande matcher</p>
+                <h3 className="mt-1 text-2xl font-semibold text-gray-900">Härnösands HF</h3>
+              </div>
+              <span className="rounded-full bg-orange-100 p-2 text-orange-600">
+                <Calendar className="h-6 w-6" />
+              </span>
+            </div>
 
+            <div className="mt-6 space-y-4">
               {loading ? (
-                <p className="text-gray-600 text-sm">Laddar matcher...</p>
+                <p className="text-sm text-gray-500">Laddar matcher…</p>
               ) : error ? (
-                <p className="text-red-600 text-sm">{error}</p>
-              ) : upcomingMatches.length > 0 ? (
-                <div className="space-y-3 w-full">
-                  {upcomingMatches.map((match, index) => (
-                    <div key={index} className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors text-left">
-                      <div className="font-bold text-base text-gray-900 mb-2">
-                        vs {match.opponent || 'TBA'}
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
-                        <span className="font-medium">{match.teamType}</span>
-                        <span>{formatDate(match.date)} {match.time || ''}</span>
-                      </div>
-                      {match.venue && (
-                        <p className="text-[11px] text-gray-500 mb-2">{match.venue}</p>
-                      )}
-                      <div className="flex items-center justify-between pt-2 border-t border-gray-200">
-                        {match.playUrl && match.playUrl !== "null" ? (
-                          <a
-                            href={match.playUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded transition-colors"
-                            title="Se matchen live"
-                          >
-                            <img
-                              src="/handbollplay_mini.png"
-                              alt=""
-                              className="w-3.5 h-3.5 brightness-0 invert"
-                            />
-                            Se live
-                          </a>
-                        ) : (
-                          <div></div>
-                        )}
-                        {match.isHome !== undefined && (
-                          <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded">
-                            {match.isHome ? "Hemma" : "Borta"}
-                          </span>
-                        )}
+                <p className="text-sm text-red-600">{error}</p>
+              ) : upcomingMatches.length === 0 ? (
+                <p className="text-sm text-gray-500">Inga kommande matcher publicerade just nu.</p>
+              ) : (
+                upcomingMatches.map((match, index) => {
+                  const opponent = removeHomeAwaySuffix(match.opponent) || "Motståndare meddelas"
+                  const scheduleBits = [formatDate(match.date), match.time, match.venue].filter(Boolean)
+
+                  return (
+                    <div
+                      key={`${match.teamType}-${match.date}-${index}`}
+                      className="rounded-2xl border border-gray-200 bg-white/90 px-4 py-4 shadow-sm transition-colors hover:border-gray-300"
+                    >
+                      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {match.teamType && (
+                              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                                {match.teamType}
+                              </span>
+                            )}
+                            {match.isHome !== undefined && (
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                                  match.isHome ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"
+                                }`}
+                              >
+                                {match.isHome ? "Hemma" : "Borta"}
+                              </span>
+                            )}
+                          </div>
+
+                          <h4 className="text-lg font-semibold text-gray-900">
+                            {match.isHome === false
+                              ? `${opponent} vs Härnösands HF`
+                              : `Härnösands HF vs ${opponent}`}
+                          </h4>
+
+                          {scheduleBits.length > 0 && (
+                            <p className="text-sm text-gray-600">{scheduleBits.join(" • ")}</p>
+                          )}
+                        </div>
+
+                        <div className="flex flex-col items-start gap-2 md:items-end">
+                          {match.playUrl && match.playUrl !== "null" && (
+                            <a
+                              href={match.playUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 rounded-full bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-orange-600"
+                            >
+                              Se live
+                            </a>
+                          )}
+                          {match.infoUrl && match.infoUrl !== "null" && (
+                            <a
+                              href={match.infoUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs font-medium text-gray-500 underline-offset-2 transition-colors hover:text-gray-700 hover:underline"
+                            >
+                              Matchinfo
+                            </a>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-600 text-sm">Inga kommande matcher hittades</p>
+                  )
+                })
               )}
             </div>
           </div>
 
-          {/* Handbollsligan Dam */}
-          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-            <div className="p-6 flex flex-col items-center text-center">
-              <Trophy className="w-12 h-12 text-green-600 mb-4" />
-              <h3 className="text-xl font-bold text-green-600 mb-2">HANDBOLLSLIGAN DAM</h3>
-              <p className="text-gray-600 text-sm">Följ vårt A-lag Dam i Handbollsligan</p>
-            </div>
-          </div>
-
-          {/* Svenska Cupen */}
-          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-            <div className="p-6 flex flex-col items-center text-center">
-              <Zap className="w-12 h-12 text-orange-500 mb-4" />
-              <h3 className="text-xl font-bold text-orange-500 mb-2">SVENSKA CUPEN 25/26</h3>
-              <p className="text-gray-600 text-sm">Följ vårt A-lag herr i Svenska Cupen</p>
-            </div>
+          <div className="space-y-4">
+            <InfoCard
+              icon={<Trophy className="h-6 w-6 text-emerald-600" />}
+              title="Handbollsligan Dam"
+              description="Följ vårt A-lag Dam i Handbollsligan."
+            />
+            <InfoCard
+              icon={<Zap className="h-6 w-6 text-orange-500" />}
+              title="Svenska Cupen 25/26"
+              description="Följ vårt A-lag Herr i Svenska Cupen."
+            />
           </div>
         </div>
       </div>

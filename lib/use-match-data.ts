@@ -157,6 +157,34 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     derivedIsHome = homeAwaySuffix[1].toLowerCase() === "hemma"
   }
 
+  const timeline = match.matchFeed ?? []
+  const hasTimelineEvents = timeline.some((event) => Boolean(event?.type || event?.description))
+  const timelineEnded = timeline.some((event) => {
+    const type = event.type?.toLowerCase() ?? ""
+    const description = event.description?.toLowerCase() ?? ""
+    return (
+      type.includes("slut") ||
+      type.includes("avslut") ||
+      type.includes("final") ||
+      description.includes("slut") ||
+      description.includes("avslut") ||
+      description.includes("final")
+    )
+  })
+
+  let derivedStatus: NormalizedMatch["matchStatus"] | undefined = match.matchStatus ?? undefined
+
+  if (timelineEnded) {
+    derivedStatus = "finished"
+  } else if (hasTimelineEvents) {
+    derivedStatus = "live"
+  } else if (derivedStatus === "finished") {
+    // Without timeline confirmation we consider the match still ongoing/upcoming.
+    derivedStatus = "upcoming"
+  } else if (derivedStatus === "live" && !hasTimelineEvents) {
+    derivedStatus = "upcoming"
+  }
+
   return {
     id,
     homeTeam: match.home,
@@ -173,7 +201,7 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     result: match.result ?? undefined,
     isHome: derivedIsHome,
     playUrl: match.playUrl && match.playUrl !== "null" ? match.playUrl : undefined,
-    matchStatus: match.matchStatus ?? undefined,
+    matchStatus: derivedStatus,
     matchFeed: match.matchFeed ?? undefined,
     gameClock: match.gameClock ?? undefined,
   }

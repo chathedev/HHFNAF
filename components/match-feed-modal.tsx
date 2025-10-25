@@ -1,10 +1,7 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { X } from "lucide-react"
-import confetti from "canvas-confetti"
-import { GameClock } from "@/components/game-clock"
-import type { GameClock as GameClockType } from "@/lib/use-match-data"
 
 type MatchFeedEvent = {
   time: string
@@ -35,7 +32,6 @@ type MatchFeedModalProps = {
   matchStatus?: "live" | "finished" | "upcoming"
   matchId?: string
   onRefresh?: () => Promise<void>
-  gameClock?: GameClockType
 }
 
 export function MatchFeedModal({
@@ -48,97 +44,38 @@ export function MatchFeedModal({
   matchStatus,
   matchId,
   onRefresh,
-  gameClock,
 }: MatchFeedModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
   const [activeTab, setActiveTab] = useState<"timeline" | "scorers">("timeline")
-  const [matchFeed, setMatchFeed] = useState(initialMatchFeed)
+  const [matchFeed, setMatchFeed] = useState<MatchFeedEvent[]>(initialMatchFeed ?? [])
   const [finalScore, setFinalScore] = useState(initialFinalScore)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const prevHHFGoalsRef = useRef<number>(0)
 
-  // Update local state when props change
   useEffect(() => {
-    console.log('📊 Modal props updated:', {
-      matchFeedLength: initialMatchFeed.length,
-      finalScore: initialFinalScore,
-      matchStatus,
-      matchId
-    })
-    setMatchFeed(initialMatchFeed)
+    setMatchFeed(initialMatchFeed ?? [])
     setFinalScore(initialFinalScore)
   }, [initialMatchFeed, initialFinalScore, matchStatus, matchId])
 
-  // Auto-refresh for live matches
   useEffect(() => {
-    if (!isOpen || matchStatus !== "live" || !matchId || !onRefresh) {
-      console.log('Auto-refresh disabled:', { isOpen, matchStatus, matchId, hasOnRefresh: !!onRefresh })
+    if (!isOpen) {
       return
     }
 
-    console.log('Auto-refresh enabled for match:', matchId)
-    
-    let isMounted = true
-    let isCurrentlyRefreshing = false
-
-    const refreshData = async () => {
-      // Don't refresh if modal was closed or already refreshing
-      if (!isMounted || isCurrentlyRefreshing) {
-        return
-      }
-      
-      isCurrentlyRefreshing = true
-      setIsRefreshing(true)
-      
-      try {
-        console.log('Refreshing match data...')
-        await onRefresh()
-        if (isMounted) {
-          console.log('Match data refreshed successfully')
-        }
-      } catch (error) {
-        if (isMounted) {
-          console.error("Failed to refresh match data:", error)
-        }
-      } finally {
-        isCurrentlyRefreshing = false
-        if (isMounted) {
-          setIsRefreshing(false)
-        }
-      }
-    }
-
-    // Initial refresh when modal opens
-    refreshData()
-
-    // Refresh every 1 second for live matches (fast updates!)
-    const interval = setInterval(refreshData, 1000)
-
-    return () => {
-      isMounted = false
-      clearInterval(interval)
-      console.log('Auto-refresh cleanup for match:', matchId)
-    }
-  }, [isOpen, matchStatus, matchId, onRefresh])
-
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
         onClose()
       }
     }
 
-    const handleClickOutside = (e: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
         onClose()
       }
     }
 
-    if (isOpen) {
-      document.addEventListener("keydown", handleEscape)
-      document.addEventListener("mousedown", handleClickOutside)
-      document.body.style.overflow = "hidden"
-    }
+    document.addEventListener("keydown", handleEscape)
+    document.addEventListener("mousedown", handleClickOutside)
+    document.body.style.overflow = "hidden"
 
     return () => {
       document.removeEventListener("keydown", handleEscape)
@@ -147,436 +84,327 @@ export function MatchFeedModal({
     }
   }, [isOpen, onClose])
 
-  // Trigger confetti when Härnösands HF scores
+  const matchEndedByTimeline = useMemo(
+    () =>
+      matchFeed.some((event) => {
+        const type = event.type?.toLowerCase() ?? ""
+        const description = event.description?.toLowerCase() ?? ""
+        return type.includes("slut") || description.includes("slut") || type.includes("matchen avslutad")
+      }),
+    [matchFeed],
+  )
+
+  const hasTimelineEvents = matchFeed.length > 0
+  const isLive = !matchEndedByTimeline && (matchStatus === "live" || hasTimelineEvents)
+  const isFinished = matchEndedByTimeline || matchStatus === "finished"
+  const isUpcoming = !isLive && !isFinished
+
   useEffect(() => {
-    if (!isOpen || !matchFeed || matchFeed.length === 0) {
+    if (!isOpen || !onRefresh || !matchId || isFinished) {
       return
     }
 
-    // Count HHF goals - only actual goals, not timeouts or other events
-    const homeTeamLower = homeTeam?.toLowerCase() || ''
-    const isHomeHHF = homeTeamLower.includes('härnösand')
-    
-    const hhfGoals = matchFeed.filter(event => {
-      const eventType = event.type?.toLowerCase() || ''
-      // Must be exactly "mål" and not contain "timeout" or other non-goal events
-      if (!eventType.includes("mål") || eventType.includes("timeout") || eventType.includes("utvisning")) return false
-      const eventTeamLower = event.team?.toLowerCase() || ''
-      const isHomeEvent = eventTeamLower.includes(homeTeamLower.split(' ')[0]) || event.isHomeGoal
-      return isHomeHHF ? isHomeEvent : !isHomeEvent
-    }).length
+    let isMounted = true
+    let pending = false
 
-    // Trigger confetti if goals increased
-    if (hhfGoals > prevHHFGoalsRef.current && prevHHFGoalsRef.current > 0) {
-      console.log('🎉 Härnösands HF scored! Triggering confetti!')
-      
-      // Fast burst of confetti
-      const count = 200
-      const defaults = {
-        origin: { y: 0.7 },
-        colors: ['#10b981', '#34d399', '#6ee7b7', '#ffffff', '#fbbf24']
+    const refreshData = async () => {
+      if (pending || !isMounted) {
+        return
       }
-
-      const fire = (particleRatio: number, opts: any) => {
-        confetti({
-          ...defaults,
-          ...opts,
-          particleCount: Math.floor(count * particleRatio)
-        })
+      pending = true
+      setIsRefreshing(true)
+      try {
+        await onRefresh()
+      } finally {
+        if (isMounted) {
+          setIsRefreshing(false)
+        }
+        pending = false
       }
-
-      fire(0.25, {
-        spread: 26,
-        startVelocity: 55,
-      })
-      fire(0.2, {
-        spread: 60,
-      })
-      fire(0.35, {
-        spread: 100,
-        decay: 0.91,
-        scalar: 0.8
-      })
-      fire(0.1, {
-        spread: 120,
-        startVelocity: 25,
-        decay: 0.92,
-        scalar: 1.2
-      })
-      fire(0.1, {
-        spread: 120,
-        startVelocity: 45,
-      })
     }
 
-    prevHHFGoalsRef.current = hhfGoals
-  }, [isOpen, matchFeed, homeTeam])
+    void refreshData()
+    const intervalId = window.setInterval(() => {
+      void refreshData()
+    }, 1500)
 
-  if (!isOpen) return null
+    return () => {
+      isMounted = false
+      window.clearInterval(intervalId)
+    }
+  }, [isOpen, onRefresh, matchId, isFinished])
 
-  // Calculate top scorers for each team
-  const goalEvents = matchFeed.filter((event) => 
-    event.type.toLowerCase().includes("mål") && event.player
+  const goalEvents = useMemo(
+    () => matchFeed.filter((event) => event.type?.toLowerCase().includes("mål") && event.player),
+    [matchFeed],
   )
 
-  const scorersByTeam = goalEvents.reduce((acc, event) => {
-    const team = event.team || "Okänt lag"
-    if (!acc[team]) {
-      acc[team] = {}
-    }
-    
-    const playerKey = `${event.player}${event.playerNumber ? ` (#${event.playerNumber})` : ""}`
-    if (!acc[team][playerKey]) {
-      acc[team][playerKey] = {
-        player: event.player!,
-        playerNumber: event.playerNumber,
-        goals: 0
+  const scorersByTeam = useMemo(() => {
+    return goalEvents.reduce((acc, event) => {
+      const team = event.team || "Okänt lag"
+      if (!acc[team]) {
+        acc[team] = {}
       }
-    }
-    acc[team][playerKey].goals++
-    
-    return acc
-  }, {} as Record<string, Record<string, { player: string; playerNumber?: string; goals: number }>>)
 
-  // Get top 3 scorers for each team
-  const topScorersByTeam = Object.entries(scorersByTeam).reduce((acc, [team, scorers]) => {
-    acc[team] = Object.values(scorers)
-      .sort((a, b) => b.goals - a.goals)
-      .slice(0, 3)
-    return acc
-  }, {} as Record<string, Array<{ player: string; playerNumber?: string; goals: number }>>)
-
-  // Group events by period and sort events within each period by time
-  const eventsByPeriod = matchFeed.reduce((acc, event) => {
-    const period = event.period || 0
-    if (!acc[period]) {
-      acc[period] = []
-    }
-    acc[period].push(event)
-    return acc
-  }, {} as Record<number, MatchFeedEvent[]>)
-
-  // Sort events within each period by time (descending - most recent first)
-  Object.keys(eventsByPeriod).forEach((periodKey) => {
-    const period = Number(periodKey)
-    eventsByPeriod[period].sort((a, b) => {
-      // Parse time strings (format: "MM:SS" or "M:SS")
-      const parseTime = (timeStr: string) => {
-        const parts = timeStr.split(':')
-        return parseInt(parts[0]) * 60 + parseInt(parts[1])
+      const playerKey = `${event.player}${event.playerNumber ? ` (#${event.playerNumber})` : ""}`
+      if (!acc[team][playerKey]) {
+        acc[team][playerKey] = {
+          player: event.player!,
+          playerNumber: event.playerNumber,
+          goals: 0,
+        }
       }
-      return parseTime(b.time) - parseTime(a.time) // Reverse: 60:00 → 0:00
+      acc[team][playerKey].goals += 1
+
+      return acc
+    }, {} as Record<string, Record<string, { player: string; playerNumber?: string; goals: number }>>)
+  }, [goalEvents])
+
+  const topScorersByTeam = useMemo(() => {
+    return Object.entries(scorersByTeam).reduce((acc, [team, scorers]) => {
+      acc[team] = Object.values(scorers)
+        .sort((a, b) => b.goals - a.goals)
+        .slice(0, 3)
+      return acc
+    }, {} as Record<string, Array<{ player: string; playerNumber?: string; goals: number }>>)
+  }, [scorersByTeam])
+
+  const eventsByPeriod = useMemo(() => {
+    const grouped: Record<number, MatchFeedEvent[]> = {}
+    const parseTime = (timeStr: string) => {
+      const [minutes = "0", seconds = "0"] = timeStr.split(":")
+      const parsedMinutes = Number.parseInt(minutes, 10)
+      const parsedSeconds = Number.parseInt(seconds, 10)
+      if (Number.isNaN(parsedMinutes) || Number.isNaN(parsedSeconds)) {
+        return 0
+      }
+      return parsedMinutes * 60 + parsedSeconds
+    }
+
+    for (const event of matchFeed) {
+      const periodKey = event.period ?? 0
+      if (!grouped[periodKey]) {
+        grouped[periodKey] = []
+      }
+      grouped[periodKey].push(event)
+    }
+
+    Object.values(grouped).forEach((events) => {
+      events.sort((a, b) => parseTime(b.time) - parseTime(a.time))
     })
-  })
 
-  const periods = Object.keys(eventsByPeriod)
-    .map(Number)
-    .filter(p => p > 0) // Only show actual periods (not period 0)
-    .sort((a, b) => b - a) // Reverse order: Period 2 first, then Period 1
+    return grouped
+  }, [matchFeed])
+
+  const periods = useMemo(
+    () =>
+      Object.keys(eventsByPeriod)
+        .map(Number)
+        .sort((a, b) => b - a),
+    [eventsByPeriod],
+  )
+
+  const hasScorers = useMemo(() => Object.keys(topScorersByTeam).length > 0, [topScorersByTeam])
+
+  if (!isOpen) {
+    return null
+  }
+
+  const formatPeriodLabel = (period: number) => {
+    if (period === 1) return "Första halvlek"
+    if (period === 2) return "Andra halvlek"
+    if (period === 0) return "Matchstart och övrigt"
+    return `Period ${period}`
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-black/45 px-4 py-6 sm:items-center">
       <div
+        className="relative flex h-full w-full max-h-[90vh] max-w-2xl flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[85vh] sm:rounded-2xl"
         ref={modalRef}
-        className="bg-white w-full sm:max-w-2xl sm:rounded-2xl shadow-2xl max-h-[95vh] flex flex-col overflow-hidden"
       >
-        {/* Header */}
-        <div className="flex-shrink-0 bg-white border-b border-gray-200 p-4 sm:p-5">
+        <header className="flex flex-col gap-3 border-b border-gray-200 px-5 py-4 sm:px-6 sm:py-5">
           <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <h2 className="text-base font-semibold text-gray-900">Matchhändelser</h2>
-                {matchStatus === "live" && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-50 text-red-600 text-xs font-medium rounded">
-                    <span className="w-1 h-1 bg-red-600 rounded-full animate-pulse"></span>
-                    LIVE
-                  </span>
-                )}
-              </div>
-              
-              <div className="flex items-center justify-between text-sm mb-2">
-                <div className="text-gray-600">{homeTeam} vs {awayTeam}</div>
-                {finalScore && (
-                  <div className="text-xl font-bold text-gray-900">{finalScore}</div>
-                )}
-              </div>
-              
-              {/* Game Clock */}
-              {gameClock && matchStatus === "live" && (
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="bg-gray-900 text-white px-3 py-1.5 rounded-lg shadow-md">
-                    <div className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <GameClock gameClock={gameClock} className="text-lg" />
-                    </div>
-                  </div>
-                </div>
-              )}
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Matchuppföljning</p>
+              <h2 className="mt-1 text-lg font-semibold text-gray-900 sm:text-xl">
+                {homeTeam} <span className="text-gray-400">vs</span> {awayTeam}
+              </h2>
             </div>
-            
             <button
               onClick={onClose}
-              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+              className="rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
               aria-label="Stäng"
             >
-              <X className="w-5 h-5 text-gray-500" />
+              <X className="h-5 w-5" />
             </button>
           </div>
-        </div>
 
-        {/* Tab Navigation */}
-        <div className="flex-shrink-0 border-b border-gray-100 bg-white">
-          <div className="flex px-4">
-            <button
-              onClick={() => setActiveTab("timeline")}
-              className={`px-3 py-2.5 text-sm font-medium transition-colors relative ${
-                activeTab === "timeline"
-                  ? "text-gray-900"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              Tidslinje
-              {activeTab === "timeline" && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900"></div>
-              )}
-            </button>
-            
-            {Object.keys(topScorersByTeam).length > 0 && (
-              <button
-                onClick={() => setActiveTab("scorers")}
-                className={`px-3 py-2.5 text-sm font-medium transition-colors relative ${
-                  activeTab === "scorers"
-                    ? "text-gray-900"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                Målskyttar
-                {activeTab === "scorers" && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900"></div>
-                )}
-              </button>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            {isLive && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 font-semibold text-red-600">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
+                Pågår
+              </span>
+            )}
+            {isFinished && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-100 px-2.5 py-1 font-semibold text-gray-700">
+                Avslutad
+              </span>
+            )}
+            {isUpcoming && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700">
+                Kommande
+              </span>
+            )}
+            {finalScore && (
+              <span className="ml-auto inline-flex items-center rounded-full bg-gray-900 px-3 py-1 text-base font-semibold text-white sm:text-lg">
+                {finalScore}
+              </span>
+            )}
+            {isRefreshing && (
+              <span className="inline-flex items-center gap-2 text-xs font-medium text-gray-500">
+                <span className="h-2 w-2 animate-ping rounded-full bg-gray-400" />
+                Uppdaterar…
+              </span>
             )}
           </div>
-        </div>
+        </header>
 
-        {/* Content Area */}
-        <div className="flex-1 overflow-y-auto bg-gray-50">
-          {/* Timeline Tab */}
+        <nav className="grid grid-cols-2 border-b border-gray-100 text-sm font-semibold">
+          <button
+            onClick={() => setActiveTab("timeline")}
+            className={`px-4 py-3 transition-colors ${
+              activeTab === "timeline" ? "bg-gray-50 text-gray-900" : "text-gray-500 hover:text-gray-800"
+            }`}
+          >
+            Tidslinje {hasTimelineEvents ? `(${matchFeed.length})` : ""}
+          </button>
+          <button
+            onClick={() => setActiveTab("scorers")}
+            className={`px-4 py-3 transition-colors ${
+              activeTab === "scorers" ? "bg-gray-50 text-gray-900" : "text-gray-500 hover:text-gray-800"
+            } disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:text-gray-400`}
+            disabled={!hasScorers}
+          >
+            Målskyttar {hasScorers ? "" : "(0)"}
+          </button>
+        </nav>
+
+        <div className="flex-1 overflow-hidden bg-gray-50">
           {activeTab === "timeline" && (
-            <div className="p-4">
+            <div className="h-full overflow-y-auto px-5 py-5 sm:px-6">
               {matchFeed.length === 0 ? (
-                <div className="text-center py-12 text-gray-400 text-sm">
-                  Inga händelser att visa
+                <div className="flex h-full items-center justify-center text-sm text-gray-500">
+                  Inga händelser ännu.
                 </div>
               ) : (
                 <div className="space-y-6">
                   {periods.map((period) => (
-                    <div key={period}>
-                      {/* Period Header - Enhanced */}
-                      <div className="relative mb-5">
-                        <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                          <div className="w-full border-t border-gray-300"></div>
-                        </div>
-                        <div className="relative flex justify-center">
-                          <span className="bg-gray-900 text-white px-5 py-2 text-xs font-bold uppercase tracking-wider rounded-full">
-                            {period === 1 ? "Första halvlek" : period === 2 ? "Andra halvlek" : `Period ${period}`}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {/* Events - Enhanced */}
-                      <div className="space-y-2.5">
-                        {eventsByPeriod[period].map((event, idx) => {
-                          // Determine if this is Härnösands HF
-                          const homeTeamLower = homeTeam?.toLowerCase() || ''
-                          const eventTeamLower = event.team?.toLowerCase() || ''
-                          const isHomeEvent = homeTeamLower && eventTeamLower && (
-                            eventTeamLower.includes(homeTeamLower.split(' ')[0]) || event.isHomeGoal
-                          )
-                          const isHHF = homeTeamLower.includes('härnösand') ? isHomeEvent : !isHomeEvent
-                          
-                          const isGoal = event.type?.toLowerCase().includes("mål") && 
-                                        !event.type?.toLowerCase().includes("timeout") &&
-                                        !event.type?.toLowerCase().includes("utvisning")
-                          
+                    <section key={period} className="space-y-3">
+                      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        {formatPeriodLabel(period)}
+                      </h3>
+                      <ul className="space-y-3">
+                        {eventsByPeriod[period].map((event, index) => {
+                          const type = event.type?.toLowerCase() ?? ""
+                          const isGoal = type.includes("mål")
+                          const isWarning = type.includes("utvisning") || type.includes("varning")
+                          const score =
+                            event.homeScore !== undefined && event.awayScore !== undefined
+                              ? `${event.homeScore}\u2013${event.awayScore}`
+                              : event.score
+
                           return (
-                            <div 
-                              key={idx} 
-                              className={`relative bg-white rounded-xl border-2 transition-all hover:shadow-md overflow-hidden ${
+                            <li
+                              key={`${event.time}-${index}`}
+                              className={`rounded-lg border px-4 py-3 shadow-sm transition-colors ${
                                 isGoal
-                                  ? isHHF 
-                                    ? "border-emerald-300 hover:border-emerald-400 ring-2 ring-emerald-100" 
-                                    : "border-blue-300 hover:border-blue-400 ring-2 ring-blue-100"
-                                  : "border-gray-200 hover:border-gray-300"
+                                  ? "border-emerald-200 bg-white"
+                                  : isWarning
+                                    ? "border-yellow-200 bg-yellow-50"
+                                    : "border-gray-200 bg-white"
                               }`}
                             >
-                              {/* Static Confetti Decoration for Goals */}
-                              {isGoal && (
-                                <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                                  {/* Top confetti */}
-                                  <div className={`absolute top-2 left-4 w-2 h-2 rounded-full ${isHHF ? 'bg-emerald-400' : 'bg-blue-400'} opacity-60`}></div>
-                                  <div className={`absolute top-3 left-8 w-1.5 h-1.5 rounded-full ${isHHF ? 'bg-yellow-400' : 'bg-cyan-400'} opacity-70`}></div>
-                                  <div className="absolute top-2 left-14 w-1 h-1 rounded-full bg-white opacity-80"></div>
-                                  <div className={`absolute top-4 left-20 w-2 h-2 rounded-full ${isHHF ? 'bg-emerald-300' : 'bg-blue-300'} opacity-50`}></div>
-                                  
-                                  {/* Right side confetti */}
-                                  <div className="absolute top-2 right-4 w-1.5 h-1.5 rounded-full bg-yellow-400 opacity-70"></div>
-                                  <div className={`absolute top-3 right-8 w-2 h-2 rounded-full ${isHHF ? 'bg-emerald-400' : 'bg-blue-400'} opacity-60`}></div>
-                                  <div className="absolute top-4 right-12 w-1 h-1 rounded-full bg-white opacity-80"></div>
-                                  <div className={`absolute top-2 right-16 w-1.5 h-1.5 rounded-full ${isHHF ? 'bg-green-300' : 'bg-cyan-300'} opacity-60`}></div>
-                                  
-                                  {/* Bottom confetti */}
-                                  <div className={`absolute bottom-2 left-6 w-1.5 h-1.5 rounded-full ${isHHF ? 'bg-emerald-500' : 'bg-blue-500'} opacity-50`}></div>
-                                  <div className="absolute bottom-3 left-12 w-1 h-1 rounded-full bg-yellow-300 opacity-70"></div>
-                                  <div className="absolute bottom-2 right-6 w-2 h-2 rounded-full bg-white opacity-60"></div>
-                                  <div className={`absolute bottom-3 right-10 w-1.5 h-1.5 rounded-full ${isHHF ? 'bg-emerald-400' : 'bg-blue-400'} opacity-60`}></div>
-                                  
-                                  {/* Scattered middle confetti */}
-                                  <div className={`absolute top-1/2 left-1/4 w-1 h-1 rounded-full ${isHHF ? 'bg-green-400' : 'bg-cyan-400'} opacity-50`}></div>
-                                  <div className="absolute top-1/2 right-1/4 w-1.5 h-1.5 rounded-full bg-yellow-400 opacity-60"></div>
-                                </div>
-                              )}
-                              
-                              {/* Goal celebration background glow */}
-                              {isGoal && (
-                                <div className={`absolute inset-0 ${
-                                  isHHF ? 'bg-emerald-50/40' : 'bg-blue-50/40'
-                                } pointer-events-none`}></div>
-                              )}
-                              
-                              {/* Team color bar - more prominent */}
-                              <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-xl ${
-                                isHHF ? "bg-emerald-500" : "bg-blue-500"
-                              }`}></div>
-                              
-                              <div className="pl-4 pr-4 py-3.5 relative z-10">
-                                <div className="flex items-center gap-4">
-                                  {/* Time Badge - Enhanced */}
-                                  <div className="flex-shrink-0">
-                                    <div className={`w-16 h-16 rounded-xl flex flex-col items-center justify-center shadow-sm border-2 ${
-                                      isGoal
-                                        ? isHHF 
-                                          ? "bg-emerald-50 border-emerald-200" 
-                                          : "bg-blue-50 border-blue-200"
-                                        : "bg-gray-50 border-gray-200"
-                                    }`}>
-                                      <span className={`text-xs font-medium ${
-                                        isGoal
-                                          ? isHHF ? "text-emerald-600" : "text-blue-600"
-                                          : "text-gray-500"
-                                      }`}>MIN</span>
-                                      <span className={`text-xl font-bold ${
-                                        isGoal
-                                          ? isHHF ? "text-emerald-700" : "text-blue-700"
-                                          : "text-gray-700"
-                                      }`}>{event.time.split(':')[0]}</span>
-                                    </div>
-                                  </div>
-                                  
-                                  {/* Event Details */}
-                                  <div className="flex-1 min-w-0">
-                                    {/* Team Badge + Event Type */}
-                                    <div className="flex items-center gap-2 mb-2">
-                                      {isGoal && <span className="text-xl">⚽</span>}
-                                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold ${
-                                        isHHF 
-                                          ? "bg-emerald-500 text-white" 
-                                          : "bg-blue-500 text-white"
-                                      }`}>
-                                        {isHHF 
-                                          ? '🟢 Härnösands HF' 
-                                          : homeTeam.toLowerCase().includes('härnösand')
-                                            ? '🔵 ' + awayTeam
-                                            : '🔵 ' + homeTeam
-                                        }
+                              <div className="flex items-start gap-3">
+                                <span className="mt-0.5 font-mono text-xs font-semibold text-gray-500">{event.time}</span>
+                                <div className="min-w-0 flex-1 space-y-1">
+                                  <div className="flex flex-wrap items-baseline gap-2">
+                                    <p className="text-sm font-semibold text-gray-900">{event.type}</p>
+                                    {event.team && (
+                                      <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                        {event.team}
                                       </span>
-                                      <span className={`text-sm font-semibold ${isGoal ? 'text-gray-900' : 'text-gray-700'}`}>
-                                        {event.type}
-                                      </span>
-                                    </div>
-                                    
-                                    {/* Player + Score Row */}
-                                    <div className="flex items-center justify-between gap-3">
-                                      {event.player && (
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-sm font-medium text-gray-900">{event.player}</span>
-                                          {event.playerNumber && (
-                                            <span className="inline-flex items-center justify-center min-w-[24px] h-6 bg-gray-800 text-white text-xs font-bold rounded px-1.5">
-                                              {event.playerNumber}
-                                            </span>
-                                          )}
-                                        </div>
-                                      )}
-                                      
-                                      {/* Score Display - Enhanced */}
-                                      {(event.homeScore !== undefined || event.awayScore !== undefined) && (
-                                        <div className="flex-shrink-0">
-                                          <div className="bg-gray-900 text-white px-3 py-1.5 rounded-lg">
-                                            <span className="text-base font-bold tabular-nums">
-                                              {event.homeScore ?? 0}–{event.awayScore ?? 0}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
+                                    )}
+                                    {score && (
+                                      <span className="ml-auto text-xs font-bold text-gray-900">{score}</span>
+                                    )}
                                   </div>
+                                  {event.player && (
+                                    <p className="text-sm text-gray-700">
+                                      {event.player}
+                                      {event.playerNumber && <span className="text-gray-500"> #{event.playerNumber}</span>}
+                                    </p>
+                                  )}
+                                  {event.description && (
+                                    <p className="text-xs text-gray-500">{event.description}</p>
+                                  )}
                                 </div>
                               </div>
-                            </div>
+                            </li>
                           )
                         })}
-                      </div>
-                    </div>
+                      </ul>
+                    </section>
                   ))}
                 </div>
               )}
             </div>
           )}
 
-          {/* Top Scorers Tab */}
-          {activeTab === "scorers" && Object.keys(topScorersByTeam).length > 0 && (
-            <div className="p-4 space-y-3">
-              {Object.entries(topScorersByTeam).map(([team, scorers]) => (
-                <div key={team} className="bg-white rounded-lg border border-gray-200 p-3">
-                  <h4 className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">{team}</h4>
-                  <div className="space-y-1.5">
-                    {scorers.map((scorer, idx) => (
-                      <div key={idx} className="flex items-center justify-between py-2">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <span className="text-base flex-shrink-0">
-                            {idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉"}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">{scorer.player}</p>
-                            {scorer.playerNumber && (
-                              <p className="text-xs text-gray-400">#{scorer.playerNumber}</p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <span className="text-base font-bold text-gray-900">{scorer.goals}</span>
-                          <span className="text-xs text-gray-500">mål</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+          {activeTab === "scorers" && (
+            <div className="h-full overflow-y-auto px-5 py-5 sm:px-6">
+              {Object.keys(topScorersByTeam).length === 0 ? (
+                <div className="flex h-full items-center justify-center text-sm text-gray-500">
+                  Inga noterade målskyttar.
                 </div>
-              ))}
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(topScorersByTeam).map(([team, scorers]) => (
+                    <section key={team} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">{team}</h3>
+                      <ul className="mt-3 space-y-2">
+                        {scorers.map((scorer, index) => (
+                          <li key={`${scorer.player}-${index}`} className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <span>{index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}</span>
+                              <div>
+                                <p className="font-medium text-gray-900">{scorer.player}</p>
+                                {scorer.playerNumber && (
+                                  <p className="text-xs text-gray-500">#{scorer.playerNumber}</p>
+                                )}
+                              </div>
+                            </div>
+                            <span className="font-semibold text-gray-900">{scorer.goals} mål</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex-shrink-0 p-3 border-t border-gray-100 bg-white">
+        <footer className="border-t border-gray-200 bg-white px-5 py-4 sm:px-6">
           <button
             onClick={onClose}
-            className="w-full px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-lg transition-colors"
+            className="w-full rounded-full bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800"
           >
             Stäng
           </button>
-        </div>
+        </footer>
       </div>
     </div>
   )
