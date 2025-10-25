@@ -109,6 +109,7 @@ export default function HomePage() {
     matches: upcomingMatches,
     loading: matchLoading,
     error: matchErrorMessage,
+    refresh,
   } = useMatchData({ refreshIntervalMs: 1_000 })
   const matchError = Boolean(matchErrorMessage)
 
@@ -1185,6 +1186,10 @@ export default function HomePage() {
               awayTeam={displayAwayTeam}
               finalScore={selectedMatch.result}
               matchStatus={selectedMatch.matchStatus}
+              matchId={selectedMatch.id}
+              onRefresh={async () => {
+                await refresh()
+              }}
             />
           )
         })()}

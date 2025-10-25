@@ -37,14 +37,50 @@ type MatchFeedModalProps = {
 export function MatchFeedModal({
   isOpen,
   onClose,
-  matchFeed,
+  matchFeed: initialMatchFeed,
   homeTeam,
   awayTeam,
-  finalScore,
+  finalScore: initialFinalScore,
   matchStatus,
+  matchId,
+  onRefresh,
 }: MatchFeedModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
   const [activeTab, setActiveTab] = useState<"timeline" | "scorers">("timeline")
+  const [matchFeed, setMatchFeed] = useState(initialMatchFeed)
+  const [finalScore, setFinalScore] = useState(initialFinalScore)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  // Update local state when props change
+  useEffect(() => {
+    setMatchFeed(initialMatchFeed)
+    setFinalScore(initialFinalScore)
+  }, [initialMatchFeed, initialFinalScore])
+
+  // Auto-refresh for live matches
+  useEffect(() => {
+    if (!isOpen || matchStatus !== "live" || !matchId) {
+      return
+    }
+
+    const refreshData = async () => {
+      if (onRefresh && !isRefreshing) {
+        setIsRefreshing(true)
+        try {
+          await onRefresh()
+        } catch (error) {
+          console.error("Failed to refresh match data:", error)
+        } finally {
+          setIsRefreshing(false)
+        }
+      }
+    }
+
+    // Refresh every 3 seconds for live matches
+    const interval = setInterval(refreshData, 3000)
+
+    return () => clearInterval(interval)
+  }, [isOpen, matchStatus, matchId, onRefresh, isRefreshing])
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {

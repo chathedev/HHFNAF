@@ -86,7 +86,7 @@ export default function MatcherPage() {
   // Use "both" endpoint to get current + old matches (unified endpoint)
   const dataType: "current" | "old" | "both" | "enhanced" = "both"
   
-  const { matches, metadata, grouped, loading, error } = useMatchData({ 
+  const { matches, metadata, grouped, loading, error, refresh } = useMatchData({ 
     refreshIntervalMs: 1_000,
     dataType
   })
@@ -654,6 +654,10 @@ export default function MatcherPage() {
               awayTeam={displayAwayTeam}
               finalScore={selectedMatch.result}
               matchStatus={selectedMatch.matchStatus}
+              matchId={selectedMatch.id}
+              onRefresh={async () => {
+                await refresh()
+              }}
             />
           )
         })()}

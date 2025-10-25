@@ -90,7 +90,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   const [selectedMatch, setSelectedMatch] = useState<NormalizedMatch | null>(null)
   
   // ALL HOOKS MUST BE AT THE TOP - before any conditional returns
-  const { matches, loading, error } = useMatchData({ 
+  const { matches, loading, error, refresh } = useMatchData({ 
     refreshIntervalMs: 1_000,
     dataType: "current"
   })
@@ -548,6 +548,10 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
           awayTeam={displayAwayTeam}
           finalScore={selectedMatch.result}
           matchStatus={selectedMatch.matchStatus}
+          matchId={selectedMatch.id}
+          onRefresh={async () => {
+            await refresh()
+          }}
         />
       )
     })()}
