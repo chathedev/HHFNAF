@@ -377,162 +377,127 @@ export function MatchFeedModal({
                                         !event.type?.toLowerCase().includes("timeout") &&
                                         !event.type?.toLowerCase().includes("utvisning")
                           
-                          // GOAL CARD - Impressive & Minimalistic Design
-                          if (isGoal) {
-                            return (
-                              <div 
-                                key={idx} 
-                                className={`relative overflow-hidden rounded-2xl transition-all duration-300 hover:scale-[1.02] ${
-                                  isHHF 
-                                    ? "bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/50" 
-                                    : "bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/50"
-                                }`}
-                              >
-                                {/* Celebratory Confetti Pattern Background */}
-                                <div className="absolute inset-0 opacity-20 pointer-events-none">
-                                  <div className="absolute top-3 left-6 w-3 h-3 bg-white rounded-full"></div>
-                                  <div className="absolute top-6 left-12 w-2 h-2 bg-yellow-300 rounded-full"></div>
-                                  <div className="absolute top-4 right-8 w-2.5 h-2.5 bg-white rounded-full"></div>
-                                  <div className="absolute top-8 right-16 w-2 h-2 bg-yellow-200 rounded-full"></div>
-                                  <div className="absolute bottom-4 left-10 w-2 h-2 bg-white rounded-full"></div>
-                                  <div className="absolute bottom-6 right-12 w-3 h-3 bg-yellow-300 rounded-full"></div>
-                                  <div className="absolute top-1/2 left-1/3 w-1.5 h-1.5 bg-white rounded-full"></div>
-                                  <div className="absolute top-1/3 right-1/4 w-2 h-2 bg-yellow-200 rounded-full"></div>
-                                </div>
-                                
-                                <div className="relative p-5">
-                                  <div className="flex items-center gap-4">
-                                    {/* TIME - Large Circle Badge */}
-                                    <div className="flex-shrink-0">
-                                      <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/40 flex flex-col items-center justify-center shadow-xl">
-                                        <span className="text-[10px] font-bold text-white/80 uppercase tracking-wider">Min</span>
-                                        <span className="text-2xl font-black text-white">{event.time.split(':')[0]}</span>
-                                      </div>
-                                    </div>
-                                    
-                                    {/* GOAL INFO */}
-                                    <div className="flex-1 min-w-0">
-                                      {/* Goal Icon + Type */}
-                                      <div className="flex items-center gap-2 mb-3">
-                                        <div className="text-3xl">⚽</div>
-                                        <span className="text-xl font-black text-white uppercase tracking-wide">
-                                          {event.type}
-                                        </span>
-                                      </div>
-                                      
-                                      {/* Player Name */}
-                                      {event.player && (
-                                        <div className="flex items-center gap-3 mb-2">
-                                          <span className="text-lg font-bold text-white">
-                                            {event.player}
-                                          </span>
-                                          {event.playerNumber && (
-                                            <span className="inline-flex items-center justify-center min-w-[32px] h-7 bg-white/90 text-gray-900 text-sm font-black rounded-lg px-2 shadow-md">
-                                              #{event.playerNumber}
-                                            </span>
-                                          )}
-                                        </div>
-                                      )}
-                                      
-                                      {/* Team Badge */}
-                                      <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30">
-                                        <span className="text-xl">{isHHF ? '🟢' : '🔵'}</span>
-                                        <span className="text-sm font-bold text-white">
-                                          {isHHF 
-                                            ? 'Härnösands HF' 
-                                            : homeTeam.toLowerCase().includes('härnösand')
-                                              ? awayTeam
-                                              : homeTeam
-                                          }
-                                        </span>
-                                      </div>
-                                    </div>
-                                    
-                                    {/* SCORE - Large Display */}
-                                    {(event.homeScore !== undefined || event.awayScore !== undefined) && (
-                                      <div className="flex-shrink-0">
-                                        <div className="bg-white/95 backdrop-blur-sm px-5 py-3 rounded-2xl shadow-2xl">
-                                          <div className="text-xs font-bold text-gray-500 uppercase tracking-wider text-center mb-1">
-                                            Ställning
-                                          </div>
-                                          <div className="text-3xl font-black text-gray-900 tabular-nums">
-                                            {event.homeScore ?? 0}–{event.awayScore ?? 0}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            )
-                          }
-                          
-                          // REGULAR EVENT CARD - Clean & Simple
                           return (
                             <div 
                               key={idx} 
-                              className="relative bg-white rounded-xl border border-gray-200 hover:border-gray-300 transition-all hover:shadow-sm overflow-hidden"
+                              className={`relative bg-white rounded-xl border-2 transition-all hover:shadow-md overflow-hidden ${
+                                isGoal
+                                  ? isHHF 
+                                    ? "border-emerald-300 hover:border-emerald-400 ring-2 ring-emerald-100" 
+                                    : "border-blue-300 hover:border-blue-400 ring-2 ring-blue-100"
+                                  : "border-gray-200 hover:border-gray-300"
+                              }`}
                             >
-                              {/* Team color indicator */}
-                              <div className={`absolute left-0 top-0 bottom-0 w-1 ${
+                              {/* Static Confetti Decoration for Goals */}
+                              {isGoal && (
+                                <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                                  {/* Top confetti */}
+                                  <div className={`absolute top-2 left-4 w-2 h-2 rounded-full ${isHHF ? 'bg-emerald-400' : 'bg-blue-400'} opacity-60`}></div>
+                                  <div className={`absolute top-3 left-8 w-1.5 h-1.5 rounded-full ${isHHF ? 'bg-yellow-400' : 'bg-cyan-400'} opacity-70`}></div>
+                                  <div className="absolute top-2 left-14 w-1 h-1 rounded-full bg-white opacity-80"></div>
+                                  <div className={`absolute top-4 left-20 w-2 h-2 rounded-full ${isHHF ? 'bg-emerald-300' : 'bg-blue-300'} opacity-50`}></div>
+                                  
+                                  {/* Right side confetti */}
+                                  <div className="absolute top-2 right-4 w-1.5 h-1.5 rounded-full bg-yellow-400 opacity-70"></div>
+                                  <div className={`absolute top-3 right-8 w-2 h-2 rounded-full ${isHHF ? 'bg-emerald-400' : 'bg-blue-400'} opacity-60`}></div>
+                                  <div className="absolute top-4 right-12 w-1 h-1 rounded-full bg-white opacity-80"></div>
+                                  <div className={`absolute top-2 right-16 w-1.5 h-1.5 rounded-full ${isHHF ? 'bg-green-300' : 'bg-cyan-300'} opacity-60`}></div>
+                                  
+                                  {/* Bottom confetti */}
+                                  <div className={`absolute bottom-2 left-6 w-1.5 h-1.5 rounded-full ${isHHF ? 'bg-emerald-500' : 'bg-blue-500'} opacity-50`}></div>
+                                  <div className="absolute bottom-3 left-12 w-1 h-1 rounded-full bg-yellow-300 opacity-70"></div>
+                                  <div className="absolute bottom-2 right-6 w-2 h-2 rounded-full bg-white opacity-60"></div>
+                                  <div className={`absolute bottom-3 right-10 w-1.5 h-1.5 rounded-full ${isHHF ? 'bg-emerald-400' : 'bg-blue-400'} opacity-60`}></div>
+                                  
+                                  {/* Scattered middle confetti */}
+                                  <div className={`absolute top-1/2 left-1/4 w-1 h-1 rounded-full ${isHHF ? 'bg-green-400' : 'bg-cyan-400'} opacity-50`}></div>
+                                  <div className="absolute top-1/2 right-1/4 w-1.5 h-1.5 rounded-full bg-yellow-400 opacity-60"></div>
+                                </div>
+                              )}
+                              
+                              {/* Goal celebration background glow */}
+                              {isGoal && (
+                                <div className={`absolute inset-0 ${
+                                  isHHF ? 'bg-emerald-50/40' : 'bg-blue-50/40'
+                                } pointer-events-none`}></div>
+                              )}
+                              
+                              {/* Team color bar - more prominent */}
+                              <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-xl ${
                                 isHHF ? "bg-emerald-500" : "bg-blue-500"
                               }`}></div>
                               
-                              <div className="pl-4 pr-4 py-3.5">
+                              <div className="pl-4 pr-4 py-3.5 relative z-10">
                                 <div className="flex items-center gap-4">
-                                  {/* Time Badge */}
+                                  {/* Time Badge - Enhanced */}
                                   <div className="flex-shrink-0">
-                                    <div className="w-14 h-14 rounded-lg bg-gray-50 border border-gray-200 flex flex-col items-center justify-center">
-                                      <span className="text-[10px] font-medium text-gray-500 uppercase">Min</span>
-                                      <span className="text-lg font-bold text-gray-700">{event.time.split(':')[0]}</span>
+                                    <div className={`w-16 h-16 rounded-xl flex flex-col items-center justify-center shadow-sm border-2 ${
+                                      isGoal
+                                        ? isHHF 
+                                          ? "bg-emerald-50 border-emerald-200" 
+                                          : "bg-blue-50 border-blue-200"
+                                        : "bg-gray-50 border-gray-200"
+                                    }`}>
+                                      <span className={`text-xs font-medium ${
+                                        isGoal
+                                          ? isHHF ? "text-emerald-600" : "text-blue-600"
+                                          : "text-gray-500"
+                                      }`}>MIN</span>
+                                      <span className={`text-xl font-bold ${
+                                        isGoal
+                                          ? isHHF ? "text-emerald-700" : "text-blue-700"
+                                          : "text-gray-700"
+                                      }`}>{event.time.split(':')[0]}</span>
                                     </div>
                                   </div>
                                   
                                   {/* Event Details */}
                                   <div className="flex-1 min-w-0">
                                     {/* Team Badge + Event Type */}
-                                    <div className="flex items-center gap-2 mb-1.5">
-                                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold ${
+                                    <div className="flex items-center gap-2 mb-2">
+                                      {isGoal && <span className="text-xl">⚽</span>}
+                                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold ${
                                         isHHF 
-                                          ? "bg-emerald-100 text-emerald-700" 
-                                          : "bg-blue-100 text-blue-700"
+                                          ? "bg-emerald-500 text-white" 
+                                          : "bg-blue-500 text-white"
                                       }`}>
-                                        {isHHF ? '🟢' : '🔵'} 
                                         {isHHF 
-                                          ? 'HHF' 
+                                          ? '🟢 Härnösands HF' 
                                           : homeTeam.toLowerCase().includes('härnösand')
-                                            ? awayTeam.split(' ')[0]
-                                            : homeTeam.split(' ')[0]
+                                            ? '🔵 ' + awayTeam
+                                            : '🔵 ' + homeTeam
                                         }
                                       </span>
-                                      <span className="text-sm font-medium text-gray-900">
+                                      <span className={`text-sm font-semibold ${isGoal ? 'text-gray-900' : 'text-gray-700'}`}>
                                         {event.type}
                                       </span>
                                     </div>
                                     
-                                    {/* Player Info */}
-                                    {event.player && (
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-sm text-gray-700">{event.player}</span>
-                                        {event.playerNumber && (
-                                          <span className="inline-flex items-center justify-center min-w-[22px] h-5 bg-gray-700 text-white text-xs font-bold rounded px-1.5">
-                                            #{event.playerNumber}
-                                          </span>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                  
-                                  {/* Score Display */}
-                                  {(event.homeScore !== undefined || event.awayScore !== undefined) && (
-                                    <div className="flex-shrink-0">
-                                      <div className="bg-gray-900 text-white px-3 py-1.5 rounded-lg">
-                                        <span className="text-sm font-bold tabular-nums">
-                                          {event.homeScore ?? 0}–{event.awayScore ?? 0}
-                                        </span>
-                                      </div>
+                                    {/* Player + Score Row */}
+                                    <div className="flex items-center justify-between gap-3">
+                                      {event.player && (
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-sm font-medium text-gray-900">{event.player}</span>
+                                          {event.playerNumber && (
+                                            <span className="inline-flex items-center justify-center min-w-[24px] h-6 bg-gray-800 text-white text-xs font-bold rounded px-1.5">
+                                              {event.playerNumber}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                      
+                                      {/* Score Display - Enhanced */}
+                                      {(event.homeScore !== undefined || event.awayScore !== undefined) && (
+                                        <div className="flex-shrink-0">
+                                          <div className="bg-gray-900 text-white px-3 py-1.5 rounded-lg">
+                                            <span className="text-base font-bold tabular-nums">
+                                              {event.homeScore ?? 0}–{event.awayScore ?? 0}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
-                                  )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
