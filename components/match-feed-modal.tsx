@@ -327,9 +327,23 @@ export function MatchFeedModal({
                                 ? `${event.homeScore}\u2013${event.awayScore}`
                                 : event.score
 
-                            const tone = isGoal ? "bg-emerald-50 border-emerald-100" : isWarning ? "bg-amber-50 border-amber-100" : "bg-white/80 border-slate-100"
+                            const eventTeam = event.team?.toLowerCase() ?? ""
+                            const homeIdentifier = homeTeam.toLowerCase().split(" ")[0] ?? ""
+                            const isHomeEvent = homeIdentifier ? eventTeam.includes(homeIdentifier) || event.isHomeGoal : false
+                            const isAwayEvent = !isHomeEvent
+
+                            const tone = isGoal
+                              ? isHomeEvent
+                                ? "bg-emerald-50 border-emerald-100"
+                                : "bg-sky-50 border-sky-100"
+                              : isWarning
+                                ? "bg-amber-50 border-amber-100"
+                                : "bg-white/80 border-slate-100"
+
                             const dotTone = isGoal
-                              ? "bg-emerald-500 ring-4 ring-emerald-100"
+                              ? isHomeEvent
+                                ? "bg-emerald-500 ring-4 ring-emerald-100"
+                                : "bg-sky-500 ring-4 ring-sky-100"
                               : isWarning
                                 ? "bg-amber-500 ring-4 ring-amber-100"
                                 : "bg-slate-300 ring-4 ring-slate-200/70"
