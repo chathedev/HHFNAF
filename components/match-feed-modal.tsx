@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react"
 import { X } from "lucide-react"
 import confetti from "canvas-confetti"
+import { GameClock } from "@/components/game-clock"
+import type { GameClock as GameClockType } from "@/lib/use-match-data"
 
 type MatchFeedEvent = {
   time: string
@@ -33,6 +35,7 @@ type MatchFeedModalProps = {
   matchStatus?: "live" | "finished" | "upcoming"
   matchId?: string
   onRefresh?: () => Promise<void>
+  gameClock?: GameClockType
 }
 
 export function MatchFeedModal({
@@ -45,6 +48,7 @@ export function MatchFeedModal({
   matchStatus,
   matchId,
   onRefresh,
+  gameClock,
 }: MatchFeedModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
   const [activeTab, setActiveTab] = useState<"timeline" | "scorers">("timeline")
@@ -290,12 +294,26 @@ export function MatchFeedModal({
                 )}
               </div>
               
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center justify-between text-sm mb-2">
                 <div className="text-gray-600">{homeTeam} vs {awayTeam}</div>
                 {finalScore && (
                   <div className="text-xl font-bold text-gray-900">{finalScore}</div>
                 )}
               </div>
+              
+              {/* Game Clock */}
+              {gameClock && matchStatus === "live" && (
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="bg-gray-900 text-white px-3 py-1.5 rounded-lg shadow-md">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <GameClock gameClock={gameClock} className="text-lg" />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             
             <button

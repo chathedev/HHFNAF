@@ -2,6 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 
+export type GameClock = {
+  minutes: number
+  seconds: number
+  display: string
+  totalSeconds: number
+  serverTimestamp: number
+  isLive: boolean
+  source?: string
+}
+
 export type MatchFeedEvent = {
   time: string
   type: string
@@ -36,6 +46,7 @@ type ApiMatch = {
   infoUrl?: string | null
   matchStatus?: "live" | "finished" | "upcoming" | null
   matchFeed?: MatchFeedEvent[]
+  gameClock?: GameClock
   teamType?: string
   opponent?: string
   isHome?: boolean
@@ -59,6 +70,7 @@ export type NormalizedMatch = {
   teamType: string
   matchStatus?: "live" | "finished" | "upcoming"
   matchFeed?: MatchFeedEvent[]
+  gameClock?: GameClock
 }
 
 export type EnhancedMatchData = {
@@ -163,6 +175,7 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     playUrl: match.playUrl && match.playUrl !== "null" ? match.playUrl : undefined,
     matchStatus: match.matchStatus ?? undefined,
     matchFeed: match.matchFeed ?? undefined,
+    gameClock: match.gameClock ?? undefined,
   }
 }
 
