@@ -55,9 +55,15 @@ export function MatchFeedModal({
 
   // Update local state when props change
   useEffect(() => {
+    console.log('📊 Modal props updated:', {
+      matchFeedLength: initialMatchFeed.length,
+      finalScore: initialFinalScore,
+      matchStatus,
+      matchId
+    })
     setMatchFeed(initialMatchFeed)
     setFinalScore(initialFinalScore)
-  }, [initialMatchFeed, initialFinalScore])
+  }, [initialMatchFeed, initialFinalScore, matchStatus, matchId])
 
   // Auto-refresh for live matches
   useEffect(() => {

@@ -656,11 +656,25 @@ export default function MatcherPage() {
               matchStatus={selectedMatch.matchStatus}
               matchId={selectedMatch.id}
               onRefresh={async () => {
+                console.log('🔄 Matcher page: Starting refresh...')
                 await refresh()
+                console.log('🔄 Matcher page: Refresh complete, updating selectedMatch...')
                 // Only update selectedMatch if modal is still open (selectedMatch is not null)
                 setSelectedMatch(prevMatch => {
-                  if (!prevMatch) return null
+                  if (!prevMatch) {
+                    console.log('🔄 Matcher page: Modal closed, skipping update')
+                    return null
+                  }
                   const updatedMatch = matches.find(m => m.id === prevMatch.id)
+                  if (updatedMatch) {
+                    console.log('🔄 Matcher page: Found updated match:', {
+                      matchFeedLength: updatedMatch.matchFeed?.length || 0,
+                      result: updatedMatch.result,
+                      status: updatedMatch.matchStatus
+                    })
+                  } else {
+                    console.log('⚠️ Matcher page: Match not found in matches array')
+                  }
                   return updatedMatch || prevMatch
                 })
               }}

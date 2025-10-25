@@ -1214,11 +1214,25 @@ export default function HomePage() {
               matchStatus={selectedMatch.matchStatus}
               matchId={selectedMatch.id}
               onRefresh={async () => {
+                console.log('🔄 Home page: Starting refresh...')
                 await refresh()
+                console.log('🔄 Home page: Refresh complete, updating selectedMatch...')
                 // Only update selectedMatch if modal is still open (selectedMatch is not null)
                 setSelectedMatch(prevMatch => {
-                  if (!prevMatch) return null
+                  if (!prevMatch) {
+                    console.log('🔄 Home page: Modal closed, skipping update')
+                    return null
+                  }
                   const updatedMatch = upcomingMatches.find(m => m.id === prevMatch.id)
+                  if (updatedMatch) {
+                    console.log('🔄 Home page: Found updated match:', {
+                      matchFeedLength: updatedMatch.matchFeed?.length || 0,
+                      result: updatedMatch.result,
+                      status: updatedMatch.matchStatus
+                    })
+                  } else {
+                    console.log('⚠️ Home page: Match not found in upcomingMatches')
+                  }
                   return updatedMatch || prevMatch
                 })
               }}
