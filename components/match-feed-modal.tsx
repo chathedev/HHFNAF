@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { X } from "lucide-react"
+import confetti from "canvas-confetti"
 
 type MatchFeedEvent = {
   time: string
@@ -50,6 +51,7 @@ export function MatchFeedModal({
   const [matchFeed, setMatchFeed] = useState(initialMatchFeed)
   const [finalScore, setFinalScore] = useState(initialFinalScore)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const prevHHFGoalsRef = useRef<number>(0)
 
   // Update local state when props change
   useEffect(() => {
@@ -134,6 +136,69 @@ export function MatchFeedModal({
       document.body.style.overflow = "unset"
     }
   }, [isOpen, onClose])
+
+  // Trigger confetti when Härnösands HF scores
+  useEffect(() => {
+    if (!isOpen || !matchFeed || matchFeed.length === 0) {
+      return
+    }
+
+    // Count HHF goals
+    const homeTeamLower = homeTeam?.toLowerCase() || ''
+    const isHomeHHF = homeTeamLower.includes('härnösand')
+    
+    const hhfGoals = matchFeed.filter(event => {
+      if (!event.type?.toLowerCase().includes("mål")) return false
+      const eventTeamLower = event.team?.toLowerCase() || ''
+      const isHomeEvent = eventTeamLower.includes(homeTeamLower.split(' ')[0]) || event.isHomeGoal
+      return isHomeHHF ? isHomeEvent : !isHomeEvent
+    }).length
+
+    // Trigger confetti if goals increased
+    if (hhfGoals > prevHHFGoalsRef.current && prevHHFGoalsRef.current > 0) {
+      console.log('🎉 Härnösands HF scored! Triggering confetti!')
+      
+      // Fast burst of confetti
+      const count = 200
+      const defaults = {
+        origin: { y: 0.7 },
+        colors: ['#10b981', '#34d399', '#6ee7b7', '#ffffff', '#fbbf24']
+      }
+
+      const fire = (particleRatio: number, opts: any) => {
+        confetti({
+          ...defaults,
+          ...opts,
+          particleCount: Math.floor(count * particleRatio)
+        })
+      }
+
+      fire(0.25, {
+        spread: 26,
+        startVelocity: 55,
+      })
+      fire(0.2, {
+        spread: 60,
+      })
+      fire(0.35, {
+        spread: 100,
+        decay: 0.91,
+        scalar: 0.8
+      })
+      fire(0.1, {
+        spread: 120,
+        startVelocity: 25,
+        decay: 0.92,
+        scalar: 1.2
+      })
+      fire(0.1, {
+        spread: 120,
+        startVelocity: 45,
+      })
+    }
+
+    prevHHFGoalsRef.current = hhfGoals
+  }, [isOpen, matchFeed, homeTeam])
 
   if (!isOpen) return null
 
@@ -311,7 +376,7 @@ export function MatchFeedModal({
                           return (
                             <div 
                               key={idx} 
-                              className={`relative bg-white rounded-xl border-2 transition-all hover:shadow-md ${
+                              className={`relative bg-white rounded-xl border-2 transition-all hover:shadow-md overflow-hidden ${
                                 isGoal
                                   ? isHHF 
                                     ? "border-emerald-200 hover:border-emerald-300" 
@@ -319,12 +384,39 @@ export function MatchFeedModal({
                                   : "border-gray-200 hover:border-gray-300"
                               }`}
                             >
+                              {/* Static Confetti Decoration for Goals */}
+                              {isGoal && (
+                                <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                                  {/* Top confetti */}
+                                  <div className={`absolute top-2 left-4 w-2 h-2 rounded-full ${isHHF ? 'bg-emerald-400' : 'bg-blue-400'} opacity-60`}></div>
+                                  <div className={`absolute top-3 left-8 w-1.5 h-1.5 rounded-full ${isHHF ? 'bg-yellow-400' : 'bg-cyan-400'} opacity-70`}></div>
+                                  <div className="absolute top-2 left-14 w-1 h-1 rounded-full bg-white opacity-80"></div>
+                                  <div className={`absolute top-4 left-20 w-2 h-2 rounded-full ${isHHF ? 'bg-emerald-300' : 'bg-blue-300'} opacity-50`}></div>
+                                  
+                                  {/* Right side confetti */}
+                                  <div className="absolute top-2 right-4 w-1.5 h-1.5 rounded-full bg-yellow-400 opacity-70"></div>
+                                  <div className={`absolute top-3 right-8 w-2 h-2 rounded-full ${isHHF ? 'bg-emerald-400' : 'bg-blue-400'} opacity-60`}></div>
+                                  <div className="absolute top-4 right-12 w-1 h-1 rounded-full bg-white opacity-80"></div>
+                                  <div className={`absolute top-2 right-16 w-1.5 h-1.5 rounded-full ${isHHF ? 'bg-green-300' : 'bg-cyan-300'} opacity-60`}></div>
+                                  
+                                  {/* Bottom confetti */}
+                                  <div className={`absolute bottom-2 left-6 w-1.5 h-1.5 rounded-full ${isHHF ? 'bg-emerald-500' : 'bg-blue-500'} opacity-50`}></div>
+                                  <div className="absolute bottom-3 left-12 w-1 h-1 rounded-full bg-yellow-300 opacity-70"></div>
+                                  <div className="absolute bottom-2 right-6 w-2 h-2 rounded-full bg-white opacity-60"></div>
+                                  <div className={`absolute bottom-3 right-10 w-1.5 h-1.5 rounded-full ${isHHF ? 'bg-emerald-400' : 'bg-blue-400'} opacity-60`}></div>
+                                  
+                                  {/* Scattered middle confetti */}
+                                  <div className={`absolute top-1/2 left-1/4 w-1 h-1 rounded-full ${isHHF ? 'bg-green-400' : 'bg-cyan-400'} opacity-50`}></div>
+                                  <div className="absolute top-1/2 right-1/4 w-1.5 h-1.5 rounded-full bg-yellow-400 opacity-60"></div>
+                                </div>
+                              )}
+                              
                               {/* Team color bar - more prominent */}
                               <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-xl ${
                                 isHHF ? "bg-emerald-500" : "bg-blue-500"
                               }`}></div>
                               
-                              <div className="pl-4 pr-4 py-3.5">
+                              <div className="pl-4 pr-4 py-3.5 relative z-10">
                                 <div className="flex items-center gap-4">
                                   {/* Time Badge - Enhanced */}
                                   <div className="flex-shrink-0">
