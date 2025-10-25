@@ -1189,11 +1189,12 @@ export default function HomePage() {
               matchId={selectedMatch.id}
               onRefresh={async () => {
                 await refresh()
-                // Update selectedMatch with fresh data
-                const updatedMatch = upcomingMatches.find(m => m.id === selectedMatch.id)
-                if (updatedMatch) {
-                  setSelectedMatch(updatedMatch)
-                }
+                // Only update selectedMatch if modal is still open (selectedMatch is not null)
+                setSelectedMatch(prevMatch => {
+                  if (!prevMatch) return null
+                  const updatedMatch = upcomingMatches.find(m => m.id === prevMatch.id)
+                  return updatedMatch || prevMatch
+                })
               }}
             />
           )

@@ -59,23 +59,38 @@ export function MatchFeedModal({
 
   // Auto-refresh for live matches
   useEffect(() => {
-    if (!isOpen || matchStatus !== "live" || !matchId) {
-      console.log('Auto-refresh disabled:', { isOpen, matchStatus, matchId })
+    if (!isOpen || matchStatus !== "live" || !matchId || !onRefresh) {
+      console.log('Auto-refresh disabled:', { isOpen, matchStatus, matchId, hasOnRefresh: !!onRefresh })
       return
     }
 
     console.log('Auto-refresh enabled for match:', matchId)
+    
+    let isMounted = true
+    let isCurrentlyRefreshing = false
 
     const refreshData = async () => {
-      if (onRefresh && !isRefreshing) {
+      // Don't refresh if modal was closed or already refreshing
+      if (!isMounted || isCurrentlyRefreshing) {
+        return
+      }
+      
+      isCurrentlyRefreshing = true
+      setIsRefreshing(true)
+      
+      try {
         console.log('Refreshing match data...')
-        setIsRefreshing(true)
-        try {
-          await onRefresh()
+        await onRefresh()
+        if (isMounted) {
           console.log('Match data refreshed successfully')
-        } catch (error) {
+        }
+      } catch (error) {
+        if (isMounted) {
           console.error("Failed to refresh match data:", error)
-        } finally {
+        }
+      } finally {
+        isCurrentlyRefreshing = false
+        if (isMounted) {
           setIsRefreshing(false)
         }
       }
@@ -87,8 +102,12 @@ export function MatchFeedModal({
     // Refresh every 3 seconds for live matches
     const interval = setInterval(refreshData, 3000)
 
-    return () => clearInterval(interval)
-  }, [isOpen, matchStatus, matchId, onRefresh, isRefreshing])
+    return () => {
+      isMounted = false
+      clearInterval(interval)
+      console.log('Auto-refresh cleanup for match:', matchId)
+    }
+  }, [isOpen, matchStatus, matchId, onRefresh])
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
