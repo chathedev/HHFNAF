@@ -111,8 +111,8 @@ export function MatchFeedModal({
     // Initial refresh when modal opens
     refreshData()
 
-    // Refresh every 3 seconds for live matches
-    const interval = setInterval(refreshData, 3000)
+    // Refresh every 1 second for live matches (fast updates!)
+    const interval = setInterval(refreshData, 1000)
 
     return () => {
       isMounted = false
