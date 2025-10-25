@@ -60,14 +60,19 @@ export function MatchFeedModal({
   // Auto-refresh for live matches
   useEffect(() => {
     if (!isOpen || matchStatus !== "live" || !matchId) {
+      console.log('Auto-refresh disabled:', { isOpen, matchStatus, matchId })
       return
     }
 
+    console.log('Auto-refresh enabled for match:', matchId)
+
     const refreshData = async () => {
       if (onRefresh && !isRefreshing) {
+        console.log('Refreshing match data...')
         setIsRefreshing(true)
         try {
           await onRefresh()
+          console.log('Match data refreshed successfully')
         } catch (error) {
           console.error("Failed to refresh match data:", error)
         } finally {
@@ -75,6 +80,9 @@ export function MatchFeedModal({
         }
       }
     }
+
+    // Initial refresh when modal opens
+    refreshData()
 
     // Refresh every 3 seconds for live matches
     const interval = setInterval(refreshData, 3000)

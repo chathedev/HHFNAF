@@ -1189,6 +1189,11 @@ export default function HomePage() {
               matchId={selectedMatch.id}
               onRefresh={async () => {
                 await refresh()
+                // Update selectedMatch with fresh data
+                const updatedMatch = upcomingMatches.find(m => m.id === selectedMatch.id)
+                if (updatedMatch) {
+                  setSelectedMatch(updatedMatch)
+                }
               }}
             />
           )

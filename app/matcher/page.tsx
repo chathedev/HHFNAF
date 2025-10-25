@@ -657,6 +657,11 @@ export default function MatcherPage() {
               matchId={selectedMatch.id}
               onRefresh={async () => {
                 await refresh()
+                // Update selectedMatch with fresh data
+                const updatedMatch = matches.find(m => m.id === selectedMatch.id)
+                if (updatedMatch) {
+                  setSelectedMatch(updatedMatch)
+                }
               }}
             />
           )
