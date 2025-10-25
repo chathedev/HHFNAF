@@ -146,36 +146,27 @@ export default function HomePage() {
 
   const matchesTodayForward = useMemo(() => {
     const now = Date.now()
-    const twoHoursAgo = now - (1000 * 60 * 60 * 2) // 2 hours ago
+    const twoHoursAgo = now - 1000 * 60 * 60 * 2
+    const liveLookbackMs = 1000 * 60 * 60 * 6
     
-    // Home page: Show upcoming, live, and recently finished matches (within 2 hours)
+    // Home page: Show upcoming, live (within window), and recently finished matches
     return upcomingMatches.filter((match) => {
       const kickoff = match.date.getTime()
-      
-      // Use backend matchStatus if available
       const status = match.matchStatus
       
-      // Include finished matches only if they started within the last 2 hours
       if (status === "finished") {
         return kickoff >= twoHoursAgo
       }
       
-      // Include all future matches (upcoming)
       if (kickoff > now || status === "upcoming") {
         return true
       }
       
-      // Include live matches
       if (status === "live") {
-        return true
+        return kickoff >= now - liveLookbackMs
       }
       
-      // Fallback for matches without matchStatus: include if kickoff is in the future
-      if (kickoff >= now) {
-        return true
-      }
-      
-      return false
+      return kickoff >= now
     })
   }, [upcomingMatches])
 

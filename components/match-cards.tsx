@@ -67,7 +67,35 @@ export default function MatchCards() {
           matches = data
         }
 
-        setUpcomingMatches(matches.slice(0, 3))
+        const now = Date.now()
+        const lookBackMs = 1000 * 60 * 60 * 6 // keep matches that started within the last 6h
+
+        const toDate = (match: Match) => {
+          if (!match.date) return null
+          const timePart = match.time && match.time.trim().length > 0 ? match.time.trim() : "00:00"
+          const parsed = new Date(`${match.date}T${timePart}`)
+          return Number.isNaN(parsed.getTime()) ? null : parsed
+        }
+
+        const upcomingOnly = matches
+          .map((match) => ({
+            match,
+            kickoff: toDate(match),
+          }))
+          .filter(({ kickoff }) => {
+            if (!kickoff) return false
+            const kickoffTime = kickoff.getTime()
+            return kickoffTime >= now - lookBackMs
+          })
+          .sort((a, b) => {
+            const aTime = a.kickoff ? a.kickoff.getTime() : Infinity
+            const bTime = b.kickoff ? b.kickoff.getTime() : Infinity
+            return aTime - bTime
+          })
+          .map(({ match }) => match)
+          .slice(0, 3)
+
+        setUpcomingMatches(upcomingOnly)
         setError(null)
       } catch (caught) {
         console.error("Error fetching matches:", caught)

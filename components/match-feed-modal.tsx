@@ -218,54 +218,54 @@ export function MatchFeedModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-black/45 px-4 py-6 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-black/55 px-4 py-6 sm:items-center">
       <div
-        className="relative flex h-full w-full max-h-[90vh] max-w-2xl flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[85vh] sm:rounded-2xl"
+        className="relative flex h-full w-full max-h-[90vh] max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:h-auto sm:max-h-[85vh]"
         ref={modalRef}
       >
-        <header className="flex flex-col gap-3 border-b border-gray-200 px-5 py-4 sm:px-6 sm:py-5">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Matchuppföljning</p>
-              <h2 className="mt-1 text-lg font-semibold text-gray-900 sm:text-xl">
-                {homeTeam} <span className="text-gray-400">vs</span> {awayTeam}
+        <header className="flex flex-col gap-4 border-b border-gray-200 px-5 py-5 sm:px-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">Matchuppföljning</p>
+              <h2 className="mt-1 text-xl font-semibold text-gray-900">
+                {homeTeam} <span className="text-gray-300">vs</span> {awayTeam}
               </h2>
             </div>
             <button
               onClick={onClose}
-              className="rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
+              className="rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
               aria-label="Stäng"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 text-sm">
+          <div className="flex flex-wrap items-center gap-2">
             {isLive && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 font-semibold text-red-600">
+              <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
                 Pågår
               </span>
             )}
             {isFinished && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-100 px-2.5 py-1 font-semibold text-gray-700">
+              <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700">
                 Avslutad
               </span>
             )}
             {isUpcoming && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700">
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
                 Kommande
               </span>
             )}
-            {finalScore && (
-              <span className="ml-auto inline-flex items-center rounded-full bg-gray-900 px-3 py-1 text-base font-semibold text-white sm:text-lg">
-                {finalScore}
+            {isRefreshing && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-500">
+                <span className="h-1.5 w-1.5 animate-ping rounded-full bg-gray-400" />
+                Uppdaterar…
               </span>
             )}
-            {isRefreshing && (
-              <span className="inline-flex items-center gap-2 text-xs font-medium text-gray-500">
-                <span className="h-2 w-2 animate-ping rounded-full bg-gray-400" />
-                Uppdaterar…
+            {finalScore && (
+              <span className="ml-auto inline-flex items-center gap-2 rounded-full bg-gray-900 px-3 py-1 text-base font-semibold text-white">
+                {finalScore}
               </span>
             )}
           </div>
@@ -291,7 +291,7 @@ export function MatchFeedModal({
           </button>
         </nav>
 
-        <div className="flex-1 overflow-hidden bg-gray-50">
+        <div className="flex-1 bg-gray-50">
           {activeTab === "timeline" && (
             <div className="h-full overflow-y-auto px-5 py-5 sm:px-6">
               {matchFeed.length === 0 ? (
@@ -299,13 +299,18 @@ export function MatchFeedModal({
                   Inga händelser ännu.
                 </div>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-8">
                   {periods.map((period) => (
-                    <section key={period} className="space-y-3">
-                      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                        {formatPeriodLabel(period)}
-                      </h3>
-                      <ul className="space-y-3">
+                    <section key={period} className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-px flex-1 bg-gray-200" />
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                          {formatPeriodLabel(period)}
+                        </h3>
+                        <div className="h-px flex-1 bg-gray-200" />
+                      </div>
+                      <ul className="relative space-y-4">
+                        <span className="absolute left-2 top-1 bottom-1 w-px bg-gray-200" aria-hidden="true" />
                         {eventsByPeriod[period].map((event, index) => {
                           const type = event.type?.toLowerCase() ?? ""
                           const isGoal = type.includes("mål")
@@ -318,37 +323,40 @@ export function MatchFeedModal({
                           return (
                             <li
                               key={`${event.time}-${index}`}
-                              className={`rounded-lg border px-4 py-3 shadow-sm transition-colors ${
-                                isGoal
-                                  ? "border-emerald-200 bg-white"
-                                  : isWarning
-                                    ? "border-yellow-200 bg-yellow-50"
-                                    : "border-gray-200 bg-white"
-                              }`}
+                              className="relative pl-6"
                             >
-                              <div className="flex items-start gap-3">
-                                <span className="mt-0.5 font-mono text-xs font-semibold text-gray-500">{event.time}</span>
-                                <div className="min-w-0 flex-1 space-y-1">
-                                  <div className="flex flex-wrap items-baseline gap-2">
-                                    <p className="text-sm font-semibold text-gray-900">{event.type}</p>
-                                    {event.team && (
-                                      <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                                        {event.team}
-                                      </span>
+                              <span
+                                className={`absolute left-[6px] top-3 h-2 w-2 rounded-full ${
+                                  isGoal ? "bg-emerald-500 ring-2 ring-emerald-100" : isWarning ? "bg-amber-500" : "bg-gray-300"
+                                }`}
+                              />
+                              <div className={`rounded-xl border bg-white px-4 py-3 shadow-sm ${isGoal ? "border-emerald-100" : isWarning ? "border-amber-100" : "border-gray-100"}`}>
+                                <div className="flex flex-wrap items-start gap-3">
+                                  <span className="font-mono text-xs font-semibold text-gray-500">{event.time}</span>
+                                  <div className="min-w-0 flex-1 space-y-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <p className="text-sm font-semibold text-gray-900">{event.type}</p>
+                                      {event.team && (
+                                        <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                                          {event.team}
+                                        </span>
+                                      )}
+                                      {score && (
+                                        <span className="ml-auto rounded-full bg-gray-900 px-2 py-0.5 text-xs font-semibold text-white">
+                                          {score}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {event.player && (
+                                      <p className="text-sm text-gray-700">
+                                        {event.player}
+                                        {event.playerNumber && <span className="text-gray-500"> #{event.playerNumber}</span>}
+                                      </p>
                                     )}
-                                    {score && (
-                                      <span className="ml-auto text-xs font-bold text-gray-900">{score}</span>
+                                    {event.description && (
+                                      <p className="text-xs text-gray-500">{event.description}</p>
                                     )}
                                   </div>
-                                  {event.player && (
-                                    <p className="text-sm text-gray-700">
-                                      {event.player}
-                                      {event.playerNumber && <span className="text-gray-500"> #{event.playerNumber}</span>}
-                                    </p>
-                                  )}
-                                  {event.description && (
-                                    <p className="text-xs text-gray-500">{event.description}</p>
-                                  )}
                                 </div>
                               </div>
                             </li>
@@ -400,7 +408,7 @@ export function MatchFeedModal({
         <footer className="border-t border-gray-200 bg-white px-5 py-4 sm:px-6">
           <button
             onClick={onClose}
-            className="w-full rounded-full bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800"
+            className="w-full rounded-full bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
           >
             Stäng
           </button>
