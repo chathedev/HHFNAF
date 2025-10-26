@@ -55,23 +55,7 @@ const getMatchOutcome = (rawResult?: string, isHome?: boolean, status?: string):
 }
 
 const getMatchStatus = (match: NormalizedMatch): StatusFilter => {
-  if (match.matchStatus) {
-    return match.matchStatus
-  }
-  
-  const now = Date.now()
-  const kickoff = match.date.getTime()
-  const liveWindowEnd = kickoff + 1000 * 60 * 60 * 2.5
-  
-  if (now >= kickoff && now <= liveWindowEnd) {
-    return "live"
-  }
-  
-  if (match.result && match.result !== "Inte publicerat") {
-    return "finished"
-  }
-
-  return "upcoming"
+  return match.matchStatus ?? "upcoming"
 }
 
 export default function MatcherPage() {

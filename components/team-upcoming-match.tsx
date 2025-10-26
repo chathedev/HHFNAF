@@ -101,28 +101,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   }, [teamLabels])
 
   const upcomingMatches = useMemo(() => {
-    const now = Date.now()
-    const liveLookbackMs = 1000 * 60 * 60 * 6
-    
-    // Team component: Show only upcoming and currently live matches in a sensible window
-    return matches.filter((match) => {
-      const kickoff = match.date.getTime()
-      const status = match.matchStatus
-      
-      if (status === "finished") {
-        return false
-      }
-      
-      if (kickoff > now || status === "upcoming") {
-        return true
-      }
-      
-      if (status === "live") {
-        return kickoff >= now - liveLookbackMs
-      }
-      
-      return kickoff >= now
-    })
+    return matches.filter((match) => match.matchStatus === "upcoming" || match.matchStatus === "live")
   }, [matches])
 
   const nextMatch = useMemo(() => {

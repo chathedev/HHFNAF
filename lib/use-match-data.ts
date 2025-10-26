@@ -158,11 +158,6 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
   }
 
   const timeline = match.matchFeed ?? []
-  const now = Date.now()
-  const kickoffMs = parsedDate.getTime()
-  const hasExplicitTime = Boolean(match.time && match.time.trim().length > 0)
-  const finishBufferMs = hasExplicitTime ? 1000 * 60 * 60 * 3 : 1000 * 60 * 60 * 24
-  const finishThreshold = kickoffMs + finishBufferMs
   const hasTimelineEvents = timeline.some((event) => Boolean(event?.type || event?.description))
   const timelineEnded = timeline.some((event) => {
     const type = event.type?.toLowerCase() ?? ""
@@ -181,29 +176,8 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
 
   if (timelineEnded) {
     derivedStatus = "finished"
-  } else if (hasTimelineEvents) {
-    derivedStatus = "live"
-  } else {
-    if (derivedStatus === "finished" && now < finishThreshold) {
-      derivedStatus = "upcoming"
-    }
-
-    if (derivedStatus === "live") {
-      if (now > finishThreshold) {
-        derivedStatus = "finished"
-      } else {
-        // Without timeline activity we keep it as upcoming until events arrive.
-        derivedStatus = "upcoming"
-      }
-    }
-
-    if ((!derivedStatus || derivedStatus === "upcoming") && now > finishThreshold) {
-      derivedStatus = "finished"
-    }
-
-    if (!derivedStatus) {
-      derivedStatus = now > finishThreshold ? "finished" : "upcoming"
-    }
+  } else if (!derivedStatus) {
+    derivedStatus = hasTimelineEvents ? "live" : "upcoming"
   }
 
   return {

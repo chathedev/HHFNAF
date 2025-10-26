@@ -95,8 +95,8 @@ export function MatchFeedModal({
   )
 
   const hasTimelineEvents = matchFeed.length > 0
-  const isLive = !matchEndedByTimeline && (matchStatus === "live" || hasTimelineEvents)
   const isFinished = matchEndedByTimeline || matchStatus === "finished"
+  const isLive = !isFinished && matchStatus === "live"
   const isUpcoming = !isLive && !isFinished
 
   useEffect(() => {

@@ -145,23 +145,7 @@ export default function HomePage() {
   const tierOrder = ["Diamantpartner", "Platinapartner", "Guldpartner", "Silverpartner", "Bronspartner"]
 
   function getMatchStatus(match: NormalizedMatch): "live" | "finished" | "upcoming" {
-    if (match.matchStatus) {
-      return match.matchStatus
-    }
-    
-    const now = Date.now()
-    const kickoff = match.date.getTime()
-    const liveWindowEnd = kickoff + 1000 * 60 * 60 * 2.5
-    
-    if (now >= kickoff && now <= liveWindowEnd) {
-      return "live"
-    }
-    
-    if (match.result) {
-      return "finished"
-    }
-    
-    return "upcoming"
+    return match.matchStatus ?? "upcoming"
   }
 
   const matchesTodayForward = useMemo(() => {
@@ -174,21 +158,17 @@ export default function HomePage() {
     
     const matchesInWindow = upcomingMatches.filter((match) => {
       const kickoff = match.date.getTime()
-      const status = match.matchStatus
+      const status = match.matchStatus ?? (kickoff >= now ? "upcoming" : "finished")
       
       if (status === "finished") {
         return kickoff >= twoHoursAgo
-      }
-      
-      if (kickoff > now || status === "upcoming") {
-        return true
       }
       
       if (status === "live") {
         return kickoff >= now - liveLookbackMs
       }
       
-      return kickoff >= now
+      return status === "upcoming"
     })
 
     matchesInWindow.sort((a, b) => {
