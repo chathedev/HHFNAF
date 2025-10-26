@@ -49,7 +49,6 @@ export function MatchFeedModal({
   const [activeTab, setActiveTab] = useState<"timeline" | "scorers">("timeline")
   const [matchFeed, setMatchFeed] = useState<MatchFeedEvent[]>(initialMatchFeed ?? [])
   const [finalScore, setFinalScore] = useState(initialFinalScore)
-  const [isRefreshing, setIsRefreshing] = useState(false)
 
   useEffect(() => {
     setMatchFeed(initialMatchFeed ?? [])
@@ -112,13 +111,9 @@ export function MatchFeedModal({
         return
       }
       pending = true
-      setIsRefreshing(true)
       try {
         await onRefresh()
       } finally {
-        if (isMounted) {
-          setIsRefreshing(false)
-        }
         pending = false
       }
     }
@@ -253,7 +248,6 @@ export function MatchFeedModal({
                 {isLive && <StatusBadge tone="live" label="Pågår" />}
                 {isUpcoming && <StatusBadge tone="upcoming" label="Kommande" />}
                 {isFinished && <StatusBadge tone="finished" label="Avslutad" />}
-                {isRefreshing && <StatusBadge tone="info" label="Uppdaterar…" />}
               </div>
             </div>
 
