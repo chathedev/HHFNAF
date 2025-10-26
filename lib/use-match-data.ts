@@ -126,6 +126,33 @@ const formatDisplayDate = (date: Date) =>
     day: "numeric",
     month: "long",
   }).format(date)
+const normalizeStatusValue = (
+  value?: string | null,
+): NormalizedMatch["matchStatus"] | undefined => {
+  if (!value) {
+    return undefined
+  }
+
+  const normalized = value.toString().trim().toLowerCase()
+
+  if (["live", "finished", "upcoming"].includes(normalized)) {
+    return normalized as NormalizedMatch["matchStatus"]
+  }
+
+  if (["playing", "inprogress", "in-progress", "ongoing", "started"].includes(normalized)) {
+    return "live"
+  }
+
+  if (["complete", "completed", "done", "slut", "final", "closed"].includes(normalized)) {
+    return "finished"
+  }
+
+  if (["scheduled", "notstarted", "not-started", "pending", "future", "upcoming"].includes(normalized)) {
+    return "upcoming"
+  }
+
+  return undefined
+}
 
 const toDate = (dateString?: string | null, timeString?: string | null) => {
   if (!dateString) {
@@ -172,7 +199,7 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     )
   })
 
-  let derivedStatus: NormalizedMatch["matchStatus"] | undefined = match.matchStatus ?? undefined
+  let derivedStatus: NormalizedMatch["matchStatus"] | undefined = normalizeStatusValue(match.matchStatus)
 
   if (timelineEnded) {
     derivedStatus = "finished"
@@ -284,9 +311,10 @@ const fetchFromApi = async (dataType: DataType = "both"): Promise<EnhancedMatchD
       }
 
       normalizedMatches.forEach((normalizedMatch) => {
-        if (normalizedMatch.matchStatus === "live") {
+        const status = normalizedMatch.matchStatus
+        if (status === "live") {
           statusBuckets.live.push(normalizedMatch)
-        } else if (normalizedMatch.matchStatus === "finished") {
+        } else if (status === "finished") {
           statusBuckets.finished.push(normalizedMatch)
         } else {
           statusBuckets.upcoming.push(normalizedMatch)
