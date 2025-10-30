@@ -78,14 +78,12 @@ export default function TeamPage({ params }: TeamPageProps) {
           const home = normalize(m.homeTeam ?? "");
           const away = normalize(m.awayTeam ?? "");
           const type = normalize(m.teamType ?? "");
-          // Strict: teamType must match AND home/away must match team name or displayName
-          const teamTypeMatch = type === normalizedTeamType;
-          const teamNameMatch =
-            home === normalizedTeamName ||
-            away === normalizedTeamName ||
-            home === normalizedDisplayName ||
-            away === normalizedDisplayName;
-          return teamTypeMatch && teamNameMatch;
+          // Require exact teamType match
+          if (type !== normalizedTeamType) return false;
+          // Require home or away to match team name or displayName (exact)
+          const isHome = home === normalizedTeamName || home === normalizedDisplayName;
+          const isAway = away === normalizedTeamName || away === normalizedDisplayName;
+          return isHome || isAway;
         });
         // Sort: live first, then upcoming, then finished (but keep finished for 1 hour)
         const now = Date.now();
