@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useEffect, useRef } from "react"
 import Link from "next/link"
-import confetti from "canvas-confetti"
 import { useSearchParams } from "next/navigation"
 
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
@@ -56,6 +55,7 @@ const getMatchOutcome = (rawResult?: string, isHome?: boolean, status?: string):
 }
 
 const getMatchStatus = (match: NormalizedMatch): StatusFilter => {
+  // Respect backend/timeline signals so live matches show even if kickoff shifts
   return match.matchStatus ?? "upcoming"
 }
 
@@ -65,9 +65,8 @@ export default function MatcherPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const [selectedMatch, setSelectedMatch] = useState<NormalizedMatch | null>(null)
   
-  // Track previous scores for confetti animation
+  // Track previous scores to highlight live updates
   const prevScoresRef = useRef<Map<string, { home: number; away: number }>>(new Map())
-  const confettiTriggeredRef = useRef<Set<string>>(new Set())
   
   // Use "both" endpoint to get current + old matches (unified endpoint)
   const dataType: "current" | "old" | "both" | "enhanced" = "both"
@@ -137,142 +136,69 @@ export default function MatcherPage() {
     return { live, upcoming, finished }
   }, [filteredMatches, grouped, statusFilter, selectedTeam])
 
-  // Confetti effect for live matches when Härnösands HF scores
   useEffect(() => {
     groupedMatches.live.forEach((match) => {
       const status = getMatchStatus(match)
-      if (!match.result || status !== "live") {
+      const scoreMatch = match.result?.match(/(\d+)\s*[–-]\s*(\d+)/)
+      if (!scoreMatch) {
+        prevScoresRef.current.set(match.id, { home: 0, away: 0 })
         return
       }
 
-      const scoreMatch = match.result.match(/(\d+)\s*[–-]\s*(\d+)/)
-      if (!scoreMatch) return
-
       const currentHomeScore = Number.parseInt(scoreMatch[1], 10)
       const currentAwayScore = Number.parseInt(scoreMatch[2], 10)
-
       if (Number.isNaN(currentHomeScore) || Number.isNaN(currentAwayScore)) {
         return
       }
 
-      // Initialize previous score on first load
-      const prevScore = prevScoresRef.current.get(match.id)
-      if (!prevScore) {
-        prevScoresRef.current.set(match.id, {
-          home: currentHomeScore,
-          away: currentAwayScore
-        })
+      const previousScore = prevScoresRef.current.get(match.id)
+      const currentSnapshot = { home: currentHomeScore, away: currentAwayScore }
+
+      if (!previousScore) {
+        prevScoresRef.current.set(match.id, currentSnapshot)
         return
       }
 
-      // Check if Härnösands HF scored
       let hhfScored = false
       if (match.isHome !== false) {
-        hhfScored = currentHomeScore > prevScore.home
+        hhfScored = currentHomeScore > previousScore.home
       } else {
-        hhfScored = currentAwayScore > prevScore.away
+        hhfScored = currentAwayScore > previousScore.away
       }
 
-      // Trigger confetti if HHF scored and not already triggered for this score
-      const scoreKey = `${match.id}-${currentHomeScore}-${currentAwayScore}`
-      if (hhfScored && !confettiTriggeredRef.current.has(scoreKey)) {
-        confettiTriggeredRef.current.add(scoreKey)
-        
-        const matchCard = document.getElementById(`match-card-${match.id}`)
-        if (matchCard) {
-          // Add celebration animation to the card
-          matchCard.classList.add('goal-celebration')
-          setTimeout(() => matchCard.classList.remove('goal-celebration'), 2000)
+      if (status === "live" && hhfScored) {
+        const card = document.getElementById("match-card-" + match.id)
+        if (card && typeof card.animate === "function") {
+          card.animate(
+            [
+              { transform: "scale(1)", boxShadow: "0 0 0 0 rgba(16,185,129,0)" },
+              { transform: "scale(1.015)", boxShadow: "0 0 0 6px rgba(16,185,129,0.25)" },
+              { transform: "scale(1)", boxShadow: "0 0 0 0 rgba(16,185,129,0)" },
+            ],
+            { duration: 600, easing: "ease-out" },
+          )
+        }
 
-          const rect = matchCard.getBoundingClientRect()
-          const x = (rect.left + rect.width / 2) / window.innerWidth
-          const y = (rect.top + rect.height / 2) / window.innerHeight
-
-          // Main celebration burst from center - contained within card
-          confetti({
-            particleCount: 120,
-            spread: 70,
-            origin: { x, y },
-            colors: ['#10b981', '#34d399', '#6ee7b7', '#ffffff', '#d1fae5'],
-            startVelocity: 25,
-            gravity: 1.2,
-            ticks: 200,
-            scalar: 0.9,
-            shapes: ['circle'],
-            drift: 0,
-            decay: 0.92
-          })
-
-          // Sparkle effect
-          setTimeout(() => {
-            confetti({
-              particleCount: 60,
-              spread: 60,
-              origin: { x, y },
-              colors: ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0'],
-              startVelocity: 20,
-              gravity: 1.0,
-              ticks: 150,
-              scalar: 0.7,
-              shapes: ['circle'],
-              decay: 0.93
-            })
-          }, 100)
-
-          // Side bursts
-          setTimeout(() => {
-            confetti({
-              particleCount: 40,
-              angle: 70,
-              spread: 45,
-              origin: { x: x - 0.05, y },
-              colors: ['#10b981', '#34d399', '#ffffff'],
-              startVelocity: 20,
-              gravity: 1.1,
-              ticks: 180,
-              scalar: 0.8,
-              shapes: ['circle'],
-              decay: 0.91
-            })
-            confetti({
-              particleCount: 40,
-              angle: 110,
-              spread: 45,
-              origin: { x: x + 0.05, y },
-              colors: ['#10b981', '#34d399', '#ffffff'],
-              startVelocity: 20,
-              gravity: 1.1,
-              ticks: 180,
-              scalar: 0.8,
-              shapes: ['circle'],
-              decay: 0.91
-            })
-          }, 200)
-          
-          // Top celebration
-          setTimeout(() => {
-            confetti({
-              particleCount: 50,
-              angle: 90,
-              spread: 80,
-              origin: { x, y: y - 0.1 },
-              colors: ['#10b981', '#6ee7b7', '#ffffff'],
-              startVelocity: 15,
-              gravity: 0.8,
-              ticks: 220,
-              scalar: 0.6,
-              shapes: ['circle'],
-              decay: 0.94
-            })
-          }, 300)
+        if (card) {
+          const scoreElement = card.querySelector('[data-score-value="true"]')
+          if (scoreElement && typeof scoreElement.animate === "function") {
+            scoreElement.animate(
+              [
+                { transform: "scale(1)", color: "inherit" },
+                { transform: "scale(1.15)", color: "rgb(16, 185, 129)" },
+                { transform: "scale(1)", color: "inherit" },
+              ],
+              { duration: 450, easing: "ease-out" },
+            )
+          }
+          if (scoreElement) {
+            scoreElement.classList.add('score-updated')
+            window.setTimeout(() => scoreElement.classList.remove('score-updated'), 600)
+          }
         }
       }
 
-      // Update previous score
-      prevScoresRef.current.set(match.id, {
-        home: currentHomeScore,
-        away: currentAwayScore
-      })
+      prevScoresRef.current.set(match.id, currentSnapshot)
     })
   }, [groupedMatches.live])
 
@@ -384,16 +310,20 @@ export default function MatcherPage() {
                       {outcomeInfo.label}
                     </span>
                   )}
-                  <span className="text-2xl font-bold text-gray-900">
+                  <span className="text-2xl font-bold text-gray-900" data-score-value="true">
                     {match.result}
                   </span>
                 </div>
               ) : (
-                <span className="text-2xl font-bold text-gray-900">{match.result}</span>
+                <span className="text-2xl font-bold text-gray-900" data-score-value="true">
+                  {match.result}
+                </span>
               )
             ) : status === "finished" ? (
               <div className="flex items-center gap-3">
-                <span className="text-2xl font-bold text-gray-900">0–0</span>
+                <span className="text-2xl font-bold text-gray-900" data-score-value="true">
+                  0–0
+                </span>
                 <div className="flex items-center gap-1.5 text-xs text-gray-600 bg-gray-50 px-2.5 py-1 rounded border border-gray-200">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

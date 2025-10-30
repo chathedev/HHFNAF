@@ -93,69 +93,6 @@ body {
     text-shadow: 0px 0px 10px rgba(0, 0, 0, 0.8);
 }
 
-/* Goal Celebration Animation */
-@keyframes goal-pulse {
-  0%, 100% {
-    transform: scale(1);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  }
-  25% {
-    transform: scale(1.02);
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.5), 0 0 40px rgba(249, 115, 22, 0.3);
-  }
-  50% {
-    transform: scale(1.03);
-    box-shadow: 0 0 30px rgba(16, 185, 129, 0.6), 0 0 60px rgba(249, 115, 22, 0.4);
-  }
-  75% {
-    transform: scale(1.02);
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.5), 0 0 40px rgba(249, 115, 22, 0.3);
-  }
-}
-
-@keyframes goal-glow {
-  0%, 100% {
-    border-color: rgb(229, 231, 235);
-  }
-  50% {
-    border-color: rgb(16, 185, 129);
-  }
-}
-
-@keyframes goal-bg-flash {
-  0%, 100% {
-    background-color: white;
-  }
-  25% {
-    background-color: rgba(16, 185, 129, 0.05);
-  }
-  50% {
-    background-color: rgba(249, 115, 22, 0.05);
-  }
-  75% {
-    background-color: rgba(16, 185, 129, 0.05);
-  }
-}
-
-.goal-celebration {
-  animation: goal-pulse 0.8s ease-in-out, 
-             goal-glow 0.8s ease-in-out,
-             goal-bg-flash 1.5s ease-in-out,
-             goal-shine 1.2s ease-in-out;
-  position: relative;
-  overflow: hidden !important;
-  box-shadow: 0 0 30px rgba(16, 185, 129, 0.4), 0 0 60px rgba(16, 185, 129, 0.2) !important;
-}
-
-@keyframes goal-shine {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 40px rgba(16, 185, 129, 0.6), 0 0 80px rgba(16, 185, 129, 0.4);
-  }
-}
-
 /* Score update pulse animation */
 @keyframes score-update {
   0% {

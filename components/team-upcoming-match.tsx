@@ -2,7 +2,6 @@
 
 import { useMemo, useEffect, useRef, useState } from "react"
 import Link from "next/link"
-import confetti from "canvas-confetti"
 
 import { Card } from "@/components/ui/card"
 import { canShowTicketForMatch } from "@/lib/matches"
@@ -118,179 +117,88 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   // Track previous score to detect when Härnösands HF scores - MUST be before any returns
   const prevScoreRef = useRef<{ home: number; away: number; matchId: string } | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
-  const confettiTriggeredRef = useRef(false)
 
-  // Confetti effect - MUST be before any returns
   useEffect(() => {
-    if (!nextMatch || !nextMatch.result) {
-      // Reset confetti trigger when no match or no result
-      confettiTriggeredRef.current = false
+    if (!nextMatch) {
+      prevScoreRef.current = null
       return
     }
 
     const now = Date.now()
     const kickoff = nextMatch.date.getTime()
     const liveWindowEnd = kickoff + 1000 * 60 * 60 * 2.5
-    const calculatedStatus = now >= kickoff && now <= liveWindowEnd ? "live" : nextMatch.result ? "finished" : "upcoming"
+    const calculatedStatus =
+      now >= kickoff && now <= liveWindowEnd ? "live" : nextMatch.result ? "finished" : "upcoming"
     const status = nextMatch.matchStatus ?? calculatedStatus
 
-    if (status !== "live") {
-      // Reset confetti trigger when match is not live
-      confettiTriggeredRef.current = false
+    const scoreMatch = nextMatch.result?.match(/(\d+)\s*[–-]\s*(\d+)/)
+    if (!scoreMatch) {
+      prevScoreRef.current = {
+        home: 0,
+        away: 0,
+        matchId: nextMatch.id,
+      }
       return
     }
 
-    const scoreMatch = nextMatch.result.match(/(\d+)\s*[–-]\s*(\d+)/)
-    if (!scoreMatch) return
-
     const currentHomeScore = Number.parseInt(scoreMatch[1], 10)
     const currentAwayScore = Number.parseInt(scoreMatch[2], 10)
-
     if (Number.isNaN(currentHomeScore) || Number.isNaN(currentAwayScore)) {
       return
     }
 
-    // Initialize previous score on first load (don't trigger confetti)
-    if (!prevScoreRef.current || prevScoreRef.current.matchId !== nextMatch.id) {
-      prevScoreRef.current = {
-        home: currentHomeScore,
-        away: currentAwayScore,
-        matchId: nextMatch.id
-      }
-      confettiTriggeredRef.current = false
+    const previousSnapshot = prevScoreRef.current
+    const currentSnapshot = {
+      home: currentHomeScore,
+      away: currentAwayScore,
+      matchId: nextMatch.id,
+    }
+
+    if (!previousSnapshot || previousSnapshot.matchId !== nextMatch.id) {
+      prevScoreRef.current = currentSnapshot
       return
     }
 
-    // Check if we have a previous score for this match
-    const prevHome = prevScoreRef.current.home
-    const prevAway = prevScoreRef.current.away
-
-    // Determine if Härnösands HF scored
     let hhfScored = false
     if (nextMatch.isHome !== false) {
-      // We're home team - check if home score increased
-      hhfScored = currentHomeScore > prevHome
+      hhfScored = currentHomeScore > previousSnapshot.home
     } else {
-      // We're away team - check if away score increased
-      hhfScored = currentAwayScore > prevAway
+      hhfScored = currentAwayScore > previousSnapshot.away
     }
 
-    // Trigger confetti if Härnösands HF scored AND we haven't triggered for this score yet
-    if (hhfScored && cardRef.current && !confettiTriggeredRef.current) {
-      confettiTriggeredRef.current = true
-        // Add celebration animation to the card
-        cardRef.current.classList.add('goal-celebration')
-        setTimeout(() => cardRef.current?.classList.remove('goal-celebration'), 2000)
+    if (status === "live" && hhfScored && cardRef.current) {
+      const card = cardRef.current
+      const scoreElement = card.querySelector("[data-score-value='true']")
 
-        const rect = cardRef.current.getBoundingClientRect()
-        // Calculate position relative to the card's center
-        const x = (rect.left + rect.width / 2) / window.innerWidth
-        const y = (rect.top + rect.height / 2) / window.innerHeight
-        
-        // Calculate boundaries for confetti to stay within card
-        const cardWidth = rect.width / window.innerWidth
-        const cardHeight = rect.height / window.innerHeight
-
-        // Main celebration burst from center - contained within card
-        confetti({
-          particleCount: 120,
-          spread: 70,
-          origin: { x, y },
-          colors: ['#10b981', '#34d399', '#6ee7b7', '#ffffff', '#d1fae5'],
-          startVelocity: 25,
-          gravity: 1.2,
-          ticks: 200,
-          scalar: 0.9,
-          shapes: ['circle'],
-          drift: 0,
-          decay: 0.92
-        })
-
-        // Sparkle effect - tighter spread
-        setTimeout(() => {
-          confetti({
-            particleCount: 60,
-            spread: 60,
-            origin: { x, y },
-            colors: ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0'],
-            startVelocity: 20,
-            gravity: 1.0,
-            ticks: 150,
-            scalar: 0.7,
-            shapes: ['circle'],
-            decay: 0.93
-          })
-        }, 100)
-
-        // Gentle side bursts - emerald theme
-        setTimeout(() => {
-          // Left burst
-          confetti({
-            particleCount: 40,
-            angle: 70,
-            spread: 45,
-            origin: { x: x - 0.05, y },
-            colors: ['#10b981', '#34d399', '#ffffff'],
-            startVelocity: 20,
-            gravity: 1.1,
-            ticks: 180,
-            scalar: 0.8,
-            shapes: ['circle'],
-            decay: 0.91
-          })
-          // Right burst
-          confetti({
-            particleCount: 40,
-            angle: 110,
-            spread: 45,
-            origin: { x: x + 0.05, y },
-            colors: ['#10b981', '#34d399', '#ffffff'],
-            startVelocity: 20,
-            gravity: 1.1,
-            ticks: 180,
-            scalar: 0.8,
-            shapes: ['circle'],
-            decay: 0.91
-          })
-        }, 200)
-        
-        // Top celebration - raining effect
-        setTimeout(() => {
-          confetti({
-            particleCount: 50,
-            angle: 90,
-            spread: 80,
-            origin: { x, y: y - 0.1 },
-            colors: ['#10b981', '#6ee7b7', '#ffffff'],
-            startVelocity: 15,
-            gravity: 0.8,
-            ticks: 220,
-            scalar: 0.6,
-            shapes: ['circle'],
-            decay: 0.94
-          })
-        }, 300)
-      
-      // Update the previous score after confetti
-      prevScoreRef.current = {
-        home: currentHomeScore,
-        away: currentAwayScore,
-        matchId: nextMatch.id
+      if (typeof card.animate === "function") {
+        card.animate(
+          [
+            { transform: "scale(1)", boxShadow: "0 0 0 0 rgba(16,185,129,0)" },
+            { transform: "scale(1.015)", boxShadow: "0 0 0 6px rgba(16,185,129,0.25)" },
+            { transform: "scale(1)", boxShadow: "0 0 0 0 rgba(16,185,129,0)" },
+          ],
+          { duration: 600, easing: "ease-out" },
+        )
       }
-      
-      // Reset confetti flag after a delay to allow for next goal
-      setTimeout(() => {
-        confettiTriggeredRef.current = false
-      }, 3000)
-    } else if (!hhfScored && (currentHomeScore !== prevHome || currentAwayScore !== prevAway)) {
-      // Score changed but not our goal - update ref and reset confetti flag
-      prevScoreRef.current = {
-        home: currentHomeScore,
-        away: currentAwayScore,
-        matchId: nextMatch.id
+
+      if (scoreElement) {
+        if (typeof scoreElement.animate === "function") {
+          scoreElement.animate(
+            [
+              { transform: "scale(1)", color: "inherit" },
+              { transform: "scale(1.15)", color: "rgb(16, 185, 129)" },
+              { transform: "scale(1)", color: "inherit" },
+            ],
+            { duration: 450, easing: "ease-out" },
+          )
+        }
+
+        scoreElement.classList.add("score-updated")
+        window.setTimeout(() => scoreElement.classList.remove("score-updated"), 600)
       }
-      confettiTriggeredRef.current = false
     }
+
+    prevScoreRef.current = currentSnapshot
   }, [nextMatch])
 
   // NOW we can do conditional returns AFTER all hooks
@@ -422,18 +330,24 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
         <div className="flex items-center gap-4">
           {/* Show live scores - just the score, no badges */}
           {status === "live" && displayScore && !isStaleZeroResult && (
-            <span className="text-2xl font-bold text-gray-900">{displayScore}</span>
+            <span className="text-2xl font-bold text-gray-900" data-score-value="true">
+              {displayScore}
+            </span>
           )}
           
           {/* Show 0-0 for live matches without any outcome badge */}
           {status === "live" && isZeroZero && !isStaleZeroResult && (
-            <span className="text-2xl font-bold text-gray-900">0–0</span>
+            <span className="text-2xl font-bold text-gray-900" data-score-value="true">
+              0–0
+            </span>
           )}
           
           {/* Show stale 0-0 with warning for finished matches */}
           {status === "finished" && isZeroZero && isStaleZeroResult && (
             <div className="flex items-center gap-3">
-              <span className="text-2xl font-bold text-gray-900">0–0</span>
+              <span className="text-2xl font-bold text-gray-900" data-score-value="true">
+                0–0
+              </span>
               <div className="flex items-center gap-1.5 text-xs text-gray-600 bg-gray-50 px-2.5 py-1 rounded border border-gray-200">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -455,7 +369,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
               }`}>
                 {outcomeInfo.label}
               </span>
-              <span className="text-2xl font-bold text-gray-900">
+              <span className="text-2xl font-bold text-gray-900" data-score-value="true">
                 {displayScore}
               </span>
             </div>

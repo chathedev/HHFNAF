@@ -320,7 +320,11 @@ export default function TeamPage({ params }: TeamPageProps) {
 
                     <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-gray-100 pt-4">
                       <div className="flex items-center gap-4">
-                        {hasResult && <span className="text-2xl font-bold text-gray-900">{match.result}</span>}
+                        {hasResult && (
+                          <span className="text-2xl font-bold text-gray-900" data-score-value="true">
+                            {match.result}
+                          </span>
+                        )}
 
                         {match.playUrl && (
                           <a
