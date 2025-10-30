@@ -113,6 +113,15 @@ export default function TeamPage({ params }: TeamPageProps) {
   const descriptionFallback =
     "Härnösands HF samlar spelare, ledare och supportrar i ett starkt lagbygge. Följ laget via våra kanaler och uppdateringar nedan."
 
+  // Helper to determine if ticket button should show
+  function shouldShowTicketButton(match: any) {
+    const venue = (match.venue ?? "").toLowerCase().trim();
+    const teamType = (match.teamType ?? "").toLowerCase().trim();
+    // Accept both variants for teamType
+    const isRelevantType = teamType.includes("dam/utv") || teamType.includes("a-lag herrar") || teamType.includes("a-lag herr");
+    return venue.includes("öbacka sc") && isRelevantType;
+  }
+
   return (
     <>
       <main className="flex-1 bg-white">
@@ -192,6 +201,28 @@ export default function TeamPage({ params }: TeamPageProps) {
                 {`Visa matcher för ${team.displayName}`}
               </a>
             </div>
+            {/* Show matches and ticket button if available */}
+            {matches.length > 0 && (
+              <div className="mt-8 space-y-6">
+                {matches.map((match, idx) => (
+                  <Card key={idx} className="rounded-xl border border-emerald-100/80 bg-white p-5 text-center shadow-sm">
+                    <div className="mb-2 text-lg font-bold text-emerald-700">{match.homeTeam} vs {match.awayTeam}</div>
+                    <div className="mb-1 text-sm text-gray-600">{match.date} {match.time}</div>
+                    <div className="mb-1 text-xs text-gray-500">{match.venue}</div>
+                    {shouldShowTicketButton(match) && (
+                      <a
+                        href={TICKET_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full border border-orange-400 bg-orange-50 px-4 py-2 text-xs font-semibold text-orange-700 transition hover:bg-orange-100 hover:text-orange-800"
+                      >
+                        Köp biljett
+                      </a>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            )}
             {/* Team photo restored below */}
             <Card className="overflow-hidden rounded-2xl border border-emerald-100/70 bg-white shadow-lg shadow-emerald-50 mt-8">
               <div
