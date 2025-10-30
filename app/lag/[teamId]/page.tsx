@@ -183,6 +183,7 @@ export default function TeamPage({ params }: TeamPageProps) {
               </Card>
             </div>
 
+            {/* Minimalistic matcher button */}
             <div className="mt-8 flex justify-center">
               <a
                 href={`/matcher?team=${encodeURIComponent(team.id)}`}
@@ -191,6 +192,20 @@ export default function TeamPage({ params }: TeamPageProps) {
                 {`Visa matcher för ${team.displayName}`}
               </a>
             </div>
+            {/* Team photo restored below */}
+            <Card className="overflow-hidden rounded-2xl border border-emerald-100/70 bg-white shadow-lg shadow-emerald-50 mt-8">
+              <div
+                className="h-[420px] w-full rounded-2xl bg-gray-200 md:h-[520px]"
+                style={{
+                  backgroundImage: `url(${team.heroImage})`,
+                  backgroundSize: "contain",
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "center",
+                }}
+                role="img"
+                aria-label={team.heroImageAlt}
+              />
+            </Card>
           </div>
         </div>
       </main>
