@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import confetti from "canvas-confetti"
+import { useSearchParams } from "next/navigation"
 
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
@@ -59,6 +60,7 @@ const getMatchStatus = (match: NormalizedMatch): StatusFilter => {
 }
 
 export default function MatcherPage() {
+  const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   const [selectedTeam, setSelectedTeam] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const [selectedMatch, setSelectedMatch] = useState<NormalizedMatch | null>(null)
@@ -443,6 +445,15 @@ export default function MatcherPage() {
     )
   }
 
+  useEffect(() => {
+    if (!searchParams) return;
+    const teamParam = searchParams.get("team")
+    if (teamParam && teamParam !== selectedTeam) {
+      setSelectedTeam(teamParam)
+    }
+    // eslint-disable-next-line
+  }, [])
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-24">
       <div className="container mx-auto px-4 max-w-7xl">
@@ -589,7 +600,7 @@ export default function MatcherPage() {
               <section>
                 <div className="flex items-center gap-3 mb-6">
                   <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 01-2 2z" />
                   </svg>
                   <h2 className="text-2xl font-black text-gray-900">Kommande matcher</h2>
                   <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-sm font-bold rounded-full">
