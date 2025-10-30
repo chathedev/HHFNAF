@@ -17,7 +17,7 @@ interface Match {
   playUrl?: string
 }
 
-const API_BASE_URL = "https://harnosandshf.api.wby.se/matcher"
+const API_BASE_URL = "https://api.harnosandshf.se/matcher"
 
 const removeHomeAwaySuffix = (value?: string) => {
   if (!value) return ""
