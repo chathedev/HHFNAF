@@ -46,23 +46,6 @@ type TeamPageProps = {
   params: { teamId: string }
 }
 
-export function generateStaticParams() {
-  return teams.map((team) => ({ teamId: team.id }))
-}
-
-export function generateMetadata({ params }: TeamPageProps) {
-  const team = teams.find((item) => item.id === params.teamId)
-  if (!team) {
-    return {
-      title: "Lag | Härnösands HF",
-    }
-  }
-  return {
-    title: `${team.displayName} | Härnösands HF`,
-    description: team.description || "Information om laget i Härnösands HF.",
-  }
-}
-
 export default function TeamPage({ params }: TeamPageProps) {
   const team = teams.find((item) => item.id === params.teamId)
   if (!team) {
