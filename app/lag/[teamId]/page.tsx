@@ -7,7 +7,6 @@ import { useEffect, useState } from "react"
 import lagContent from "@/public/content/lag.json"
 import Footer from "@/components/footer"
 import { Card } from "@/components/ui/card"
-import { MatchFeedModal } from "@/components/match-feed-modal"
 
 const PLACEHOLDER_HERO = "/placeholder.jpg"
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
@@ -210,12 +209,6 @@ export default function TeamPage({ params }: TeamPageProps) {
                       {match.result && (
                         <span className="text-2xl font-bold text-gray-900">{match.result}</span>
                       )}
-                      <button
-                        className="mt-4 rounded-full border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
-                        onClick={() => { setSelectedMatch(match); setModalOpen(true); }}
-                      >
-                        Visa live-feed
-                      </button>
                     </Card>
                   ))
                 )}
@@ -237,19 +230,14 @@ export default function TeamPage({ params }: TeamPageProps) {
             </Card>
           </div>
         </div>
-        {selectedMatch && modalOpen && (
-          <MatchFeedModal
-            isOpen={modalOpen}
-            onClose={() => setModalOpen(false)}
-            matchFeed={selectedMatch.feed ?? []}
-            homeTeam={selectedMatch.homeTeam}
-            awayTeam={selectedMatch.awayTeam}
-            finalScore={selectedMatch.finalScore}
-            matchStatus={selectedMatch.matchStatus}
-            matchId={selectedMatch.id}
-            onRefresh={undefined} // If you want live refresh, pass a function to refetch feed
-          />
-        )}
+        <div className="mt-8 flex justify-center">
+          <a
+            href={`/matcher?team=${encodeURIComponent(team.id)}`}
+            className="px-4 py-2 rounded bg-blue-600 text-white font-medium shadow hover:bg-blue-700 transition"
+          >
+            {`Visa matcher för ${team.displayName}`}
+          </a>
+        </div>
       </main>
       <Footer />
     </>
