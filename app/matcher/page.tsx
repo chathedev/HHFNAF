@@ -217,13 +217,57 @@ export default function MatcherPage() {
     
     // Ticket button logic: shared eligibility + upcoming/live guard
     const showTicket = status !== "finished" && canShowTicketForMatch(match)
+
+    const showResultCard = status === "live" || status === "finished" || hasValidResult
+
+    let scoreValue: string | null = null
+    let scoreSupportingText: string | null = null
+
+    if (hasValidResult) {
+      scoreValue = match.result
+      if (status === "finished" && outcomeInfo?.label === "Ej publicerat") {
+        scoreSupportingText = "Resultat ej publicerat"
+      }
+    } else if (status === "finished") {
+      scoreValue = "0–0"
+      scoreSupportingText = "Resultat ej publicerat"
+    } else if (status === "live") {
+      const trimmed = match.result?.trim()
+      scoreValue = trimmed && trimmed.length > 0 ? trimmed : "0–0"
+      if (!trimmed || trimmed === "0-0" || trimmed === "0–0") {
+        scoreSupportingText = "Ingen uppdatering ännu"
+      }
+    }
+
+    if (!scoreValue && showResultCard) {
+      scoreValue = "—"
+    }
+
+    const resultBoxTone = (() => {
+      if (status === "live") {
+        return "border-rose-200 bg-rose-50"
+      }
+      if (status === "finished") {
+        if (outcomeInfo?.label === "Vinst") {
+          return "border-emerald-200 bg-emerald-50"
+        }
+        if (outcomeInfo?.label === "Förlust") {
+          return "border-red-200 bg-red-50"
+        }
+        return "border-slate-200 bg-slate-50"
+      }
+      return "border-gray-200 bg-gray-50"
+    })()
+
+    const resultLabelClass = status === "live" ? "text-rose-600" : status === "finished" ? "text-slate-600" : "text-slate-500"
+    const resultLabelText = status === "finished" ? "Slutresultat" : status === "live" ? "Ställning just nu" : "Resultat"
+    // --- REDESIGN START ---
+    // Layout: Score/result area is more prominent, buttons below, clear separation
     return (
       <article
         key={match.id}
         id={`match-card-${match.id}`}
-        className={`bg-white rounded-lg border border-gray-200 hover:border-emerald-400 hover:shadow-lg transition-all p-6 group relative ${
-          canOpenTimeline ? "cursor-pointer" : ""
-        }`}
+        className={`bg-white rounded-lg border border-gray-200 hover:border-emerald-400 hover:shadow-lg transition-all p-6 group relative flex flex-col gap-6`}
         onClick={() => canOpenTimeline && setSelectedMatch(match)}
         role={canOpenTimeline ? "button" : undefined}
         tabIndex={canOpenTimeline ? 0 : undefined}
@@ -234,20 +278,8 @@ export default function MatcherPage() {
           }
         }}
       >
-        {/* Click hint badge - only show if timeline is clickable */}
-        {canOpenTimeline && (
-          <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-            <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded flex items-center gap-1">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Se matchhändelser
-            </span>
-          </div>
-        )}
-        
         {/* Header */}
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex items-start justify-between mb-2">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
               <span className="text-sm font-semibold text-emerald-700">
@@ -260,14 +292,13 @@ export default function MatcherPage() {
                 </span>
               )}
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+            <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">
               {isHome ? (
                 <>Härnösands HF <span className="text-gray-400">vs</span> {opponentName} ({homeAwayLabel})</>
               ) : (
                 <>{opponentName} <span className="text-gray-400">vs</span> Härnösands HF ({homeAwayLabel})</>
               )}
             </h3>
-
             {scheduleLine && (
               <p className="text-sm text-gray-600">{scheduleLine}</p>
             )}
@@ -275,7 +306,6 @@ export default function MatcherPage() {
               <p className="text-xs text-gray-500 mt-1">{match.series}</p>
             )}
           </div>
-          
           {match.infoUrl && (
             <Link
               href={match.infoUrl}
@@ -291,55 +321,50 @@ export default function MatcherPage() {
           )}
         </div>
 
-        {/* Result or Actions */}
-        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-          <div className="flex items-center gap-4">
-            {hasValidResult ? (
-              status === "finished" ? (
-                <div className="flex items-center gap-3">
-                  {outcomeInfo?.label && outcomeInfo.label !== "Ej publicerat" && (
-                    <span
-                      className={`text-xs font-semibold px-2.5 py-1 rounded ${
-                        outcomeInfo.label === "Vinst"
-                          ? "bg-green-100 text-green-800"
-                          : outcomeInfo.label === "Förlust"
-                            ? "bg-red-100 text-red-800"
-                            : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {outcomeInfo.label}
-                    </span>
-                  )}
-                  <span className="text-2xl font-bold text-gray-900" data-score-value="true">
-                    {match.result}
-                  </span>
-                </div>
-              ) : (
-                <span className="text-2xl font-bold text-gray-900" data-score-value="true">
-                  {match.result}
-                </span>
-              )
-            ) : status === "finished" ? (
-              <div className="flex items-center gap-3">
-                <span className="text-2xl font-bold text-gray-900" data-score-value="true">
-                  0–0
-                </span>
-                <div className="flex items-center gap-1.5 text-xs text-gray-600 bg-gray-50 px-2.5 py-1 rounded border border-gray-200">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>Resultat ej publicerat</span>
-                </div>
-              </div>
-            ) : null}
+        {/* Score/Result Area - prominent, separated */}
+        {showResultCard && scoreValue && (
+          <div className={`flex flex-col items-center gap-2 rounded-2xl border-2 px-6 py-5 ${resultBoxTone} shadow-sm`}>  
+            <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${resultLabelClass} mb-1`}>{resultLabelText}</p>
+            <div className="flex items-end gap-3">
+              <span className="text-4xl md:text-5xl font-extrabold text-slate-900" data-score-value="true">
+                {scoreValue}
+              </span>
+              {scoreSupportingText && (
+                <span className="text-xs text-slate-500">{scoreSupportingText}</span>
+              )}
+            </div>
+            {status === "live" && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2.5 py-0.5 text-xs font-semibold text-rose-600 mt-2">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-500" />
+                Pågår
+              </span>
+            )}
+            {status === "finished" && outcomeInfo?.label && outcomeInfo.label !== "Ej publicerat" && (
+              <span
+                className={`text-xs font-semibold px-3 py-1 rounded-full mt-2 ${
+                  outcomeInfo.label === "Vinst"
+                    ? "bg-emerald-100 text-emerald-800"
+                    : outcomeInfo.label === "Förlust"
+                      ? "bg-red-100 text-red-700"
+                      : "bg-slate-200 text-slate-700"
+                }`}
+              >
+                {outcomeInfo.label}
+              </span>
+            )}
+          </div>
+        )}
 
+        {/* Action Buttons - moved below score/result, spaced out */}
+        {(match.playUrl && match.playUrl !== "null") || showTicket ? (
+          <div className="flex flex-wrap items-center justify-center gap-4 mt-2">
             {match.playUrl && match.playUrl !== "null" && (
               <a
                 href={match.playUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 shadow"
                 title={status === "finished" ? "Se repris" : "Se matchen live"}
               >
                 <img
@@ -350,23 +375,22 @@ export default function MatcherPage() {
                 {status === "finished" ? "Se repris" : "Se live"}
               </a>
             )}
+            {showTicket && (
+              <Link
+                href={TICKET_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600 shadow"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                </svg>
+                Köp biljett
+              </Link>
+            )}
           </div>
-
-          {showTicket && (
-            <Link
-              href={TICKET_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-              </svg>
-              Köp biljett
-            </Link>
-          )}
-        </div>
+        ) : null}
       </article>
     )
   }
