@@ -7,7 +7,7 @@ import { useSearchParams } from "next/navigation"
 
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
-import { TICKET_VENUES } from "@/lib/matches"
+import { canShowTicketForMatch } from "@/lib/matches"
 
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 
@@ -289,12 +289,8 @@ export default function MatcherPage() {
     // Only allow clicking timeline for live or finished matches
     const canOpenTimeline = status === "live" || status === "finished"
     
-    // Ticket button logic: only for home matches, A-lag herr and dam/utv, upcoming matches, and eligible venues
-    const normalizedTeamType = match.teamType.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "")
-    const isALagHerrOrDam = normalizedTeamType.includes("alag") && (normalizedTeamType.includes("herr") || normalizedTeamType.includes("dam") || normalizedTeamType.includes("utv"))
-    const venueName = match.venue?.toLowerCase() ?? ""
-    const showTicket = status === "upcoming" && isHome && isALagHerrOrDam && TICKET_VENUES.some((keyword) => venueName.includes(keyword))
-    
+    // Ticket button logic: shared eligibility + upcoming/live guard
+    const showTicket = status !== "finished" && canShowTicketForMatch(match)
     return (
       <article
         key={match.id}
@@ -511,17 +507,6 @@ export default function MatcherPage() {
                 onChange={(e) => setSelectedTeam(e.target.value)}
               >
                 <option value="all">🏐 Alla lag</option>
-                {teamOptions.map((team) => (
-                  <option key={team.value} value={team.value}>
-                    {team.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">
-                Matchstatus
               </label>
               <select
                 className="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-gray-900 font-medium focus:border-emerald-400 focus:outline-none transition-colors"

@@ -5,7 +5,7 @@ import Link from "next/link"
 import confetti from "canvas-confetti"
 
 import { Card } from "@/components/ui/card"
-import { TICKET_VENUES } from "@/lib/matches"
+import { canShowTicketForMatch } from "@/lib/matches"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 
@@ -322,14 +322,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   const homeAwayLabel = nextMatch.isHome === false ? 'borta' : 'hemma'
   const isHome = nextMatch.isHome !== false
   
-  // Check if team is A-lag (herr or dam/utv)
-  const normalizedTeamType = nextMatch.teamType.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "")
-  const isALagMatch =
-    (normalizedTeamType.includes("alag") && normalizedTeamType.includes("herr")) || 
-    (normalizedTeamType.includes("alag") && (normalizedTeamType.includes("dam") || normalizedTeamType.includes("utv")))
-  const venueName = nextMatch.venue?.toLowerCase() ?? ""
-  const isTicketEligibleBase =
-    Boolean(ticketUrl) && isHome && isALagMatch && TICKET_VENUES.some((keyword) => venueName.includes(keyword))
+  const isTicketEligibleBase = Boolean(ticketUrl) && canShowTicketForMatch(nextMatch)
   const outcomeInfo = getMatchOutcome(nextMatch.result, nextMatch.isHome, status)
   const displayScore = getDisplayScore(nextMatch.result, nextMatch.isHome)
   

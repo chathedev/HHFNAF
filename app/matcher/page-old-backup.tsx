@@ -7,6 +7,7 @@ import confetti from "canvas-confetti"
 
 import { Card } from "@/components/ui/card"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
+import { canShowTicketForMatch } from "@/lib/matches"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
@@ -261,7 +262,6 @@ export default function MatcherPage() {
       })
     })
   }, [filteredMatches])
-
   return (
     <main className="min-h-screen bg-white py-28">
       <div className="container mx-auto px-4">
@@ -379,8 +379,7 @@ export default function MatcherPage() {
             const isTicketEligible =
               !outcomeInfo &&
               isFutureOrLive &&
-              (match.normalizedTeam.includes("alag") || match.normalizedTeam.includes("damutv")) &&
-              Boolean(match.venue && match.venue.toLowerCase().includes("öbacka sc"))
+              canShowTicketForMatch(match)
 
             return (
               <div 

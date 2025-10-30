@@ -7,7 +7,7 @@ import { useMemo, useState } from "react"
 import lagContent from "@/public/content/lag.json"
 import Footer from "@/components/footer"
 import { Card } from "@/components/ui/card"
-import { TICKET_VENUES } from "@/lib/matches"
+import { canShowTicketForMatch, normalizeMatchKey } from "@/lib/matches"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 
@@ -29,16 +29,6 @@ const slugify = (value: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "")
-
-const normalizeKey = (value: string) =>
-  value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "")
-    .trim()
-
-const TICKET_VENUE_KEYS = TICKET_VENUES.map((venue) => normalizeKey(venue))
 
 const MATCH_STATUS_PRIORITY: Record<NonNullable<NormalizedMatch["matchStatus"]>, number> = {
   live: 0,
@@ -70,28 +60,8 @@ const extractOpponentName = (opponent: string) => opponent.replace(/\s*\((hemma|
 const buildScheduleLine = (match: NormalizedMatch) =>
   [match.displayDate, match.time, match.venue].filter((item): item is string => Boolean(item)).join(" • ")
 
-const shouldShowTicketButton = (match: NormalizedMatch, status: NormalizedMatch["matchStatus"]) => {
-  if (status === "finished") {
-    return false
-  }
-  const isHome = match.isHome === true // must be true, not just not false
-  if (!isHome) {
-    return false
-  }
-  // Accept teamType if it contains any of these keywords
-  const normalizedTeamType = normalizeKey(match.teamType)
-  const ticketKeywords = ["dam", "utv", "alag", "herr"]
-  const matchesTeamType = ticketKeywords.some((kw) => normalizedTeamType.includes(kw))
-  if (!matchesTeamType) {
-    return false
-  }
-  // Accept venue if it matches any ticket venue key
-  const normalizedVenue = normalizeKey(match.venue ?? "")
-  if (!normalizedVenue) {
-    return false
-  }
-  return TICKET_VENUE_KEYS.some((venueKey) => normalizedVenue.includes(venueKey))
-}
+const shouldShowTicketButton = (match: NormalizedMatch, status: NormalizedMatch["matchStatus"]) =>
+  status !== "finished" && canShowTicketForMatch(match)
 
 const teams = lagContent.teamCategories.flatMap((category) =>
   (category.teams ?? []).map((team) => ({
@@ -129,7 +99,7 @@ export default function TeamPage({ params }: TeamPageProps) {
       if (!value) {
         return
       }
-      const key = normalizeKey(value)
+      const key = normalizeMatchKey(value)
       if (key) {
         keys.add(key)
       }

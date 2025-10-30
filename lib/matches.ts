@@ -24,6 +24,49 @@ export const TICKET_VENUES = ["öbacka sc"]
 
 const HARNOSAND_CLUB_NAME = "härnösands hf"
 
+export const normalizeMatchKey = (value?: string | null) =>
+  (value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "")
+    .trim()
+
+export const isTicketEligibleTeamType = (teamType?: string | null) => {
+  const normalized = normalizeMatchKey(teamType)
+  if (!normalized) {
+    return false
+  }
+  const isALag = normalized.includes("alag")
+  const hasHerr = normalized.includes("herr")
+  const hasDam = normalized.includes("dam")
+  const hasUtv = normalized.includes("utv")
+
+  const isALagSenior = isALag && (hasHerr || hasDam)
+  const isDamUtv = hasDam && hasUtv
+
+  return isALagSenior || isDamUtv
+}
+
+export const isTicketEligibleVenue = (venue?: string | null) => {
+  const normalizedVenue = normalizeMatchKey(venue)
+  if (!normalizedVenue) {
+    return false
+  }
+  return TICKET_VENUES.some((candidate) => normalizedVenue.includes(normalizeMatchKey(candidate)))
+}
+
+export const canShowTicketForMatch = (match: {
+  teamType?: string | null
+  isHome?: boolean | null
+  venue?: string | null
+}) => {
+  if (match.isHome === false) {
+    return false
+  }
+  return isTicketEligibleTeamType(match.teamType) && isTicketEligibleVenue(match.venue)
+}
+
 const formatDateForDisplay = (date: Date) => {
   const formatted = new Intl.DateTimeFormat("sv-SE", {
     weekday: "short",

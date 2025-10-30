@@ -28,7 +28,7 @@ import Footer from "@/components/footer"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { defaultContent } from "@/lib/default-content"
 import type { FullContent, Partner } from "@/lib/content-types"
-import { TICKET_VENUES } from "@/lib/matches"
+import { canShowTicketForMatch } from "@/lib/matches"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 import { InstagramFeed } from "@/components/instagram-feed"
@@ -331,6 +331,13 @@ export default function HomePage() {
     })
   }, [matchesToDisplay])
 
+  function shouldShowTicketButton(match: NormalizedMatch): boolean {
+    if (getMatchStatus(match) === "finished") {
+      return false;
+    }
+    return canShowTicketForMatch(match);
+  }
+
   return (
     <ErrorBoundary>
       <div>
@@ -522,7 +529,6 @@ export default function HomePage() {
                           const opponentName = match.opponent.replace(/\s*\((hemma|borta)\)\s*$/i, '').trim()
                           const homeAwayLabel = match.isHome === false ? 'borta' : 'hemma'
                           const isHome = match.isHome !== false
-                          const venueName = match.venue?.toLowerCase() ?? ""
                           const scheduleParts = [match.displayDate, match.time, match.venue].filter(
                             (value): value is string => Boolean(value),
                           )
@@ -544,19 +550,13 @@ export default function HomePage() {
                           // Don't show LIVE badge if match has been 0-0 for more than 60 minutes (likely stale data)
                           const shouldShowLive = status === "live" && !(isZeroZero && minutesSinceKickoff > 60)
                           
-                          // Check if team is A-lag (herr or dam/utv)
-                          const normalizedTeamType = match.teamType.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "")
-                          const isALagTeam =
-                            (normalizedTeamType.includes("alag") && normalizedTeamType.includes("herr")) || 
-                            (normalizedTeamType.includes("alag") && (normalizedTeamType.includes("dam") || normalizedTeamType.includes("utv")))
                           const isFutureOrLive = match.date.getTime() >= Date.now() || status === "live"
                           const showTicket =
                             status !== "finished" &&
                             isFutureOrLive &&
-                            isHome &&
-                            isALagTeam &&
                             !outcomeInfo &&
-                            TICKET_VENUES.some((keyword) => venueName.includes(keyword))
+                            canShowTicketForMatch(match) &&
+                            isHome
                           
                           // Only allow clicking timeline for live or finished matches
                           const canOpenTimeline = status === "live" || status === "finished"
@@ -723,7 +723,7 @@ export default function HomePage() {
                                     )}
                                   </div>
 
-                                  {showTicket && (
+                                  {shouldShowTicketButton(match) && (
                                     <Link
                                       href={TICKET_URL}
                                       target="_blank"
