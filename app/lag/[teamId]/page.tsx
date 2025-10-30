@@ -57,50 +57,49 @@ export default function TeamPage({ params }: TeamPageProps) {
   const [modalOpen, setModalOpen] = useState(false)
 
   useEffect(() => {
-    if (!team) return
+    if (!team) return;
+    let intervalId: NodeJS.Timeout;
+    const normalize = (str: string) =>
+      str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "")
+        .trim();
+    const normalizedTeamName = normalize(team.name);
     async function fetchMatches() {
       try {
-        const res = await fetch("https://api.harnosandshf.se/matcher/data")
-        const data = await res.json()
-        // Robust normalization for team matching
-        const normalize = (str: string) =>
-          str
-            .toLowerCase()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .replace(/[^a-z0-9]+/g, "")
-            .trim();
-        const normalizedTeamNames = [normalize(team.name), normalize(team.displayName)]
+        const res = await fetch("https://api.harnosandshf.se/matcher/data");
+        const data = await res.json();
         let filtered = data.filter((m: any) => {
-          const home = normalize(m.homeTeam ?? "")
-          const away = normalize(m.awayTeam ?? "")
-          return normalizedTeamNames.some((n) => n === home || n === away)
-        })
+          const home = normalize(m.homeTeam ?? "");
+          const away = normalize(m.awayTeam ?? "");
+          return home.startsWith(normalizedTeamName) || away.startsWith(normalizedTeamName);
+        });
         // Sort: live first, then upcoming, then finished (but keep finished for 1 hour)
-        const now = Date.now()
+        const now = Date.now();
         filtered = filtered.filter((m: any) => {
           if (m.matchStatus === "finished" && m.finishedAt) {
-            const finishedTime = new Date(m.finishedAt).getTime()
-            return now - finishedTime < 3600 * 1000 // keep for 1 hour
+            const finishedTime = new Date(m.finishedAt).getTime();
+            return now - finishedTime < 3600 * 1000; // keep for 1 hour
           }
-          return true
-        })
+          return true;
+        });
         filtered.sort((a: any, b: any) => {
-          // live first
-          if (a.matchStatus === "live" && b.matchStatus !== "live") return -1
-          if (b.matchStatus === "live" && a.matchStatus !== "live") return 1
-          // upcoming before finished
-          if (a.matchStatus === "upcoming" && b.matchStatus === "finished") return -1
-          if (b.matchStatus === "upcoming" && a.matchStatus === "finished") return 1
-          // sort by start time
-          return new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
-        })
-        setMatches(filtered.slice(0, 2))
+          if (a.matchStatus === "live" && b.matchStatus !== "live") return -1;
+          if (b.matchStatus === "live" && a.matchStatus !== "live") return 1;
+          if (a.matchStatus === "upcoming" && b.matchStatus === "finished") return -1;
+          if (b.matchStatus === "upcoming" && a.matchStatus === "finished") return 1;
+          return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+        });
+        setMatches(filtered.slice(0, 2));
       } catch (e) {
-        setMatches([])
+        setMatches([]);
       }
     }
-    fetchMatches()
+    fetchMatches();
+    intervalId = setInterval(fetchMatches, 3000);
+    return () => clearInterval(intervalId);
   }, [team?.name, team?.displayName])
 
   const descriptionFallback =
