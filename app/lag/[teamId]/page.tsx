@@ -63,10 +63,11 @@ export default function TeamPage({ params }: TeamPageProps) {
       str
         .toLowerCase()
         .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[0-\u036f]/g, "")
         .replace(/[^a-z0-9]+/g, "")
         .trim();
     const normalizedTeamName = normalize(team.name);
+    const normalizedTeamType = normalize(team.category);
     async function fetchMatches() {
       try {
         const res = await fetch("https://api.harnosandshf.se/matcher/data");
@@ -74,7 +75,12 @@ export default function TeamPage({ params }: TeamPageProps) {
         let filtered = data.filter((m: any) => {
           const home = normalize(m.homeTeam ?? "");
           const away = normalize(m.awayTeam ?? "");
-          return home.startsWith(normalizedTeamName) || away.startsWith(normalizedTeamName);
+          const type = normalize(m.teamType ?? "");
+          return (
+            home.startsWith(normalizedTeamName) ||
+            away.startsWith(normalizedTeamName) ||
+            type === normalizedTeamType
+          );
         });
         // Sort: live first, then upcoming, then finished (but keep finished for 1 hour)
         const now = Date.now();
@@ -100,7 +106,7 @@ export default function TeamPage({ params }: TeamPageProps) {
     fetchMatches();
     intervalId = setInterval(fetchMatches, 3000);
     return () => clearInterval(intervalId);
-  }, [team?.name, team?.displayName])
+  }, [team?.name, team?.category])
 
   const descriptionFallback =
     "Härnösands HF samlar spelare, ledare och supportrar i ett starkt lagbygge. Följ laget via våra kanaler och uppdateringar nedan."
@@ -183,28 +189,30 @@ export default function TeamPage({ params }: TeamPageProps) {
               </div>
               <div className="grid gap-6 md:grid-cols-2">
                 {matches.length === 0 ? (
-                  <div className="text-slate-500">Inga matcher hittades.</div>
+                  <div className="text-slate-400 text-center py-8">
+                    <svg className="mx-auto mb-2 h-8 w-8 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span className="block text-sm">Inga relevanta matcher just nu.</span>
+                  </div>
                 ) : (
                   matches.map((match, idx) => (
-                    <Card key={match.id || idx} className="rounded-xl border border-emerald-100/80 bg-white p-5 shadow-sm">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs font-semibold uppercase text-slate-400">{match.matchStatus === "live" ? "Live" : match.matchStatus === "finished" ? "Avslutad" : "Kommande"}</p>
-                            <h3 className="text-lg font-bold text-emerald-900">{match.homeTeam} vs {match.awayTeam}</h3>
-                          </div>
-                          <button
-                            className="rounded-full border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
-                            onClick={() => { setSelectedMatch(match); setModalOpen(true); }}
-                          >
-                            Visa live-feed
-                          </button>
-                        </div>
-                        <p className="text-sm text-slate-600">Start: {match.startTime ? new Date(match.startTime).toLocaleString("sv-SE") : "?"}</p>
-                        {match.matchStatus === "finished" && (
-                          <p className="text-sm text-slate-700">Slutresultat: {match.finalScore ?? "—"}</p>
-                        )}
+                    <Card key={match.id || idx} className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm hover:border-emerald-400 hover:shadow-lg transition-all group relative">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${match.matchStatus === "live" ? "bg-red-100 text-red-700 animate-pulse" : match.matchStatus === "finished" ? "bg-gray-100 text-gray-700" : "bg-emerald-100 text-emerald-700"}`}>
+                          {match.matchStatus === "live" ? "LIVE" : match.matchStatus === "finished" ? "Avslutad" : "Kommande"}
+                        </span>
+                        <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">{match.teamType}</span>
                       </div>
+                      <h3 className="text-lg font-bold text-emerald-900 mb-1">{match.homeTeam} <span className="text-gray-400">vs</span> {match.awayTeam}</h3>
+                      <p className="text-sm text-gray-600 mb-2">{match.date} {match.time} • {match.venue}</p>
+                      {match.result && (
+                        <span className="text-2xl font-bold text-gray-900">{match.result}</span>
+                      )}
+                      <button
+                        className="mt-4 rounded-full border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
+                        onClick={() => { setSelectedMatch(match); setModalOpen(true); }}
+                      >
+                        Visa live-feed
+                      </button>
                     </Card>
                   ))
                 )}
