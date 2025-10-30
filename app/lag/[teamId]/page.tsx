@@ -62,12 +62,19 @@ export default function TeamPage({ params }: TeamPageProps) {
       try {
         const res = await fetch("https://api.harnosandshf.se/matcher/data")
         const data = await res.json()
-        // Filter matches for this team
-        const teamNames = [team.name.toLowerCase(), team.displayName.toLowerCase()]
+        // Robust normalization for team matching
+        const normalize = (str: string) =>
+          str
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]+/g, "")
+            .trim();
+        const normalizedTeamNames = [normalize(team.name), normalize(team.displayName)]
         let filtered = data.filter((m: any) => {
-          const home = m.homeTeam?.toLowerCase() || ""
-          const away = m.awayTeam?.toLowerCase() || ""
-          return teamNames.some((n) => home.includes(n) || away.includes(n))
+          const home = normalize(m.homeTeam ?? "")
+          const away = normalize(m.awayTeam ?? "")
+          return normalizedTeamNames.some((n) => n === home || n === away)
         })
         // Sort: live first, then upcoming, then finished (but keep finished for 1 hour)
         const now = Date.now()
