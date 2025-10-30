@@ -448,11 +448,12 @@ export default function MatcherPage() {
   useEffect(() => {
     if (!searchParams) return;
     const teamParam = searchParams.get("team")
-    if (teamParam && teamParam !== selectedTeam) {
-      setSelectedTeam(teamParam)
+    if (teamParam) {
+      const validTeam = teamOptions.some((team) => team.value === teamParam)
+      setSelectedTeam(validTeam ? teamParam : "all")
     }
     // eslint-disable-next-line
-  }, [])
+  }, [teamOptions])
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-24">
