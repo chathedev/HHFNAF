@@ -183,60 +183,15 @@ export default function TeamPage({ params }: TeamPageProps) {
               </Card>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">Matcher</p>
-                <h2 className="text-2xl font-bold text-emerald-900">{team.displayName}</h2>
-                <p className="text-sm text-emerald-700">Vi visar de 2 mest relevanta matcherna för laget, inklusive live-feed.</p>
-              </div>
-              <div className="grid gap-6 md:grid-cols-2">
-                {matches.length === 0 ? (
-                  <div className="text-slate-400 text-center py-8">
-                    <svg className="mx-auto mb-2 h-8 w-8 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    <span className="block text-sm">Inga relevanta matcher just nu.</span>
-                  </div>
-                ) : (
-                  matches.map((match, idx) => (
-                    <Card key={match.id || idx} className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm hover:border-emerald-400 hover:shadow-lg transition-all group relative">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${match.matchStatus === "live" ? "bg-red-100 text-red-700 animate-pulse" : match.matchStatus === "finished" ? "bg-gray-100 text-gray-700" : "bg-emerald-100 text-emerald-700"}`}>
-                          {match.matchStatus === "live" ? "LIVE" : match.matchStatus === "finished" ? "Avslutad" : "Kommande"}
-                        </span>
-                        <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">{match.teamType}</span>
-                      </div>
-                      <h3 className="text-lg font-bold text-emerald-900 mb-1">{match.homeTeam} <span className="text-gray-400">vs</span> {match.awayTeam}</h3>
-                      <p className="text-sm text-gray-600 mb-2">{match.date} {match.time} • {match.venue}</p>
-                      {match.result && (
-                        <span className="text-2xl font-bold text-gray-900">{match.result}</span>
-                      )}
-                    </Card>
-                  ))
-                )}
-              </div>
+            <div className="mt-8 flex justify-center">
+              <a
+                href={`/matcher?team=${encodeURIComponent(team.id)}`}
+                className="px-4 py-2 rounded bg-blue-600 text-white font-medium shadow hover:bg-blue-700 transition"
+              >
+                {`Visa matcher för ${team.displayName}`}
+              </a>
             </div>
-
-            <Card className="overflow-hidden rounded-2xl border border-emerald-100/70 bg-white shadow-lg shadow-emerald-50">
-              <div
-                className="h-[420px] w-full rounded-2xl bg-gray-200 md:h-[520px]"
-                style={{
-                  backgroundImage: `url(${team.heroImage})`,
-                  backgroundSize: "contain",
-                  backgroundRepeat: "no-repeat",
-                  backgroundPosition: "center",
-                }}
-                role="img"
-                aria-label={team.heroImageAlt}
-              />
-            </Card>
           </div>
-        </div>
-        <div className="mt-8 flex justify-center">
-          <a
-            href={`/matcher?team=${encodeURIComponent(team.id)}`}
-            className="px-4 py-2 rounded bg-blue-600 text-white font-medium shadow hover:bg-blue-700 transition"
-          >
-            {`Visa matcher för ${team.displayName}`}
-          </a>
         </div>
       </main>
       <Footer />
