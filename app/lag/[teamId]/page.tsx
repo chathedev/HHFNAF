@@ -67,18 +67,23 @@ export default function TeamPage({ params }: TeamPageProps) {
         .replace(/[^a-z0-9]+/g, "")
         .trim();
     const normalizedTeamName = normalize(team.name);
+    const normalizedDisplayName = normalize(team.displayName);
     const normalizedTeamType = normalize(team.category);
     async function fetchMatches() {
       try {
         const res = await fetch("https://api.harnosandshf.se/matcher/data");
-        const data = await res.json();
+        const raw = await res.json();
+        const data = Array.isArray(raw.current) ? raw.current : Array.isArray(raw) ? raw : [];
         let filtered = data.filter((m: any) => {
           const home = normalize(m.homeTeam ?? "");
           const away = normalize(m.awayTeam ?? "");
           const type = normalize(m.teamType ?? "");
+          // Match on teamType or any team name variant
           return (
             home.startsWith(normalizedTeamName) ||
             away.startsWith(normalizedTeamName) ||
+            home.startsWith(normalizedDisplayName) ||
+            away.startsWith(normalizedDisplayName) ||
             type === normalizedTeamType
           );
         });
@@ -96,7 +101,7 @@ export default function TeamPage({ params }: TeamPageProps) {
           if (b.matchStatus === "live" && a.matchStatus !== "live") return 1;
           if (a.matchStatus === "upcoming" && b.matchStatus === "finished") return -1;
           if (b.matchStatus === "upcoming" && a.matchStatus === "finished") return 1;
-          return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+          return new Date(a.startTime || `${a.date}T${a.time}` ).getTime() - new Date(b.startTime || `${b.date}T${b.time}` ).getTime();
         });
         setMatches(filtered.slice(0, 2));
       } catch (e) {
@@ -106,7 +111,7 @@ export default function TeamPage({ params }: TeamPageProps) {
     fetchMatches();
     intervalId = setInterval(fetchMatches, 3000);
     return () => clearInterval(intervalId);
-  }, [team?.name, team?.category])
+  }, [team?.name, team?.displayName, team?.category])
 
   const descriptionFallback =
     "Härnösands HF samlar spelare, ledare och supportrar i ett starkt lagbygge. Följ laget via våra kanaler och uppdateringar nedan."
