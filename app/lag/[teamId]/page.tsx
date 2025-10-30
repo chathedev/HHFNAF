@@ -78,7 +78,7 @@ export default function TeamPage({ params }: TeamPageProps) {
           const home = normalize(m.homeTeam ?? "");
           const away = normalize(m.awayTeam ?? "");
           const type = normalize(m.teamType ?? "");
-          // Only show matches where teamType matches AND team name matches
+          // Strict: teamType must match AND home/away must match team name or displayName
           const teamTypeMatch = type === normalizedTeamType;
           const teamNameMatch =
             home === normalizedTeamName ||
