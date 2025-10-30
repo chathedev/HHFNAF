@@ -78,16 +78,20 @@ const shouldShowTicketButton = (match: NormalizedMatch, status: NormalizedMatch[
   if (!isHome) {
     return false
   }
+  // Make teamType matching more robust for Dam/utv
   const normalizedTeamType = normalizeKey(match.teamType)
   const isALagHerr = normalizedTeamType.includes("alag") && normalizedTeamType.includes("herr")
-  const isDamUtv = normalizedTeamType.includes("dam") || normalizedTeamType.includes("utv")
+  // Accept any teamType that includes dam, utv, or damutv
+  const isDamUtv = normalizedTeamType.includes("dam") || normalizedTeamType.includes("utv") || normalizedTeamType.includes("damutv")
   if (!(isALagHerr || isDamUtv)) {
     return false
   }
+  // Make venue matching more robust
   const normalizedVenue = normalizeKey(match.venue ?? "")
   if (!normalizedVenue) {
     return false
   }
+  // Accept any venue that includes any ticket venue key
   return TICKET_VENUE_KEYS.some((venueKey) => normalizedVenue.includes(venueKey))
 }
 
