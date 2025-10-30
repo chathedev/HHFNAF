@@ -2,11 +2,14 @@
 
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useMemo, useState } from "react"
 
 import lagContent from "@/public/content/lag.json"
 import Footer from "@/components/footer"
 import { Card } from "@/components/ui/card"
+import { TICKET_VENUES } from "@/lib/matches"
+import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
+import { MatchFeedModal } from "@/components/match-feed-modal"
 
 const PLACEHOLDER_HERO = "/placeholder.jpg"
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
@@ -26,6 +29,67 @@ const slugify = (value: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "")
+
+const normalizeKey = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "")
+    .trim()
+
+const TICKET_VENUE_KEYS = TICKET_VENUES.map((venue) => normalizeKey(venue))
+
+const MATCH_STATUS_PRIORITY: Record<NonNullable<NormalizedMatch["matchStatus"]>, number> = {
+  live: 0,
+  upcoming: 1,
+  finished: 2,
+}
+
+const getStatusPriority = (status: NormalizedMatch["matchStatus"]) =>
+  status ? MATCH_STATUS_PRIORITY[status] : 3
+
+const getDerivedStatus = (match: NormalizedMatch): NormalizedMatch["matchStatus"] => {
+  if (match.matchStatus) {
+    return match.matchStatus
+  }
+  const now = Date.now()
+  const kickoff = match.date.getTime()
+  const liveWindowEnd = kickoff + 1000 * 60 * 60 * 2.5
+  if (now >= kickoff && now <= liveWindowEnd) {
+    return "live"
+  }
+  if (now < kickoff) {
+    return "upcoming"
+  }
+  return match.result ? "finished" : "finished"
+}
+
+const extractOpponentName = (opponent: string) => opponent.replace(/\s*\((hemma|borta)\)\s*$/i, "").trim()
+
+const buildScheduleLine = (match: NormalizedMatch) =>
+  [match.displayDate, match.time, match.venue].filter((item): item is string => Boolean(item)).join(" • ")
+
+const shouldShowTicketButton = (match: NormalizedMatch, status: NormalizedMatch["matchStatus"]) => {
+  if (status === "finished") {
+    return false
+  }
+  const isHome = match.isHome !== false
+  if (!isHome) {
+    return false
+  }
+  const normalizedTeamType = normalizeKey(match.teamType)
+  const isALagHerr = normalizedTeamType.includes("alag") && normalizedTeamType.includes("herr")
+  const isDamUtv = normalizedTeamType.includes("dam") || normalizedTeamType.includes("utv")
+  if (!(isALagHerr || isDamUtv)) {
+    return false
+  }
+  const normalizedVenue = normalizeKey(match.venue ?? "")
+  if (!normalizedVenue) {
+    return false
+  }
+  return TICKET_VENUE_KEYS.some((venueKey) => normalizedVenue.includes(venueKey))
+}
 
 const teams = lagContent.teamCategories.flatMap((category) =>
   (category.teams ?? []).map((team) => ({
@@ -51,76 +115,62 @@ export default function TeamPage({ params }: TeamPageProps) {
     notFound()
   }
 
-  const [matches, setMatches] = useState<any[]>([])
-  const [selectedMatch, setSelectedMatch] = useState<any | null>(null)
-  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedMatch, setSelectedMatch] = useState<NormalizedMatch | null>(null)
+  const { matches: allMatches, loading, error, refresh } = useMatchData({
+    dataType: "current",
+    refreshIntervalMs: 12_000,
+  })
 
-  useEffect(() => {
-    if (!team) return;
-    let intervalId: NodeJS.Timeout;
-    const normalize = (str: string) =>
-      str
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[0-\u036f]/g, "")
-        .replace(/[^a-z0-9]+/g, "")
-        .trim();
-    const normalizedTeamName = normalize(team.name);
-    const normalizedDisplayName = normalize(team.displayName);
-    const normalizedTeamType = normalize(team.category);
-    async function fetchMatches() {
-      try {
-        const res = await fetch("https://api.harnosandshf.se/matcher/data");
-        const raw = await res.json();
-        const data = Array.isArray(raw.current) ? raw.current : Array.isArray(raw) ? raw : [];
-        let filtered = data.filter((m: any) => {
-          const home = normalize(m.homeTeam ?? "");
-          const away = normalize(m.awayTeam ?? "");
-          const type = normalize(m.teamType ?? "");
-          // Require exact teamType match
-          if (type !== normalizedTeamType) return false;
-          // Require home or away to match team name or displayName (exact)
-          const isHome = home === normalizedTeamName || home === normalizedDisplayName;
-          const isAway = away === normalizedTeamName || away === normalizedDisplayName;
-          return isHome || isAway;
-        });
-        // Sort: live first, then upcoming, then finished (but keep finished for 1 hour)
-        const now = Date.now();
-        filtered = filtered.filter((m: any) => {
-          if (m.matchStatus === "finished" && m.finishedAt) {
-            const finishedTime = new Date(m.finishedAt).getTime();
-            return now - finishedTime < 3600 * 1000; // keep for 1 hour
-          }
-          return true;
-        });
-        filtered.sort((a: any, b: any) => {
-          if (a.matchStatus === "live" && b.matchStatus !== "live") return -1;
-          if (b.matchStatus === "live" && a.matchStatus !== "live") return 1;
-          if (a.matchStatus === "upcoming" && b.matchStatus === "finished") return -1;
-          if (b.matchStatus === "upcoming" && a.matchStatus === "finished") return 1;
-          return new Date(a.startTime || `${a.date}T${a.time}` ).getTime() - new Date(b.startTime || `${b.date}T${b.time}` ).getTime();
-        });
-        setMatches(filtered.slice(0, 2));
-      } catch (e) {
-        setMatches([]);
+  const teamMatchKeys = useMemo(() => {
+    const keys = new Set<string>()
+    ;[team.name, team.displayName, team.id].forEach((value) => {
+      if (!value) {
+        return
       }
-    }
-    fetchMatches();
-    intervalId = setInterval(fetchMatches, 3000);
-    return () => clearInterval(intervalId);
-  }, [team?.name, team?.displayName, team?.category])
+      const key = normalizeKey(value)
+      if (key) {
+        keys.add(key)
+      }
+    })
+    return keys
+  }, [team.name, team.displayName, team.id])
+
+  const teamMatches = useMemo(() => {
+    const now = Date.now()
+    const recentFinishedThreshold = 1000 * 60 * 60 * 24
+
+    const filtered = allMatches.filter((match) => teamMatchKeys.has(match.normalizedTeam))
+    const relevant = filtered.filter((match) => {
+      const status = getDerivedStatus(match)
+      if (status !== "finished") {
+        return true
+      }
+      return now - match.date.getTime() <= recentFinishedThreshold
+    })
+
+    return relevant
+      .slice()
+      .sort((a, b) => {
+        const statusA = getDerivedStatus(a)
+        const statusB = getDerivedStatus(b)
+        const statusDiff = getStatusPriority(statusA) - getStatusPriority(statusB)
+        if (statusDiff !== 0) {
+          return statusDiff
+        }
+        if (statusA === "finished" && statusB === "finished") {
+          return b.date.getTime() - a.date.getTime()
+        }
+        return a.date.getTime() - b.date.getTime()
+      })
+      .slice(0, 4)
+  }, [allMatches, teamMatchKeys])
 
   const descriptionFallback =
     "Härnösands HF samlar spelare, ledare och supportrar i ett starkt lagbygge. Följ laget via våra kanaler och uppdateringar nedan."
 
-  // Helper to determine if ticket button should show
-  function shouldShowTicketButton(match: any) {
-    const venue = (match.venue ?? "").toLowerCase().trim();
-    const teamType = (match.teamType ?? "").toLowerCase().trim();
-    // Accept both variants for teamType
-    const isRelevantType = teamType.includes("dam/utv") || teamType.includes("a-lag herrar") || teamType.includes("a-lag herr");
-    return venue.includes("öbacka sc") && isRelevantType;
-  }
+  const showLoadingState = loading && teamMatches.length === 0
+  const showErrorState = !loading && Boolean(error) && teamMatches.length === 0
+  const showEmptyState = !loading && !error && teamMatches.length === 0
 
   return (
     <>
@@ -201,28 +251,158 @@ export default function TeamPage({ params }: TeamPageProps) {
                 {`Visa matcher för ${team.displayName}`}
               </a>
             </div>
-            {/* Show matches and ticket button if available */}
-            {matches.length > 0 && (
-              <div className="mt-8 space-y-6">
-                {matches.map((match, idx) => (
-                  <Card key={idx} className="rounded-xl border border-emerald-100/80 bg-white p-5 text-center shadow-sm">
-                    <div className="mb-2 text-lg font-bold text-emerald-700">{match.homeTeam} vs {match.awayTeam}</div>
-                    <div className="mb-1 text-sm text-gray-600">{match.date} {match.time}</div>
-                    <div className="mb-1 text-xs text-gray-500">{match.venue}</div>
-                    {shouldShowTicketButton(match) && (
-                      <a
-                        href={TICKET_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full border border-orange-400 bg-orange-50 px-4 py-2 text-xs font-semibold text-orange-700 transition hover:bg-orange-100 hover:text-orange-800"
-                      >
-                        Köp biljett
-                      </a>
-                    )}
-                  </Card>
-                ))}
+            
+            <section aria-label="Lagets matcher" className="mt-10 space-y-6">
+              <div className="text-center">
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-700">Lagets matcher</p>
+                <h2 className="mt-2 text-2xl font-bold text-gray-900">{team.displayName}</h2>
               </div>
-            )}
+
+              {teamMatches.map((match) => {
+                const status = getDerivedStatus(match)
+                const opponentName = extractOpponentName(match.opponent)
+                const isHome = match.isHome !== false
+                const homeAwayLabel = isHome ? "hemma" : "borta"
+                const scheduleLine = buildScheduleLine(match)
+                const trimmedResult = match.result?.trim()
+                const hasResult =
+                  Boolean(trimmedResult) && trimmedResult.toLowerCase() !== "inte publicerat"
+                const playLabel = status === "finished" ? "Se repris" : "Se live"
+                const canOpenTimeline = status === "live" || status === "finished"
+                const showTicket = shouldShowTicketButton(match, status)
+
+                return (
+                  <Card
+                    key={match.id}
+                    className={`group relative rounded-2xl border border-emerald-100/80 bg-white p-6 text-left shadow-sm transition ${
+                      canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:shadow-lg" : ""
+                    }`}
+                    onClick={() => {
+                      if (canOpenTimeline) {
+                        setSelectedMatch(match)
+                      }
+                    }}
+                    role={canOpenTimeline ? "button" : undefined}
+                    tabIndex={canOpenTimeline ? 0 : undefined}
+                    onKeyDown={(event) => {
+                      if (!canOpenTimeline) {
+                        return
+                      }
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault()
+                        setSelectedMatch(match)
+                      }
+                    }}
+                  >
+                    {canOpenTimeline && (
+                      <div className="absolute top-4 right-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                        <span className="inline-flex items-center gap-1.5 rounded bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-600">
+                          <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Se matchhändelser
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="mb-2 flex items-center gap-3">
+                          <span className="text-sm font-semibold text-emerald-700">{match.teamType}</span>
+                          {status === "live" && (
+                            <span className="inline-flex items-center gap-1.5 rounded bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700">
+                              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-600" />
+                              LIVE
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900">
+                          {isHome ? (
+                            <>
+                              Härnösands HF <span className="text-gray-400">vs</span> {opponentName} ({homeAwayLabel})
+                            </>
+                          ) : (
+                            <>
+                              {opponentName} <span className="text-gray-400">vs</span> Härnösands HF ({homeAwayLabel})
+                            </>
+                          )}
+                        </h3>
+                        {scheduleLine && <p className="mt-1 text-sm text-gray-600">{scheduleLine}</p>}
+                        {match.series && <p className="mt-1 text-xs text-gray-500">{match.series}</p>}
+                      </div>
+                      {match.infoUrl && (
+                        <Link
+                          href={match.infoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-emerald-600 transition hover:text-emerald-700"
+                          onClick={(event) => event.stopPropagation()}
+                          title="Matchsida"
+                        >
+                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </Link>
+                      )}
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-gray-100 pt-4">
+                      <div className="flex items-center gap-4">
+                        {hasResult && <span className="text-2xl font-bold text-gray-900">{match.result}</span>}
+
+                        {match.playUrl && (
+                          <a
+                            href={match.playUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(event) => event.stopPropagation()}
+                            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+                            title={status === "finished" ? "Se repris" : "Se matchen live"}
+                          >
+                            <img src="/handbollplay_mini.png" alt="" className="h-4 w-4 brightness-0 invert" />
+                            {playLabel}
+                          </a>
+                        )}
+                      </div>
+
+                      {showTicket && (
+                        <a
+                          href={TICKET_URL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(event) => event.stopPropagation()}
+                          className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600"
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                          </svg>
+                          Köp biljett
+                        </a>
+                      )}
+                    </div>
+                  </Card>
+                )
+              })}
+
+              {showLoadingState && (
+                <Card className="rounded-xl border border-emerald-100/70 bg-white p-6 text-center text-sm text-gray-600 shadow-sm">
+                  Hämtar matcher…
+                </Card>
+              )}
+
+              {showErrorState && (
+                <Card className="rounded-xl border border-red-200 bg-red-50 p-6 text-center text-sm text-red-700 shadow-sm">
+                  {error ?? "Kunde inte hämta matcher just nu. Försök igen senare."}
+                </Card>
+              )}
+
+              {showEmptyState && (
+                <Card className="rounded-xl border border-emerald-100/70 bg-white p-6 text-center text-sm text-gray-600 shadow-sm">
+                  Inga matcher planerade just nu. Titta in igen snart.
+                </Card>
+              )}
+            </section>
+
             {/* Team photo restored below */}
             <Card className="overflow-hidden rounded-2xl border border-emerald-100/70 bg-white shadow-lg shadow-emerald-50 mt-8">
               <div
@@ -240,6 +420,25 @@ export default function TeamPage({ params }: TeamPageProps) {
           </div>
         </div>
       </main>
+      {selectedMatch && (
+        <MatchFeedModal
+          isOpen={true}
+          onClose={() => setSelectedMatch(null)}
+          matchFeed={selectedMatch.matchFeed ?? []}
+          homeTeam={selectedMatch.isHome !== false ? "Härnösands HF" : extractOpponentName(selectedMatch.opponent)}
+          awayTeam={selectedMatch.isHome !== false ? extractOpponentName(selectedMatch.opponent) : "Härnösands HF"}
+          finalScore={selectedMatch.result}
+          matchStatus={getDerivedStatus(selectedMatch)}
+          matchId={selectedMatch.id}
+          onRefresh={async () => {
+            try {
+              await refresh()
+            } catch {
+              // ignore refresh polling errors
+            }
+          }}
+        />
+      )}
       <Footer />
     </>
   )
