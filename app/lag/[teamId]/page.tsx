@@ -78,14 +78,14 @@ export default function TeamPage({ params }: TeamPageProps) {
           const home = normalize(m.homeTeam ?? "");
           const away = normalize(m.awayTeam ?? "");
           const type = normalize(m.teamType ?? "");
-          // Match on teamType or any team name variant
-          return (
-            home.startsWith(normalizedTeamName) ||
-            away.startsWith(normalizedTeamName) ||
-            home.startsWith(normalizedDisplayName) ||
-            away.startsWith(normalizedDisplayName) ||
-            type === normalizedTeamType
-          );
+          // Only show matches where teamType matches AND team name matches
+          const teamTypeMatch = type === normalizedTeamType;
+          const teamNameMatch =
+            home === normalizedTeamName ||
+            away === normalizedTeamName ||
+            home === normalizedDisplayName ||
+            away === normalizedDisplayName;
+          return teamTypeMatch && teamNameMatch;
         });
         // Sort: live first, then upcoming, then finished (but keep finished for 1 hour)
         const now = Date.now();
