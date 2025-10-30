@@ -74,24 +74,22 @@ const shouldShowTicketButton = (match: NormalizedMatch, status: NormalizedMatch[
   if (status === "finished") {
     return false
   }
-  const isHome = match.isHome !== false
+  const isHome = match.isHome === true // must be true, not just not false
   if (!isHome) {
     return false
   }
-  // Make teamType matching more robust for Dam/utv
+  // Accept teamType if it contains any of these keywords
   const normalizedTeamType = normalizeKey(match.teamType)
-  const isALagHerr = normalizedTeamType.includes("alag") && normalizedTeamType.includes("herr")
-  // Accept any teamType that includes dam, utv, or damutv
-  const isDamUtv = normalizedTeamType.includes("dam") || normalizedTeamType.includes("utv") || normalizedTeamType.includes("damutv")
-  if (!(isALagHerr || isDamUtv)) {
+  const ticketKeywords = ["dam", "utv", "alag", "herr"]
+  const matchesTeamType = ticketKeywords.some((kw) => normalizedTeamType.includes(kw))
+  if (!matchesTeamType) {
     return false
   }
-  // Make venue matching more robust
+  // Accept venue if it matches any ticket venue key
   const normalizedVenue = normalizeKey(match.venue ?? "")
   if (!normalizedVenue) {
     return false
   }
-  // Accept any venue that includes any ticket venue key
   return TICKET_VENUE_KEYS.some((venueKey) => normalizedVenue.includes(venueKey))
 }
 
