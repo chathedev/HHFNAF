@@ -1,10 +1,11 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { useEffect, useState } from "react"
 
 import lagContent from "@/public/content/lag.json"
 import Footer from "@/components/footer"
 import { Card } from "@/components/ui/card"
-import { TeamUpcomingMatch } from "@/components/team-upcoming-match"
+import { MatchFeedModal } from "@/components/match-feed-modal"
 
 type RawTeam = (typeof lagContent)["teamCategories"][number]["teams"][number]
 
@@ -70,6 +71,49 @@ export default function TeamPage({ params }: TeamPageProps) {
   if (!team) {
     notFound()
   }
+
+  const [matches, setMatches] = useState<any[]>([])
+  const [selectedMatch, setSelectedMatch] = useState<any | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+
+  useEffect(() => {
+    async function fetchMatches() {
+      try {
+        const res = await fetch("https://api.harnosandshf.se/matcher/data")
+        const data = await res.json()
+        // Filter matches for this team
+        const teamNames = [team.name.toLowerCase(), team.displayName.toLowerCase()]
+        let filtered = data.filter((m: any) => {
+          const home = m.homeTeam?.toLowerCase() || ""
+          const away = m.awayTeam?.toLowerCase() || ""
+          return teamNames.some((n) => home.includes(n) || away.includes(n))
+        })
+        // Sort: live first, then upcoming, then finished (but keep finished for 1 hour)
+        const now = Date.now()
+        filtered = filtered.filter((m: any) => {
+          if (m.matchStatus === "finished" && m.finishedAt) {
+            const finishedTime = new Date(m.finishedAt).getTime()
+            return now - finishedTime < 3600 * 1000 // keep for 1 hour
+          }
+          return true
+        })
+        filtered.sort((a: any, b: any) => {
+          // live first
+          if (a.matchStatus === "live" && b.matchStatus !== "live") return -1
+          if (b.matchStatus === "live" && a.matchStatus !== "live") return 1
+          // upcoming before finished
+          if (a.matchStatus === "upcoming" && b.matchStatus === "finished") return -1
+          if (b.matchStatus === "upcoming" && a.matchStatus === "finished") return 1
+          // sort by start time
+          return new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+        })
+        setMatches(filtered.slice(0, 2))
+      } catch (e) {
+        setMatches([])
+      }
+    }
+    fetchMatches()
+  }, [team.name, team.displayName])
 
   const descriptionFallback =
     "Härnösands HF samlar spelare, ledare och supportrar i ett starkt lagbygge. Följ laget via våra kanaler och uppdateringar nedan."
@@ -146,11 +190,38 @@ export default function TeamPage({ params }: TeamPageProps) {
 
             <div className="space-y-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">Nästa match</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">Matcher</p>
                 <h2 className="text-2xl font-bold text-emerald-900">{team.displayName}</h2>
-                <p className="text-sm text-emerald-700">Vi uppdaterar matchlistan löpande med det senaste spelschemat.</p>
+                <p className="text-sm text-emerald-700">Vi visar de 2 mest relevanta matcherna för laget, inklusive live-feed.</p>
               </div>
-              <TeamUpcomingMatch teamLabels={[team.name, team.displayName]} ticketUrl={TICKET_URL} />
+              <div className="grid gap-6 md:grid-cols-2">
+                {matches.length === 0 ? (
+                  <div className="text-slate-500">Inga matcher hittades.</div>
+                ) : (
+                  matches.map((match, idx) => (
+                    <Card key={match.id || idx} className="rounded-xl border border-emerald-100/80 bg-white p-5 shadow-sm">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-semibold uppercase text-slate-400">{match.matchStatus === "live" ? "Live" : match.matchStatus === "finished" ? "Avslutad" : "Kommande"}</p>
+                            <h3 className="text-lg font-bold text-emerald-900">{match.homeTeam} vs {match.awayTeam}</h3>
+                          </div>
+                          <button
+                            className="rounded-full border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
+                            onClick={() => { setSelectedMatch(match); setModalOpen(true); }}
+                          >
+                            Visa live-feed
+                          </button>
+                        </div>
+                        <p className="text-sm text-slate-600">Start: {match.startTime ? new Date(match.startTime).toLocaleString("sv-SE") : "?"}</p>
+                        {match.matchStatus === "finished" && (
+                          <p className="text-sm text-slate-700">Slutresultat: {match.finalScore ?? "—"}</p>
+                        )}
+                      </div>
+                    </Card>
+                  ))
+                )}
+              </div>
             </div>
 
             <Card className="overflow-hidden rounded-2xl border border-emerald-100/70 bg-white shadow-lg shadow-emerald-50">
@@ -168,6 +239,19 @@ export default function TeamPage({ params }: TeamPageProps) {
             </Card>
           </div>
         </div>
+        {selectedMatch && modalOpen && (
+          <MatchFeedModal
+            isOpen={modalOpen}
+            onClose={() => setModalOpen(false)}
+            matchFeed={selectedMatch.feed ?? []}
+            homeTeam={selectedMatch.homeTeam}
+            awayTeam={selectedMatch.awayTeam}
+            finalScore={selectedMatch.finalScore}
+            matchStatus={selectedMatch.matchStatus}
+            matchId={selectedMatch.id}
+            onRefresh={undefined} // If you want live refresh, pass a function to refetch feed
+          />
+        )}
       </main>
       <Footer />
     </>
