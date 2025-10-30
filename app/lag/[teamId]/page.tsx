@@ -1,3 +1,5 @@
+"use client"
+
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -7,8 +9,6 @@ import Footer from "@/components/footer"
 import { Card } from "@/components/ui/card"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 
-type RawTeam = (typeof lagContent)["teamCategories"][number]["teams"][number]
-
 const PLACEHOLDER_HERO = "/placeholder.jpg"
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 
@@ -16,7 +16,6 @@ const encodeAssetPath = (path: string) => {
   if (!path) {
     return PLACEHOLDER_HERO
   }
-
   const segments = path.split("/").map((segment, index) => (index === 0 ? segment : encodeURIComponent(segment)))
   return segments.join("/")
 }
@@ -30,18 +29,17 @@ const slugify = (value: string) =>
     .replace(/(^-|-$)+/g, "")
 
 const teams = lagContent.teamCategories.flatMap((category) =>
-  (category.teams ?? []).map((team: RawTeam) => ({
-    id: typeof team.id === "string" && team.id.trim().length > 0 ? team.id : slugify(team.name),
+  (category.teams ?? []).map((team) => ({
+    id: (team as any).id?.trim() ? (team as any).id : slugify(team.name),
     name: team.name,
-    displayName:
-      typeof team.displayName === "string" && team.displayName.trim().length > 0 ? team.displayName : team.name,
+    displayName: (team as any).displayName?.trim() ? (team as any).displayName : team.name,
     category: category.name,
     description: typeof team.description === "string" ? team.description : "",
     link: team.link,
     instagramLink: team.instagramLink,
     heroImage: encodeAssetPath(team.heroImage || PLACEHOLDER_HERO),
     heroImageAlt: team.heroImageAlt || `Lagbild ${team.name}`,
-  })),
+  }))
 )
 
 type TeamPageProps = {
@@ -59,7 +57,6 @@ export function generateMetadata({ params }: TeamPageProps) {
       title: "Lag | Härnösands HF",
     }
   }
-
   return {
     title: `${team.displayName} | Härnösands HF`,
     description: team.description || "Information om laget i Härnösands HF.",
@@ -77,6 +74,7 @@ export default function TeamPage({ params }: TeamPageProps) {
   const [modalOpen, setModalOpen] = useState(false)
 
   useEffect(() => {
+    if (!team) return
     async function fetchMatches() {
       try {
         const res = await fetch("https://api.harnosandshf.se/matcher/data")
@@ -113,7 +111,7 @@ export default function TeamPage({ params }: TeamPageProps) {
       }
     }
     fetchMatches()
-  }, [team.name, team.displayName])
+  }, [team?.name, team?.displayName])
 
   const descriptionFallback =
     "Härnösands HF samlar spelare, ledare och supportrar i ett starkt lagbygge. Följ laget via våra kanaler och uppdateringar nedan."
