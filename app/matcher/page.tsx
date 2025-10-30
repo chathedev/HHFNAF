@@ -496,19 +496,37 @@ export default function MatcherPage() {
 
         {/* Filters */}
         <div className="mb-8 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid gap-6 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">
+              <label
+                htmlFor="team-filter"
+                className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider"
+              >
                 Filtrera lag
               </label>
               <select
+                id="team-filter"
                 className="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-gray-900 font-medium focus:border-emerald-400 focus:outline-none transition-colors"
                 value={selectedTeam}
                 onChange={(e) => setSelectedTeam(e.target.value)}
               >
                 <option value="all">🏐 Alla lag</option>
+                {teamOptions.map((team) => (
+                  <option key={team.value} value={team.value}>
+                    {team.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label
+                htmlFor="status-filter"
+                className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider"
+              >
+                Matchstatus
               </label>
               <select
+                id="status-filter"
                 className="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-gray-900 font-medium focus:border-emerald-400 focus:outline-none transition-colors"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
