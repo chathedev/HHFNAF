@@ -264,8 +264,6 @@ export default function HomePage() {
   // Helper for result card display logic
   const showResultCard = (status: string, hasValidResult: boolean) => status === "live" || status === "finished" || hasValidResult;
 
-  const showResultCard = (status: string, hasValidResult: boolean) => status === "live" || status === "finished" || hasValidResult;
-
   return (
     <ErrorBoundary>
       <div>
