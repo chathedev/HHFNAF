@@ -261,6 +261,8 @@ export default function HomePage() {
     return canShowTicketForMatch(match);
   }
 
+  const showResultCard = (status: string, hasValidResult: boolean) => status === "live" || status === "finished" || hasValidResult;
+
   return (
     <ErrorBoundary>
       <div>
@@ -484,6 +486,8 @@ export default function HomePage() {
                           // Only allow clicking timeline for live or finished matches
                           const canOpenTimeline = status === "live" || status === "finished"
 
+                          const hasValidResult = match.result && match.result !== "Inte publicerat" && match.result !== "0-0" && match.result.trim() !== "";
+
                           return (
                             <li key={match.id}>
                               <div 
@@ -558,7 +562,7 @@ export default function HomePage() {
                                 </div>
 
                                 <div className="mt-5 space-y-4 border-t border-gray-100 pt-4">
-                                  {showResultCard && scoreValue && (
+                                  {showResultCard(status, hasValidResult) && scoreValue && (
                                     <div className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border px-4 py-3 ${resultBoxTone}`}>
                                       <div className="flex flex-wrap items-end gap-3">
                                         <div>
@@ -1038,11 +1042,7 @@ export default function HomePage() {
                     <AccordionContent className="text-gray-700 text-base">
                       Till en början behöver du bara bekväma träningskläder, inomhusskor och en vattenflaska. Handbollar
                       finns att låna under träningarna. När du väl bestämmer dig för att fortsätta kan du behöva
-                      klubbkläder.
-                    </AccordionContent>
-                  </AccordionItem>
-                  <AccordionItem value="item-3">
-                    <AccordionTrigger className="text-lg font-semibold text-gray-800 hover:no-underline">
+                     
                       Finns det provträningar?
                     </AccordionTrigger>
                     <AccordionContent className="text-gray-700 text-base">
