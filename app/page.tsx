@@ -1044,8 +1044,11 @@ export default function HomePage() {
                     </AccordionTrigger>
                     <AccordionContent className="text-gray-700 text-base">
                       Till en början behöver du bara bekväma träningskläder, inomhusskor och en vattenflaska. Handbollar
-                      finns att låna under träningarna. När du väl bestämmer dig för att fortsätta kan du behöva
-                     
+                      finns att låna under träningarna. När du väl bestämmer dig för att fortsätta kan du behöva annan utrustning.
+                    </AccordionContent>
+                  </AccordionItem>
+                  <AccordionItem value="item-3">
+                    <AccordionTrigger className="text-lg font-semibold text-gray-800 hover:no-underline">
                       Finns det provträningar?
                     </AccordionTrigger>
                     <AccordionContent className="text-gray-700 text-base">
