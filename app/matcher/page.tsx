@@ -396,38 +396,9 @@ export default function MatcherPage() {
   }
 
   useEffect(() => {
-    if (!searchParams) return;
-    const teamParam = searchParams.get("team")
-    if (teamParam) {
-      // Find the closest matching team value (fallbacks, ignore case, allow partials)
-      let bestMatch = "all"
-      let bestScore = 0
-      for (const team of teamOptions) {
-        // Exact match (case-insensitive)
-        if (team.value.toLowerCase() === teamParam.toLowerCase()) {
-          bestMatch = team.value
-          bestScore = 100
-          break
-        }
-        // Label match (case-insensitive)
-        if (team.label.toLowerCase() === teamParam.toLowerCase()) {
-          bestMatch = team.value
-          bestScore = 99
-          break
-        }
-        // Partial match (case-insensitive)
-        const valueScore = team.value.toLowerCase().includes(teamParam.toLowerCase()) ? teamParam.length : 0
-        const labelScore = team.label.toLowerCase().includes(teamParam.toLowerCase()) ? teamParam.length : 0
-        const score = Math.max(valueScore, labelScore)
-        if (score > bestScore) {
-          bestScore = score
-          bestMatch = team.value
-        }
-      }
-      setSelectedTeam(bestMatch)
-    } else {
-      setSelectedTeam("all")
-    }
+    // Remove ?team filtering from URL, only set selectedTeam from dropdown
+    // This disables auto-select from URL and fixes jumping back to 'Alla lag'
+    // User can only select team from dropdown
     // eslint-disable-next-line
   }, [teamOptions])
 
