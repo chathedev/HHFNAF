@@ -76,8 +76,10 @@ export default function MatcherPage() {
     dataType
   })
 
-  // Build teamOptions from screenshot team list
+  // Team options with A-lag teams at the top
   const teamOptions = [
+    { value: "Dam/utv", label: "Dam/utv" },
+    { value: "A-lag Herrar", label: "A-lag Herrar" },
     { value: "Fritids-Teknikskola", label: "Fritids-Teknikskola" },
     { value: "F19-Senior", label: "F19-Senior" },
     { value: "F16 (2009)", label: "F16 (2009)" },
@@ -98,25 +100,30 @@ export default function MatcherPage() {
     { value: "P10 (2015)", label: "P10 (2015)" },
     { value: "P9 (2016)", label: "P9 (2016)" },
     { value: "P8 (2017)", label: "P8 (2017)" },
-    { value: "P7 (2018)", label: "P7 (2018)" },
-    { value: "Dam/utv", label: "Dam/utv" },
-    { value: "A-lag Herrar", label: "A-lag Herrar" }
+    { value: "P7 (2018)", label: "P7 (2018)" }
   ]
+
+  // Enhanced filtering: combine legacy and new keys for each team
+  const teamKeyMap = {
+    "Dam/utv": ["Dam/utv", "Dam", "A-lag Dam", "Dam-utv"],
+    "A-lag Herrar": ["A-lag Herrar", "Herr", "A-lag Herrar", "Herr-utv"],
+    // Add more mappings if needed for other teams
+  };
 
   const filteredMatches = useMemo(() => {
     return matches.filter((match) => {
-      if (selectedTeam !== "all" && match.normalizedTeam !== selectedTeam) {
-        return false
+      if (selectedTeam !== "all") {
+        const keys = teamKeyMap[selectedTeam] || [selectedTeam];
+        if (!keys.includes(match.normalizedTeam)) {
+          return false;
+        }
       }
-      
-      const status = getMatchStatus(match)
-      
+      const status = getMatchStatus(match);
       if (statusFilter !== "all" && status !== statusFilter) {
-        return false
+        return false;
       }
-      
-      return true
-    })
+      return true;
+    });
   }, [matches, selectedTeam, statusFilter])
 
   // Group matches by status - use server-provided grouped data when available
