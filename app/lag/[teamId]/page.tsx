@@ -375,7 +375,7 @@ export default function TeamPage({ params }: TeamPageProps) {
               {showErrorState && (
                 <Card className="rounded-xl border border-red-200 bg-red-50 p-6 text-center text-sm text-red-700 shadow-sm">
                   {error ?? "Kunde inte hämta matcher just nu. Försök igen senare."}
-               
+                </Card>
               )}
 
               {showEmptyState && (
