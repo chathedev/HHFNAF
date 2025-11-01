@@ -145,8 +145,8 @@ export default function MatcherPage() {
         return
       }
 
-      const currentHomeScore = Number.parseInt(scoreMatch[1], 10)
-      const currentAwayScore = Number.parseInt(scoreMatch[2], 10)
+      const currentHomeScore = Number.parseInt(scoreScoreMatch[1], 10)
+      const currentAwayScore = Number.parseInt(scoreScoreMatch[2], 10)
       if (Number.isNaN(currentHomeScore) || Number.isNaN(currentAwayScore)) {
         return
       }
@@ -399,8 +399,27 @@ export default function MatcherPage() {
     if (!searchParams) return;
     const teamParam = searchParams.get("team")
     if (teamParam) {
-      const validTeam = teamOptions.some((team) => team.value === teamParam)
-      setSelectedTeam(validTeam ? teamParam : "all")
+      // Find the closest matching team value
+      let bestMatch = "all"
+      let bestScore = 0
+      for (const team of teamOptions) {
+        if (team.value === teamParam) {
+          bestMatch = team.value
+          bestScore = 100
+          break
+        }
+        // Fuzzy match: check if teamParam is contained in value or label
+        const valueScore = team.value.includes(teamParam) ? teamParam.length : 0
+        const labelScore = team.label.toLowerCase().includes(teamParam.toLowerCase()) ? teamParam.length : 0
+        const score = Math.max(valueScore, labelScore)
+        if (score > bestScore) {
+          bestScore = score
+          bestMatch = team.value
+        }
+      }
+      setSelectedTeam(bestMatch)
+    } else {
+      setSelectedTeam("all")
     }
     // eslint-disable-next-line
   }, [teamOptions])
