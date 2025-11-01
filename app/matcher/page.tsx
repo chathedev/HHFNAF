@@ -76,28 +76,30 @@ export default function MatcherPage() {
     dataType
   })
 
-  // Build teamOptions from lag.json
-  const teamOptions = useMemo(() => {
-    // Import lagContent directly if possible, else require
-    let lagContent
-    try {
-      lagContent = require("@/public/content/lag.json")
-    } catch {
-      lagContent = {}
-    }
-    const options = []
-    if (lagContent.teamCategories) {
-      lagContent.teamCategories.forEach((category) => {
-        (category.teams || []).forEach((team) => {
-          options.push({
-            value: team.name,
-            label: team.name,
-          })
-        })
-      })
-    }
-    return options
-  }, [])
+  // Build teamOptions from screenshot team list
+  const teamOptions = [
+    { value: "Fritids-Teknikskola", label: "Fritids-Teknikskola" },
+    { value: "F19-Senior", label: "F19-Senior" },
+    { value: "F16 (2009)", label: "F16 (2009)" },
+    { value: "F15 (2010)", label: "F15 (2010)" },
+    { value: "F14 (2011)", label: "F14 (2011)" },
+    { value: "F13 (2012)", label: "F13 (2012)" },
+    { value: "F12 (2013)", label: "F12 (2013)" },
+    { value: "F11 (2014)", label: "F11 (2014)" },
+    { value: "F10 (2015)", label: "F10 (2015)" },
+    { value: "F9 (2016)", label: "F9 (2016)" },
+    { value: "F8 (2017)", label: "F8 (2017)" },
+    { value: "F7 (2018)", label: "F7 (2018)" },
+    { value: "F6 (2019)", label: "F6 (2019)" },
+    { value: "P16 (2009/2010)", label: "P16 (2009/2010)" },
+    { value: "P14 (2011)", label: "P14 (2011)" },
+    { value: "P13 (2012)", label: "P13 (2012)" },
+    { value: "P12 (2013/2014)", label: "P12 (2013/2014)" },
+    { value: "P10 (2015)", label: "P10 (2015)" },
+    { value: "P9 (2016)", label: "P9 (2016)" },
+    { value: "P8 (2017)", label: "P8 (2017)" },
+    { value: "P7 (2018)", label: "P7 (2018)" },
+  ]
 
   const filteredMatches = useMemo(() => {
     return matches.filter((match) => {
