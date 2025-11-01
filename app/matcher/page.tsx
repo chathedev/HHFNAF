@@ -343,8 +343,8 @@ export default function MatcherPage() {
         </div>
 
         {/* Score/Result Area - prominent, separated */}
-        {showResultCard && scoreValue && (
-          <div className={`flex flex-col items-center gap-2 rounded-2xl border-2 px-6 py-5 ${resultBoxTone} shadow-sm`}>  
+        {showResultCard && scoreValue !== null && (
+          <div className={`flex flex-col items-center gap-2 rounded-2xl border-2 px-6 py-5 ${resultBoxTone} shadow-sm`}>
             <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${resultLabelClass} mb-1`}>{resultLabelText}</p>
             <div className="flex items-end gap-3">
               <span className="text-4xl md:text-5xl font-extrabold text-slate-900" data-score-value="true">
