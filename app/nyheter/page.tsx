@@ -11,29 +11,37 @@ import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
 
 interface NewsApiResponse {
-  updatedAt: string
-  source: string
-  count: number
+  fetchedAt: string
+  fetchedTimestamp: number
+  source: {
+    title: string
+    description: string
+    link: string
+    category: string
+  }
   items: NewsApiItem[]
 }
 
 interface NewsApiItem {
+  id: string
+  guid: string
   title: string
-  image: string | null
-  text: string
+  description: string
   link: string
-  pubDate: string
-  isoDate: string
+  imageUrl: string | null
   categories: string[]
+  publishedAt: string
+  publishedTimestamp: number
+  rawPubDate: string
 }
 
 interface NewsItem {
   title: string
   link: string
-  text: string
+  description: string
   cleanText: string
-  isoDate: string
-  image: string | null
+  publishedAt: string
+  imageUrl: string | null
   categories: string[]
 }
 
@@ -110,48 +118,35 @@ export default function NyheterPage() {
   useEffect(() => {
     async function fetchNews() {
       try {
-        console.log("[v0] Fetching news from internal API...")
         const response = await fetch("/api/news", {
-          headers: {
-            Accept: "application/json",
-          },
-          cache: "no-store", // Disable caching for fresh data
+          headers: { Accept: "application/json" },
+          cache: "no-store",
         })
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch news: ${response.statusText}`)
-        }
-
+        if (!response.ok) throw new Error(`Failed to fetch news: ${response.statusText}`)
         const newsData: NewsApiResponse = await response.json()
-        console.log("[v0] Received news data:", newsData.count, "items")
-
         const transformedNews = newsData.items.map((item) => ({
           title: item.title,
           link: item.link,
-          text: item.text,
-          cleanText: cleanHtmlContent(item.text),
-          isoDate: item.isoDate,
-          image: item.image,
+          description: item.description,
+          cleanText: cleanHtmlContent(item.description),
+          publishedAt: item.publishedAt,
+          imageUrl: item.imageUrl,
           categories: item.categories,
         }))
-
-        console.log("[v0] Transformed news:", transformedNews.length, "items")
         setNews(transformedNews)
       } catch (err) {
-        console.error("[v0] Error fetching news:", err)
         setError("Kunde inte ladda nyheter. Försök igen senare.")
       } finally {
         setLoading(false)
       }
     }
-
     fetchNews()
   }, [])
 
   const filteredNews = news.filter(
     (item) =>
       item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.cleanText.toLowerCase().includes(searchTerm.toLowerCase()),
+      item.cleanText.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   return (
@@ -199,9 +194,9 @@ export default function NyheterPage() {
                   key={`${item.link}-${index}`}
                   className="rounded-3xl border border-gray-200 bg-white/80 shadow-sm backdrop-blur p-6 flex flex-col justify-between min-h-[340px]"
                 >
-                  {item.image && (
+                  {item.imageUrl && (
                     <img
-                      src={item.image}
+                      src={item.imageUrl}
                       alt={item.title}
                       className="w-full h-40 object-cover rounded-2xl mb-4"
                       loading="lazy"
@@ -209,8 +204,8 @@ export default function NyheterPage() {
                   )}
                   <div className="flex-1 flex flex-col">
                     <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2">{item.title}</h3>
-                    {item.isoDate && (
-                      <p className="text-sm text-green-600 font-medium mb-2">{formatDate(item.isoDate)}</p>
+                    {item.publishedAt && (
+                      <p className="text-sm text-green-600 font-medium mb-2">{formatDate(item.publishedAt)}</p>
                     )}
                     <p className="text-gray-700 mb-4 line-clamp-3">{item.cleanText}</p>
                     {item.categories && item.categories.length > 0 && (
@@ -263,6 +258,11 @@ export default function NyheterPage() {
                 </AccordionItem>
                 <AccordionItem value="item-2">
                   <AccordionTrigger className="text-lg font-semibold text-gray-800 hover:no-underline">
+                    Vilken utrustning behöver jag?
+                  </AccordionTrigger>
+                  <AccordionContent className="text-gray-700 text-base">
+                    Till en början behöver du bara bekväma träningskläder, inomhusskor och en vattenflaska. Handbollar
+                    finns att låna under träningarna. När du väl bestämmer dig för att fortsätta kan du
                     Vilken utrustning behöver jag?
                   </AccordionTrigger>
                   <AccordionContent className="text-gray-700 text-base">

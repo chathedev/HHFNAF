@@ -26,10 +26,15 @@ export async function GET() {
   } catch (error) {
     console.error("Error fetching news:", error)
     return NextResponse.json({
-      updatedAt: new Date().toISOString(),
-      source: "fallback",
-      count: 0,
-      items: [],
+      fetchedAt: new Date().toISOString(),
+      fetchedTimestamp: Date.now(),
+      source: {
+        title: "laget.se - Nyheter från Härnösands HF",
+        description: "Här hittar ni alltid de senaste nyheterna från oss samtidigt som det läggs upp på hemsidan",
+        link: "https://www.laget.se/HarnosandsHF",
+        category: "laget.se"
+      },
+      items: []
     })
   }
 }
