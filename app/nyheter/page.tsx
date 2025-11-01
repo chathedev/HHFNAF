@@ -193,29 +193,24 @@ export default function NyheterPage() {
           )}
 
           {!loading && !error && (
-            <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 justify-center">
               {filteredNews.map((item, index) => (
-                <li
+                <div
                   key={`${item.link}-${index}`}
-                  className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+                  className="rounded-3xl border border-gray-200 bg-white/80 shadow-sm backdrop-blur p-6 flex flex-col justify-between min-h-[340px]"
                 >
                   {item.image && (
-                    <div className="relative overflow-hidden">
-                      <Image
-                        src={item.image || "/placeholder.svg"}
-                        alt={item.title}
-                        width={600}
-                        height={300}
-                        className="w-full h-48 object-cover transition-transform duration-300 hover:scale-105"
-                        loading="lazy"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-                    </div>
+                    <img
+                      src={item.image}
+                      alt={item.title}
+                      className="w-full h-40 object-cover rounded-2xl mb-4"
+                      loading="lazy"
+                    />
                   )}
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold leading-tight text-gray-900 mb-2 line-clamp-2">{item.title}</h3>
+                  <div className="flex-1 flex flex-col">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2">{item.title}</h3>
                     {item.isoDate && (
-                      <p className="text-sm text-green-600 font-medium mb-3">{formatDate(item.isoDate)}</p>
+                      <p className="text-sm text-green-600 font-medium mb-2">{formatDate(item.isoDate)}</p>
                     )}
                     <p className="text-gray-700 mb-4 line-clamp-3">{item.cleanText}</p>
                     {item.categories && item.categories.length > 0 && (
@@ -227,21 +222,21 @@ export default function NyheterPage() {
                         ))}
                       </div>
                     )}
-                    <div className="flex justify-between items-center pt-4 border-t border-gray-100">
-                      <Button
-                        asChild
-                        className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors duration-200"
-                      >
-                        <Link href={item.link} target="_blank" rel="noopener noreferrer">
-                          Läs mer
-                        </Link>
-                      </Button>
-                      <span className="text-xs text-gray-400">Extern länk</span>
-                    </div>
                   </div>
-                </li>
+                  <div className="pt-4 flex justify-between items-center border-t border-gray-100">
+                    <a
+                      href={item.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-full bg-green-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700"
+                    >
+                      Läs mer
+                    </a>
+                    <span className="text-xs text-gray-400">Extern länk</span>
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
 
           {!loading && !error && filteredNews.length === 0 && searchTerm && (
