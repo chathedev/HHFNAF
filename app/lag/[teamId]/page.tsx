@@ -67,7 +67,7 @@ const teams = lagContent.teamCategories.flatMap((category) =>
   (category.teams ?? []).map((team) => ({
     id: (team as any).id?.trim() ? (team as any).id : slugify(team.name),
     name: team.name,
-    displayName: (team as any).displayName?.trim() ? (team as any).displayName : team.name,
+    displayName: team.displayName?.trim() ? team.displayName : team.name,
     category: category.name,
     description: typeof team.description === "string" ? team.description : "",
     link: team.link,

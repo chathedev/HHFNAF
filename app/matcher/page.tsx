@@ -76,18 +76,28 @@ export default function MatcherPage() {
     dataType
   })
 
+  // Build teamOptions from lag.json
   const teamOptions = useMemo(() => {
-    const unique = new Map<string, string>()
-    matches.forEach((match) => {
-      const label = match.teamType.trim()
-      if (!unique.has(match.normalizedTeam)) {
-        unique.set(match.normalizedTeam, label)
-      }
-    })
-    return Array.from(unique.entries())
-      .map(([value, label]) => ({ value, label }))
-      .sort((a, b) => a.label.localeCompare(b.label, "sv-SE"))
-  }, [matches])
+    // Import lagContent directly if possible, else require
+    let lagContent
+    try {
+      lagContent = require("@/public/content/lag.json")
+    } catch {
+      lagContent = {}
+    }
+    const options = []
+    if (lagContent.teamCategories) {
+      lagContent.teamCategories.forEach((category) => {
+        (category.teams || []).forEach((team) => {
+          options.push({
+            value: team.name,
+            label: team.name,
+          })
+        })
+      })
+    }
+    return options
+  }, [])
 
   const filteredMatches = useMemo(() => {
     return matches.filter((match) => {
@@ -416,10 +426,9 @@ export default function MatcherPage() {
             </svg>
             Tillbaka
           </Link>
-          
           <h1 className="text-5xl font-black text-gray-900 mb-4">Matcher</h1>
           <p className="text-xl text-gray-600 max-w-2xl">
-            Följ alla våra lag live och se resultat från senaste matcherna
+            Följ alla våra lag live och se resultat från senaste matcherna. Välj lag nedan:
           </p>
         </div>
 
