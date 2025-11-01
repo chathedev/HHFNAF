@@ -65,6 +65,8 @@ const shouldShowTicketButton = (match: NormalizedMatch, status: NormalizedMatch[
 
 // Correct teams array, no duplicates or syntax errors
 const teams = [
+  { id: "dam-utv", name: "Dam/utv", displayName: "Dam/utv" },
+  { id: "a-lag-herrar", name: "A-lag Herrar", displayName: "A-lag Herrar" },
   { id: "fritids-teknikskola", name: "Fritids-Teknikskola", displayName: "Fritids-Teknikskola" },
   { id: "f19-senior", name: "F19-Senior", displayName: "F19-Senior" },
   { id: "f16-2009", name: "F16 (2009)", displayName: "F16 (2009)" },
@@ -85,9 +87,7 @@ const teams = [
   { id: "p10-2015", name: "P10 (2015)", displayName: "P10 (2015)" },
   { id: "p9-2016", name: "P9 (2016)", displayName: "P9 (2016)" },
   { id: "p8-2017", name: "P8 (2017)", displayName: "P8 (2017)" },
-  { id: "p7-2018", name: "P7 (2018)", displayName: "P7 (2018)" },
-  { id: "dam-utv", name: "Dam/utv", displayName: "Dam/utv" },
-  { id: "a-lag-herrar", name: "A-lag Herrar", displayName: "A-lag Herrar" }
+  { id: "p7-2018", name: "P7 (2018)", displayName: "P7 (2018)" }
 ]
 
 type TeamPageProps = {
