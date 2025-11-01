@@ -87,7 +87,7 @@ const teams = [
   { id: "p10-2015", name: "P10 (2015)", displayName: "P10 (2015)" },
   { id: "p9-2016", name: "P9 (2016)", displayName: "P9 (2016)" },
   { id: "p8-2017", name: "P8 (2017)", displayName: "P8 (2017)" },
-  { id: "p7-2018", name: "P7 (2018)", displayName: "P7 (2018)" },
+  { id: "p7-2018", name: "P7 (2018)", displayName: "P7 (2018)" }
 ];
 
 type TeamPageProps = {
@@ -108,7 +108,6 @@ export default function TeamPage({ params }: TeamPageProps) {
 
   const teamMatchKeys = useMemo(() => {
     const keys = new Set<string>();
-    // Only use new names for filtering
     keys.add(team.name);
     keys.add(team.displayName);
     keys.add(team.id);
