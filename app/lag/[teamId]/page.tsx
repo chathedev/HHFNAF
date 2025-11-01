@@ -327,8 +327,7 @@ export default function TeamPage({ params }: TeamPageProps) {
                           {status === "live" && (
                             <span className="inline-flex items-center gap-1.5 rounded bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700">
                               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-600" />
-                              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-600" />
-                              LIVELIVE
+                              LIVE
                             </span>
                           )}
                         </div>
@@ -412,11 +411,20 @@ export default function TeamPage({ params }: TeamPageProps) {
 
               {showErrorState && (
                 <Card className="rounded-xl border border-red-200 bg-red-50 p-6 text-center text-sm text-red-700 shadow-sm">
-                  {error ?? "Kunde inte hämta matcher just nu. Försök igen senare."}
-               
-                  {error ?? "Kunde inte hämta matcher just nu. Försök igen senare."}                  {error ?? "Kunde inte hämta matcher just nu. Försök igen senare."}
-               
-            <Card className="overflow-hidden rounded-2xl border border-emerald-100/70 bg-white shadow-lg shadow-emerald-50 mt-8">
+                  {typeof error === "string"
+                    ? error
+                    : "Kunde inte hämta matcher just nu. Försök igen senare."}
+                </Card>
+              )}
+
+              {showEmptyState && (
+                <Card className="rounded-xl border border-emerald-100/70 bg-white p-6 text-center text-sm text-gray-600 shadow-sm">
+                  Inga matcher planerade just nu.
+                </Card>
+              )}
+            </section>
+
+            <Card className="mt-8 overflow-hidden rounded-2xl border border-emerald-100/70 bg-white shadow-lg shadow-emerald-50">
               <div
                 className="h-[420px] w-full rounded-2xl bg-gray-200 md:h-[520px]"
                 style={{
