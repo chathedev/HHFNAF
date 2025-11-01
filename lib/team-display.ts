@@ -13,10 +13,10 @@ export type ClubTeamMetadata = {
 }
 
 export const CLUB_TEAM_METADATA: ClubTeamMetadata[] = [
-  { id: "dam-utv", name: "Dam/utv", displayName: "Dam/utv", category: "Dam", heroImage: "/placeholder.jpg", heroImageAlt: "Dam/utv" },
-  { id: "a-lag-herrar", name: "A-lag Herrar", displayName: "A-lag Herrar", category: "Herr", heroImage: "/placeholder.jpg", heroImageAlt: "A-lag Herrar" },
+  { id: "dam-utv", name: "Dam/utv", displayName: "Dam/utv", category: "Dam", heroImage: "/HarnosandsHF/Gruppfoto/Härnösands HF - Dam.jpg", heroImageAlt: "Dam/utv" },
+  { id: "a-lag-herrar", name: "A-lag Herrar", displayName: "A-lag Herrar", category: "Herr", heroImage: "/HarnosandsHF/Gruppfoto/Härnösands HF - A lag herr.jpg", heroImageAlt: "A-lag Herrar" },
   { id: "fritids-teknikskola", name: "Fritids-Teknikskola", displayName: "Fritids-Teknikskola", category: "Övrigt", heroImage: "/placeholder.jpg", heroImageAlt: "Fritids-Teknikskola" },
-  { id: "f19-senior", name: "F19-Senior", displayName: "F19-Senior", category: "Dam", heroImage: "/placeholder.jpg", heroImageAlt: "F19-Senior" },
+  { id: "f19-senior", name: "F19-Senior", displayName: "F19-Senior", category: "Dam", heroImage: "/HarnosandsHF/Gruppfoto/Härnösands HF - F19.jpg", heroImageAlt: "F19-Senior" },
   { id: "f16-2009", name: "F16", displayName: "F16 (2009)", category: "Dam", heroImage: "/placeholder.jpg", heroImageAlt: "F16" },
   { id: "f15-2010", name: "F15", displayName: "F15 (2010)", category: "Dam", heroImage: "/placeholder.jpg", heroImageAlt: "F15" },
   { id: "f14-2011", name: "F14", displayName: "F14 (2011–12)", category: "Dam", heroImage: "/placeholder.jpg", heroImageAlt: "F14" },
