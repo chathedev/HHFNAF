@@ -63,30 +63,30 @@ const buildScheduleLine = (match: NormalizedMatch) =>
 const shouldShowTicketButton = (match: NormalizedMatch, status: NormalizedMatch["matchStatus"]) =>
   status !== "finished" && canShowTicketForMatch(match)
 
-// Replace teams array with new team list from screenshot
+// Correct teams array, no duplicates or syntax errors
 const teams = [
-  { id: "fritids-teknikskola", name: "Fritids-Teknikskola", displayName: "Fritids-Teknikskola" },"Fritids-Teknikskola" },
-  { id: "f19-senior", name: "F19-Senior", displayName: "F19-Senior" },, name: "F19-Senior", displayName: "F19-Senior" },
+  { id: "fritids-teknikskola", name: "Fritids-Teknikskola", displayName: "Fritids-Teknikskola" },
+  { id: "f19-senior", name: "F19-Senior", displayName: "F19-Senior" },
   { id: "f16-2009", name: "F16 (2009)", displayName: "F16 (2009)" },
-  { id: "f15-2010", name: "F15 (2010)", displayName: "F15 (2010)" },15 (2010)", displayName: "F15 (2010)" },
+  { id: "f15-2010", name: "F15 (2010)", displayName: "F15 (2010)" },
   { id: "f14-2011", name: "F14 (2011)", displayName: "F14 (2011)" },
-  { id: "f13-2012", name: "F13 (2012)", displayName: "F13 (2012)" },name: "F13 (2012)", displayName: "F13 (2012)" },
-  { id: "f12-2013", name: "F12 (2013)", displayName: "F12 (2013)" },, displayName: "F12 (2013)" },
-  { id: "f11-2014", name: "F11 (2014)", displayName: "F11 (2014)" },,
-  { id: "f10-2015", name: "F10 (2015)", displayName: "F10 (2015)" },5)" },
-  { id: "f9-2016", name: "F9 (2016)", displayName: "F9 (2016)" },d: "f9-2016", name: "F9 (2016)", displayName: "F9 (2016)" },
-  { id: "f8-2017", name: "F8 (2017)", displayName: "F8 (2017)" }, { id: "f8-2017", name: "F8 (2017)", displayName: "F8 (2017)" },
-  { id: "f7-2018", name: "F7 (2018)", displayName: "F7 (2018)" },  { id: "f7-2018", name: "F7 (2018)", displayName: "F7 (2018)" },
-  { id: "f6-2019", name: "F6 (2019)", displayName: "F6 (2019)" },e: "F6 (2019)", displayName: "F6 (2019)" },
-  { id: "p16-2009-2010", name: "P16 (2009/2010)", displayName: "P16 (2009/2010)" },e: "P16 (2009/2010)", displayName: "P16 (2009/2010)" },
-  { id: "p14-2011", name: "P14 (2011)", displayName: "P14 (2011)" }, { id: "p14-2011", name: "P14 (2011)", displayName: "P14 (2011)" },
-  { id: "p13-2012", name: "P13 (2012)", displayName: "P13 (2012)" },  { id: "p13-2012", name: "P13 (2012)", displayName: "P13 (2012)" },
-  { id: "p12-2013-2014", name: "P12 (2013/2014)", displayName: "P12 (2013/2014)" },: "P12 (2013/2014)" },
-  { id: "p10-2015", name: "P10 (2015)", displayName: "P10 (2015)" },5)" },
-  { id: "p9-2016", name: "P9 (2016)", displayName: "P9 (2016)" },16", name: "P9 (2016)", displayName: "P9 (2016)" },
-  { id: "p8-2017", name: "P8 (2017)", displayName: "P8 (2017)" },17", name: "P8 (2017)", displayName: "P8 (2017)" },
-  { id: "p7-2018", name: "P7 (2018)", displayName: "P7 (2018)" }, id: "p7-2018", name: "P7 (2018)", displayName: "P7 (2018)" },
-]]
+  { id: "f13-2012", name: "F13 (2012)", displayName: "F13 (2012)" },
+  { id: "f12-2013", name: "F12 (2013)", displayName: "F12 (2013)" },
+  { id: "f11-2014", name: "F11 (2014)", displayName: "F11 (2014)" },
+  { id: "f10-2015", name: "F10 (2015)", displayName: "F10 (2015)" },
+  { id: "f9-2016", name: "F9 (2016)", displayName: "F9 (2016)" },
+  { id: "f8-2017", name: "F8 (2017)", displayName: "F8 (2017)" },
+  { id: "f7-2018", name: "F7 (2018)", displayName: "F7 (2018)" },
+  { id: "f6-2019", name: "F6 (2019)", displayName: "F6 (2019)" },
+  { id: "p16-2009-2010", name: "P16 (2009/2010)", displayName: "P16 (2009/2010)" },
+  { id: "p14-2011", name: "P14 (2011)", displayName: "P14 (2011)" },
+  { id: "p13-2012", name: "P13 (2012)", displayName: "P13 (2012)" },
+  { id: "p12-2013-2014", name: "P12 (2013/2014)", displayName: "P12 (2013/2014)" },
+  { id: "p10-2015", name: "P10 (2015)", displayName: "P10 (2015)" },
+  { id: "p9-2016", name: "P9 (2016)", displayName: "P9 (2016)" },
+  { id: "p8-2017", name: "P8 (2017)", displayName: "P8 (2017)" },
+  { id: "p7-2018", name: "P7 (2018)", displayName: "P7 (2018)" }
+]
 
 type TeamPageProps = {
   params: { teamId: string }ng }
