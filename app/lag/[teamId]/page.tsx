@@ -10,6 +10,12 @@ import { Card } from "@/components/ui/card"
 import { canShowTicketForMatch, normalizeMatchKey } from "@/lib/matches"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
+import {
+  CLUB_TEAM_METADATA,
+  createTeamMatchKeySet,
+  extendTeamDisplayName,
+  extendTeamDisplayNameFromCandidates,
+} from "@/lib/team-display"
 
 const PLACEHOLDER_HERO = "/placeholder.jpg"
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
@@ -63,48 +69,73 @@ const buildScheduleLine = (match: NormalizedMatch) =>
 const shouldShowTicketButton = (match: NormalizedMatch, status: NormalizedMatch["matchStatus"]) =>
   status !== "finished" && canShowTicketForMatch(match)
 
-// Correct teams array, no duplicates or syntax errors
-const teams = [
-  { id: "dam-utv", name: "Dam/utv", displayName: "Dam/utv" },
-  { id: "a-lag-herrar", name: "A-lag Herrar", displayName: "A-lag Herrar" },
-  { id: "fritids-teknikskola", name: "Fritids-Teknikskola", displayName: "Fritids-Teknikskola" },
-  { id: "f19-senior", name: "F19-Senior", displayName: "F19-Senior" },
-  { id: "f16-2009", name: "F16 (2009)", displayName: "F16 (2009)" },
-  { id: "f15-2010", name: "F15 (2010)", displayName: "F15 (2010)" },
-  { id: "f14-2011", name: "F14 (2011)", displayName: "F14 (2011)" },
-  { id: "f13-2012", name: "F13 (2012)", displayName: "F13 (2012)" },
-  { id: "f12-2013", name: "F12 (2013)", displayName: "F12 (2013)" },
-  { id: "f11-2014", name: "F11 (2014)", displayName: "F11 (2014)" },
-  { id: "f10-2015", name: "F10 (2015)", displayName: "F10 (2015)" },
-  { id: "f9-2016", name: "F9 (2016)", displayName: "F9 (2016)" },
-  { id: "f8-2017", name: "F8 (2017)", displayName: "F8 (2017)" },
-  { id: "f7-2018", name: "F7 (2018)", displayName: "F7 (2018)" },
-  { id: "f6-2019", name: "F6 (2019)", displayName: "F6 (2019)" },
-  { id: "p16-2009-2010", name: "P16 (2009/2010)", displayName: "P16 (2009/2010)" },
-  { id: "p14-2011", name: "P14 (2011)", displayName: "P14 (2011)" },
-  { id: "p13-2012", name: "P13 (2012)", displayName: "P13 (2012)" },
-  { id: "p12-2013-2014", name: "P12 (2013/2014)", displayName: "P12 (2013/2014)" },
-  { id: "p10-2015", name: "P10 (2015)", displayName: "P10 (2015)" },
-  { id: "p9-2016", name: "P9 (2016)", displayName: "P9 (2016)" },
-  { id: "p8-2017", name: "P8 (2017)", displayName: "P8 (2017)" },
-  { id: "p7-2018", name: "P7 (2018)", displayName: "P7 (2018)" }
-];
+const contentTeamEntries = lagContent.teamCategories.flatMap((category) => {
+  const rawTeams = Array.isArray(category.teams) ? category.teams : []
+  return rawTeams.map((team) => {
+    const rawId = (team as { id?: string })?.id?.trim()
+    const id = rawId && rawId.length > 0 ? rawId : slugify(team.name)
+    return { id, category: category.name, team }
+  })
+})
+
+const contentTeamMap = new Map(contentTeamEntries.map((entry) => [entry.id, entry]))
+
+const teams = CLUB_TEAM_METADATA.map((meta) => {
+  const content = contentTeamMap.get(meta.id) ?? contentTeamMap.get(slugify(meta.name))
+  const resolvedCategory = meta.category || content?.category || "Övrigt"
+  const resolvedDescription =
+    meta.description ?? (content?.team && typeof content.team.description === "string" ? content.team.description : "") ?? ""
+  const resolvedLink = meta.link ?? (content?.team as { link?: string })?.link ?? ""
+  const resolvedInstagram = meta.instagramLink ?? (content?.team as { instagramLink?: string })?.instagramLink ?? ""
+  const resolvedHero =
+    meta.heroImage ??
+    (content?.team as { heroImage?: string })?.heroImage ??
+    PLACEHOLDER_HERO
+  const resolvedHeroAlt =
+    meta.heroImageAlt ??
+    (content?.team as { heroImageAlt?: string })?.heroImageAlt ??
+    `Lagbild ${meta.displayName}`
+
+  return {
+    ...meta,
+    category: resolvedCategory,
+    description: resolvedDescription,
+    link: resolvedLink,
+    instagramLink: resolvedInstagram,
+    heroImage: encodeAssetPath(resolvedHero),
+    heroImageAlt: resolvedHeroAlt,
+  }
+}).sort((a, b) => {
+  // Sort by F/P, then by year range (extract first year)
+  const getSortKey = (team) => {
+    const match = team.displayName.match(/(F|P)(\d+)[^\d]*(\d{4})/)
+    if (match) {
+      return `${match[1]}${match[2]}-${match[3]}`
+    }
+    return team.displayName
+  }
+  return getSortKey(a).localeCompare(getSortKey(b))
+})
 
 type TeamPageProps = {
   params: { teamId: string }
 }
 
-export default function TeamPage({ params }: TeamPageProps) {
-  const team = teams.find((item) => item.id === params.teamId)
-  if (!team) {
-    notFound()
-  }
+const getTeamDisplayName = (team: (typeof teams)[number]) =>
+  extendTeamDisplayNameFromCandidates([team.displayName, team.name, team.id])
 
-  const [selectedMatch, setSelectedMatch] = useState<NormalizedMatch | null>(null)
+export default function TeamPage({ params }: TeamPageProps) {
+  const team = teams.find((item) => item.id === params.teamId);
+  if (!team) {
+    notFound();
+  }
+  const teamDisplayName = getTeamDisplayName(team);
+
+  const [selectedMatch, setSelectedMatch] = useState<NormalizedMatch | null>(null);
   const { matches: allMatches, loading, error, refresh } = useMatchData({
     dataType: "current",
     refreshIntervalMs: 3_000,
-  })
+  });
 
   // Auto-refresh match data every 3 seconds
   useEffect(() => {
@@ -114,17 +145,26 @@ export default function TeamPage({ params }: TeamPageProps) {
     return () => clearInterval(interval);
   }, [refresh]);
 
-  const teamMatchKeys = useMemo(() => {
-    const keys = new Set<string>();
-    keys.add(team.name);
-    keys.add(team.displayName);
-    keys.add(team.id);
-    return keys;
-  }, [team.name, team.displayName, team.id])
+  const teamMatchKeys = useMemo(
+    () => createTeamMatchKeySet(team.name, team.displayName, team.id, teamDisplayName),
+    [team.name, team.displayName, team.id, teamDisplayName],
+  );
+
   const teamMatches = useMemo(() => {
     const now = Date.now()
     const recentFinishedThreshold = 1000 * 60 * 60 * 24
-    const filtered = allMatches.filter((match) => teamMatchKeys.has(match.normalizedTeam))
+    const filtered = allMatches.filter((match) => {
+      if (teamMatchKeys.has(match.normalizedTeam)) {
+        return true
+      }
+      if (match.teamType) {
+        const fallbackKey = normalizeMatchKey(match.teamType)
+        if (fallbackKey && teamMatchKeys.has(fallbackKey)) {
+          return true
+        }
+      }
+      return false
+    })
     const relevant = filtered.filter((match) => {
       const status = getDerivedStatus(match)
       if (status !== "finished") {
@@ -158,7 +198,6 @@ export default function TeamPage({ params }: TeamPageProps) {
   return (
     <>
       <main className="flex-1 bg-white">
-
         <section className="relative overflow-hidden rounded-b-[3rem] bg-gradient-to-br from-emerald-600 via-emerald-500 to-orange-400">
           <div className="pointer-events-none absolute -left-36 top-8 h-72 w-72 rounded-full bg-white/15 blur-3xl" />
           <div className="pointer-events-none absolute -right-44 bottom-[-140px] h-80 w-80 rounded-full bg-emerald-900/30 blur-3xl" />
@@ -171,11 +210,9 @@ export default function TeamPage({ params }: TeamPageProps) {
               Tillbaka till alla lag
             </Link>
             <p className="text-xs font-semibold uppercase tracking-[0.45em] text-white/80">{team.category}</p>
-            <h1 className="mt-4 text-4xl font-black tracking-tight md:text-5xl lg:text-6xl">{team.displayName}</h1>
+            <h1 className="mt-4 text-4xl font-black tracking-tight md:text-5xl lg:text-6xl">{teamDisplayName}</h1>
             <p className="mt-5 max-w-2xl text-sm text-white/85 md:text-base">
-              {team.description && team.description.trim().length > 0
-                ? team.description
-                : descriptionFallback}
+              {team.description && team.description.trim().length > 0 ? team.description : descriptionFallback}
             </p>
           </div>
         </section>
@@ -231,7 +268,7 @@ export default function TeamPage({ params }: TeamPageProps) {
             <section aria-label="Lagets matcher" className="mt-10 space-y-6">
               <div className="text-center">
                 <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-700">Lagets matcher</p>
-                <h2 className="mt-2 text-2xl font-bold text-gray-900">{team.displayName}</h2>
+                <h2 className="mt-2 text-2xl font-bold text-gray-900">{teamDisplayName}</h2>
               </div>
 
               {teamMatches.map((match) => {
@@ -246,6 +283,7 @@ export default function TeamPage({ params }: TeamPageProps) {
                 const playLabel = status === "finished" ? "Se repris" : "Se live"
                 const canOpenTimeline = status === "live" || status === "finished"
                 const showTicket = shouldShowTicketButton(match, status)
+                const matchTeamLabel = extendTeamDisplayName(match.teamType)
 
                 return (
                   <Card
@@ -283,18 +321,20 @@ export default function TeamPage({ params }: TeamPageProps) {
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
                         <div className="mb-2 flex items-center gap-3">
-                          <span className="text-sm font-semibold text-emerald-700">{match.teamType}</span>
+                          {matchTeamLabel && (
+                            <span className="text-sm font-semibold text-emerald-700">{matchTeamLabel}</span>
+                          )}
                           {status === "live" && (
                             <span className="inline-flex items-center gap-1.5 rounded bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700">
                               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-600" />
                               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-600" />
-                              LIVE
+                              LIVELIVE
                             </span>
                           )}
                         </div>
                         <h3 className="text-xl font-bold text-gray-900">
                           {isHome ? (
-                            <> (
+                            <>
                               Härnösands HF <span className="text-gray-400">vs</span> {opponentName} ({homeAwayLabel})
                             </>
                           ) : (
@@ -373,17 +413,9 @@ export default function TeamPage({ params }: TeamPageProps) {
               {showErrorState && (
                 <Card className="rounded-xl border border-red-200 bg-red-50 p-6 text-center text-sm text-red-700 shadow-sm">
                   {error ?? "Kunde inte hämta matcher just nu. Försök igen senare."}
-                </Card>
-              )}
-
-              {showEmptyState && (
-                <Card className="rounded-xl border border-emerald-100/70 bg-white p-6 text-center text-sm text-gray-600 shadow-sm">
-                  Detta lag använder inte Profixio ännu.
-                </Card>
-              )}
-            </section>
-
-            {/* Team photo restored below */}
+               
+                  {error ?? "Kunde inte hämta matcher just nu. Försök igen senare."}                  {error ?? "Kunde inte hämta matcher just nu. Försök igen senare."}
+               
             <Card className="overflow-hidden rounded-2xl border border-emerald-100/70 bg-white shadow-lg shadow-emerald-50 mt-8">
               <div
                 className="h-[420px] w-full rounded-2xl bg-gray-200 md:h-[520px]"

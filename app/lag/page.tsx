@@ -10,6 +10,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
+import { CLUB_TEAM_METADATA, extendTeamDisplayName } from "@/lib/team-display"
 import { Card } from "@/components/ui/card"
 
 type RawTeam = (typeof lagContent)["teamCategories"][number]["teams"][number]
@@ -32,32 +33,43 @@ const encodeAssetPath = (path: string) => {
   return segments.join("/")
 }
 
-// Use only new team names for lag page
-const teams = [
-  { id: "dam-utv", name: "Dam/utv", displayName: "Dam/utv" },
-  { id: "a-lag-herrar", name: "A-lag Herrar", displayName: "A-lag Herrar" },
-  { id: "fritids-teknikskola", name: "Fritids-Teknikskola", displayName: "Fritids-Teknikskola" },
-  { id: "f19-senior", name: "F19-Senior", displayName: "F19-Senior" },
-  { id: "f16-2009", name: "F16 (2009)", displayName: "F16 (2009)" },
-  { id: "f15-2010", name: "F15 (2010)", displayName: "F15 (2010)" },
-  { id: "f14-2011", name: "F14 (2011)", displayName: "F14 (2011)" },
-  { id: "f13-2012", name: "F13 (2012)", displayName: "F13 (2012)" },
-  { id: "f12-2013", name: "F12 (2013)", displayName: "F12 (2013)" },
-  { id: "f11-2014", name: "F11 (2014)", displayName: "F11 (2014)" },
-  { id: "f10-2015", name: "F10 (2015)", displayName: "F10 (2015)" },
-  { id: "f9-2016", name: "F9 (2016)", displayName: "F9 (2016)" },
-  { id: "f8-2017", name: "F8 (2017)", displayName: "F8 (2017)" },
-  { id: "f7-2018", name: "F7 (2018)", displayName: "F7 (2018)" },
-  { id: "f6-2019", name: "F6 (2019)", displayName: "F6 (2019)" },
-  { id: "p16-2009-2010", name: "P16 (2009/2010)", displayName: "P16 (2009/2010)" },
-  { id: "p14-2011", name: "P14 (2011)", displayName: "P14 (2011)" },
-  { id: "p13-2012", name: "P13 (2012)", displayName: "P13 (2012)" },
-  { id: "p12-2013-2014", name: "P12 (2013/2014)", displayName: "P12 (2013/2014)" },
-  { id: "p10-2015", name: "P10 (2015)", displayName: "P10 (2015)" },
-  { id: "p9-2016", name: "P9 (2016)", displayName: "P9 (2016)" },
-  { id: "p8-2017", name: "P8 (2017)", displayName: "P8 (2017)" },
-  { id: "p7-2018", name: "P7 (2018)", displayName: "P7 (2018)" }
-]
+const contentTeamEntries = lagContent.teamCategories.flatMap((category) => {
+  const categoryTeams = Array.isArray(category.teams) ? category.teams : []
+  return categoryTeams.map((team) => {
+    const rawId = (team as { id?: string })?.id?.trim()
+    const id = rawId && rawId.length > 0 ? rawId : slugify(team.name)
+    return { id, category: category.name, team }
+  })
+})
+
+const contentTeamMap = new Map(contentTeamEntries.map((entry) => [entry.id, entry]))
+
+const teams = CLUB_TEAM_METADATA.map((meta) => {
+  const content = contentTeamMap.get(meta.id) ?? contentTeamMap.get(slugify(meta.name))
+  const resolvedCategory = meta.category || content?.category || "Övrigt"
+  const resolvedLink = meta.link ?? (content?.team as { link?: string })?.link ?? ""
+  const resolvedInstagram = meta.instagramLink ?? (content?.team as { instagramLink?: string })?.instagramLink ?? ""
+  const resolvedHero =
+    meta.heroImage ??
+    (content?.team as { heroImage?: string })?.heroImage ??
+    PLACEHOLDER_HERO
+  const resolvedHeroAlt =
+    meta.heroImageAlt ??
+    (content?.team as { heroImageAlt?: string })?.heroImageAlt ??
+    `Lagbild ${meta.displayName}`
+  const resolvedDescription =
+    meta.description ?? (content?.team && typeof content.team.description === "string" ? content.team.description : "") ?? ""
+
+  return {
+    ...meta,
+    category: resolvedCategory,
+    link: resolvedLink,
+    instagramLink: resolvedInstagram,
+    heroImage: encodeAssetPath(resolvedHero),
+    heroImageAlt: resolvedHeroAlt,
+    description: resolvedDescription,
+  }
+})
 
 const categoryStats = lagContent.teamCategories.map((category) => ({
   name: category.name,
@@ -158,7 +170,9 @@ export default function LagPage() {
                           <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-emerald-600">
                             {team.category}
                           </p>
-                          <h3 className="text-sm font-semibold tracking-tight text-gray-900">{team.displayName}</h3>
+                          <h3 className="text-sm font-semibold tracking-tight text-gray-900">
+                            {extendTeamDisplayName(team.displayName ?? team.name)}
+                          </h3>
                           {team.link ? (
                             <Link
                               href={team.link}
@@ -210,7 +224,9 @@ export default function LagPage() {
                     </Link>
                   </div>
                   <div className="px-4 py-4 space-y-3">
-                    <h3 className="text-sm font-semibold tracking-tight text-gray-900">{team.displayName}</h3>
+                    <h3 className="text-sm font-semibold tracking-tight text-gray-900">
+                      {extendTeamDisplayName(team.displayName ?? team.name)}
+                    </h3>
                     {team.link ? (
                       <Link
                         href={team.link}

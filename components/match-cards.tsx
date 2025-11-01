@@ -3,6 +3,7 @@
 import { Calendar, Trophy, Zap } from "lucide-react"
 import { useEffect, useState } from "react"
 import type { ReactNode } from "react"
+import { extendTeamDisplayName } from "@/lib/team-display"
 
 interface Match {
   teamType?: string
@@ -151,6 +152,7 @@ export default function MatchCards() {
               ) : (
                 upcomingMatches.map((match, index) => {
                   const opponent = removeHomeAwaySuffix(match.opponent) || "Motståndare meddelas"
+                  const teamLabel = extendTeamDisplayName(match.teamType)
                   const scheduleBits = [formatDate(match.date), match.time, match.venue].filter(Boolean)
 
                   return (
@@ -161,9 +163,9 @@ export default function MatchCards() {
                       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div className="space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
-                            {match.teamType && (
+                            {teamLabel && (
                               <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-                                {match.teamType}
+                                {teamLabel}
                               </span>
                             )}
                             {match.isHome !== undefined && (

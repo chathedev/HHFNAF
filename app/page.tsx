@@ -28,6 +28,7 @@ import { ErrorBoundary } from "@/components/error-boundary"
 import { defaultContent } from "@/lib/default-content"
 import type { FullContent, Partner } from "@/lib/content-types"
 import { canShowTicketForMatch } from "@/lib/matches"
+import { extendTeamDisplayName } from "@/lib/team-display"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 import { InstagramFeed } from "@/components/instagram-feed"
@@ -451,7 +452,7 @@ export default function HomePage() {
                     {!matchLoading && !matchError && matchesToDisplay.length > 0 && (
                       <ul className="grid gap-4">
                         {matchesToDisplay.map((match) => {
-                          const primaryTeamLabel = match.teamType?.trim() || "Härnösands HF"
+                          const primaryTeamLabel = extendTeamDisplayName(match.teamType?.trim() || "Härnösands HF")
                           const opponentName = match.opponent.replace(/\s*\((hemma|borta)\)\s*$/i, '').trim()
                           const homeAwayLabel = match.isHome === false ? 'borta' : 'hemma'
                           const isHome = match.isHome !== false

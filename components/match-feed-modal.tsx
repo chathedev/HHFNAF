@@ -121,7 +121,7 @@ export function MatchFeedModal({
     void refreshData()
     const intervalId = window.setInterval(() => {
       void refreshData()
-    }, 1500)
+    }, 3000)
 
     return () => {
       isMounted = false

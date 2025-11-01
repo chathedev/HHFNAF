@@ -2,6 +2,7 @@
 
 import { useMemo, useEffect, useRef, useState } from "react"
 import Link from "next/link"
+import { extendTeamDisplayName } from "@/lib/team-display"
 
 import { Card } from "@/components/ui/card"
 import { canShowTicketForMatch } from "@/lib/matches"
@@ -245,6 +246,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   
   // Don't show LIVE badge if match has been 0-0 for more than 60 minutes (likely stale data)
   const shouldShowLive = status === "live" && !(isZeroZero && minutesSinceKickoff > 60)
+  const teamTypeLabel = extendTeamDisplayName(nextMatch.teamType)
   
   const isFutureOrLive = nextMatch.date.getTime() >= Date.now() || status === "live"
   const showTicket = isTicketEligibleBase && !outcomeInfo && isFutureOrLive
@@ -285,9 +287,11 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <span className="text-sm font-semibold text-emerald-700">
-              {nextMatch.teamType}
-            </span>
+            {teamTypeLabel && (
+              <span className="text-sm font-semibold text-emerald-700">
+                {teamTypeLabel}
+              </span>
+            )}
             {shouldShowLive && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded">
                 <span className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse"></span>

@@ -6,7 +6,8 @@ import { useSearchParams } from "next/navigation"
 
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
-import { canShowTicketForMatch } from "@/lib/matches"
+import { canShowTicketForMatch, normalizeMatchKey } from "@/lib/matches"
+import { extendTeamDisplayName, createTeamMatchKeySet } from "@/lib/team-display"
 
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 
@@ -59,6 +60,59 @@ const getMatchStatus = (match: NormalizedMatch): StatusFilter => {
   return match.matchStatus ?? "upcoming"
 }
 
+const TEAM_OPTION_VALUES = [
+  "Dam/utv",
+  "A-lag Herrar",
+  "Fritids-Teknikskola",
+  "F19-Senior",
+  "F16 (2009)",
+  "F15 (2010)",
+  "F14 (2011)",
+  "F13 (2012)",
+  "F12 (2013)",
+  "F11 (2014)",
+  "F10 (2015)",
+  "F9 (2016)",
+  "F8 (2017)",
+  "F7 (2018)",
+  "F6 (2019)",
+  "P16 (2009/2010)",
+  "P14 (2011)",
+  "P13 (2012)",
+  "P12 (2013/2014)",
+  "P10 (2015)",
+  "P9 (2016)",
+  "P8 (2017)",
+  "P7 (2018)",
+] as const
+
+const buildTeamKeys = (...values: string[]) => {
+  const set = createTeamMatchKeySet(...values)
+  values.forEach((value) => {
+    const extended = extendTeamDisplayName(value)
+    if (extended && extended !== value) {
+      createTeamMatchKeySet(extended).forEach((key) => set.add(key))
+    }
+  })
+  return set
+}
+
+const TEAM_MATCH_KEY_MAP: Record<string, Set<string>> = {
+  "Dam/utv": buildTeamKeys("Dam/utv", "Dam", "A-lag Dam", "Dam-utv"),
+  "A-lag Herrar": buildTeamKeys("A-lag Herrar", "Herr", "Herr-utv"),
+}
+
+TEAM_OPTION_VALUES.forEach((value) => {
+  if (!TEAM_MATCH_KEY_MAP[value]) {
+    TEAM_MATCH_KEY_MAP[value] = buildTeamKeys(value)
+  }
+})
+
+const TEAM_OPTIONS = TEAM_OPTION_VALUES.map((value) => ({
+  value,
+  label: extendTeamDisplayName(value),
+}))
+
 export default function MatcherPage() {
   const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   const [selectedTeam, setSelectedTeam] = useState<string>("all")
@@ -76,46 +130,24 @@ export default function MatcherPage() {
     dataType
   })
 
-  // Team options with A-lag teams at the top
-  const teamOptions = [
-    { value: "Dam/utv", label: "Dam/utv" },
-    { value: "A-lag Herrar", label: "A-lag Herrar" },
-    { value: "Fritids-Teknikskola", label: "Fritids-Teknikskola" },
-    { value: "F19-Senior", label: "F19-Senior" },
-    { value: "F16 (2009)", label: "F16 (2009)" },
-    { value: "F15 (2010)", label: "F15 (2010)" },
-    { value: "F14 (2011)", label: "F14 (2011)" },
-    { value: "F13 (2012)", label: "F13 (2012)" },
-    { value: "F12 (2013)", label: "F12 (2013)" },
-    { value: "F11 (2014)", label: "F11 (2014)" },
-    { value: "F10 (2015)", label: "F10 (2015)" },
-    { value: "F9 (2016)", label: "F9 (2016)" },
-    { value: "F8 (2017)", label: "F8 (2017)" },
-    { value: "F7 (2018)", label: "F7 (2018)" },
-    { value: "F6 (2019)", label: "F6 (2019)" },
-    { value: "P16 (2009/2010)", label: "P16 (2009/2010)" },
-    { value: "P14 (2011)", label: "P14 (2011)" },
-    { value: "P13 (2012)", label: "P13 (2012)" },
-    { value: "P12 (2013/2014)", label: "P12 (2013/2014)" },
-    { value: "P10 (2015)", label: "P10 (2015)" },
-    { value: "P9 (2016)", label: "P9 (2016)" },
-    { value: "P8 (2017)", label: "P8 (2017)" },
-    { value: "P7 (2018)", label: "P7 (2018)" }
-  ]
+  const teamOptions = TEAM_OPTIONS
 
-  // Enhanced filtering: combine legacy and new keys for each team
-  const teamKeyMap = {
-    "Dam/utv": ["Dam/utv", "Dam", "A-lag Dam", "Dam-utv"],
-    "A-lag Herrar": ["A-lag Herrar", "Herr", "A-lag Herrar", "Herr-utv"],
-    // Add more mappings if needed for other teams
-  };
+  const selectedTeamKeys = useMemo(() => {
+    if (selectedTeam === "all") {
+      return null
+    }
+    return TEAM_MATCH_KEY_MAP[selectedTeam] ?? buildTeamKeys(selectedTeam)
+  }, [selectedTeam])
 
   const filteredMatches = useMemo(() => {
     return matches.filter((match) => {
-      if (selectedTeam !== "all") {
-        const keys = teamKeyMap[selectedTeam] || [selectedTeam];
-        if (!keys.includes(match.normalizedTeam)) {
-          return false;
+      if (selectedTeamKeys) {
+        const normalizedKey = match.normalizedTeam
+        if (!selectedTeamKeys.has(normalizedKey)) {
+          const fallbackKey = match.teamType ? normalizeMatchKey(match.teamType) : ""
+          if (!fallbackKey || !selectedTeamKeys.has(fallbackKey)) {
+            return false;
+          }
         }
       }
       const status = getMatchStatus(match);
@@ -124,7 +156,7 @@ export default function MatcherPage() {
       }
       return true;
     });
-  }, [matches, selectedTeam, statusFilter])
+  }, [matches, selectedTeamKeys, statusFilter])
 
   // Group matches by status - use server-provided grouped data when available
   const groupedMatches = useMemo(() => {
@@ -282,6 +314,7 @@ export default function MatcherPage() {
 
     const resultLabelClass = status === "live" ? "text-rose-600" : status === "finished" ? "text-slate-600" : "text-slate-500"
     const resultLabelText = status === "finished" ? "Slutresultat" : status === "live" ? "Ställning just nu" : "Resultat"
+    const teamTypeLabel = extendTeamDisplayName(match.teamType)
     // --- REDESIGN START ---
     // Layout: Score/result area is more prominent, buttons below, clear separation
     return (
@@ -303,9 +336,11 @@ export default function MatcherPage() {
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-sm font-semibold text-emerald-700">
-                {match.teamType}
-              </span>
+              {teamTypeLabel && (
+                <span className="text-sm font-semibold text-emerald-700">
+                  {teamTypeLabel}
+                </span>
+              )}
               {status === "live" && (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded">
                   <span className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse"></span>
