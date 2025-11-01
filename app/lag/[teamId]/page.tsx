@@ -106,199 +106,194 @@ export default function TeamPage({ params }: TeamPageProps) {
     refreshIntervalMs: 3_000,
   })
 
-  const teamMatchKeys = useMemo(() => {
-    const keys = new Set<string>()
-    ;[team.name, team.displayName, team.id].forEach((value) => {
-      if (!value) {
-        return
-      }
-      const key = normalizeMatchKey(value)
-      if (key) {
-        keys.add(key)
-      }
-    })
-    return keys
+  const teamMatchKeys = useMemo(() => {s
+    const keys = new Set<string>(); => {
+    // Only use new names for filtering
+    keys.add(team.name); names for filtering
+    keys.add(team.displayName);eam.name);
+    keys.add(team.id);s.add(team.displayName);
+    return keys;
   }, [team.name, team.displayName, team.id])
-
+.displayName, team.id])
   const teamMatches = useMemo(() => {
-    const now = Date.now()
-    const recentFinishedThreshold = 1000 * 60 * 60 * 24
-
+    const now = Date.now()t teamMatches = useMemo(() => {
+    const recentFinishedThreshold = 1000 * 60 * 60 * 24 Date.now()
+0 * 60 * 24
     const filtered = allMatches.filter((match) => teamMatchKeys.has(match.normalizedTeam))
-    const relevant = filtered.filter((match) => {
-      const status = getDerivedStatus(match)
+    const relevant = filtered.filter((match) => {r((match) => teamMatchKeys.has(match.normalizedTeam))
+      const status = getDerivedStatus(match)red.filter((match) => {
       if (status !== "finished") {
-        return true
+        return true      if (status !== "finished") {
       }
       return now - match.date.getTime() <= recentFinishedThreshold
-    })
+    })ecentFinishedThreshold
 
     return relevant
-      .slice()
+      .slice()urn relevant
       .sort((a, b) => {
-        const statusA = getDerivedStatus(a)
-        const statusB = getDerivedStatus(b)
-        const statusDiff = getStatusPriority(statusA) - getStatusPriority(statusB)
-        if (statusDiff !== 0) {
-          return statusDiff
+        const statusA = getDerivedStatus(a).sort((a, b) => {
+        const statusB = getDerivedStatus(b)        const statusA = getDerivedStatus(a)
+        const statusDiff = getStatusPriority(statusA) - getStatusPriority(statusB)sB = getDerivedStatus(b)
+        if (statusDiff !== 0) {statusDiff = getStatusPriority(statusA) - getStatusPriority(statusB)
+          return statusDiff!== 0) {
         }
         if (statusA === "finished" && statusB === "finished") {
           return b.date.getTime() - a.date.getTime()
-        }
+        }() - a.date.getTime()
         return a.date.getTime() - b.date.getTime()
-      })
+      })eturn a.date.getTime() - b.date.getTime()
       .slice(0, 2)
   }, [allMatches, teamMatchKeys])
-
+Matches, teamMatchKeys])
   const descriptionFallback =
-    "Härnösands HF samlar spelare, ledare och supportrar i ett starkt lagbygge. Följ laget via våra kanaler och uppdateringar nedan."
-
+    "Härnösands HF samlar spelare, ledare och supportrar i ett starkt lagbygge. Följ laget via våra kanaler och uppdateringar nedan."descriptionFallback =
+ samlar spelare, ledare och supportrar i ett starkt lagbygge. Följ laget via våra kanaler och uppdateringar nedan."
   const showLoadingState = loading && teamMatches.length === 0
-  const showErrorState = !loading && Boolean(error) && teamMatches.length === 0
-  const showEmptyState = !loading && !error && teamMatches.length === 0
+  const showErrorState = !loading && Boolean(error) && teamMatches.length === 0  const showLoadingState = loading && teamMatches.length === 0
+  const showEmptyState = !loading && !error && teamMatches.length === 0ding && Boolean(error) && teamMatches.length === 0
 
   return (
     <>
       <main className="flex-1 bg-white">
 
         <section className="relative overflow-hidden rounded-b-[3rem] bg-gradient-to-br from-emerald-600 via-emerald-500 to-orange-400">
-          <div className="pointer-events-none absolute -left-36 top-8 h-72 w-72 rounded-full bg-white/15 blur-3xl" />
-          <div className="pointer-events-none absolute -right-44 bottom-[-140px] h-80 w-80 rounded-full bg-emerald-900/30 blur-3xl" />
-          <div className="relative mx-auto flex max-w-4xl flex-col items-center px-4 py-20 text-center text-white md:px-6 md:py-24">
-            <Link
+          <div className="pointer-events-none absolute -left-36 top-8 h-72 w-72 rounded-full bg-white/15 blur-3xl" />ection className="relative overflow-hidden rounded-b-[3rem] bg-gradient-to-br from-emerald-600 via-emerald-500 to-orange-400">
+          <div className="pointer-events-none absolute -right-44 bottom-[-140px] h-80 w-80 rounded-full bg-emerald-900/30 blur-3xl" />    <div className="pointer-events-none absolute -left-36 top-8 h-72 w-72 rounded-full bg-white/15 blur-3xl" />
+          <div className="relative mx-auto flex max-w-4xl flex-col items-center px-4 py-20 text-center text-white md:px-6 md:py-24">-none absolute -right-44 bottom-[-140px] h-80 w-80 rounded-full bg-emerald-900/30 blur-3xl" />
+            <Link          <div className="relative mx-auto flex max-w-4xl flex-col items-center px-4 py-20 text-center text-white md:px-6 md:py-24">
               href="/lag"
               className="mb-6 inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.35em] text-emerald-600 shadow transition hover:bg-emerald-50"
-            >
+            >cking-[0.35em] text-emerald-600 shadow transition hover:bg-emerald-50"
               Tillbaka till alla lag
-            </Link>
+            </Link>lbaka till alla lag
             <p className="text-xs font-semibold uppercase tracking-[0.45em] text-white/80">{team.category}</p>
             <h1 className="mt-4 text-4xl font-black tracking-tight md:text-5xl lg:text-6xl">{team.displayName}</h1>
-            <p className="mt-5 max-w-2xl text-sm text-white/85 md:text-base">
-              {team.description && team.description.trim().length > 0
-                ? team.description
+            <p className="mt-5 max-w-2xl text-sm text-white/85 md:text-base">h1 className="mt-4 text-4xl font-black tracking-tight md:text-5xl lg:text-6xl">{team.displayName}</h1>
+              {team.description && team.description.trim().length > 0-2xl text-sm text-white/85 md:text-base">
+                ? team.description.description && team.description.trim().length > 0
                 : descriptionFallback}
             </p>
           </div>
         </section>
 
         <div className="px-4 pb-16 pt-12 md:px-6">
-          <div className="mx-auto max-w-4xl space-y-8">
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Card className="rounded-xl border border-emerald-100/80 bg-white p-5 text-center shadow-sm">
-                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-700">Laget.se</p>
-                {team.link ? (
+          <div className="mx-auto max-w-4xl space-y-8">ssName="px-4 pb-16 pt-12 md:px-6">
+            <div className="grid gap-4 sm:grid-cols-3">lassName="mx-auto max-w-4xl space-y-8">
+              <Card className="rounded-xl border border-emerald-100/80 bg-white p-5 text-center shadow-sm">lassName="grid gap-4 sm:grid-cols-3">
+                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-700">Laget.se</p>              <Card className="rounded-xl border border-emerald-100/80 bg-white p-5 text-center shadow-sm">
+                {team.link ? (d uppercase tracking-[0.3em] text-emerald-700">Laget.se</p>
                   <Link
                     href={team.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-700 transition hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-600"
-                  >
+                    className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-700 transition hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-600"ner noreferrer"
+                  >ssName="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-700 transition hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-600"
                     Öppna laget.se
                   </Link>
                 ) : (
                   <p className="mt-3 text-xs text-gray-500">Länk läggs till snart.</p>
-                )}
+                )}p className="mt-3 text-xs text-gray-500">Länk läggs till snart.</p>
               </Card>
 
               <Card className="rounded-xl border border-emerald-100/70 bg-white p-5 text-center shadow-sm">
-                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-700">Instagram</p>
-                {team.instagramLink ? (
-                  <Link
-                    href={team.instagramLink}
+                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-700">Instagram</p>xt-center shadow-sm">
+                {team.instagramLink ? ( className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-700">Instagram</p>
+                  <Link.instagramLink ? (
+                    href={team.instagramLink}                  <Link
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-600"
-                  >
+                    className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-600"errer"
+                  >ssName="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-600"
                     Följ laget
                   </Link>
                 ) : (
                   <p className="mt-3 text-xs text-gray-500">Instagram uppdateras snart.</p>
-                )}
+                )}p className="mt-3 text-xs text-gray-500">Instagram uppdateras snart.</p>
               </Card>
 
               <Card className="rounded-xl border border-orange-200/80 bg-white p-5 text-center shadow-sm">
-                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-orange-600">Kontakt</p>
-                <Link
+                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-orange-600">Kontakt</p>ter shadow-sm">
+                <Link className="text-sm font-semibold uppercase tracking-[0.3em] text-orange-600">Kontakt</p>
                   href="/kontakt"
-                  className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full border border-orange-200 bg-white px-3 py-1 text-xs font-semibold text-orange-600 transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-500"
-                >
+                  className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full border border-orange-200 bg-white px-3 py-1 text-xs font-semibold text-orange-600 transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-500"                  href="/kontakt"
+                >er-orange-200 bg-white px-3 py-1 text-xs font-semibold text-orange-600 transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-500"
                   Kontakta föreningen
-                </Link>
+                </Link>takta föreningen
               </Card>
             </div>
-
+>
             {/* Minimalistic matcher button */}
-            {/* Removed matcher button as requested */}
-            
+            {/* Removed matcher button as requested */}istic matcher button */}
+            ed matcher button as requested */}
             <section aria-label="Lagets matcher" className="mt-10 space-y-6">
-              <div className="text-center">
+              <div className="text-center">            <section aria-label="Lagets matcher" className="mt-10 space-y-6">
                 <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-700">Lagets matcher</p>
-                <h2 className="mt-2 text-2xl font-bold text-gray-900">{team.displayName}</h2>
-              </div>
+                <h2 className="mt-2 text-2xl font-bold text-gray-900">{team.displayName}</h2>ercase tracking-[0.3em] text-emerald-700">Lagets matcher</p>
+              </div>    <h2 className="mt-2 text-2xl font-bold text-gray-900">{team.displayName}</h2>
 
               {teamMatches.map((match) => {
                 const status = getDerivedStatus(match)
                 const opponentName = extractOpponentName(match.opponent)
-                const isHome = match.isHome !== false
-                const homeAwayLabel = isHome ? "hemma" : "borta"
-                const scheduleLine = buildScheduleLine(match)
-                const trimmedResult = match.result?.trim()
+                const isHome = match.isHome !== falset opponentName = extractOpponentName(match.opponent)
+                const homeAwayLabel = isHome ? "hemma" : "borta"                const isHome = match.isHome !== false
+                const scheduleLine = buildScheduleLine(match)e ? "hemma" : "borta"
+                const trimmedResult = match.result?.trim()(match)
                 const hasResult =
                   Boolean(trimmedResult) && trimmedResult.toLowerCase() !== "inte publicerat"
-                const playLabel = status === "finished" ? "Se repris" : "Se live"
-                const canOpenTimeline = status === "live" || status === "finished"
-                const showTicket = shouldShowTicketButton(match, status)
-
+                const playLabel = status === "finished" ? "Se repris" : "Se live"rCase() !== "inte publicerat"
+                const canOpenTimeline = status === "live" || status === "finished" repris" : "Se live"
+                const showTicket = shouldShowTicketButton(match, status)|| status === "finished"
+= shouldShowTicketButton(match, status)
                 return (
                   <Card
                     key={match.id}
                     className={`group relative rounded-2xl border border-emerald-100/80 bg-white p-6 text-left shadow-sm transition ${
-                      canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:shadow-lg" : ""
-                    }`}
+                      canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:shadow-lg" : ""                    className={`group relative rounded-2xl border border-emerald-100/80 bg-white p-6 text-left shadow-sm transition ${
+                    }`}nOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:shadow-lg" : ""
                     onClick={() => {
-                      if (canOpenTimeline) {
+                      if (canOpenTimeline) { {
                         setSelectedMatch(match)
                       }
                     }}
                     role={canOpenTimeline ? "button" : undefined}
-                    tabIndex={canOpenTimeline ? 0 : undefined}
-                    onKeyDown={(event) => {
-                      if (!canOpenTimeline) {
-                        return
+                    tabIndex={canOpenTimeline ? 0 : undefined}"button" : undefined}
+                    onKeyDown={(event) => { 0 : undefined}
+                      if (!canOpenTimeline) {eyDown={(event) => {
+                        returnif (!canOpenTimeline) {
                       }
                       if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault()
-                        setSelectedMatch(match)
-                      }
+                        event.preventDefault()ter" || event.key === " ") {
+                        setSelectedMatch(match))
+                      }ectedMatch(match)
                     }}
                   >
                     {canOpenTimeline && (
                       <div className="absolute top-4 right-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                        <span className="inline-flex items-center gap-1.5 rounded bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-600">
-                          <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
+                        <span className="inline-flex items-center gap-1.5 rounded bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-600">div className="absolute top-4 right-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                          <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">  <span className="inline-flex items-center gap-1.5 rounded bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-600">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />       <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          </svg>inecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                           Se matchhändelser
                         </span>
                       </div>
                     )}
 
                     <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="mb-2 flex items-center gap-3">
-                          <span className="text-sm font-semibold text-emerald-700">{match.teamType}</span>
-                          {status === "live" && (
+                      <div className="flex-1">ame="flex items-start justify-between gap-4">
+                        <div className="mb-2 flex items-center gap-3">lassName="flex-1">
+                          <span className="text-sm font-semibold text-emerald-700">{match.teamType}</span>  <div className="mb-2 flex items-center gap-3">
+                          {status === "live" && (                          <span className="text-sm font-semibold text-emerald-700">{match.teamType}</span>
                             <span className="inline-flex items-center gap-1.5 rounded bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700">
-                              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-600" /><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-600" />
-                              LIVE
+                              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-600" /><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-600" />nline-flex items-center gap-1.5 rounded bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700">
+                              LIVEse rounded-full bg-red-600" /><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-600" />
                             </span>
                           )}
                         </div>
                         <h3 className="text-xl font-bold text-gray-900">
-                          {isHome ? (
-                            <>
-                              Härnösands HF <span className="text-gray-400">vs</span> {opponentName} ({homeAwayLabel})
-                            </>
+                          {isHome ? (ame="text-xl font-bold text-gray-900">
+                            <> (
+                              Härnösands HF <span className="text-gray-400">vs</span> {opponentName} ({homeAwayLabel})<>
+                            </>Härnösands HF <span className="text-gray-400">vs</span> {opponentName} ({homeAwayLabel})
                           ) : (
                             <>
                               {opponentName} <span className="text-gray-400">vs</span> Härnösands HF ({homeAwayLabel})
@@ -307,59 +302,59 @@ export default function TeamPage({ params }: TeamPageProps) {
                         </h3>
                         {scheduleLine && <p className="mt-1 text-sm text-gray-600">{scheduleLine}</p>}
                         {match.series && <p className="mt-1 text-xs text-gray-500">{match.series}</p>}
-                      </div>
+                      </div>series && <p className="mt-1 text-xs text-gray-500">{match.series}</p>}
                       {match.infoUrl && (
-                        <Link
+                        <LinkinfoUrl && (
                           href={match.infoUrl}
                           target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-emerald-600 transition hover:text-emerald-700"
-                          onClick={(event) => event.stopPropagation()}
-                          title="Matchsida"
-                        >
+                          rel="noopener noreferrer"rget="_blank"
+                          className="text-emerald-600 transition hover:text-emerald-700"oreferrer"
+                          onClick={(event) => event.stopPropagation()}ssName="text-emerald-600 transition hover:text-emerald-700"
+                          title="Matchsida"event.stopPropagation()}
+                        >a"
                           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />wBox="0 0 24 24">
+                          </svg>="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                         </Link>
-                      )}
+                      )}/Link>
                     </div>
 
                     <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-gray-100 pt-4">
-                      <div className="flex items-center gap-4">
-                        {hasResult && (
-                          <span className="text-2xl font-bold text-gray-900" data-score-value="true">
-                            {match.result}
+                      <div className="flex items-center gap-4">ame="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-gray-100 pt-4">
+                        {hasResult && (iv className="flex items-center gap-4">
+                          <span className="text-2xl font-bold text-gray-900" data-score-value="true">asResult && (
+                            {match.result}                          <span className="text-2xl font-bold text-gray-900" data-score-value="true">
                           </span>
                         )}
 
                         {match.playUrl && (
-                          <a
+                          <a(
                             href={match.playUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(event) => event.stopPropagation()}
-                            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-                            title={status === "finished" ? "Se repris" : "Se matchen live"}
-                          >
+                            target="_blank"  href={match.playUrl}
+                            rel="noopener noreferrer"                            target="_blank"
+                            onClick={(event) => event.stopPropagation()}oreferrer"
+                            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"onClick={(event) => event.stopPropagation()}
+                            title={status === "finished" ? "Se repris" : "Se matchen live"}ex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+                          >== "finished" ? "Se repris" : "Se matchen live"}
                             <img src="/handbollplay_mini.png" alt="" className="h-4 w-4 brightness-0 invert" />
-                            {playLabel}
+                            {playLabel}ssName="h-4 w-4 brightness-0 invert" />
                           </a>
                         )}
                       </div>
 
                       {showTicket && (
-                        <a
+                        <aket && (
                           href={TICKET_URL}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(event) => event.stopPropagation()}
-                          className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600"
-                        >
+                          target="_blank"ef={TICKET_URL}
+                          rel="noopener noreferrer"                          target="_blank"
+                          onClick={(event) => event.stopPropagation()}r noreferrer"
+                          className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600"onClick={(event) => event.stopPropagation()}
+                        >-flex items-center gap-2 rounded-lg bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600"
                           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                          </svg>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          </svg>="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
                           Köp biljett
-                        </a>
+                        </a> Köp biljett
                       )}
                     </div>
                   </Card>
@@ -367,16 +362,16 @@ export default function TeamPage({ params }: TeamPageProps) {
               })}
 
               {showLoadingState && (
-                <Card className="rounded-xl border border-emerald-100/70 bg-white p-6 text-center text-sm text-gray-600 shadow-sm">
-                  Hämtar matcher…
-                </Card>
-              )}
+                <Card className="rounded-xl border border-emerald-100/70 bg-white p-6 text-center text-sm text-gray-600 shadow-sm">gState && (
+                  Hämtar matcher…Card className="rounded-xl border border-emerald-100/70 bg-white p-6 text-center text-sm text-gray-600 shadow-sm">
+                </Card> Hämtar matcher…
+              )}                </Card>
 
               {showErrorState && (
-                <Card className="rounded-xl border border-red-200 bg-red-50 p-6 text-center text-sm text-red-700 shadow-sm">
-                  {error ?? "Kunde inte hämta matcher just nu. Försök igen senare."}
-                </Card>
-              )}
+                <Card className="rounded-xl border border-red-200 bg-red-50 p-6 text-center text-sm text-red-700 shadow-sm">(
+                  {error ?? "Kunde inte hämta matcher just nu. Försök igen senare."}lassName="rounded-xl border border-red-200 bg-red-50 p-6 text-center text-sm text-red-700 shadow-sm">
+                </Card>  {error ?? "Kunde inte hämta matcher just nu. Försök igen senare."}
+              )}               
 
               {showEmptyState && (
                 <Card className="rounded-xl border border-emerald-100/70 bg-white p-6 text-center text-sm text-gray-600 shadow-sm">
