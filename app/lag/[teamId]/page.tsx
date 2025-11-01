@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import lagContent from "@/public/content/lag.json"
 import Footer from "@/components/footer"
@@ -105,6 +105,14 @@ export default function TeamPage({ params }: TeamPageProps) {
     dataType: "current",
     refreshIntervalMs: 3_000,
   })
+
+  // Auto-refresh match data every 3 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refresh();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [refresh]);
 
   const teamMatchKeys = useMemo(() => {
     const keys = new Set<string>();

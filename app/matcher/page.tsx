@@ -423,6 +423,14 @@ export default function MatcherPage() {
     // eslint-disable-next-line
   }, [teamOptions])
 
+  // Auto-refresh match data every 3 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refresh();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [refresh]);
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-24">
       <div className="container mx-auto px-4 max-w-7xl">
