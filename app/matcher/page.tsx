@@ -399,17 +399,24 @@ export default function MatcherPage() {
     if (!searchParams) return;
     const teamParam = searchParams.get("team")
     if (teamParam) {
-      // Find the closest matching team value
+      // Find the closest matching team value (fallbacks, ignore case, allow partials)
       let bestMatch = "all"
       let bestScore = 0
       for (const team of teamOptions) {
-        if (team.value === teamParam) {
+        // Exact match (case-insensitive)
+        if (team.value.toLowerCase() === teamParam.toLowerCase()) {
           bestMatch = team.value
           bestScore = 100
           break
         }
-        // Fuzzy match: check if teamParam is contained in value or label
-        const valueScore = team.value.includes(teamParam) ? teamParam.length : 0
+        // Label match (case-insensitive)
+        if (team.label.toLowerCase() === teamParam.toLowerCase()) {
+          bestMatch = team.value
+          bestScore = 99
+          break
+        }
+        // Partial match (case-insensitive)
+        const valueScore = team.value.toLowerCase().includes(teamParam.toLowerCase()) ? teamParam.length : 0
         const labelScore = team.label.toLowerCase().includes(teamParam.toLowerCase()) ? teamParam.length : 0
         const score = Math.max(valueScore, labelScore)
         if (score > bestScore) {
