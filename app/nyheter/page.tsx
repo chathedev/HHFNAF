@@ -153,16 +153,15 @@ export default function NyheterPage() {
     <>
       <Header />
       <main className="flex-1 bg-white">
-        <div className="h-24"></div> {/* Spacer for fixed header */}
-        <div className="container px-4 md:px-6 py-8 md:py-12 lg:py-16">
-          <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl mb-8 text-green-700">
+        <div className="h-24"></div>
+        <div className="container max-w-full px-2 sm:px-4 md:px-6 py-6 md:py-10 lg:py-14">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-6 text-green-700 text-center">
             Senaste Nyheterna
           </h1>
-          <p className="text-lg text-gray-700 mb-8">
+          <p className="text-base sm:text-lg text-gray-700 mb-6 text-center">
             Här hittar du de senaste nyheterna och uppdateringarna från Härnösands HF.
           </p>
-
-          <div className="flex justify-center mb-8">
+          <div className="flex justify-center mb-6">
             <div className="relative w-full max-w-md">
               <Input
                 type="text"
@@ -174,42 +173,39 @@ export default function NyheterPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             </div>
           </div>
-
           {loading && (
             <div className="text-center py-8">
               <p className="text-gray-600">Laddar nyheter...</p>
             </div>
           )}
-
           {error && (
             <div className="text-center py-8">
               <p className="text-red-600">{error}</p>
             </div>
           )}
-
           {!loading && !error && (
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 justify-center">
+            <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 justify-center">
               {filteredNews.map((item, index) => (
                 <div
                   key={`${item.link}-${index}`}
-                  className="rounded-3xl border border-gray-200 bg-white/80 shadow-sm backdrop-blur p-6 flex flex-col justify-between min-h-[340px]"
+                  className="rounded-2xl border border-gray-200 bg-white/80 shadow-sm backdrop-blur p-4 flex flex-col justify-between min-h-[280px]"
                 >
                   {item.imageUrl && (
                     <img
                       src={item.imageUrl}
                       alt={item.title}
-                      className="w-full h-40 object-cover rounded-2xl mb-4"
+                      className="w-full h-32 sm:h-40 object-cover rounded-xl mb-3"
                       loading="lazy"
                     />
                   )}
                   <div className="flex-1 flex flex-col">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2">{item.title}</h3>
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-1 line-clamp-2">{item.title}</h3>
                     {item.publishedAt && (
-                      <p className="text-sm text-green-600 font-medium mb-2">{formatDate(item.publishedAt)}</p>
+                      <p className="text-xs sm:text-sm text-green-600 font-medium mb-1">{formatDate(item.publishedAt)}</p>
                     )}
-                    <p className="text-gray-700 mb-4 line-clamp-3">{item.cleanText}</p>
+                    <p className="text-gray-700 mb-2 line-clamp-3">{item.cleanText}</p>
                     {item.categories && item.categories.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-4">
+                      <div className="flex flex-wrap gap-1 mb-2">
                         {item.categories.map((category, catIndex) => (
                           <span key={catIndex} className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
                             {category}
@@ -218,12 +214,12 @@ export default function NyheterPage() {
                       </div>
                     )}
                   </div>
-                  <div className="pt-4 flex justify-between items-center border-t border-gray-100">
+                  <div className="pt-2 flex justify-between items-center border-t border-gray-100">
                     <a
                       href={item.link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 rounded-full bg-green-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700"
+                      className="inline-flex items-center gap-2 rounded-full bg-green-600 px-4 py-1.5 text-xs sm:text-sm font-semibold text-white transition-colors hover:bg-green-700"
                     >
                       Läs mer
                     </a>
@@ -233,13 +229,11 @@ export default function NyheterPage() {
               ))}
             </div>
           )}
-
           {!loading && !error && filteredNews.length === 0 && searchTerm && (
             <div className="text-center py-8">
               <p className="text-gray-600">Inga nyheter hittades för "{searchTerm}"</p>
             </div>
           )}
-
           <section className="mt-16">
             <div className="bg-white shadow-lg rounded-lg p-8 md:p-12 max-w-4xl mx-auto">
               <h2 className="text-3xl font-bold text-green-700 mb-8 text-center">Vanliga frågor om att börja träna</h2>

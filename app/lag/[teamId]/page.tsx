@@ -90,7 +90,7 @@ export default function TeamPage({ params }: TeamPageProps) {
   const [selectedMatch, setSelectedMatch] = useState<NormalizedMatch | null>(null)
   const { matches: allMatches, loading, error, refresh } = useMatchData({
     dataType: "current",
-    refreshIntervalMs: 12_000,
+    refreshIntervalMs: 3_000,
   })
 
   const teamMatchKeys = useMemo(() => {
@@ -134,7 +134,7 @@ export default function TeamPage({ params }: TeamPageProps) {
         }
         return a.date.getTime() - b.date.getTime()
       })
-      .slice(0, 4)
+      .slice(0, 2)
   }, [allMatches, teamMatchKeys])
 
   const descriptionFallback =
@@ -215,14 +215,7 @@ export default function TeamPage({ params }: TeamPageProps) {
             </div>
 
             {/* Minimalistic matcher button */}
-            <div className="mt-8 flex justify-center">
-              <a
-                href={`/matcher?team=${encodeURIComponent(team.id)}`}
-                className="px-4 py-2 rounded bg-blue-600 text-white font-medium shadow hover:bg-blue-700 transition"
-              >
-                {`Visa matcher för ${team.displayName}`}
-              </a>
-            </div>
+            {/* Removed matcher button as requested */}
             
             <section aria-label="Lagets matcher" className="mt-10 space-y-6">
               <div className="text-center">

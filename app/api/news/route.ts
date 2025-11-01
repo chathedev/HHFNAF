@@ -5,8 +5,7 @@ export async function GET() {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 8000) // 8 second timeout
 
-    // Use the correct API endpoint as requested
-    const response = await fetch("https://api.harnosandshf.se/nyheter?limit=20", {
+    const response = await fetch("https://api.harnosandshf.se/api/news?limit=20", {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; HHF/1.0)",
         Accept: "application/json",
