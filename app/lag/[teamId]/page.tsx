@@ -296,9 +296,9 @@ export default function TeamPage({ params }: TeamPageProps) {
                         </div>
                         <h3 className="text-xl font-bold text-gray-900">
                           {isHome ? (
-                            <><>
+                            <>
                               Härnösands HF <span className="text-gray-400">vs</span> {opponentName} ({homeAwayLabel})
-                            </>/>
+                            </>
                           ) : (
                             <>
                               {opponentName} <span className="text-gray-400">vs</span> Härnösands HF ({homeAwayLabel})
