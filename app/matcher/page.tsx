@@ -99,6 +99,8 @@ export default function MatcherPage() {
     { value: "P9 (2016)", label: "P9 (2016)" },
     { value: "P8 (2017)", label: "P8 (2017)" },
     { value: "P7 (2018)", label: "P7 (2018)" },
+    { value: "Dam/utv", label: "Dam/utv" },
+    { value: "A-lag Herrar", label: "A-lag Herrar" }
   ]
 
   const filteredMatches = useMemo(() => {
