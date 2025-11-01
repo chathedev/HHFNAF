@@ -262,13 +262,7 @@ export default function NyheterPage() {
                   </AccordionTrigger>
                   <AccordionContent className="text-gray-700 text-base">
                     Till en början behöver du bara bekväma träningskläder, inomhusskor och en vattenflaska. Handbollar
-                    finns att låna under träningarna. När du väl bestämmer dig för att fortsätta kan du
-                    Vilken utrustning behöver jag?
-                  </AccordionTrigger>
-                  <AccordionContent className="text-gray-700 text-base">
-                    Till en början behöver du bara bekväma träningskläder, inomhusskor och en vattenflaska. Handbollar
-                    finns att låna under träningarna. När du väl bestämmer dig för att fortsätta kan du behöva
-                    klubbkläder.
+                    finns att låna under träningarna. När du väl bestämmer dig för att fortsätta kan du behöva klubbkläder.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-3">
