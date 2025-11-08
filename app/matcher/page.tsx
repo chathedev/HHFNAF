@@ -56,6 +56,15 @@ const getMatchOutcome = (rawResult?: string, isHome?: boolean, status?: string):
 }
 
 const getMatchStatus = (match: NormalizedMatch): StatusFilter => {
+  // Check if match should be auto-finished based on time (75 minutes = 1h 15min)
+  const now = Date.now()
+  const minutesSinceKickoff = (now - match.date.getTime()) / (1000 * 60)
+  
+  // If more than 75 minutes have passed, force status to finished
+  if (minutesSinceKickoff > 75) {
+    return "finished"
+  }
+  
   // Respect backend/timeline signals so live matches show even if kickoff shifts
   return match.matchStatus ?? "upcoming"
 }

@@ -144,6 +144,15 @@ export default function HomePage() {
   const tierOrder = ["Diamantpartner", "Platinapartner", "Guldpartner", "Silverpartner", "Bronspartner"]
 
   function getMatchStatus(match: NormalizedMatch): "live" | "finished" | "upcoming" {
+    // Check if match should be auto-finished based on time (75 minutes = 1h 15min)
+    const now = Date.now()
+    const minutesSinceKickoff = (now - match.date.getTime()) / (1000 * 60)
+    
+    // If more than 75 minutes have passed, force status to finished
+    if (minutesSinceKickoff > 75) {
+      return "finished"
+    }
+    
     // Trust backend/timeline status so early starts surface as live immediately
     return match.matchStatus ?? "upcoming"
   }

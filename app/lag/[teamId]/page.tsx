@@ -46,10 +46,19 @@ const getStatusPriority = (status: NormalizedMatch["matchStatus"]) =>
   status ? MATCH_STATUS_PRIORITY[status] : 3
 
 const getDerivedStatus = (match: NormalizedMatch): NormalizedMatch["matchStatus"] => {
+  // Check if match should be auto-finished based on time (75 minutes = 1h 15min)
+  const now = Date.now()
+  const minutesSinceKickoff = (now - match.date.getTime()) / (1000 * 60)
+  
+  // If more than 75 minutes have passed, force status to finished
+  if (minutesSinceKickoff > 75) {
+    return "finished"
+  }
+  
   if (match.matchStatus) {
     return match.matchStatus
   }
-  const now = Date.now()
+  
   const kickoff = match.date.getTime()
   const liveWindowEnd = kickoff + 1000 * 60 * 60 * 2.5
   if (now >= kickoff && now <= liveWindowEnd) {
