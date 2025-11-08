@@ -490,6 +490,50 @@ export default function HomePage() {
 
                           const hasValidResult = match.result && match.result !== "Inte publicerat" && match.result !== "0-0" && match.result.trim() !== "";
 
+                          const showResultCard = status === "live" || status === "finished" || hasValidResult
+
+                          let scoreValue: string | null = null
+                          let scoreSupportingText: string | null = null
+
+                          if (hasValidResult) {
+                            scoreValue = match.result
+                            if (status === "finished" && outcomeInfo?.label === "Ej publicerat") {
+                              scoreSupportingText = "Resultat ej publicerat"
+                            }
+                          } else if (status === "finished") {
+                            scoreValue = "0–0"
+                            scoreSupportingText = "Resultat ej publicerat"
+                          } else if (status === "live") {
+                            const trimmed = match.result?.trim()
+                            scoreValue = trimmed && trimmed.length > 0 ? trimmed : "0–0"
+                            if (!trimmed || trimmed === "0-0" || trimmed === "0–0") {
+                              scoreSupportingText = "Ingen uppdatering ännu"
+                            }
+                          }
+
+                          if (!scoreValue && showResultCard) {
+                            scoreValue = "—"
+                          }
+
+                          const resultBoxTone = (() => {
+                            if (status === "live") {
+                              return "border-rose-200 bg-rose-50"
+                            }
+                            if (status === "finished") {
+                              if (outcomeInfo?.label === "Vinst") {
+                                return "border-emerald-200 bg-emerald-50"
+                              }
+                              if (outcomeInfo?.label === "Förlust") {
+                                return "border-red-200 bg-red-50"
+                              }
+                              return "border-slate-200 bg-slate-50"
+                            }
+                            return "border-gray-200 bg-gray-50"
+                          })()
+
+                          const resultLabelClass = status === "live" ? "text-rose-600" : status === "finished" ? "text-slate-600" : "text-slate-500"
+                          const resultLabelText = status === "finished" ? "Slutresultat" : status === "live" ? "Ställning just nu" : "Resultat"
+
                           return (
                             <li key={match.id}>
                               <div 
