@@ -474,14 +474,14 @@ export default function HomePage() {
                           const isZeroZero = normalizedResult === "0-0" || normalizedResult === "00" || trimmedResult === "0-0" || trimmedResult === "0–0"
                           
                           // A handball match typically lasts 60 minutes (2x30 min) + breaks ~10-15 min = ~75 minutes max
-                          // If more than 90 minutes have passed since kickoff, the match is definitely over
-                          const matchShouldBeFinished = minutesSinceKickoff > 90
+                          // If more than 75 minutes have passed since kickoff, the match is definitely over
+                          const matchShouldBeFinished = minutesSinceKickoff > 75
                           
                           // If match shows 0-0 and should be finished, treat as unpublished result
                           const isStaleZeroResult = isZeroZero && matchShouldBeFinished
                           
                           // Don't show LIVE badge if match should be finished or has been 0-0 for too long
-                          const shouldShowLive = status === "live" && !matchShouldBeFinished && !(isZeroZero && minutesSinceKickoff > 75)
+                          const shouldShowLive = status === "live" && !matchShouldBeFinished && !(isZeroZero && minutesSinceKickoff > 70)
                           
                           const isFutureOrLive = match.date.getTime() >= Date.now() || (status === "live" && !matchShouldBeFinished)
                           const showTicket =

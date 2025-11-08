@@ -286,7 +286,7 @@ export default function TeamPage({ params }: TeamPageProps) {
                 const isZeroZero = normalizedResult === "0-0" || normalizedResult === "00" || trimmedResult === "0-0" || trimmedResult === "0–0"
                 
                 // A handball match typically lasts 60 minutes (2x30 min) + breaks ~10-15 min = ~75 minutes max
-                const matchShouldBeFinished = minutesSinceKickoff > 90
+                const matchShouldBeFinished = minutesSinceKickoff > 75
                 const isStaleZeroResult = isZeroZero && matchShouldBeFinished
                 
                 const hasResult =

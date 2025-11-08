@@ -273,8 +273,8 @@ export default function MatcherPage() {
     const isZeroZero = normalizedResult === "0-0" || normalizedResult === "00" || trimmedResult === "0-0" || trimmedResult === "0–0"
     
     // A handball match typically lasts 60 minutes (2x30 min) + breaks ~10-15 min = ~75 minutes max
-    // If more than 90 minutes have passed since kickoff, the match is definitely over
-    const matchShouldBeFinished = minutesSinceKickoff > 90
+    // If more than 75 minutes have passed since kickoff, the match is definitely over
+    const matchShouldBeFinished = minutesSinceKickoff > 75
     const isStaleZeroResult = isZeroZero && matchShouldBeFinished
     
     // Only allow clicking timeline for live or finished matches (but not if match should be finished)
