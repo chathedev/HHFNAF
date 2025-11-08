@@ -262,16 +262,28 @@ export default function MatcherPage() {
     const scheduleLine = [match.displayDate, match.time, match.venue].filter(Boolean).join(" • ")
     const status = getMatchStatus(match)
     
-    const hasValidResult = match.result && match.result !== "Inte publicerat" && match.result !== "0-0" && match.result.trim() !== ""
+    const hasValidResult = match.result && match.result !== "Inte publicerat" && match.result !== "0-0" && match.result !== "0–0" && match.result.trim() !== ""
     const outcomeInfo = getMatchOutcome(match.result, match.isHome, status)
     
-    // Only allow clicking timeline for live or finished matches
-    const canOpenTimeline = status === "live" || status === "finished"
+    // Check if match should be finished based on time
+    const now = Date.now()
+    const minutesSinceKickoff = (now - match.date.getTime()) / (1000 * 60)
+    const trimmedResult = typeof match.result === "string" ? match.result.trim() : null
+    const normalizedResult = trimmedResult?.replace(/[–-]/g, '-').toLowerCase()
+    const isZeroZero = normalizedResult === "0-0" || normalizedResult === "00" || trimmedResult === "0-0" || trimmedResult === "0–0"
+    
+    // A handball match typically lasts 60 minutes (2x30 min) + breaks ~10-15 min = ~75 minutes max
+    // If more than 90 minutes have passed since kickoff, the match is definitely over
+    const matchShouldBeFinished = minutesSinceKickoff > 90
+    const isStaleZeroResult = isZeroZero && matchShouldBeFinished
+    
+    // Only allow clicking timeline for live or finished matches (but not if match should be finished)
+    const canOpenTimeline = (status === "live" && !matchShouldBeFinished) || status === "finished"
     
     // Ticket button logic: shared eligibility + upcoming/live guard
-    const showTicket = status !== "finished" && canShowTicketForMatch(match)
+    const showTicket = status !== "finished" && !matchShouldBeFinished && canShowTicketForMatch(match)
 
-    const showResultCard = status === "live" || status === "finished" || hasValidResult
+    const showResultCard = (status === "live" && !matchShouldBeFinished) || status === "finished" || hasValidResult || isStaleZeroResult
 
     let scoreValue: string | null = null
     let scoreSupportingText: string | null = null
@@ -281,19 +293,22 @@ export default function MatcherPage() {
       if (status === "finished" && outcomeInfo?.label === "Ej publicerat") {
         scoreSupportingText = "Resultat ej publicerat"
       }
-    } else if (status === "finished") {
-      scoreValue = "0–0"
+    } else if (status === "finished" || isStaleZeroResult) {
+      scoreValue = "—"
       scoreSupportingText = "Resultat ej publicerat"
-    } else if (status === "live") {
+    } else if (status === "live" && !matchShouldBeFinished) {
       const trimmed = match.result?.trim()
-      scoreValue = trimmed && trimmed.length > 0 ? trimmed : "0–0"
+      scoreValue = trimmed && trimmed.length > 0 && trimmed !== "0-0" && trimmed !== "0–0" ? trimmed : "0–0"
       if (!trimmed || trimmed === "0-0" || trimmed === "0–0") {
-        scoreSupportingText = "Ingen uppdatering ännu"
+        if (minutesSinceKickoff > 10) {
+          scoreSupportingText = "Ingen uppdatering ännu"
+        }
       }
     }
 
     if (!scoreValue && showResultCard) {
       scoreValue = "—"
+      scoreSupportingText = "Resultat ej publicerat"
     }
 
     const resultBoxTone = (() => {

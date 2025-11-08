@@ -464,7 +464,7 @@ export default function HomePage() {
                           const outcomeInfo = getMatchOutcome(match.result, match.isHome, status)
                           const displayScore = getDisplayScore(match.result, match.isHome)
                           
-                          // Check if result is stale (0-0 shown when match should be live)
+                          // Check if result is stale (0-0 shown when match should be finished)
                           const now = Date.now()
                           const minutesSinceKickoff = (now - match.date.getTime()) / (1000 * 60)
                           const trimmedResult = typeof match.result === "string" ? match.result.trim() : null
@@ -472,12 +472,18 @@ export default function HomePage() {
                           // Normalize the result to check for any variation of 0-0
                           const normalizedResult = trimmedResult?.replace(/[–-]/g, '-').toLowerCase()
                           const isZeroZero = normalizedResult === "0-0" || normalizedResult === "00" || trimmedResult === "0-0" || trimmedResult === "0–0"
-                          const isStaleZeroResult = isZeroZero && minutesSinceKickoff > 3 && (status === "live" || status === "finished")
                           
-                          // Don't show LIVE badge if match has been 0-0 for more than 60 minutes (likely stale data)
-                          const shouldShowLive = status === "live" && !(isZeroZero && minutesSinceKickoff > 60)
+                          // A handball match typically lasts 60 minutes (2x30 min) + breaks ~10-15 min = ~75 minutes max
+                          // If more than 90 minutes have passed since kickoff, the match is definitely over
+                          const matchShouldBeFinished = minutesSinceKickoff > 90
                           
-                          const isFutureOrLive = match.date.getTime() >= Date.now() || status === "live"
+                          // If match shows 0-0 and should be finished, treat as unpublished result
+                          const isStaleZeroResult = isZeroZero && matchShouldBeFinished
+                          
+                          // Don't show LIVE badge if match should be finished or has been 0-0 for too long
+                          const shouldShowLive = status === "live" && !matchShouldBeFinished && !(isZeroZero && minutesSinceKickoff > 75)
+                          
+                          const isFutureOrLive = match.date.getTime() >= Date.now() || (status === "live" && !matchShouldBeFinished)
                           const showTicket =
                             status !== "finished" &&
                             isFutureOrLive &&
@@ -486,9 +492,9 @@ export default function HomePage() {
                             isHome
                           
                           // Only allow clicking timeline for live or finished matches
-                          const canOpenTimeline = status === "live" || status === "finished"
+                          const canOpenTimeline = (status === "live" && !matchShouldBeFinished) || status === "finished"
 
-                          const hasValidResult = match.result && match.result !== "Inte publicerat" && match.result !== "0-0" && match.result.trim() !== "";
+                          const hasValidResult = match.result && match.result !== "Inte publicerat" && match.result !== "0-0" && match.result !== "0–0" && match.result.trim() !== "";
 
                           let scoreValue: string | null = null
                           let scoreSupportingText: string | null = null
@@ -498,14 +504,16 @@ export default function HomePage() {
                             if (status === "finished" && outcomeInfo?.label === "Ej publicerat") {
                               scoreSupportingText = "Resultat ej publicerat"
                             }
-                          } else if (status === "finished") {
-                            scoreValue = "0–0"
+                          } else if (status === "finished" || isStaleZeroResult) {
+                            scoreValue = "—"
                             scoreSupportingText = "Resultat ej publicerat"
-                          } else if (status === "live") {
+                          } else if (status === "live" && !matchShouldBeFinished) {
                             const trimmed = match.result?.trim()
-                            scoreValue = trimmed && trimmed.length > 0 ? trimmed : "0–0"
+                            scoreValue = trimmed && trimmed.length > 0 && trimmed !== "0-0" && trimmed !== "0–0" ? trimmed : "0–0"
                             if (!trimmed || trimmed === "0-0" || trimmed === "0–0") {
-                              scoreSupportingText = "Ingen uppdatering ännu"
+                              if (minutesSinceKickoff > 10) {
+                                scoreSupportingText = "Ingen uppdatering ännu"
+                              }
                             }
                           }
 

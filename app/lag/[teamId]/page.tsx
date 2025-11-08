@@ -278,12 +278,30 @@ export default function TeamPage({ params }: TeamPageProps) {
                 const homeAwayLabel = isHome ? "hemma" : "borta"
                 const scheduleLine = buildScheduleLine(match)
                 const trimmedResult = match.result?.trim()
+                
+                // Check if match should be finished based on time
+                const now = Date.now()
+                const minutesSinceKickoff = (now - match.date.getTime()) / (1000 * 60)
+                const normalizedResult = trimmedResult?.replace(/[–-]/g, '-').toLowerCase()
+                const isZeroZero = normalizedResult === "0-0" || normalizedResult === "00" || trimmedResult === "0-0" || trimmedResult === "0–0"
+                
+                // A handball match typically lasts 60 minutes (2x30 min) + breaks ~10-15 min = ~75 minutes max
+                const matchShouldBeFinished = minutesSinceKickoff > 90
+                const isStaleZeroResult = isZeroZero && matchShouldBeFinished
+                
                 const hasResult =
-                  Boolean(trimmedResult) && trimmedResult.toLowerCase() !== "inte publicerat"
+                  Boolean(trimmedResult) && 
+                  trimmedResult.toLowerCase() !== "inte publicerat" && 
+                  trimmedResult !== "0-0" && 
+                  trimmedResult !== "0–0"
+                  
                 const playLabel = status === "finished" ? "Se repris" : "Se live"
-                const canOpenTimeline = status === "live" || status === "finished"
-                const showTicket = shouldShowTicketButton(match, status)
+                const canOpenTimeline = (status === "live" && !matchShouldBeFinished) || status === "finished"
+                const showTicket = shouldShowTicketButton(match, status) && !matchShouldBeFinished
                 const matchTeamLabel = extendTeamDisplayName(match.teamType)
+                
+                // Don't show LIVE badge if match should be finished
+                const shouldShowLive = status === "live" && !matchShouldBeFinished
 
                 return (
                   <Card
@@ -324,7 +342,7 @@ export default function TeamPage({ params }: TeamPageProps) {
                           {matchTeamLabel && (
                             <span className="text-sm font-semibold text-emerald-700">{matchTeamLabel}</span>
                           )}
-                          {status === "live" && (
+                          {shouldShowLive && (
                             <span className="inline-flex items-center gap-1.5 rounded bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700">
                               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-600" />
                               LIVE
@@ -363,11 +381,16 @@ export default function TeamPage({ params }: TeamPageProps) {
 
                     <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-gray-100 pt-4">
                       <div className="flex items-center gap-4">
-                        {hasResult && (
+                        {hasResult ? (
                           <span className="text-2xl font-bold text-gray-900" data-score-value="true">
                             {match.result}
                           </span>
-                        )}
+                        ) : isStaleZeroResult ? (
+                          <div className="flex flex-col">
+                            <span className="text-2xl font-bold text-gray-500">—</span>
+                            <span className="text-xs text-gray-500">Resultat ej publicerat</span>
+                          </div>
+                        ) : null}
 
                         {match.playUrl && (
                           <a
