@@ -490,8 +490,6 @@ export default function HomePage() {
 
                           const hasValidResult = match.result && match.result !== "Inte publicerat" && match.result !== "0-0" && match.result.trim() !== "";
 
-                          const showResultCard = status === "live" || status === "finished" || hasValidResult
-
                           let scoreValue: string | null = null
                           let scoreSupportingText: string | null = null
 
