@@ -144,16 +144,25 @@ export default function HomePage() {
   const tierOrder = ["Diamantpartner", "Platinapartner", "Guldpartner", "Silverpartner", "Bronspartner"]
 
   function getMatchStatus(match: NormalizedMatch): "live" | "finished" | "upcoming" {
-    // Check if match should be auto-finished based on time (75 minutes = 1h 15min)
     const now = Date.now()
     const minutesSinceKickoff = (now - match.date.getTime()) / (1000 * 60)
     
-    // If more than 75 minutes have passed, force status to finished
-    if (minutesSinceKickoff > 75) {
+    // Only auto-finish if more than 75 minutes have passed AND match is not explicitly marked as live
+    // This allows matches to stay live during halftime and normal play
+    if (minutesSinceKickoff > 75 && match.matchStatus !== "live") {
       return "finished"
     }
     
-    // Trust backend/timeline status so early starts surface as live immediately
+    // Trust backend/timeline status - if backend says live, keep it live
+    if (match.matchStatus === "live") {
+      // Only override to finished if way past reasonable time (2+ hours)
+      if (minutesSinceKickoff > 120) {
+        return "finished"
+      }
+      return "live"
+    }
+    
+    // For other statuses, trust backend
     return match.matchStatus ?? "upcoming"
   }
 
@@ -483,14 +492,14 @@ export default function HomePage() {
                           const isZeroZero = normalizedResult === "0-0" || normalizedResult === "00" || trimmedResult === "0-0" || trimmedResult === "0–0"
                           
                           // A handball match typically lasts 60 minutes (2x30 min) + breaks ~10-15 min = ~75 minutes max
-                          // If more than 75 minutes have passed since kickoff, the match is definitely over
-                          const matchShouldBeFinished = minutesSinceKickoff > 75
+                          // Only consider match finished if backend says so OR if way past reasonable time (2+ hours) AND showing stale 0-0
+                          const matchShouldBeFinished = minutesSinceKickoff > 120 && isZeroZero && status !== "live"
                           
                           // If match shows 0-0 and should be finished, treat as unpublished result
                           const isStaleZeroResult = isZeroZero && matchShouldBeFinished
                           
-                          // Don't show LIVE badge if match should be finished or has been 0-0 for too long
-                          const shouldShowLive = status === "live" && !matchShouldBeFinished && !(isZeroZero && minutesSinceKickoff > 70)
+                          // Show LIVE badge if status is live (trust backend during halftime)
+                          const shouldShowLive = status === "live"
                           
                           const isFutureOrLive = match.date.getTime() >= Date.now() || (status === "live" && !matchShouldBeFinished)
                           const showTicket =

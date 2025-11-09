@@ -46,13 +46,22 @@ const getStatusPriority = (status: NormalizedMatch["matchStatus"]) =>
   status ? MATCH_STATUS_PRIORITY[status] : 3
 
 const getDerivedStatus = (match: NormalizedMatch): NormalizedMatch["matchStatus"] => {
-  // Check if match should be auto-finished based on time (75 minutes = 1h 15min)
   const now = Date.now()
   const minutesSinceKickoff = (now - match.date.getTime()) / (1000 * 60)
   
-  // If more than 75 minutes have passed, force status to finished
-  if (minutesSinceKickoff > 75) {
+  // Only auto-finish if more than 75 minutes have passed AND match is not explicitly marked as live
+  // This allows matches to stay live during halftime and normal play
+  if (minutesSinceKickoff > 75 && match.matchStatus !== "live") {
     return "finished"
+  }
+  
+  // Trust backend/timeline status - if backend says live, keep it live
+  if (match.matchStatus === "live") {
+    // Only override to finished if way past reasonable time (2+ hours)
+    if (minutesSinceKickoff > 120) {
+      return "finished"
+    }
+    return "live"
   }
   
   if (match.matchStatus) {
@@ -295,7 +304,8 @@ export default function TeamPage({ params }: TeamPageProps) {
                 const isZeroZero = normalizedResult === "0-0" || normalizedResult === "00" || trimmedResult === "0-0" || trimmedResult === "0–0"
                 
                 // A handball match typically lasts 60 minutes (2x30 min) + breaks ~10-15 min = ~75 minutes max
-                const matchShouldBeFinished = minutesSinceKickoff > 75
+                // Only consider finished if way past reasonable time (2+ hours) AND showing stale 0-0
+                const matchShouldBeFinished = minutesSinceKickoff > 120 && isZeroZero && status !== "live"
                 const isStaleZeroResult = isZeroZero && matchShouldBeFinished
                 
                 const hasResult =
