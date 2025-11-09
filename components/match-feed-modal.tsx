@@ -52,14 +52,19 @@ export function MatchFeedModal({
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   useEffect(() => {
-    // Only update if data has actually changed to prevent flickering
-    if (JSON.stringify(initialMatchFeed) !== JSON.stringify(matchFeed)) {
+    // Always update state immediately when new data arrives
+    // Using deep comparison to prevent unnecessary re-renders
+    const newFeedStr = JSON.stringify(initialMatchFeed ?? [])
+    const currentFeedStr = JSON.stringify(matchFeed)
+    
+    if (newFeedStr !== currentFeedStr) {
       setMatchFeed(initialMatchFeed ?? [])
     }
+    
     if (initialFinalScore !== finalScore) {
       setFinalScore(initialFinalScore)
     }
-  }, [initialMatchFeed, initialFinalScore])
+  }, [initialMatchFeed, initialFinalScore, matchFeed, finalScore])
 
   useEffect(() => {
     if (!isOpen) {
@@ -105,7 +110,9 @@ export function MatchFeedModal({
   const isUpcoming = !isLive && !isFinished
 
   useEffect(() => {
-    if (!isOpen || !onRefresh || !matchId || isFinished) {
+    // Always refresh when modal is open, regardless of match status
+    // This ensures continuous updates even during halftime or when status changes
+    if (!isOpen || !onRefresh || !matchId) {
       return
     }
 
@@ -132,7 +139,7 @@ export function MatchFeedModal({
     // Immediate refresh on open
     void refreshData()
     
-    // Update every 1 second for smooth live updates
+    // Update every 1 second for smooth live updates - ALWAYS active when modal is open
     const intervalId = window.setInterval(() => {
       void refreshData()
     }, 1000)
@@ -141,7 +148,7 @@ export function MatchFeedModal({
       isMounted = false
       window.clearInterval(intervalId)
     }
-  }, [isOpen, onRefresh, matchId, isFinished])
+  }, [isOpen, onRefresh, matchId]) // Removed isFinished dependency to keep updating always
 
   const goalEvents = useMemo(
     () => matchFeed.filter((event) => event.type?.toLowerCase().includes("mål") && event.player),
@@ -262,8 +269,8 @@ export function MatchFeedModal({
                 {isLive && <StatusBadge tone="live" label="Pågår" />}
                 {isUpcoming && <StatusBadge tone="upcoming" label="Kommande" />}
                 {isFinished && <StatusBadge tone="finished" label="Avslutad" />}
-                {isRefreshing && isLive && (
-                  <span className="text-xs text-slate-400 animate-pulse">Uppdaterar...</span>
+                {isRefreshing && (
+                  <span className="text-xs text-slate-400 animate-pulse">●</span>
                 )}
               </div>
             </div>
