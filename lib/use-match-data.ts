@@ -351,7 +351,7 @@ const fetchFromApi = async (dataType: DataType = "both"): Promise<EnhancedMatchD
 }
 
 export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: DataType }) => {
-  const refreshIntervalMs = options?.refreshIntervalMs ?? 30_000
+  const refreshIntervalMs = options?.refreshIntervalMs ?? 3_000 // Default 3s for smooth real-time updates
   const dataType = options?.dataType ?? "both"
 
   const [matches, setMatches] = useState<NormalizedMatch[]>([])

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, memo } from "react"
 import { X } from "lucide-react"
 
 type MatchFeedEvent = {
@@ -49,11 +49,17 @@ export function MatchFeedModal({
   const [activeTab, setActiveTab] = useState<"timeline" | "scorers">("timeline")
   const [matchFeed, setMatchFeed] = useState<MatchFeedEvent[]>(initialMatchFeed ?? [])
   const [finalScore, setFinalScore] = useState(initialFinalScore)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   useEffect(() => {
-    setMatchFeed(initialMatchFeed ?? [])
-    setFinalScore(initialFinalScore)
-  }, [initialMatchFeed, initialFinalScore, matchStatus, matchId])
+    // Only update if data has actually changed to prevent flickering
+    if (JSON.stringify(initialMatchFeed) !== JSON.stringify(matchFeed)) {
+      setMatchFeed(initialMatchFeed ?? [])
+    }
+    if (initialFinalScore !== finalScore) {
+      setFinalScore(initialFinalScore)
+    }
+  }, [initialMatchFeed, initialFinalScore])
 
   useEffect(() => {
     if (!isOpen) {
@@ -111,17 +117,25 @@ export function MatchFeedModal({
         return
       }
       pending = true
+      setIsRefreshing(true)
       try {
         await onRefresh()
+      } catch (error) {
+        // Silently handle errors to prevent disruption
+        console.error("Failed to refresh match data:", error)
       } finally {
         pending = false
+        setIsRefreshing(false)
       }
     }
 
+    // Immediate refresh on open
     void refreshData()
+    
+    // Update every 1 second for smooth live updates
     const intervalId = window.setInterval(() => {
       void refreshData()
-    }, 3000)
+    }, 1000)
 
     return () => {
       isMounted = false
@@ -248,6 +262,9 @@ export function MatchFeedModal({
                 {isLive && <StatusBadge tone="live" label="Pågår" />}
                 {isUpcoming && <StatusBadge tone="upcoming" label="Kommande" />}
                 {isFinished && <StatusBadge tone="finished" label="Avslutad" />}
+                {isRefreshing && isLive && (
+                  <span className="text-xs text-slate-400 animate-pulse">Uppdaterar...</span>
+                )}
               </div>
             </div>
 
@@ -437,3 +454,6 @@ export function MatchFeedModal({
     </div>
   )
 }
+
+// Memoize the component to prevent unnecessary re-renders during frequent updates
+export default memo(MatchFeedModal)
