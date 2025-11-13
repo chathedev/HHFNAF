@@ -151,18 +151,10 @@ export default function TeamPage({ params }: TeamPageProps) {
   const teamDisplayName = getTeamDisplayName(team);
 
   const [selectedMatch, setSelectedMatch] = useState<NormalizedMatch | null>(null);
-  const { matches: allMatches, loading, error, refresh } = useMatchData({
+  const { matches: allMatches, loading, error, refresh, isRefreshing } = useMatchData({
     dataType: "current",
-    refreshIntervalMs: 3_000,
+    refreshIntervalMs: 1_000, // 1 second for smooth real-time updates
   });
-
-  // Auto-refresh match data every 3 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refresh();
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [refresh]);
 
   const teamMatchKeys = useMemo(
     () => createTeamMatchKeySet(team.name, team.displayName, team.id, teamDisplayName),

@@ -143,7 +143,7 @@ export default function MatcherPage() {
   // Use "both" endpoint to get current + old matches (unified endpoint)
   const dataType: "current" | "old" | "both" | "enhanced" = "both"
   
-  const { matches, metadata, grouped, loading, error, refresh } = useMatchData({ 
+  const { matches, metadata, grouped, loading, error, refresh, isRefreshing } = useMatchData({ 
     refreshIntervalMs: 1_000,
     dataType
   })

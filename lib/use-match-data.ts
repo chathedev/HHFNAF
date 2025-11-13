@@ -351,7 +351,7 @@ const fetchFromApi = async (dataType: DataType = "both"): Promise<EnhancedMatchD
 }
 
 export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: DataType }) => {
-  const refreshIntervalMs = options?.refreshIntervalMs ?? 3_000 // Default 3s for smooth real-time updates
+  const refreshIntervalMs = options?.refreshIntervalMs ?? 1_000 // Default 1s for smooth real-time updates
   const dataType = options?.dataType ?? "both"
 
   const [matches, setMatches] = useState<NormalizedMatch[]>([])
@@ -359,13 +359,30 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
   const [grouped, setGrouped] = useState<EnhancedMatchData['grouped']>()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const refresh = useCallback(async () => {
     try {
+      // Set refreshing state for smooth UI feedback
+      setIsRefreshing(true)
       const data = await fetchFromApi(dataType)
-      setMatches(data.matches)
-      setMetadata(data.metadata)
-      setGrouped(data.grouped)
+      
+      // Use JSON comparison to prevent unnecessary re-renders
+      const newMatchesStr = JSON.stringify(data.matches)
+      const currentMatchesStr = JSON.stringify(matches)
+      
+      if (newMatchesStr !== currentMatchesStr) {
+        setMatches(data.matches)
+      }
+      
+      if (JSON.stringify(data.metadata) !== JSON.stringify(metadata)) {
+        setMetadata(data.metadata)
+      }
+      
+      if (JSON.stringify(data.grouped) !== JSON.stringify(grouped)) {
+        setGrouped(data.grouped)
+      }
+      
       setError(null)
       setLoading(false)
       return data
@@ -375,8 +392,10 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
       setError(message)
       setLoading(false)
       throw caught
+    } finally {
+      setIsRefreshing(false)
     }
-  }, [dataType])
+  }, [dataType, matches, metadata, grouped])
 
   useEffect(() => {
     let isMounted = true
@@ -453,5 +472,6 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
     loading,
     error,
     refresh,
+    isRefreshing,
   }
 }

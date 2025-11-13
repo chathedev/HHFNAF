@@ -110,6 +110,7 @@ export default function HomePage() {
     loading: matchLoading,
     error: matchErrorMessage,
     refresh,
+    isRefreshing: isRefreshingMatches,
   } = useMatchData({ refreshIntervalMs: 1_000 })
   const matchError = Boolean(matchErrorMessage)
 
