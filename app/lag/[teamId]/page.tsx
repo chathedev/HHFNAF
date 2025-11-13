@@ -245,8 +245,8 @@ export default function TeamPage({ params }: TeamPageProps) {
                   src={team.heroImage}
                   alt={team.heroImageAlt}
                   width={1200}
-                  height={600}
-                  className="h-64 w-full object-cover object-center md:h-80 lg:h-96"
+                  height={800}
+                  className="w-full h-auto object-contain bg-gray-50"
                   priority
                 />
               </div>
