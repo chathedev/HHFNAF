@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { notFound } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 
@@ -234,6 +235,24 @@ export default function TeamPage({ params }: TeamPageProps) {
             </p>
           </div>
         </section>
+
+        {/* Team Hero Image Section */}
+        {team.heroImage && team.heroImage !== PLACEHOLDER_HERO && (
+          <section className="px-4 py-12 md:px-6">
+            <div className="mx-auto max-w-4xl">
+              <div className="overflow-hidden rounded-3xl bg-white shadow-2xl">
+                <Image
+                  src={team.heroImage}
+                  alt={team.heroImageAlt}
+                  width={1200}
+                  height={600}
+                  className="h-64 w-full object-cover object-center md:h-80 lg:h-96"
+                  priority
+                />
+              </div>
+            </div>
+          </section>
+        )}
 
         <div className="px-4 pb-16 pt-12 md:px-6">
           <div className="mx-auto max-w-4xl space-y-8">
