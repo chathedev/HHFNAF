@@ -281,7 +281,7 @@ export default function HomePage() {
   }
 
   // Helper for result card display logic
-  const showResultCard = (status: string, hasValidResult: boolean) => status === "live" || status === "finished" || hasValidResult;
+  const showResultCard = (status: string, hasResult: boolean) => status === "live" || status === "finished" || hasResult;
 
   return (
     <ErrorBoundary>
@@ -512,19 +512,28 @@ export default function HomePage() {
                           // Only allow clicking timeline for live or finished matches
                           const canOpenTimeline = (status === "live" && !matchShouldBeFinished) || status === "finished"
 
-                          const hasValidResult = match.result && 
-                            match.result.trim() !== "" &&
-                            match.result.toLowerCase() !== "inte publicerat" &&
-                            !match.result.match(/^0[-–]0$/);
+                          // Enhanced logic: Only show finished matches with REAL results (greater than 0-0)
+                          const result = match.result?.trim() || ""
+                          let hasRealResult = false
+                          
+                          if (result && result.toLowerCase() !== "inte publicerat") {
+                            const scoreMatch = result.match(/(\d+)[-–](\d+)/)
+                            if (scoreMatch) {
+                              const homeScore = parseInt(scoreMatch[1])
+                              const awayScore = parseInt(scoreMatch[2])
+                              // Must have at least one goal scored (not 0-0)
+                              hasRealResult = homeScore > 0 || awayScore > 0
+                            }
+                          }
 
                           let scoreValue: string | null = null
                           let scoreSupportingText: string | null = null
                           
-                          // Helper for showing result card
-                          const shouldShowCard = (status: string, hasValidResult: boolean) => 
-                            status === "live" || status === "finished" || hasValidResult;
+                          // Helper for showing result card - show finished only if real result
+                          const shouldShowCard = (status: string, hasRealResult: boolean) => 
+                            status === "live" || (status === "finished" && hasRealResult) || hasRealResult;
 
-                          if (hasValidResult) {
+                          if (hasRealResult) {
                             scoreValue = match.result || null
                             if (status === "finished" && outcomeInfo?.label === "Ej publicerat") {
                               scoreSupportingText = "Resultat ej publicerat"
@@ -542,7 +551,7 @@ export default function HomePage() {
                             }
                           }
 
-                          if (!scoreValue && shouldShowCard(status, !!hasValidResult)) {
+                          if (!scoreValue && shouldShowCard(status, !!hasRealResult)) {
                             scoreValue = "—"
                           }
 
@@ -639,7 +648,7 @@ export default function HomePage() {
                                 </div>
 
                                 <div className="mt-5 space-y-4 border-t border-gray-100 pt-4">
-                                  {shouldShowCard(status, !!hasValidResult) && scoreValue && (
+                                  {shouldShowCard(status, !!hasRealResult) && scoreValue && (
                                     <div className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border px-4 py-3 ${resultBoxTone}`}>
                                       <div className="flex flex-wrap items-end gap-3">
                                         <div>

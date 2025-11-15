@@ -76,8 +76,8 @@ Completely rebuilt the match display system with better result handling, redesig
 **New Behavior:**
 - ✅ Shows **upcoming** matches
 - ✅ Shows **live** matches
-- ✅ Shows **finished** matches for **4 hours** after kickoff (2 extra hours after 2-hour match)
-- ❌ Hides finished matches after 4 hours
+- ✅ Shows **finished** matches with **real results (> 0-0)** for **4 hours** after kickoff (2 extra hours after 2-hour match)
+- ❌ Hides 0-0 results and matches after 4 hours
 - 📊 Max 10 matches total
 
 **Logic:**
@@ -96,7 +96,7 @@ if (status === "finished") {
 
 ### 4. **Matcher Page Timing Logic**
 
-- Shows finished matches for **4 hours** after kickoff (2 extra hours after 2-hour match)
+- Shows finished matches with **real results (> 0-0)** for **4 hours** after kickoff (2 extra hours after 2-hour match)
 - After 3 hours, they disappear from "current" view
 - Can still be viewed by selecting "old" matches filter
 
@@ -187,8 +187,9 @@ The system now properly handles all backend match data:
 - [x] Upcoming matches show calendar icon
 
 ### Timing Logic
-- [x] Home page shows finished for 4 hours (2 extra hours after match)
-- [x] Matcher page shows finished for 4 hours (2 extra hours after match)
+- [x] Home page shows finished matches with real results (> 0-0) for 4 hours (2 extra hours after match)
+- [x] Matcher page shows finished matches with real results (> 0-0) for 4 hours (2 extra hours after match)
+- [x] Team pages show ALL finished matches (including 0-0) for 4 hours
 - [x] Auto-hide after time window expires
 
 ### Filtering

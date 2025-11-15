@@ -247,22 +247,57 @@ const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matc
   return new Date()
 }
 
-// ENHANCED: Helper to check if a finished match should still be displayed
+// ENHANCED: Helper to check if a finished match should still be displayed (for home/matcher pages - only > 0-0)
 const shouldShowFinishedMatch = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matchStatus?: string; result?: string }, retentionHours: number) => {
   if (match.matchStatus !== "finished") {
     return false // Not finished, handled elsewhere
   }
   
-  // Check if result is meaningful (not 0-0 or empty)
-  const hasValidResult = match.result && 
-    match.result.trim() !== "" &&
-    match.result.toLowerCase() !== "inte publicerat" &&
-    !match.result.match(/^0[-–]0$/) // Match both regular dash and en-dash for 0-0
+  // Enhanced logic: Only show finished matches with REAL results (greater than 0-0)
+  const result = match.result?.trim() || ""
   
-  if (!hasValidResult) {
-    return false // Don't show matches without meaningful results
+  if (!result || result.toLowerCase() === "inte publicerat") {
+    return false // No result or not published
   }
   
+  // Parse score to check if it's greater than 0-0
+  const scoreMatch = result.match(/(\d+)[-–](\d+)/)
+  if (!scoreMatch) {
+    return false // Invalid score format
+  }
+  
+  const homeScore = parseInt(scoreMatch[1])
+  const awayScore = parseInt(scoreMatch[2])
+  
+  // Must have at least one goal scored (not 0-0)
+  if (homeScore === 0 && awayScore === 0) {
+    return false // Don't show 0-0 results
+  }
+  
+  // Valid result with actual goals scored - now check time window
+  const now = Date.now()
+  
+  // ENHANCED LOGIC: start time + time played + retention hours
+  const matchEndTime = getMatchEndTime(match)
+  
+  if (matchEndTime) {
+    // Perfect: start time + actual time played + retention period
+    const retentionWindowEnd = matchEndTime.getTime() + (retentionHours * 60 * 60 * 1000)
+    return now <= retentionWindowEnd
+  }
+  
+  // Fallback: If we can't determine match end time, be generous and show it
+  // This ensures newly finished matches are never hidden incorrectly
+  return true
+}
+
+// TEAM PAGES: Helper for team pages that shows ALL finished matches (including 0-0)
+const shouldShowFinishedMatchForTeam = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matchStatus?: string; result?: string }, retentionHours: number) => {
+  if (match.matchStatus !== "finished") {
+    return false // Not finished, handled elsewhere
+  }
+  
+  // Team pages show ALL finished matches regardless of result (including 0-0)
   const now = Date.now()
   
   // ENHANCED LOGIC: start time + time played + retention hours
@@ -711,7 +746,7 @@ if (typeof window !== "undefined") {
 }
 
 // Export helper functions for other components
-export { getMatchEndTime, shouldShowFinishedMatch }
+export { getMatchEndTime, shouldShowFinishedMatch, shouldShowFinishedMatchForTeam }
 
 export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: DataType }) => {
   const baseRefreshInterval = options?.refreshIntervalMs ?? 1_000

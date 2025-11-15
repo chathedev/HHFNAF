@@ -9,7 +9,7 @@ import lagContent from "@/public/content/lag.json"
 import Footer from "@/components/footer"
 import { Card } from "@/components/ui/card"
 import { canShowTicketForMatch, normalizeMatchKey } from "@/lib/matches"
-import { useMatchData, shouldShowFinishedMatch, type NormalizedMatch } from "@/lib/use-match-data"
+import { useMatchData, shouldShowFinishedMatchForTeam, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 import {
   CLUB_TEAM_METADATA,
@@ -161,7 +161,8 @@ export default function TeamPage({ params }: TeamPageProps) {
       // For finished matches: show for 2 hours AFTER actual match end
       if (status === "finished") {
         // Use enhanced helper function for team page (4 hours retention = 2 extra hours after 2-hour match)
-        return shouldShowFinishedMatch(match, 4)
+        // Team pages show ALL finished matches (including 0-0 results)
+        return shouldShowFinishedMatchForTeam(match, 4)
       }
       
       return false

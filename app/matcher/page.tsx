@@ -178,12 +178,23 @@ export default function MatcherPage() {
       // Enhanced visibility logic: if showing finished matches specifically, show ALL finished matches with valid results
       if (status === "finished") {
         if (statusFilter === "finished") {
-          // When specifically filtering for finished matches, show ALL with valid results
-          const hasValidResult = match.result && 
-            match.result.trim() !== "" &&
-            match.result.toLowerCase() !== "inte publicerat" &&
-            !match.result.match(/^0[-–]0$/)
-          return hasValidResult
+          // Enhanced logic: Show only finished matches with REAL results (> 0-0)
+          const result = match.result?.trim() || ""
+          
+          if (!result || result.toLowerCase() === "inte publicerat") {
+            return false
+          }
+          
+          const scoreMatch = result.match(/(\d+)[-–](\d+)/)
+          if (!scoreMatch) {
+            return false
+          }
+          
+          const homeScore = parseInt(scoreMatch[1])
+          const awayScore = parseInt(scoreMatch[2])
+          
+          // Must have at least one goal scored (not 0-0)
+          return homeScore > 0 || awayScore > 0
         } else {
           // When showing "all" matches, use time-based retention (4 hours = 2 extra hours after 2-hour match)
           return shouldShowFinishedMatch(match, 4)
