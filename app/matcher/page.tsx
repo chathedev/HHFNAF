@@ -722,6 +722,7 @@ export default function MatcherPage() {
               finalScore={selectedMatch.result}
               matchStatus={selectedMatch.matchStatus}
               matchId={selectedMatch.id}
+              gameClock={selectedMatch.gameClock}
               onRefresh={async () => {
                 console.log('🔄 Matcher page: Starting refresh...')
                 await refresh()

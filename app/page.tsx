@@ -1174,6 +1174,7 @@ export default function HomePage() {
               finalScore={selectedMatch.result}
               matchStatus={selectedMatch.matchStatus}
               matchId={selectedMatch.id}
+              gameClock={selectedMatch.gameClock}
               onRefresh={async () => {
                 console.log("🔄 Home page: Starting refresh...")
                 await refresh()

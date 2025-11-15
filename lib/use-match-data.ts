@@ -12,6 +12,8 @@ export type GameClock = {
   serverTimestamp: number
   isLive: boolean
   source?: string
+  overtime?: boolean
+  lastUpdated?: number
 }
 
 export type MatchFeedEvent = {
