@@ -7,19 +7,7 @@ import { useSearchParams } from "next/navigation"
 import { useMatchData, shouldShowFinishedMatch, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 import { canShowTicketForMatch, normalizeMatchKey } from "@/lib/matches"
-import { extendTeamDisplayName, createTeamMatchKeySet } from            )}
-            {status === "live" && match.matchStatus !== "halftime" && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2.5 py-0.5 text-xs font-semibold text-rose-600 mt-2">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-500" />
-                Pågår
-              </span>
-            )}
-            {match.matchStatus === "halftime" && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2.5 py-0.5 text-xs font-semibold text-orange-600 mt-2">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-orange-500" />
-                Paus
-              </span>
-            )}/team-display"
+import { extendTeamDisplayName, createTeamMatchKeySet } from "@/lib/team-display"
 
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 
