@@ -174,12 +174,14 @@ const toDate = (dateString?: string | null, timeString?: string | null) => {
 }
 
 // Helper to determine when a match actually ended based on timeline
-const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matchStatus?: string }) => {
+const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matchStatus?: string; result?: string }) => {
   // If not finished, return null
   if (match.matchStatus !== "finished") {
     return null
   }
   
+  const now = Date.now()
+  const matchStart = match.date.getTime()
   const timeline = match.matchFeed ?? []
   
   // Look for actual match end events in timeline
@@ -205,17 +207,60 @@ const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matc
       // Timeline times are usually in format like "40:00" or "90+2"
       const timeStr = endEvent.time.replace(/[^\d:+]/g, '')
       if (timeStr) {
-        // Estimate end time as start time + match minutes
-        const matchMinutes = parseInt(timeStr.split(':')[0]) || 90
-        return new Date(match.date.getTime() + matchMinutes * 60 * 1000)
+        // Parse minutes including overtime (90+5 = 95 minutes)
+        const parts = timeStr.split('+')
+        const baseMinutes = parseInt(parts[0].split(':')[0]) || 90
+        const overtimeMinutes = parts[1] ? parseInt(parts[1]) : 0
+        const totalMinutes = baseMinutes + overtimeMinutes
+        
+        return new Date(matchStart + totalMinutes * 60 * 1000)
       }
     } catch (e) {
-      // Fall back to start time + 90 minutes if parsing fails
+      // Fall back if parsing fails
     }
   }
   
-  // Fallback: assume standard 90-minute match if no timeline info
-  return new Date(match.date.getTime() + 90 * 60 * 1000)
+  // ENHANCED FALLBACK LOGIC for newly finished matches
+  
+  // If match has a meaningful result, it's likely recently finished
+  const hasResult = match.result && 
+    match.result !== "0-0" && 
+    match.result !== "0–0" && 
+    match.result.trim() !== ""
+  
+  if (hasResult) {
+    // If match started recently (within last 3 hours) and has result, 
+    // assume it just ended (use current time as end time)
+    const hoursAgo = (now - matchStart) / (1000 * 60 * 60)
+    if (hoursAgo <= 3) {
+      // For recently finished matches, use NOW as end time to ensure they show up
+      return new Date(now)
+    }
+  }
+  
+  // Look for any timeline events to estimate match length
+  if (timeline.length > 0) {
+    // Find the latest timeline event time
+    const lastEvent = timeline[timeline.length - 1]
+    if (lastEvent?.time) {
+      try {
+        const timeStr = lastEvent.time.replace(/[^\d:+]/g, '')
+        if (timeStr) {
+          const parts = timeStr.split('+')
+          const baseMinutes = parseInt(parts[0].split(':')[0]) || 90
+          const overtimeMinutes = parts[1] ? parseInt(parts[1]) : 0
+          const totalMinutes = Math.max(baseMinutes + overtimeMinutes, 45) // At least 45 min
+          
+          return new Date(matchStart + totalMinutes * 60 * 1000)
+        }
+      } catch (e) {
+        // Continue to fallback
+      }
+    }
+  }
+  
+  // Ultimate fallback: assume standard 90-minute match
+  return new Date(matchStart + 90 * 60 * 1000)
 }
 
 const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {

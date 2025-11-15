@@ -189,18 +189,25 @@ export default function TeamPage({ params }: TeamPageProps) {
       
       // For finished matches: show for 1 hour AFTER actual match end
       if (status === "finished") {
-        // Get ACTUAL match end time from timeline
-        const matchEndTime = getMatchEndTime(match)
-        const withinOneHour = matchEndTime ? matchEndTime.getTime() >= oneHourAgo : false
-        
         // Check if result is meaningful (not 0-0)
         const hasResult = match.result && 
           match.result !== "0-0" && 
           match.result !== "0–0" && 
           match.result.trim() !== ""
         
-        // Only show if within 1 hour AFTER actual end AND has meaningful result
-        return withinOneHour && hasResult
+        if (!hasResult) {
+          return false // Don't show matches without meaningful results
+        }
+        
+        // Get ACTUAL match end time from timeline
+        const matchEndTime = getMatchEndTime(match)
+        const withinOneHour = matchEndTime ? matchEndTime.getTime() >= oneHourAgo : false
+        
+        // ENHANCED: Also show if match started recently (for newly finished matches)
+        const recentlyStarted = match.date.getTime() >= now - (3 * 60 * 60 * 1000) // 3 hours ago
+        
+        // Show if within 1 hour after end OR recently started with result
+        return withinOneHour || (recentlyStarted && hasResult)
       }
       
       return false

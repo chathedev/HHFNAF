@@ -196,18 +196,25 @@ export default function HomePage() {
       const status = match.matchStatus ?? (kickoff >= now ? "upcoming" : "finished")
       
       if (status === "finished") {
-        // Get ACTUAL match end time from timeline
-        const matchEndTime = getMatchEndTime(match)
-        const withinTwoHours = matchEndTime ? matchEndTime.getTime() >= twoHoursAgo : false
-        
         // Check if result is meaningful (not 0-0)
         const hasResult = match.result && 
           match.result !== "0-0" && 
           match.result !== "0–0" && 
           match.result.trim() !== ""
         
-        // Show finished matches for 2 hours AFTER they actually ended
-        return withinTwoHours && hasResult
+        if (!hasResult) {
+          return false // Don't show matches without meaningful results
+        }
+        
+        // Get ACTUAL match end time from timeline
+        const matchEndTime = getMatchEndTime(match)
+        const withinTwoHours = matchEndTime ? matchEndTime.getTime() >= twoHoursAgo : false
+        
+        // ENHANCED: Also show if match started recently (for newly finished matches)
+        const recentlyStarted = kickoff >= now - (4 * 60 * 60 * 1000) // 4 hours ago
+        
+        // Show finished matches for 2 hours after end OR if recently started with result
+        return withinTwoHours || (recentlyStarted && hasResult)
       }
       
       if (status === "live" || status === "halftime") {

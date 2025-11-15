@@ -193,18 +193,25 @@ export default function MatcherPage() {
       
       // Enhanced finished match filtering - show for 3 hours after ACTUAL match end
       if (status === "finished") {
-        // Get ACTUAL match end time from timeline
-        const matchEndTime = getMatchEndTime(match)
-        const withinTimeWindow = matchEndTime ? matchEndTime.getTime() >= threeHoursAgo : false
-        
         // Check if result is meaningful (not 0-0)
         const hasResult = match.result && 
           match.result !== "0-0" && 
           match.result !== "0–0" && 
           match.result.trim() !== ""
         
-        // Only show if within 3-hour window AFTER actual end AND has meaningful result
-        if (!withinTimeWindow || !hasResult) {
+        if (!hasResult) {
+          return false // Don't show matches without meaningful results
+        }
+        
+        // Get ACTUAL match end time from timeline
+        const matchEndTime = getMatchEndTime(match)
+        const withinTimeWindow = matchEndTime ? matchEndTime.getTime() >= threeHoursAgo : false
+        
+        // ENHANCED: Also show if match started recently (for newly finished matches)
+        const recentlyStarted = match.date.getTime() >= now - (5 * 60 * 60 * 1000) // 5 hours ago
+        
+        // Show if within 3-hour window after end OR recently started with result
+        if (!withinTimeWindow && !recentlyStarted) {
           return false
         }
       }
