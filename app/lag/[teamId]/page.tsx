@@ -486,7 +486,6 @@ export default function TeamPage({ params }: TeamPageProps) {
           finalScore={selectedMatch.result}
           matchStatus={getDerivedStatus(selectedMatch)}
           matchId={selectedMatch.id}
-          gameClock={selectedMatch.gameClock}
           onRefresh={async () => {
             try {
               await refresh()

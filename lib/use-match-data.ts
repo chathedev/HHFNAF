@@ -4,18 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { matchStateManager } from "./match-state-manager"
 import { dataFreshnessMonitor } from "./data-freshness-monitor"
 
-export type GameClock = {
-  minutes: number
-  seconds: number
-  display: string
-  totalSeconds: number
-  serverTimestamp: number
-  isLive: boolean
-  source?: string
-  overtime?: boolean
-  lastUpdated?: number
-}
-
 export type MatchFeedEvent = {
   time: string
   type: string
@@ -50,7 +38,6 @@ type ApiMatch = {
   infoUrl?: string | null
   matchStatus?: "live" | "finished" | "upcoming" | null
   matchFeed?: MatchFeedEvent[]
-  gameClock?: GameClock
   teamType?: string
   opponent?: string
   isHome?: boolean
@@ -74,7 +61,6 @@ export type NormalizedMatch = {
   teamType: string
   matchStatus?: "live" | "finished" | "upcoming" | "halftime"
   matchFeed?: MatchFeedEvent[]
-  gameClock?: GameClock
   isHalftime?: boolean // Special flag for halftime breaks
 }
 
@@ -392,7 +378,6 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     playUrl: match.playUrl && match.playUrl !== "null" ? match.playUrl : undefined,
     matchStatus: derivedStatus,
     matchFeed: match.matchFeed ?? undefined,
-    gameClock: match.gameClock ?? undefined,
     isHalftime: derivedStatus === "halftime",
   }
 }

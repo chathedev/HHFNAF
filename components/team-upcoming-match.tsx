@@ -430,7 +430,6 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
           finalScore={selectedMatch.result}
           matchStatus={selectedMatch.matchStatus}
           matchId={selectedMatch.id}
-          gameClock={selectedMatch.gameClock}
           onRefresh={async () => {
             console.log('🔄 Team component: Starting refresh...')
             await refresh()

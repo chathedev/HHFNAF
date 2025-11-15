@@ -2,8 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, memo } from "react"
 import { X } from "lucide-react"
-import { GameClock } from "./game-clock"
-import type { GameClock as GameClockType } from "@/lib/use-match-data"
+
 
 type MatchFeedEvent = {
   time: string
@@ -34,7 +33,6 @@ type MatchFeedModalProps = {
   matchStatus?: "live" | "finished" | "upcoming" | "halftime"
   matchId?: string
   onRefresh?: () => Promise<void>
-  gameClock?: GameClockType
 }
 
 export function MatchFeedModal({
@@ -47,7 +45,6 @@ export function MatchFeedModal({
   matchStatus,
   matchId,
   onRefresh,
-  gameClock,
 }: MatchFeedModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
   const [activeTab, setActiveTab] = useState<"timeline" | "scorers">("timeline")
@@ -315,17 +312,7 @@ export function MatchFeedModal({
                 <X className="h-5 w-5" />
               </button>
 
-              {gameClock && (isLive || isHalftime) && (
-                <div className="text-right">
-                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Matchtid</p>
-                  <div className="mt-1">
-                    <GameClock
-                      gameClock={gameClock}
-                      size="lg"
-                    />
-                  </div>
-                </div>
-              )}
+
 
               <div className="text-right">
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Resultat</p>
