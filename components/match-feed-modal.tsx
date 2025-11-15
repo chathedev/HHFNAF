@@ -291,7 +291,7 @@ export function MatchFeedModal({
 
               <div className="flex flex-wrap items-center gap-2">
                 {isLive && !isHalftime && <StatusBadge tone="live" label="Pågår" />}
-                {isHalftime && <StatusBadge tone="live" label="Halvlek" />}
+                {isHalftime && <StatusBadge tone="live" label="Paus" />}
                 {isUpcoming && <StatusBadge tone="upcoming" label="Kommande" />}
                 {isFinished && <StatusBadge tone="finished" label="Avslutad" />}
                 {isRefreshing && (

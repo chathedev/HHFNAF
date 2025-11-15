@@ -221,7 +221,7 @@ export function MatchFeedModal({
                 {matchStatus === "halftime" && (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-orange-500 text-white text-xs font-bold rounded-full">
                     <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
-                    HALVLEK
+                    PAUS
                   </span>
                 )}
                 {isRefreshing && (
