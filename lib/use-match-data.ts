@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { matchStateManager } from "./match-state-manager"
 import { dataFreshnessMonitor } from "./data-freshness-monitor"
+import { mapVenueIdToName } from "./venue-mapper"
 
 export type MatchFeedEvent = {
   time: string
@@ -370,7 +371,7 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     date: parsedDate,
     displayDate: formatDisplayDate(parsedDate),
     time: match.time ?? undefined,
-    venue: match.venue ?? undefined,
+    venue: mapVenueIdToName(match.venue),
     series: match.series ?? undefined,
     infoUrl: match.infoUrl ?? undefined,
     result: match.result ?? undefined,
