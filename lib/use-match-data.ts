@@ -183,7 +183,7 @@ const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matc
   const matchStart = match.date.getTime()
   const timeline = match.matchFeed ?? []
   
-  // PRIORITY 1: Look for actual match end events in timeline
+  // PRIORITY 1: Look for actual match end events with time played
   const endEvent = timeline.find((event) => {
     const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
     return (
@@ -210,6 +210,7 @@ const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matc
         const totalMinutes = baseMinutes + overtimeMinutes
         
         if (totalMinutes > 0) {
+          // Return actual match end: start time + time played
           return new Date(matchStart + totalMinutes * 60 * 1000)
         }
       }
@@ -218,33 +219,20 @@ const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matc
     }
   }
   
-  // PRIORITY 2: Calculate from halftime events (handball matches)
-  const halftimeEvent = timeline.find((event) => {
-    const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
-    return (
-      text.includes("1:a halvlek är slut") ||
-      text.includes("1:a halvlek slut") ||
-      text.includes("första halvlek är slut") ||
-      text.includes("första halvlek slut")
-    )
-  })
-  
-  if (halftimeEvent?.time) {
-    try {
-      const halftimeStr = halftimeEvent.time.replace(/[^\d:]/g, '')
-      const halftimeMinutes = parseInt(halftimeStr.split(':')[0]) || 25
-      // Handball: 2 halves + break time
-      const estimatedTotalMinutes = (halftimeMinutes * 2) + 10 // 10 min break
-      
-      return new Date(matchStart + estimatedTotalMinutes * 60 * 1000)
-    } catch (e) {
-      // Continue to next method
-    }
-  }
-  
-  // PRIORITY 3: Use last timeline event as match duration indicator
+  // PRIORITY 2: Use the last meaningful timeline event with actual time played
   if (timeline.length > 0) {
-    const lastEvent = timeline[timeline.length - 1]
+    // Sort timeline events by time to get the actual last event
+    const sortedEvents = timeline
+      .filter(event => event.time && event.time.match(/\d+:\d+/))
+      .sort((a, b) => {
+        const aTime = a.time?.replace(/[^\d:+]/g, '') || '0:0'
+        const bTime = b.time?.replace(/[^\d:+]/g, '') || '0:0'
+        const aMinutes = parseInt(aTime.split(':')[0]) || 0
+        const bMinutes = parseInt(bTime.split(':')[0]) || 0
+        return bMinutes - aMinutes // Latest time first
+      })
+    
+    const lastEvent = sortedEvents[0]
     if (lastEvent?.time) {
       try {
         const timeStr = lastEvent.time.replace(/[^\d:+]/g, '')
@@ -254,8 +242,8 @@ const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matc
           const overtimeMinutes = parts[1] ? parseInt(parts[1]) : 0
           const totalMinutes = baseMinutes + overtimeMinutes
           
-          // If reasonable match duration (between 40-120 minutes)
-          if (totalMinutes >= 40 && totalMinutes <= 120) {
+          // Use actual time played from timeline
+          if (totalMinutes > 0) {
             return new Date(matchStart + totalMinutes * 60 * 1000)
           }
         }
@@ -265,19 +253,9 @@ const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matc
     }
   }
   
-  // PRIORITY 4: Standard handball match duration fallback
-  // Check if youth match (shorter duration)
-  const hasYouthKeywords = timeline.some(event => {
-    const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
-    return text.includes("junior") || text.includes("ungdom") || text.includes("youth") || text.includes("f1")
-  })
-  
-  // Standard handball durations:
-  // Youth: 25min x 2 + 10min break = 60 minutes
-  // Adult: 30min x 2 + 10min break = 70 minutes
-  const estimatedDuration = hasYouthKeywords ? 60 : 70
-  
-  return new Date(matchStart + estimatedDuration * 60 * 1000)
+  // PRIORITY 3: Fallback - assume match just ended if no timeline data
+  // Return current time as best guess for match end
+  return new Date()
 }
 
 // ENHANCED: Helper to check if a finished match should still be displayed
@@ -298,21 +276,19 @@ const shouldShowFinishedMatch = (match: { date: Date; matchFeed?: MatchFeedEvent
   }
   
   const now = Date.now()
-  const matchStart = match.date.getTime()
   
-  // Get estimated match end time
+  // ENHANCED LOGIC: start time + time played + retention hours
   const matchEndTime = getMatchEndTime(match)
   
   if (matchEndTime) {
-    // Show for specified hours after actual match end
+    // Perfect: start time + actual time played + retention period
     const retentionWindowEnd = matchEndTime.getTime() + (retentionHours * 60 * 60 * 1000)
     return now <= retentionWindowEnd
   }
   
-  // Fallback: show for retention period after match start
-  // This ensures newly finished matches always show
-  const fallbackWindowEnd = matchStart + (retentionHours * 60 * 60 * 1000)
-  return now <= fallbackWindowEnd
+  // Fallback: If we can't determine match end time, be generous and show it
+  // This ensures newly finished matches are never hidden incorrectly
+  return true
 }
 
 const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
