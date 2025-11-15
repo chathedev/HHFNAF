@@ -297,11 +297,11 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     derivedIsHome = homeAwaySuffix[1].toLowerCase() === "hemma"
   }
 
-  // TRUST BACKEND STATUS FULLY - Only analyze timeline if backend has no status
+  // Start with backend status, but ALWAYS check timeline for halftime override
   let derivedStatus: NormalizedMatch["matchStatus"] | undefined = normalizeStatusValue(match.matchStatus)
   
-  // Only derive status from timeline if backend didn't provide one
-  if (!derivedStatus) {
+  // ALWAYS analyze timeline for halftime detection (override backend status if needed)
+  {
     const timeline = match.matchFeed ?? []
     const hasTimelineEvents = timeline.some((event) => Boolean(event?.type || event?.description))
     
@@ -326,19 +326,30 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
       )
     })
     
-    // Check for halftime break (1:a halvlek är slut means break, NOT finished)
-    const isHalftimeBreak = timeline.some((event) => {
-      const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
-      return (
-        (text.includes("1:a halvlek är slut") ||
-         text.includes("1:a halvlek slut") ||
-         text.includes("första halvlek är slut") ||
-         text.includes("första halvlek slut")) &&
-        !text.includes("2:a halvlek") // Make sure it's not about second half
-      )
-    })
+    // Check for halftime break - look at the LATEST event to determine current state
+    const sortedTimeline = timeline
+      .filter(event => event.time && (event.type || event.description))
+      .sort((a, b) => {
+        // Sort by time to get the latest event
+        const aTime = a.time?.replace(/[^\d:]/g, '') || '0:0'
+        const bTime = b.time?.replace(/[^\d:]/g, '') || '0:0'
+        const aMinutes = parseInt(aTime.split(':')[0]) || 0
+        const bMinutes = parseInt(bTime.split(':')[0]) || 0
+        return bMinutes - aMinutes // Latest first
+      })
+
+    const latestEvent = sortedTimeline[0]
+    const latestEventText = latestEvent 
+      ? `${latestEvent.type || ''} ${latestEvent.description || ''}`.toLowerCase()
+      : ''
+
+    // Check if the LATEST event is halftime
+    const isHalftimeBreak = latestEventText.includes("1:a halvlek är slut") ||
+      latestEventText.includes("1:a halvlek slut") ||
+      latestEventText.includes("första halvlek är slut") ||
+      latestEventText.includes("första halvlek slut")
     
-    // Check for second half starting (means live again after break)
+    // Check if second half has started (means no longer in break)
     const secondHalfStarted = timeline.some((event) => {
       const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
       return (
@@ -349,16 +360,24 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
       )
     })
     
+    // PRIORITY OVERRIDE: Timeline-based status always wins for halftime/finished detection
     if (matchActuallyEnded) {
       derivedStatus = "finished"
     } else if (isHalftimeBreak && !secondHalfStarted) {
-      // Proper halftime status - match is ongoing but in break
+      // OVERRIDE: Always show halftime when detected, regardless of backend status
       derivedStatus = "halftime" 
-    } else if (secondHalfStarted || hasTimelineEvents) {
+    } else if (secondHalfStarted) {
+      // OVERRIDE: Force live when second half starts
       derivedStatus = "live"
-    } else {
-      derivedStatus = "upcoming"
+    } else if (!derivedStatus) {
+      // Fallback to timeline-based detection if backend provided no status
+      if (hasTimelineEvents) {
+        derivedStatus = "live"
+      } else {
+        derivedStatus = "upcoming"
+      }
     }
+    // If backend provided status and no timeline override needed, keep backend status
   }
 
   return {
