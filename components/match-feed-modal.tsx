@@ -373,12 +373,16 @@ export function MatchFeedModal({
                                 : event.score
 
                             const eventTeam = event.team?.toLowerCase() ?? ""
-                            const homeIdentifier = homeTeam.toLowerCase().split(" ")[0] ?? ""
-                            const isHomeEvent = homeIdentifier ? eventTeam.includes(homeIdentifier) || event.isHomeGoal : false
-                            const isAwayEvent = !isHomeEvent
+                            
+                            // ENHANCED: Härnösand is ALWAYS green, regardless of home/away status
+                            const isHarnosandEvent = eventTeam.includes("härnösand") || 
+                              eventTeam.includes("harnosand") || 
+                              eventTeam.includes("hhf") ||
+                              (event.isHomeGoal && homeTeam.toLowerCase().includes("härnösand")) ||
+                              (!event.isHomeGoal && awayTeam.toLowerCase().includes("härnösand"))
 
                             const tone = isGoal
-                              ? isHomeEvent
+                              ? isHarnosandEvent
                                 ? "bg-emerald-50 border-emerald-100"
                                 : "bg-sky-50 border-sky-100"
                               : isWarning
@@ -386,7 +390,7 @@ export function MatchFeedModal({
                                 : "bg-white/80 border-slate-100"
 
                             const dotTone = isGoal
-                              ? isHomeEvent
+                              ? isHarnosandEvent
                                 ? "bg-emerald-500 ring-4 ring-emerald-100"
                                 : "bg-sky-500 ring-4 ring-sky-100"
                               : isWarning

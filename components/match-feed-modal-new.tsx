@@ -307,15 +307,21 @@ export function MatchFeedModal({
                         <div className="h-px flex-1 bg-gray-300"></div>
                       </div>
 
-                      {/* Team Legend */}
+                      {/* Team Legend - Härnösand always green */}
                       <div className="flex items-center justify-center gap-4 mb-4 text-xs font-semibold">
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-3 bg-emerald-500 rounded-sm"></div>
-                          <span className="text-gray-700">{homeTeam}</span>
+                          <span className="text-gray-700">
+                            {homeTeam.toLowerCase().includes("härnösand") ? homeTeam : 
+                             awayTeam.toLowerCase().includes("härnösand") ? awayTeam : 
+                             "Härnösands HF"}
+                          </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-3 bg-blue-500 rounded-sm"></div>
-                          <span className="text-gray-700">{awayTeam}</span>
+                          <span className="text-gray-700">
+                            {homeTeam.toLowerCase().includes("härnösand") ? awayTeam : homeTeam}
+                          </span>
                         </div>
                       </div>
                       
@@ -323,9 +329,14 @@ export function MatchFeedModal({
                       <div className="space-y-2">
                         {eventsByPeriod[period].map((event, idx) => {
                           // Determine if event is for home or away team
-                          const homeTeamFirstWord = homeTeam?.toLowerCase().split(' ')[0] || ''
                           const eventTeamLower = event.team?.toLowerCase() || ''
-                          const isHomeEvent = (homeTeamFirstWord && eventTeamLower.includes(homeTeamFirstWord)) || event.isHomeGoal
+                          
+                          // ENHANCED: Härnösand is ALWAYS green, regardless of home/away status
+                          const isHarnosandEvent = eventTeamLower.includes("härnösand") || 
+                            eventTeamLower.includes("harnosand") || 
+                            eventTeamLower.includes("hhf") ||
+                            (event.isHomeGoal && homeTeam.toLowerCase().includes("härnösand")) ||
+                            (!event.isHomeGoal && awayTeam.toLowerCase().includes("härnösand"))
                           const isGoal = event.type?.toLowerCase().includes("mål")
                           const isCard = event.type?.toLowerCase().includes("utvisning") || event.type?.toLowerCase().includes("varning")
                           
@@ -334,7 +345,7 @@ export function MatchFeedModal({
                               key={idx} 
                               className={`bg-white rounded-lg p-3 border-l-4 transition-all hover:shadow-md ${
                                 isGoal 
-                                  ? isHomeEvent 
+                                  ? isHarnosandEvent 
                                     ? "border-emerald-500 bg-emerald-50/30" 
                                     : "border-blue-500 bg-blue-50/30"
                                   : isCard
@@ -347,7 +358,7 @@ export function MatchFeedModal({
                                 <div className="flex-shrink-0">
                                   <div className={`w-12 h-12 rounded-lg flex items-center justify-center font-bold text-xs ${
                                     isGoal 
-                                      ? isHomeEvent 
+                                      ? isHarnosandEvent 
                                         ? "bg-emerald-100 text-emerald-700" 
                                         : "bg-blue-100 text-blue-700"
                                       : "bg-gray-100 text-gray-700"
@@ -361,11 +372,11 @@ export function MatchFeedModal({
                                   <div className="flex items-start justify-between gap-2 mb-1">
                                     <div className="flex items-center gap-2 flex-wrap">
                                       <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                                        isHomeEvent 
+                                        isHarnosandEvent 
                                           ? "bg-emerald-100 text-emerald-700" 
                                           : "bg-blue-100 text-blue-700"
                                       }`}>
-                                        {isHomeEvent ? homeTeam.split(' ')[0] : awayTeam.split(' ')[0]}
+                                        {isHarnosandEvent ? "Härnösand" : (event.team || "Motståndare")}
                                       </span>
                                       <span className="text-sm font-semibold text-gray-900">{event.type}</span>
                                     </div>
