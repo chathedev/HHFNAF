@@ -39,6 +39,7 @@ const slugify = (value: string) =>
 
 const MATCH_STATUS_PRIORITY: Record<NonNullable<NormalizedMatch["matchStatus"]>, number> = {
   live: 0,
+  halftime: 0, // Halftime is treated same as live
   upcoming: 1,
   finished: 2,
 }
@@ -163,7 +164,8 @@ export default function TeamPage({ params }: TeamPageProps) {
 
   const teamMatches = useMemo(() => {
     const now = Date.now()
-    const oneHourAgo = now - (1000 * 60 * 60) // 1 hour ago
+    const oneHourAgo = now - 1000 * 60 * 60 * 1 // 1 hour for team pages
+    
     const filtered = allMatches.filter((match) => {
       if (teamMatchKeys.has(match.normalizedTeam)) {
         return true
@@ -176,23 +178,31 @@ export default function TeamPage({ params }: TeamPageProps) {
       }
       return false
     })
+    
     const relevant = filtered.filter((match) => {
       const status = getDerivedStatus(match)
+      
+      // Show all live and upcoming matches
       if (status !== "finished") {
         return true
       }
       
-      // Only show finished matches for 1 hour if they have a real result
-      const matchEndTime = match.date.getTime() + (2 * 60 * 60 * 1000) // Assume 2h match duration
-      const hasRealResult = match.result && match.result !== "0-0" && match.result !== "0–0" && match.result.match(/[1-9]/)
-      
-      if (hasRealResult && matchEndTime >= oneHourAgo) {
-        return true // Keep finished matches with real results for 1 hour
-      } else if (!hasRealResult && matchEndTime >= now) {
-        return false // Remove 0-0 matches immediately after they're finished
+      // For finished matches: show for 1 hour if result is not 0-0
+      if (status === "finished") {
+        const matchEndTime = match.date.getTime()
+        const withinOneHour = matchEndTime >= oneHourAgo
+        
+        // Check if result is meaningful (not 0-0)
+        const hasResult = match.result && 
+          match.result !== "0-0" && 
+          match.result !== "0–0" && 
+          match.result.trim() !== ""
+        
+        // Only show if within 1 hour AND has a meaningful result
+        return withinOneHour && hasResult
       }
       
-      return matchEndTime >= oneHourAgo // Default: keep for 1 hour
+      return false
     })
 
     return relevant

@@ -185,31 +185,31 @@ export default function HomePage() {
 
   const matchesTodayForward = useMemo(() => {
     const now = Date.now()
-    const oneHourAgo = now - (1000 * 60 * 60) // 1 hour ago (changed from 2 hours)
+    const twoHoursAgo = now - 1000 * 60 * 60 * 2
     const liveLookbackMs = 1000 * 60 * 60 * 6
     
-    // Home page: Show upcoming, live (within window), and recently finished matches (1 hour only)
+    // Home page: Show upcoming, live (within window), and recently finished matches
     const statusOrder: Record<string, number> = { live: 0, upcoming: 1, finished: 2 }
     
     const matchesInWindow = upcomingMatches.filter((match) => {
-      const status = match.matchStatus ?? (match.date.getTime() >= now ? "upcoming" : "finished")
+      const kickoff = match.date.getTime()
+      const status = match.matchStatus ?? (kickoff >= now ? "upcoming" : "finished")
       
       if (status === "finished") {
-        const matchEndTime = match.date.getTime() + (2 * 60 * 60 * 1000) // Assume 2h match duration
-        const hasRealResult = match.result && match.result !== "0-0" && match.result !== "0–0" && match.result.match(/[1-9]/)
+        const withinTwoHours = kickoff >= twoHoursAgo
         
-        // Only show finished matches for 1 hour if they have a real result
-        if (hasRealResult && matchEndTime >= oneHourAgo) {
-          return true
-        } else if (!hasRealResult) {
-          return false // Don't show 0-0 matches on home page
-        }
+        // Check if result is meaningful (not 0-0)
+        const hasResult = match.result && 
+          match.result !== "0-0" && 
+          match.result !== "0–0" && 
+          match.result.trim() !== ""
         
-        return matchEndTime >= oneHourAgo
+        // Show finished matches for 2 hours if they have meaningful results
+        return withinTwoHours && hasResult
       }
       
       if (status === "live" || status === "halftime") {
-        return match.date.getTime() >= now - liveLookbackMs
+        return kickoff >= now - liveLookbackMs
       }
       
       return status === "upcoming"

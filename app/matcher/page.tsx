@@ -11,7 +11,7 @@ import { extendTeamDisplayName, createTeamMatchKeySet } from "@/lib/team-display
 
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 
-type StatusFilter = "all" | "upcoming" | "live" | "finished" | "halftime"
+type StatusFilter = "all" | "upcoming" | "live" | "finished"
 type DataTypeFilter = "both" | "current" | "old"
 
 type MatchOutcome = {
@@ -75,11 +75,6 @@ const getMatchStatus = (match: NormalizedMatch): StatusFilter => {
   }
   
   // Respect backend/timeline signals so live matches show even if kickoff shifts
-  // Map halftime to live for filtering purposes
-  if (match.matchStatus === "halftime") {
-    return "live"
-  }
-  
   return match.matchStatus ?? "upcoming"
 }
 
@@ -180,9 +175,10 @@ export default function MatcherPage() {
 
   const filteredMatches = useMemo(() => {
     const now = Date.now()
-    const oneHourAgo = now - (1000 * 60 * 60) // 1 hour ago
+    const threeHoursAgo = now - 1000 * 60 * 60 * 3 // 3 hours for match page
     
     return matches.filter((match) => {
+      // Team filtering
       if (selectedTeamKeys) {
         const normalizedKey = match.normalizedTeam
         if (!selectedTeamKeys.has(normalizedKey)) {
@@ -195,23 +191,28 @@ export default function MatcherPage() {
       
       const status = getMatchStatus(match);
       
-      // Filter out old finished matches (keep only 1 hour after match end if result > 0-0)
+      // Enhanced finished match filtering - show for 3 hours after finish
       if (status === "finished") {
-        const matchEndTime = match.date.getTime() + (2 * 60 * 60 * 1000) // Assume 2h match duration
-        const hasRealResult = match.result && match.result !== "0-0" && match.result !== "0–0" && match.result.match(/[1-9]/)
+        const matchEndTime = match.date.getTime()
+        const withinTimeWindow = matchEndTime >= threeHoursAgo
         
-        // Only show finished matches within 1 hour if they have a real result
-        if (hasRealResult && matchEndTime < oneHourAgo) {
-          return false
-        } else if (!hasRealResult && matchEndTime < now) {
-          // Remove 0-0 matches immediately after they're finished
+        // Check if result is meaningful (not 0-0)
+        const hasResult = match.result && 
+          match.result !== "0-0" && 
+          match.result !== "0–0" && 
+          match.result.trim() !== ""
+        
+        // Only show if within 3-hour window AND has meaningful result
+        if (!withinTimeWindow || !hasResult) {
           return false
         }
       }
       
+      // Status filtering
       if (statusFilter !== "all" && status !== statusFilter) {
         return false;
       }
+      
       return true;
     });
   }, [matches, selectedTeamKeys, statusFilter])
