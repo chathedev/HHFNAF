@@ -197,22 +197,30 @@ export default function MatcherPage() {
         const hasResult = match.result && 
           match.result !== "0-0" && 
           match.result !== "0–0" && 
-          match.result.trim() !== ""
+          match.result.trim() !== "" &&
+          match.result.toLowerCase() !== "inte publicerat"
         
         if (!hasResult) {
           return false // Don't show matches without meaningful results
         }
         
-        // Get ACTUAL match end time from timeline
-        const matchEndTime = getMatchEndTime(match)
+        // ENHANCED: Always show recently finished matches + timeline-based retention
+        const timeSinceStart = (now - match.date.getTime()) / (1000 * 60 * 60)
         
+        // If match finished recently (within 5 hours of starting), ALWAYS show it
+        if (timeSinceStart <= 5) {
+          return true
+        }
+        
+        // For older matches, use timeline-based end time
+        const matchEndTime = getMatchEndTime(match)
         if (matchEndTime) {
-          // Show for 3 hours after the match ACTUALLY ended (based on timeline)
           const threeHoursAfterEnd = matchEndTime.getTime() + (3 * 60 * 60 * 1000)
           return now <= threeHoursAfterEnd
         }
         
-        return false // If we can't determine end time, don't show
+        // Fallback: if we can't determine end time but match is reasonably recent, show it
+        return timeSinceStart <= 8 // Show for up to 8 hours as safety net
       }
       
       // Status filtering

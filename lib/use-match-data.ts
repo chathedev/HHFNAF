@@ -173,9 +173,9 @@ const toDate = (dateString?: string | null, timeString?: string | null) => {
   return parsed
 }
 
-// Helper to determine when a match actually ended based on timeline
+// Helper to determine when a match should stop being displayed (ENHANCED FOR RELIABILITY)
 const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matchStatus?: string; result?: string }) => {
-  // If not finished, return null
+  // If not finished, return null (match is still active)
   if (match.matchStatus !== "finished") {
     return null
   }
@@ -184,7 +184,7 @@ const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matc
   const matchStart = match.date.getTime()
   const timeline = match.matchFeed ?? []
   
-  // Look for actual match end events in timeline
+  // PRIORITY 1: Look for actual match end events in timeline
   const endEvent = timeline.find((event) => {
     const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
     return (
@@ -202,11 +202,9 @@ const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matc
   })
   
   if (endEvent?.time) {
-    // Parse the timeline event time - this is the ACTUAL match end time
     try {
       const timeStr = endEvent.time.replace(/[^\d:+]/g, '')
       if (timeStr) {
-        // Parse minutes including overtime (90+5 = 95 minutes)
         const parts = timeStr.split('+')
         const baseMinutes = parseInt(parts[0].split(':')[0]) || 0
         const overtimeMinutes = parts[1] ? parseInt(parts[1]) : 0
@@ -215,11 +213,11 @@ const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matc
         return new Date(matchStart + totalMinutes * 60 * 1000)
       }
     } catch (e) {
-      // Fall back if parsing fails
+      // Continue to next method
     }
   }
   
-  // Look for halftime events to calculate match duration more accurately
+  // PRIORITY 2: Calculate from halftime events
   const halftimeEvent = timeline.find((event) => {
     const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
     return (
@@ -230,33 +228,19 @@ const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matc
     )
   })
   
-  const secondHalfStartEvent = timeline.find((event) => {
-    const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
-    return (
-      text.includes("2:a halvlek startades") ||
-      text.includes("2:a halvlek") && text.includes("start") ||
-      text.includes("andra halvlek startades") ||
-      text.includes("andra halvlek") && text.includes("start")
-    )
-  })
-  
-  // Try to calculate based on timeline events
-  if (halftimeEvent?.time && secondHalfStartEvent?.time) {
+  if (halftimeEvent?.time) {
     try {
-      // Parse halftime duration (e.g., "25:00", "30:00")
       const halftimeStr = halftimeEvent.time.replace(/[^\d:]/g, '')
       const halftimeMinutes = parseInt(halftimeStr.split(':')[0]) || 25
-      
-      // Estimate full match: halftime * 2 + break time (usually 5-10 min)
-      const estimatedTotalMinutes = (halftimeMinutes * 2) + 8 // 8 min break average
+      const estimatedTotalMinutes = (halftimeMinutes * 2) + 8
       
       return new Date(matchStart + estimatedTotalMinutes * 60 * 1000)
     } catch (e) {
-      // Continue to fallback
+      // Continue to next method
     }
   }
   
-  // Look for any timeline events to estimate match length based on last event
+  // PRIORITY 3: Use last timeline event if reasonable
   if (timeline.length > 0) {
     const lastEvent = timeline[timeline.length - 1]
     if (lastEvent?.time) {
@@ -268,27 +252,40 @@ const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matc
           const overtimeMinutes = parts[1] ? parseInt(parts[1]) : 0
           const totalMinutes = baseMinutes + overtimeMinutes
           
-          // If this looks like a reasonable match duration, use it
           if (totalMinutes >= 40 && totalMinutes <= 120) {
             return new Date(matchStart + totalMinutes * 60 * 1000)
           }
         }
       } catch (e) {
-        // Continue to fallback
+        // Continue to final fallback
       }
     }
   }
   
-  // Fallback: Calculate based on typical handball match durations
-  // Check if this looks like a youth/junior match (shorter halves)
+  // PRIORITY 4: SMART FALLBACK - If match just finished, be more generous
+  const timeSinceStart = now - matchStart
+  const hoursAgo = timeSinceStart / (1000 * 60 * 60)
+  
+  // Check if match has meaningful result (not 0-0)
+  const hasResult = match.result && 
+    match.result !== "0-0" && 
+    match.result !== "0–0" && 
+    match.result.trim() !== "" &&
+    match.result.toLowerCase() !== "inte publicerat"
+  
+  // If match started recently (within 4 hours) and has result, assume it JUST finished
+  if (hoursAgo <= 4 && hasResult) {
+    // Return current time as end time so it gets maximum retention window
+    return new Date(now - (5 * 60 * 1000)) // 5 minutes ago to ensure it shows
+  }
+  
+  // ULTIMATE FALLBACK: Standard handball durations
   const hasYouthKeywords = timeline.some(event => {
     const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
     return text.includes("junior") || text.includes("ungdom") || text.includes("youth")
   })
   
-  // Standard durations: 25min x 2 + 8min break = 58min OR 30min x 2 + 8min break = 68min
-  const estimatedDuration = hasYouthKeywords ? 58 : 68 // minutes
-  
+  const estimatedDuration = hasYouthKeywords ? 58 : 68 // Standard durations
   return new Date(matchStart + estimatedDuration * 60 * 1000)
 }
 

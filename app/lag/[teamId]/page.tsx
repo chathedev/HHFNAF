@@ -193,22 +193,30 @@ export default function TeamPage({ params }: TeamPageProps) {
         const hasResult = match.result && 
           match.result !== "0-0" && 
           match.result !== "0–0" && 
-          match.result.trim() !== ""
+          match.result.trim() !== "" &&
+          match.result.toLowerCase() !== "inte publicerat"
         
         if (!hasResult) {
           return false // Don't show matches without meaningful results
         }
         
-        // Get ACTUAL match end time from timeline
-        const matchEndTime = getMatchEndTime(match)
+        // ENHANCED: Always show recently finished matches + timeline-based retention
+        const timeSinceStart = (now - match.date.getTime()) / (1000 * 60 * 60)
         
+        // If match finished recently (within 3 hours of starting), ALWAYS show it
+        if (timeSinceStart <= 3) {
+          return true
+        }
+        
+        // For older matches, use timeline-based end time
+        const matchEndTime = getMatchEndTime(match)
         if (matchEndTime) {
-          // Show for 1 hour after the match ACTUALLY ended (based on timeline)
           const oneHourAfterEnd = matchEndTime.getTime() + (1 * 60 * 60 * 1000)
           return now <= oneHourAfterEnd
         }
         
-        return false // If we can't determine end time, don't show
+        // Fallback: if we can't determine end time but match is reasonably recent, show it
+        return timeSinceStart <= 5 // Show for up to 5 hours as safety net
       }
       
       return false
