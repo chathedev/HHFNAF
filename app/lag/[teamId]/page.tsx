@@ -9,7 +9,7 @@ import lagContent from "@/public/content/lag.json"
 import Footer from "@/components/footer"
 import { Card } from "@/components/ui/card"
 import { canShowTicketForMatch, normalizeMatchKey } from "@/lib/matches"
-import { useMatchData, getMatchEndTime, type NormalizedMatch } from "@/lib/use-match-data"
+import { useMatchData, shouldShowFinishedMatch, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 import {
   CLUB_TEAM_METADATA,
@@ -160,34 +160,8 @@ export default function TeamPage({ params }: TeamPageProps) {
       
       // For finished matches: show for 1 hour AFTER actual match end
       if (status === "finished") {
-        // Check if result is meaningful (not 0-0)
-        const hasResult = match.result && 
-          match.result !== "0-0" && 
-          match.result !== "0–0" && 
-          match.result.trim() !== "" &&
-          match.result.toLowerCase() !== "inte publicerat"
-        
-        if (!hasResult) {
-          return false // Don't show matches without meaningful results
-        }
-        
-        // ENHANCED: Always show recently finished matches + timeline-based retention
-        const timeSinceStart = (now - match.date.getTime()) / (1000 * 60 * 60)
-        
-        // If match finished recently (within 3 hours of starting), ALWAYS show it
-        if (timeSinceStart <= 3) {
-          return true
-        }
-        
-        // For older matches, use timeline-based end time
-        const matchEndTime = getMatchEndTime(match)
-        if (matchEndTime) {
-          const oneHourAfterEnd = matchEndTime.getTime() + (1 * 60 * 60 * 1000)
-          return now <= oneHourAfterEnd
-        }
-        
-        // Fallback: if we can't determine end time but match is reasonably recent, show it
-        return timeSinceStart <= 5 // Show for up to 5 hours as safety net
+        // Use enhanced helper function for team page (1 hour retention)
+        return shouldShowFinishedMatch(match, 1)
       }
       
       return false

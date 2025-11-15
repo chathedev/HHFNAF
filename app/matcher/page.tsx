@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 
-import { useMatchData, getMatchEndTime, type NormalizedMatch } from "@/lib/use-match-data"
+import { useMatchData, shouldShowFinishedMatch, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 import { canShowTicketForMatch, normalizeMatchKey } from "@/lib/matches"
 import { extendTeamDisplayName, createTeamMatchKeySet } from "@/lib/team-display"
@@ -175,34 +175,8 @@ export default function MatcherPage() {
       
       // Enhanced finished match filtering - show for 3 hours after ACTUAL match end
       if (status === "finished") {
-        // Check if result is meaningful (not 0-0)
-        const hasResult = match.result && 
-          match.result !== "0-0" && 
-          match.result !== "0–0" && 
-          match.result.trim() !== "" &&
-          match.result.toLowerCase() !== "inte publicerat"
-        
-        if (!hasResult) {
-          return false // Don't show matches without meaningful results
-        }
-        
-        // ENHANCED: Always show recently finished matches + timeline-based retention
-        const timeSinceStart = (now - match.date.getTime()) / (1000 * 60 * 60)
-        
-        // If match finished recently (within 5 hours of starting), ALWAYS show it
-        if (timeSinceStart <= 5) {
-          return true
-        }
-        
-        // For older matches, use timeline-based end time
-        const matchEndTime = getMatchEndTime(match)
-        if (matchEndTime) {
-          const threeHoursAfterEnd = matchEndTime.getTime() + (3 * 60 * 60 * 1000)
-          return now <= threeHoursAfterEnd
-        }
-        
-        // Fallback: if we can't determine end time but match is reasonably recent, show it
-        return timeSinceStart <= 8 // Show for up to 8 hours as safety net
+        // Use enhanced helper function for match page (3 hours retention)
+        return shouldShowFinishedMatch(match, 3)
       }
       
       // Status filtering
