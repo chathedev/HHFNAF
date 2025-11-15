@@ -202,26 +202,16 @@ const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matc
   })
   
   if (endEvent?.time) {
-    // Try to parse the timeline event time for handball matches
+    // Parse the timeline event time - this is the ACTUAL match end time
     try {
-      // Timeline times are usually in format like "60:00" or "25:30" for handball
       const timeStr = endEvent.time.replace(/[^\d:+]/g, '')
       if (timeStr) {
-        // Parse minutes including overtime
+        // Parse minutes including overtime (90+5 = 95 minutes)
         const parts = timeStr.split('+')
-        let baseMinutes = parseInt(parts[0].split(':')[0]) || 0
+        const baseMinutes = parseInt(parts[0].split(':')[0]) || 0
         const overtimeMinutes = parts[1] ? parseInt(parts[1]) : 0
-        
-        // For handball: if time seems too low, it might be missing half time
-        if (baseMinutes < 50 && baseMinutes > 25) {
-          // Likely second half time, add first half (25-30 min + break)
-          baseMinutes += 30 + 5 // Add first half + break
-        } else if (baseMinutes < 30) {
-          // Very low time, assume it's just second half minutes
-          baseMinutes += 30 + 5 // Add first half + break  
-        }
-        
         const totalMinutes = baseMinutes + overtimeMinutes
+        
         return new Date(matchStart + totalMinutes * 60 * 1000)
       }
     } catch (e) {
@@ -229,84 +219,77 @@ const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matc
     }
   }
   
-  // Look for halftime markers to estimate match progression
+  // Look for halftime events to calculate match duration more accurately
   const halftimeEvent = timeline.find((event) => {
     const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
     return (
       text.includes("1:a halvlek är slut") ||
       text.includes("1:a halvlek slut") ||
       text.includes("första halvlek är slut") ||
-      text.includes("första halvlek slut") ||
-      text.includes("halvlek") && text.includes("paus")
+      text.includes("första halvlek slut")
     )
   })
   
-  // If we have halftime info, estimate total match time
-  if (halftimeEvent?.time) {
+  const secondHalfStartEvent = timeline.find((event) => {
+    const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
+    return (
+      text.includes("2:a halvlek startades") ||
+      text.includes("2:a halvlek") && text.includes("start") ||
+      text.includes("andra halvlek startades") ||
+      text.includes("andra halvlek") && text.includes("start")
+    )
+  })
+  
+  // Try to calculate based on timeline events
+  if (halftimeEvent?.time && secondHalfStartEvent?.time) {
     try {
-      const timeStr = halftimeEvent.time.replace(/[^\d:+]/g, '')
-      if (timeStr) {
-        const firstHalfMinutes = parseInt(timeStr.split(':')[0]) || 30
-        // Handball: first half + break (5-10 min) + second half (same length)
-        const estimatedTotalMinutes = (firstHalfMinutes * 2) + 8 // Add break time
-        return new Date(matchStart + estimatedTotalMinutes * 60 * 1000)
-      }
+      // Parse halftime duration (e.g., "25:00", "30:00")
+      const halftimeStr = halftimeEvent.time.replace(/[^\d:]/g, '')
+      const halftimeMinutes = parseInt(halftimeStr.split(':')[0]) || 25
+      
+      // Estimate full match: halftime * 2 + break time (usually 5-10 min)
+      const estimatedTotalMinutes = (halftimeMinutes * 2) + 8 // 8 min break average
+      
+      return new Date(matchStart + estimatedTotalMinutes * 60 * 1000)
     } catch (e) {
-      // Continue to other fallbacks
+      // Continue to fallback
     }
   }
   
-  // ENHANCED FALLBACK for newly finished matches with meaningful results
-  const hasResult = match.result && 
-    match.result !== "0-0" && 
-    match.result !== "0–0" && 
-    match.result.trim() !== ""
-  
-  if (hasResult) {
-    const hoursAgo = (now - matchStart) / (1000 * 60 * 60)
-    // If match started recently and has result, estimate end time
-    if (hoursAgo <= 2) {
-      // For very recent matches, use smart estimation
-      const estimatedMatchLength = 65 // 30+30+5 minutes typical handball match
-      return new Date(matchStart + estimatedMatchLength * 60 * 1000)
-    }
-  }
-  
-  // Look for any timeline events to estimate when match actually ended
+  // Look for any timeline events to estimate match length based on last event
   if (timeline.length > 0) {
-    // Find the latest timeline event with time info
-    const eventsWithTime = timeline.filter(e => e.time).sort((a, b) => {
-      const aTime = parseInt(a.time?.replace(/[^\d]/g, '') || '0')
-      const bTime = parseInt(b.time?.replace(/[^\d]/g, '') || '0') 
-      return bTime - aTime // Latest first
-    })
-    
-    const lastEvent = eventsWithTime[0]
+    const lastEvent = timeline[timeline.length - 1]
     if (lastEvent?.time) {
       try {
         const timeStr = lastEvent.time.replace(/[^\d:+]/g, '')
         if (timeStr) {
-          let eventMinutes = parseInt(timeStr.split(':')[0]) || 0
+          const parts = timeStr.split('+')
+          const baseMinutes = parseInt(parts[0].split(':')[0]) || 0
+          const overtimeMinutes = parts[1] ? parseInt(parts[1]) : 0
+          const totalMinutes = baseMinutes + overtimeMinutes
           
-          // Handball logic: if event time is in second half, add first half
-          if (eventMinutes < 35 && timeline.some(e => 
-            (e.type + ' ' + e.description).toLowerCase().includes('halvlek'))) {
-            eventMinutes += 35 // Add first half + break
+          // If this looks like a reasonable match duration, use it
+          if (totalMinutes >= 40 && totalMinutes <= 120) {
+            return new Date(matchStart + totalMinutes * 60 * 1000)
           }
-          
-          // Add a small buffer for match end procedures
-          const totalMinutes = Math.max(eventMinutes + 2, 60) // At least 60 min total
-          return new Date(matchStart + totalMinutes * 60 * 1000)
         }
       } catch (e) {
-        // Continue to ultimate fallback
+        // Continue to fallback
       }
     }
   }
   
-  // Ultimate fallback: standard handball match duration
-  // 30 minutes × 2 halves + 10 minutes break/procedures = 70 minutes
-  return new Date(matchStart + 70 * 60 * 1000)
+  // Fallback: Calculate based on typical handball match durations
+  // Check if this looks like a youth/junior match (shorter halves)
+  const hasYouthKeywords = timeline.some(event => {
+    const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
+    return text.includes("junior") || text.includes("ungdom") || text.includes("youth")
+  })
+  
+  // Standard durations: 25min x 2 + 8min break = 58min OR 30min x 2 + 8min break = 68min
+  const estimatedDuration = hasYouthKeywords ? 58 : 68 // minutes
+  
+  return new Date(matchStart + estimatedDuration * 60 * 1000)
 }
 
 const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {

@@ -205,15 +205,14 @@ export default function MatcherPage() {
         
         // Get ACTUAL match end time from timeline
         const matchEndTime = getMatchEndTime(match)
-        const withinTimeWindow = matchEndTime ? matchEndTime.getTime() >= threeHoursAgo : false
         
-        // ENHANCED: Also show if match started recently (for newly finished matches)
-        const recentlyStarted = match.date.getTime() >= now - (5 * 60 * 60 * 1000) // 5 hours ago
-        
-        // Show if within 3-hour window after end OR recently started with result
-        if (!withinTimeWindow && !recentlyStarted) {
-          return false
+        if (matchEndTime) {
+          // Show for 3 hours after the match ACTUALLY ended (based on timeline)
+          const threeHoursAfterEnd = matchEndTime.getTime() + (3 * 60 * 60 * 1000)
+          return now <= threeHoursAfterEnd
         }
+        
+        return false // If we can't determine end time, don't show
       }
       
       // Status filtering

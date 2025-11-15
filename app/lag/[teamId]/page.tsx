@@ -201,13 +201,14 @@ export default function TeamPage({ params }: TeamPageProps) {
         
         // Get ACTUAL match end time from timeline
         const matchEndTime = getMatchEndTime(match)
-        const withinOneHour = matchEndTime ? matchEndTime.getTime() >= oneHourAgo : false
         
-        // ENHANCED: Also show if match started recently (for newly finished matches)
-        const recentlyStarted = match.date.getTime() >= now - (3 * 60 * 60 * 1000) // 3 hours ago
+        if (matchEndTime) {
+          // Show for 1 hour after the match ACTUALLY ended (based on timeline)
+          const oneHourAfterEnd = matchEndTime.getTime() + (1 * 60 * 60 * 1000)
+          return now <= oneHourAfterEnd
+        }
         
-        // Show if within 1 hour after end OR recently started with result
-        return withinOneHour || (recentlyStarted && hasResult)
+        return false // If we can't determine end time, don't show
       }
       
       return false
@@ -350,7 +351,7 @@ export default function TeamPage({ params }: TeamPageProps) {
                 
                 const hasResult =
                   Boolean(trimmedResult) && 
-                  trimmedResult.toLowerCase() !== "inte publicerat" && 
+                  trimmedResult?.toLowerCase() !== "inte publicerat" && 
                   trimmedResult !== "0-0" && 
                   trimmedResult !== "0–0"
                   

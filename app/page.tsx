@@ -208,13 +208,14 @@ export default function HomePage() {
         
         // Get ACTUAL match end time from timeline
         const matchEndTime = getMatchEndTime(match)
-        const withinTwoHours = matchEndTime ? matchEndTime.getTime() >= twoHoursAgo : false
         
-        // ENHANCED: Also show if match started recently (for newly finished matches)
-        const recentlyStarted = kickoff >= now - (4 * 60 * 60 * 1000) // 4 hours ago
+        if (matchEndTime) {
+          // Show for 2 hours after the match ACTUALLY ended (based on timeline)
+          const twoHoursAfterEnd = matchEndTime.getTime() + (2 * 60 * 60 * 1000)
+          return now <= twoHoursAfterEnd
+        }
         
-        // Show finished matches for 2 hours after end OR if recently started with result
-        return withinTwoHours || (recentlyStarted && hasResult)
+        return false // If we can't determine end time, don't show
       }
       
       if (status === "live" || status === "halftime") {
@@ -551,9 +552,13 @@ export default function HomePage() {
 
                           let scoreValue: string | null = null
                           let scoreSupportingText: string | null = null
+                          
+                          // Helper for showing result card
+                          const shouldShowCard = (status: string, hasValidResult: boolean) => 
+                            status === "live" || status === "finished" || hasValidResult;
 
                           if (hasValidResult) {
-                            scoreValue = match.result
+                            scoreValue = match.result || null
                             if (status === "finished" && outcomeInfo?.label === "Ej publicerat") {
                               scoreSupportingText = "Resultat ej publicerat"
                             }
@@ -570,7 +575,7 @@ export default function HomePage() {
                             }
                           }
 
-                          if (!scoreValue && showResultCard) {
+                          if (!scoreValue && shouldShowCard(status, !!hasValidResult)) {
                             scoreValue = "—"
                           }
 
@@ -667,7 +672,7 @@ export default function HomePage() {
                                 </div>
 
                                 <div className="mt-5 space-y-4 border-t border-gray-100 pt-4">
-                                  {showResultCard(status, hasValidResult) && scoreValue && (
+                                  {shouldShowCard(status, !!hasValidResult) && scoreValue && (
                                     <div className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border px-4 py-3 ${resultBoxTone}`}>
                                       <div className="flex flex-wrap items-end gap-3">
                                         <div>
