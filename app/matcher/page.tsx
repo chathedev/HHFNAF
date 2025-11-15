@@ -11,7 +11,7 @@ import { extendTeamDisplayName, createTeamMatchKeySet } from "@/lib/team-display
 
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 
-type StatusFilter = "all" | "upcoming" | "live" | "finished"
+type StatusFilter = "all" | "upcoming" | "live" | "finished" | "halftime"
 type DataTypeFilter = "both" | "current" | "old"
 
 type MatchOutcome = {
@@ -75,6 +75,11 @@ const getMatchStatus = (match: NormalizedMatch): StatusFilter => {
   }
   
   // Respect backend/timeline signals so live matches show even if kickoff shifts
+  // Map halftime to live for filtering purposes
+  if (match.matchStatus === "halftime") {
+    return "live"
+  }
+  
   return match.matchStatus ?? "upcoming"
 }
 
@@ -174,6 +179,9 @@ export default function MatcherPage() {
   }, [selectedTeam])
 
   const filteredMatches = useMemo(() => {
+    const now = Date.now()
+    const oneHourAgo = now - (1000 * 60 * 60) // 1 hour ago
+    
     return matches.filter((match) => {
       if (selectedTeamKeys) {
         const normalizedKey = match.normalizedTeam
@@ -184,7 +192,23 @@ export default function MatcherPage() {
           }
         }
       }
+      
       const status = getMatchStatus(match);
+      
+      // Filter out old finished matches (keep only 1 hour after match end if result > 0-0)
+      if (status === "finished") {
+        const matchEndTime = match.date.getTime() + (2 * 60 * 60 * 1000) // Assume 2h match duration
+        const hasRealResult = match.result && match.result !== "0-0" && match.result !== "0–0" && match.result.match(/[1-9]/)
+        
+        // Only show finished matches within 1 hour if they have a real result
+        if (hasRealResult && matchEndTime < oneHourAgo) {
+          return false
+        } else if (!hasRealResult && matchEndTime < now) {
+          // Remove 0-0 matches immediately after they're finished
+          return false
+        }
+      }
+      
       if (statusFilter !== "all" && status !== statusFilter) {
         return false;
       }

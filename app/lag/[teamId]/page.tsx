@@ -163,7 +163,7 @@ export default function TeamPage({ params }: TeamPageProps) {
 
   const teamMatches = useMemo(() => {
     const now = Date.now()
-    const recentFinishedThreshold = 1000 * 60 * 60 * 24
+    const oneHourAgo = now - (1000 * 60 * 60) // 1 hour ago
     const filtered = allMatches.filter((match) => {
       if (teamMatchKeys.has(match.normalizedTeam)) {
         return true
@@ -181,7 +181,18 @@ export default function TeamPage({ params }: TeamPageProps) {
       if (status !== "finished") {
         return true
       }
-      return now - match.date.getTime() <= recentFinishedThreshold
+      
+      // Only show finished matches for 1 hour if they have a real result
+      const matchEndTime = match.date.getTime() + (2 * 60 * 60 * 1000) // Assume 2h match duration
+      const hasRealResult = match.result && match.result !== "0-0" && match.result !== "0–0" && match.result.match(/[1-9]/)
+      
+      if (hasRealResult && matchEndTime >= oneHourAgo) {
+        return true // Keep finished matches with real results for 1 hour
+      } else if (!hasRealResult && matchEndTime >= now) {
+        return false // Remove 0-0 matches immediately after they're finished
+      }
+      
+      return matchEndTime >= oneHourAgo // Default: keep for 1 hour
     })
 
     return relevant
