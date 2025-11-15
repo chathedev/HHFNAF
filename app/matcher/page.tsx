@@ -173,10 +173,15 @@ export default function MatcherPage() {
       
       const status = getMatchStatus(match);
       
-      // Enhanced finished match filtering - show for 3 hours after ACTUAL match end
+      // Enhanced finished match filtering
       if (status === "finished") {
-        // Use enhanced helper function for match page (3 hours retention)
-        return shouldShowFinishedMatch(match, 3)
+        if (statusFilter === "finished") {
+          // When filtering specifically for finished matches, show ALL finished matches
+          return shouldShowFinishedMatch(match, 999) // 999 = show all
+        } else {
+          // When showing "all" matches, only show recent finished matches (3 hours)
+          return shouldShowFinishedMatch(match, 3)
+        }
       }
       
       // Status filtering
@@ -319,7 +324,7 @@ export default function MatcherPage() {
     let scoreSupportingText: string | null = null
 
     if (hasValidResult) {
-      scoreValue = match.result
+      scoreValue = match.result ?? null
       if (status === "finished" && outcomeInfo?.label === "Ej publicerat") {
         scoreSupportingText = "Resultat ej publicerat"
       }
@@ -706,7 +711,7 @@ export default function MatcherPage() {
           return (
             <MatchFeedModal
               isOpen={true}
-              onClose={() => setSelectedMatch(null)}
+              onClose={() => setSelectedMatchId(null)}
               matchFeed={selectedMatch.matchFeed || []}
               homeTeam={displayHomeTeam}
               awayTeam={displayAwayTeam}
@@ -717,23 +722,24 @@ export default function MatcherPage() {
                 console.log('🔄 Matcher page: Starting refresh...')
                 await refresh()
                 console.log('🔄 Matcher page: Refresh complete, updating selectedMatch...')
-                // Only update selectedMatch if modal is still open (selectedMatch is not null)
-                setSelectedMatch(prevMatch => {
-                  if (!prevMatch) {
+                // Only update selectedMatchId if modal is still open (selectedMatchId is not null)
+                setSelectedMatchId(prevMatchId => {
+                  if (!prevMatchId) {
                     console.log('🔄 Matcher page: Modal closed, skipping update')
                     return null
                   }
-                  const updatedMatch = matches.find(m => m.id === prevMatch.id)
+                  const updatedMatch = matches.find(m => m.id === prevMatchId)
                   if (updatedMatch) {
                     console.log('🔄 Matcher page: Found updated match:', {
                       matchFeedLength: updatedMatch.matchFeed?.length || 0,
                       result: updatedMatch.result,
                       status: updatedMatch.matchStatus
                     })
+                    return prevMatchId // Keep the same ID since match was found
                   } else {
                     console.log('⚠️ Matcher page: Match not found in matches array')
+                    return prevMatchId // Keep existing ID even if match temporarily not found
                   }
-                  return updatedMatch || prevMatch
                 })
               }}
             />
