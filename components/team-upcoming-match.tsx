@@ -245,7 +245,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   const isStaleZeroResult = isZeroZero && minutesSinceKickoff > 3 && (status === "live" || status === "finished")
   
   // Don't show LIVE badge if match has been 0-0 for more than 60 minutes (likely stale data)
-  const shouldShowLive = status === "live" && !(isZeroZero && minutesSinceKickoff > 60)
+  const shouldShowLive = status === "live" && nextMatch.matchStatus !== "halftime" && !(isZeroZero && minutesSinceKickoff > 60)
   const teamTypeLabel = extendTeamDisplayName(nextMatch.teamType)
   
   const isFutureOrLive = nextMatch.date.getTime() >= Date.now() || status === "live"
@@ -296,6 +296,12 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded">
                 <span className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse"></span>
                 LIVE
+              </span>
+            )}
+            {nextMatch.matchStatus === "halftime" && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-orange-100 text-orange-700 text-xs font-semibold rounded">
+                <span className="w-1.5 h-1.5 bg-orange-600 rounded-full animate-pulse"></span>
+                PAUS
               </span>
             )}
           </div>

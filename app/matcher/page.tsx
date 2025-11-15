@@ -7,7 +7,19 @@ import { useSearchParams } from "next/navigation"
 import { useMatchData, shouldShowFinishedMatch, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 import { canShowTicketForMatch, normalizeMatchKey } from "@/lib/matches"
-import { extendTeamDisplayName, createTeamMatchKeySet } from "@/lib/team-display"
+import { extendTeamDisplayName, createTeamMatchKeySet } from            )}
+            {status === "live" && match.matchStatus !== "halftime" && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2.5 py-0.5 text-xs font-semibold text-rose-600 mt-2">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-500" />
+                Pågår
+              </span>
+            )}
+            {match.matchStatus === "halftime" && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2.5 py-0.5 text-xs font-semibold text-orange-600 mt-2">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-orange-500" />
+                Paus
+              </span>
+            )}/team-display"
 
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 
@@ -395,10 +407,16 @@ export default function MatcherPage() {
                   {teamTypeLabel}
                 </span>
               )}
-              {status === "live" && (
+              {status === "live" && match.matchStatus !== "halftime" && (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded">
                   <span className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse"></span>
                   LIVE
+                </span>
+              )}
+              {match.matchStatus === "halftime" && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-orange-100 text-orange-700 text-xs font-semibold rounded">
+                  <span className="w-1.5 h-1.5 bg-orange-600 rounded-full animate-pulse"></span>
+                  PAUS
                 </span>
               )}
             </div>

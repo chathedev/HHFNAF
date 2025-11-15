@@ -655,10 +655,16 @@ export default function HomePage() {
                                             )}
                                           </div>
                                         </div>
-                                        {shouldShowLive && (
+                                        {shouldShowLive && match.matchStatus !== "halftime" && (
                                           <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2.5 py-0.5 text-xs font-semibold text-red-600">
                                             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
                                             Pågår
+                                          </span>
+                                        )}
+                                        {match.matchStatus === "halftime" && (
+                                          <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2.5 py-0.5 text-xs font-semibold text-orange-600">
+                                            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-orange-500" />
+                                            Paus
                                           </span>
                                         )}
                                       </div>
