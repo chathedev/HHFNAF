@@ -178,8 +178,8 @@ export default function HomePage() {
       const status = match.matchStatus ?? (kickoff >= now ? "upcoming" : "finished")
       
       if (status === "finished") {
-        // Use enhanced helper function for home page (2 hours retention)
-        return shouldShowFinishedMatch(match, 2)
+        // Use enhanced helper function for home page (4 hours retention = 2 extra hours after 2-hour match)
+        return shouldShowFinishedMatch(match, 4)
       }
       
       if (status === "live" || status === "halftime") {

@@ -158,10 +158,10 @@ export default function TeamPage({ params }: TeamPageProps) {
         return true
       }
       
-      // For finished matches: show for 1 hour AFTER actual match end
+      // For finished matches: show for 2 hours AFTER actual match end
       if (status === "finished") {
-        // Use enhanced helper function for team page (1 hour retention)
-        return shouldShowFinishedMatch(match, 1)
+        // Use enhanced helper function for team page (4 hours retention = 2 extra hours after 2-hour match)
+        return shouldShowFinishedMatch(match, 4)
       }
       
       return false

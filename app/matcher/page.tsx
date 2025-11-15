@@ -185,8 +185,8 @@ export default function MatcherPage() {
             !match.result.match(/^0[-–]0$/)
           return hasValidResult
         } else {
-          // When showing "all" matches, use time-based retention (3 hours)
-          return shouldShowFinishedMatch(match, 3)
+          // When showing "all" matches, use time-based retention (4 hours = 2 extra hours after 2-hour match)
+          return shouldShowFinishedMatch(match, 4)
         }
       }
       
