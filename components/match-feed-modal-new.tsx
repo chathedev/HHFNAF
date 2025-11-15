@@ -29,7 +29,7 @@ type MatchFeedModalProps = {
   homeTeam: string
   awayTeam: string
   finalScore?: string
-  matchStatus?: "live" | "finished" | "upcoming"
+  matchStatus?: "live" | "finished" | "upcoming" | "halftime"
   matchId?: string
   onRefresh?: () => Promise<void>
 }
@@ -101,8 +101,8 @@ export function MatchFeedModal({
     // Immediate refresh
     refreshData()
     
-    // Ultra-responsive refresh - adaptive based on match status
-    const isLive = matchStatus === "live"
+    // Ultra-responsive refresh - adaptive based on match status (halftime is still live)
+    const isLive = matchStatus === "live" || matchStatus === "halftime"
     const refreshInterval = isLive ? 250 : 500 // Even faster for live matches
     const intervalId = window.setInterval(refreshData, refreshInterval)
 
@@ -216,6 +216,12 @@ export function MatchFeedModal({
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
                     <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
                     LIVE
+                  </span>
+                )}
+                {matchStatus === "halftime" && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-orange-500 text-white text-xs font-bold rounded-full">
+                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
+                    HALVLEK
                   </span>
                 )}
                 {isRefreshing && (

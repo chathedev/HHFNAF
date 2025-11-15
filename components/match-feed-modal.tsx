@@ -29,7 +29,7 @@ type MatchFeedModalProps = {
   homeTeam: string
   awayTeam: string
   finalScore?: string
-  matchStatus?: "live" | "finished" | "upcoming"
+  matchStatus?: "live" | "finished" | "upcoming" | "halftime"
   matchId?: string
   onRefresh?: () => Promise<void>
 }
@@ -108,16 +108,28 @@ export function MatchFeedModal({
   const matchEndedByTimeline = useMemo(
     () =>
       matchFeed.some((event) => {
-        const type = event.type?.toLowerCase() ?? ""
-        const description = event.description?.toLowerCase() ?? ""
-        return type.includes("slut") || description.includes("slut") || type.includes("matchen avslutad")
+        const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
+        // Only consider ACTUAL match end events, NOT halftime
+        return (
+          text.includes("2:a halvlek är slut") ||
+          text.includes("2:a halvlek slut") ||
+          text.includes("andra halvlek är slut") ||
+          text.includes("andra halvlek slut") ||
+          text.includes("matchen är slut") ||
+          text.includes("matchen slut") ||
+          text.includes("match över") ||
+          text.includes("slutresultat") ||
+          text.includes("matchen avslutad") ||
+          (text.includes("final") && !text.includes("första"))
+        )
       }),
     [matchFeed],
   )
 
   const hasTimelineEvents = matchFeed.length > 0
   const isFinished = matchEndedByTimeline || matchStatus === "finished"
-  const isLive = !isFinished && matchStatus === "live"
+  const isLive = !isFinished && (matchStatus === "live" || matchStatus === "halftime")
+  const isHalftime = matchStatus === "halftime"
   const isUpcoming = !isLive && !isFinished
 
   useEffect(() => {
@@ -277,7 +289,8 @@ export function MatchFeedModal({
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                {isLive && <StatusBadge tone="live" label="Pågår" />}
+                {isLive && !isHalftime && <StatusBadge tone="live" label="Pågår" />}
+                {isHalftime && <StatusBadge tone="live" label="Halvlek" />}
                 {isUpcoming && <StatusBadge tone="upcoming" label="Kommande" />}
                 {isFinished && <StatusBadge tone="finished" label="Avslutad" />}
                 {isRefreshing && (
