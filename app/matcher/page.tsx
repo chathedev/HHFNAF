@@ -156,9 +156,6 @@ export default function MatcherPage() {
   }, [selectedTeam])
 
   const filteredMatches = useMemo(() => {
-    const now = Date.now()
-    const threeHoursAgo = now - 1000 * 60 * 60 * 3 // 3 hours for match page
-    
     return matches.filter((match) => {
       // Team filtering
       if (selectedTeamKeys) {
@@ -173,20 +170,24 @@ export default function MatcherPage() {
       
       const status = getMatchStatus(match);
       
-      // Enhanced finished match filtering
-      if (status === "finished") {
-        if (statusFilter === "finished") {
-          // When filtering specifically for finished matches, show ALL finished matches
-          return shouldShowFinishedMatch(match, 999) // 999 = show all
-        } else {
-          // When showing "all" matches, only show recent finished matches (3 hours)
-          return shouldShowFinishedMatch(match, 3)
-        }
-      }
-      
-      // Status filtering
+      // Status filtering FIRST - if user wants only finished matches, show ALL finished matches
       if (statusFilter !== "all" && status !== statusFilter) {
         return false;
+      }
+      
+      // Enhanced visibility logic: if showing finished matches specifically, show ALL finished matches with valid results
+      if (status === "finished") {
+        if (statusFilter === "finished") {
+          // When specifically filtering for finished matches, show ALL with valid results
+          const hasValidResult = match.result && 
+            match.result.trim() !== "" &&
+            match.result.toLowerCase() !== "inte publicerat" &&
+            !match.result.match(/^0[-–]0$/)
+          return hasValidResult
+        } else {
+          // When showing "all" matches, use time-based retention (3 hours)
+          return shouldShowFinishedMatch(match, 3)
+        }
       }
       
       return true;
@@ -297,7 +298,10 @@ export default function MatcherPage() {
     const scheduleLine = [match.displayDate, match.time, match.venue].filter(Boolean).join(" • ")
     const status = getMatchStatus(match)
     
-    const hasValidResult = match.result && match.result !== "Inte publicerat" && match.result !== "0-0" && match.result !== "0–0" && match.result.trim() !== ""
+    const hasValidResult = match.result && 
+      match.result.trim() !== "" &&
+      match.result.toLowerCase() !== "inte publicerat" &&
+      !match.result.match(/^0[-–]0$/)
     const outcomeInfo = getMatchOutcome(match.result, match.isHome, status)
     
     // Check if match should be finished based on time
@@ -324,7 +328,7 @@ export default function MatcherPage() {
     let scoreSupportingText: string | null = null
 
     if (hasValidResult) {
-      scoreValue = match.result ?? null
+      scoreValue = match.result || null
       if (status === "finished" && outcomeInfo?.label === "Ej publicerat") {
         scoreSupportingText = "Resultat ej publicerat"
       }
@@ -735,10 +739,10 @@ export default function MatcherPage() {
                       result: updatedMatch.result,
                       status: updatedMatch.matchStatus
                     })
-                    return prevMatchId // Keep the same ID since match was found
+                    return updatedMatch.id
                   } else {
                     console.log('⚠️ Matcher page: Match not found in matches array')
-                    return prevMatchId // Keep existing ID even if match temporarily not found
+                    return prevMatchId
                   }
                 })
               }}

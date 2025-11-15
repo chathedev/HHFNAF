@@ -512,7 +512,10 @@ export default function HomePage() {
                           // Only allow clicking timeline for live or finished matches
                           const canOpenTimeline = (status === "live" && !matchShouldBeFinished) || status === "finished"
 
-                          const hasValidResult = match.result && match.result !== "Inte publicerat" && match.result !== "0-0" && match.result !== "0–0" && match.result.trim() !== "";
+                          const hasValidResult = match.result && 
+                            match.result.trim() !== "" &&
+                            match.result.toLowerCase() !== "inte publicerat" &&
+                            !match.result.match(/^0[-–]0$/);
 
                           let scoreValue: string | null = null
                           let scoreSupportingText: string | null = null

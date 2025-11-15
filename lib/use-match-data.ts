@@ -266,24 +266,15 @@ const shouldShowFinishedMatch = (match: { date: Date; matchFeed?: MatchFeedEvent
   
   // Check if result is meaningful (not 0-0 or empty)
   const hasValidResult = match.result && 
-    match.result !== "0-0" && 
-    match.result !== "0–0" && 
     match.result.trim() !== "" &&
     match.result.toLowerCase() !== "inte publicerat" &&
-    match.result.toLowerCase() !== "–" &&
-    match.result !== "—"
+    !match.result.match(/^0[-–]0$/) // Match both regular dash and en-dash for 0-0
   
   if (!hasValidResult) {
     return false // Don't show matches without meaningful results
   }
   
   const now = Date.now()
-  
-  // SPECIAL CASE: If retentionHours is very large (like 999), show ALL finished matches
-  // This is used for "show all finished matches" filter
-  if (retentionHours >= 999) {
-    return true
-  }
   
   // ENHANCED LOGIC: start time + time played + retention hours
   const matchEndTime = getMatchEndTime(match)
