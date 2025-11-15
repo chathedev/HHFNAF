@@ -173,6 +173,51 @@ const toDate = (dateString?: string | null, timeString?: string | null) => {
   return parsed
 }
 
+// Helper to determine when a match actually ended based on timeline
+const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matchStatus?: string }) => {
+  // If not finished, return null
+  if (match.matchStatus !== "finished") {
+    return null
+  }
+  
+  const timeline = match.matchFeed ?? []
+  
+  // Look for actual match end events in timeline
+  const endEvent = timeline.find((event) => {
+    const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
+    return (
+      text.includes("2:a halvlek är slut") ||
+      text.includes("2:a halvlek slut") ||
+      text.includes("andra halvlek är slut") ||
+      text.includes("andra halvlek slut") ||
+      text.includes("matchen är slut") ||
+      text.includes("matchen slut") ||
+      text.includes("match över") ||
+      text.includes("slutresultat") ||
+      text.includes("matchen avslutad") ||
+      (text.includes("final") && !text.includes("första"))
+    )
+  })
+  
+  if (endEvent?.time) {
+    // Try to parse the timeline event time
+    try {
+      // Timeline times are usually in format like "40:00" or "90+2"
+      const timeStr = endEvent.time.replace(/[^\d:+]/g, '')
+      if (timeStr) {
+        // Estimate end time as start time + match minutes
+        const matchMinutes = parseInt(timeStr.split(':')[0]) || 90
+        return new Date(match.date.getTime() + matchMinutes * 60 * 1000)
+      }
+    } catch (e) {
+      // Fall back to start time + 90 minutes if parsing fails
+    }
+  }
+  
+  // Fallback: assume standard 90-minute match if no timeline info
+  return new Date(match.date.getTime() + 90 * 60 * 1000)
+}
+
 const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
   const teamType = match.teamType?.trim()
   const opponent = match.opponent?.trim()
@@ -585,6 +630,9 @@ if (typeof window !== "undefined") {
     })
   }, 5 * 60 * 1000)
 }
+
+// Export helper function for other components
+export { getMatchEndTime }
 
 export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: DataType }) => {
   const baseRefreshInterval = options?.refreshIntervalMs ?? 1_000

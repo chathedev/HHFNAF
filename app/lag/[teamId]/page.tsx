@@ -9,7 +9,7 @@ import lagContent from "@/public/content/lag.json"
 import Footer from "@/components/footer"
 import { Card } from "@/components/ui/card"
 import { canShowTicketForMatch, normalizeMatchKey } from "@/lib/matches"
-import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
+import { useMatchData, getMatchEndTime, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 import {
   CLUB_TEAM_METADATA,
@@ -187,10 +187,11 @@ export default function TeamPage({ params }: TeamPageProps) {
         return true
       }
       
-      // For finished matches: show for 1 hour if result is not 0-0
+      // For finished matches: show for 1 hour AFTER actual match end
       if (status === "finished") {
-        const matchEndTime = match.date.getTime()
-        const withinOneHour = matchEndTime >= oneHourAgo
+        // Get ACTUAL match end time from timeline
+        const matchEndTime = getMatchEndTime(match)
+        const withinOneHour = matchEndTime ? matchEndTime.getTime() >= oneHourAgo : false
         
         // Check if result is meaningful (not 0-0)
         const hasResult = match.result && 
@@ -198,7 +199,7 @@ export default function TeamPage({ params }: TeamPageProps) {
           match.result !== "0–0" && 
           match.result.trim() !== ""
         
-        // Only show if within 1 hour AND has a meaningful result
+        // Only show if within 1 hour AFTER actual end AND has meaningful result
         return withinOneHour && hasResult
       }
       

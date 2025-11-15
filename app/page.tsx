@@ -29,7 +29,7 @@ import { defaultContent } from "@/lib/default-content"
 import type { FullContent, Partner } from "@/lib/content-types"
 import { canShowTicketForMatch } from "@/lib/matches"
 import { extendTeamDisplayName } from "@/lib/team-display"
-import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
+import { useMatchData, getMatchEndTime, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 import { InstagramFeed } from "@/components/instagram-feed"
 
@@ -196,7 +196,9 @@ export default function HomePage() {
       const status = match.matchStatus ?? (kickoff >= now ? "upcoming" : "finished")
       
       if (status === "finished") {
-        const withinTwoHours = kickoff >= twoHoursAgo
+        // Get ACTUAL match end time from timeline
+        const matchEndTime = getMatchEndTime(match)
+        const withinTwoHours = matchEndTime ? matchEndTime.getTime() >= twoHoursAgo : false
         
         // Check if result is meaningful (not 0-0)
         const hasResult = match.result && 
@@ -204,7 +206,7 @@ export default function HomePage() {
           match.result !== "0–0" && 
           match.result.trim() !== ""
         
-        // Show finished matches for 2 hours if they have meaningful results
+        // Show finished matches for 2 hours AFTER they actually ended
         return withinTwoHours && hasResult
       }
       

@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 
-import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
+import { useMatchData, getMatchEndTime, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 import { canShowTicketForMatch, normalizeMatchKey } from "@/lib/matches"
 import { extendTeamDisplayName, createTeamMatchKeySet } from "@/lib/team-display"
@@ -191,10 +191,11 @@ export default function MatcherPage() {
       
       const status = getMatchStatus(match);
       
-      // Enhanced finished match filtering - show for 3 hours after finish
+      // Enhanced finished match filtering - show for 3 hours after ACTUAL match end
       if (status === "finished") {
-        const matchEndTime = match.date.getTime()
-        const withinTimeWindow = matchEndTime >= threeHoursAgo
+        // Get ACTUAL match end time from timeline
+        const matchEndTime = getMatchEndTime(match)
+        const withinTimeWindow = matchEndTime ? matchEndTime.getTime() >= threeHoursAgo : false
         
         // Check if result is meaningful (not 0-0)
         const hasResult = match.result && 
@@ -202,7 +203,7 @@ export default function MatcherPage() {
           match.result !== "0–0" && 
           match.result.trim() !== ""
         
-        // Only show if within 3-hour window AND has meaningful result
+        // Only show if within 3-hour window AFTER actual end AND has meaningful result
         if (!withinTimeWindow || !hasResult) {
           return false
         }
