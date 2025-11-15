@@ -130,8 +130,10 @@ export function MatchFeedModal({
     // Immediate refresh on open
     refreshData()
     
-    // Ultra-fast refresh every 500ms for maximum responsiveness
-    const intervalId = window.setInterval(refreshData, 500)
+    // Ultra-responsive refresh - 300ms for live matches, 500ms for others
+    const isLive = matchStatus === "live"
+    const refreshInterval = isLive ? 300 : 500
+    const intervalId = window.setInterval(refreshData, refreshInterval)
 
     return () => {
       isMounted = false

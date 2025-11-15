@@ -135,7 +135,7 @@ export default function MatcherPage() {
   const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   const [selectedTeam, setSelectedTeam] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
-  const [selectedMatch, setSelectedMatch] = useState<NormalizedMatch | null>(null)
+  const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   
   // Track previous scores to highlight live updates
   const prevScoresRef = useRef<Map<string, { home: number; away: number }>>(new Map())
@@ -147,6 +147,22 @@ export default function MatcherPage() {
     refreshIntervalMs: 1_000,
     dataType
   })
+
+  const selectedMatch = useMemo(() => {
+    if (!selectedMatchId) {
+      return null
+    }
+    return matches.find((match) => match.id === selectedMatchId) ?? null
+  }, [selectedMatchId, matches])
+
+  useEffect(() => {
+    if (!selectedMatchId || loading) {
+      return
+    }
+    if (!selectedMatch) {
+      setSelectedMatchId(null)
+    }
+  }, [selectedMatchId, selectedMatch, loading])
 
   const teamOptions = TEAM_OPTIONS
 
@@ -355,13 +371,13 @@ export default function MatcherPage() {
         key={match.id}
         id={`match-card-${match.id}`}
         className={`bg-white rounded-lg border border-gray-200 hover:border-emerald-400 hover:shadow-lg transition-all p-6 group relative flex flex-col gap-6`}
-        onClick={() => canOpenTimeline && setSelectedMatch(match)}
+        onClick={() => canOpenTimeline && setSelectedMatchId(match.id)}
         role={canOpenTimeline ? "button" : undefined}
         tabIndex={canOpenTimeline ? 0 : undefined}
         onKeyDown={(e) => {
           if (canOpenTimeline && (e.key === "Enter" || e.key === " ")) {
             e.preventDefault()
-            setSelectedMatch(match)
+            setSelectedMatchId(match.id)
           }
         }}
       >

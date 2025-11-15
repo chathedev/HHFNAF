@@ -104,7 +104,7 @@ export default function HomePage() {
 
   const [content] = useState<FullContent>(defaultContent)
   const [openTier, setOpenTier] = useState<string | null>("Diamantpartner")
-  const [selectedMatch, setSelectedMatch] = useState<NormalizedMatch | null>(null)
+  const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   const {
     matches: upcomingMatches,
     loading: matchLoading,
@@ -113,6 +113,22 @@ export default function HomePage() {
     isRefreshing: isRefreshingMatches,
   } = useMatchData({ refreshIntervalMs: 1_000 })
   const matchError = Boolean(matchErrorMessage)
+
+  const selectedMatch = useMemo(() => {
+    if (!selectedMatchId) {
+      return null
+    }
+    return upcomingMatches.find((match) => match.id === selectedMatchId) ?? null
+  }, [selectedMatchId, upcomingMatches])
+
+  useEffect(() => {
+    if (!selectedMatchId || matchLoading) {
+      return
+    }
+    if (!selectedMatch) {
+      setSelectedMatchId(null)
+    }
+  }, [selectedMatchId, selectedMatch, matchLoading])
 
   // Track previous scores to highlight live updates
   const prevScoresRef = useRef<Map<string, { home: number; away: number }>>(new Map())
@@ -566,13 +582,13 @@ export default function HomePage() {
                                 className={`bg-white rounded-lg border border-gray-200 hover:border-emerald-400 hover:shadow-lg transition-all p-6 group relative ${
                                   canOpenTimeline ? "cursor-pointer" : ""
                                 }`}
-                                onClick={() => canOpenTimeline && setSelectedMatch(match)}
+                                onClick={() => canOpenTimeline && setSelectedMatchId(match.id)}
                                 role={canOpenTimeline ? "button" : undefined}
                                 tabIndex={canOpenTimeline ? 0 : undefined}
                                 onKeyDown={(e) => {
                                   if (canOpenTimeline && (e.key === "Enter" || e.key === " ")) {
                                     e.preventDefault()
-                                    setSelectedMatch(match)
+                                    setSelectedMatchId(match.id)
                                   }
                                 }}
                               >
@@ -1161,7 +1177,7 @@ export default function HomePage() {
           return (
             <MatchFeedModal
               isOpen={true}
-              onClose={() => setSelectedMatch(null)}
+              onClose={() => setSelectedMatchId(null)}
               matchFeed={selectedMatch.matchFeed || []}
               homeTeam={displayHomeTeam}
               awayTeam={displayAwayTeam}
@@ -1169,27 +1185,8 @@ export default function HomePage() {
               matchStatus={selectedMatch.matchStatus}
               matchId={selectedMatch.id}
               onRefresh={async () => {
-                console.log('🔄 Home page: Starting refresh...')
+                console.log("🔄 Home page: Starting refresh...")
                 await refresh()
-                console.log('🔄 Home page: Refresh complete, updating selectedMatch...')
-                // Only update selectedMatch if modal is still open (selectedMatch is not null)
-                setSelectedMatch(prevMatch => {
-                  if (!prevMatch) {
-                    console.log('🔄 Home page: Modal closed, skipping update')
-                    return null
-                  }
-                  const updatedMatch = upcomingMatches.find(m => m.id === prevMatch.id)
-                  if (updatedMatch) {
-                    console.log('🔄 Home page: Found updated match:', {
-                      matchFeedLength: updatedMatch.matchFeed?.length || 0,
-                      result: updatedMatch.result,
-                      status: updatedMatch.matchStatus
-                    })
-                  } else {
-                    console.log('⚠️ Home page: Match not found in upcomingMatches')
-                  }
-                  return updatedMatch || prevMatch
-                })
               }}
             />
           )

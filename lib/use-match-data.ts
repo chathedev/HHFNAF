@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { matchStateManager } from "./match-state-manager"
 
 export type GameClock = {
   minutes: number
@@ -237,22 +238,37 @@ const normalizeMatches = (matches: ApiMatch[]) =>
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const fetchFromApi = async (dataType: DataType = "both"): Promise<EnhancedMatchData> => {
-  const endpoint = getDataEndpoint(dataType)
-  let attempt = 0
-  let delay = 1000 // Reduced initial delay
+// Add memory cache for ultra-fast responses
+const memoryCache = new Map<string, { data: EnhancedMatchData; timestamp: number }>()
+const CACHE_DURATION = 200 // Cache for 200ms to reduce API calls while maintaining freshness
 
-  while (attempt < 2) { // Reduced retry attempts for faster response
+const fetchFromApi = async (dataType: DataType = "both", bypassCache = false): Promise<EnhancedMatchData> => {
+  const endpoint = getDataEndpoint(dataType)
+  const cacheKey = `${dataType}-${endpoint}`
+  
+  // Check memory cache first (unless bypassed)
+  if (!bypassCache) {
+    const cached = memoryCache.get(cacheKey)
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return cached.data
+    }
+  }
+
+  let attempt = 0
+  let delay = 500 // Even faster initial delay
+
+  while (attempt < 2) {
     try {
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 3000) // Faster timeout
+      const timeoutId = setTimeout(() => controller.abort(), 2000) // Even faster timeout
 
       const response = await fetch(endpoint, { 
         cache: "no-store",
         signal: controller.signal,
         headers: {
           'Accept': 'application/json',
-          'Cache-Control': 'no-cache',
+          'Cache-Control': 'no-cache, must-revalidate',
+          'Pragma': 'no-cache',
         }
       })
       
@@ -261,7 +277,7 @@ const fetchFromApi = async (dataType: DataType = "both"): Promise<EnhancedMatchD
       if (response.status === 503) {
         attempt += 1
         await sleep(delay)
-        delay = Math.min(delay * 1.2, 3000) // Reduced max delay
+        delay = Math.min(delay * 1.1, 1500) // Much faster max delay
         continue
       }
 
@@ -303,7 +319,12 @@ const fetchFromApi = async (dataType: DataType = "both"): Promise<EnhancedMatchD
         // /matcher/data returns { current: [...], old: [...] }
         const current = Array.isArray(payload.current) ? payload.current : []
         const old = Array.isArray(payload.old) ? payload.old : []
-        matches = [...current, ...old]
+        
+        // Prioritize live matches for instant display
+        const liveMatches = [...current, ...old].filter(m => m.matchStatus === "live")
+        const otherMatches = [...current, ...old].filter(m => m.matchStatus !== "live")
+        
+        matches = [...liveMatches, ...otherMatches] // Live matches first
       } else {
         // Fallback: check if payload itself is an array
         matches = Array.isArray(payload) ? payload : []
@@ -338,18 +359,31 @@ const fetchFromApi = async (dataType: DataType = "both"): Promise<EnhancedMatchD
         bySeries: grouped?.bySeries ?? {},
       }
 
-      return {
+      const result = {
         matches: normalizedMatches,
         metadata,
         grouped: normalizedGrouped,
       }
+
+      // Cache the result for ultra-fast subsequent calls
+      memoryCache.set(cacheKey, { data: result, timestamp: Date.now() })
+      
+      return result
     } catch (error) {
-      if (attempt < 2) {
+      if (attempt < 1) { // Only 1 retry for speed
         attempt += 1
         await sleep(delay)
-        delay = Math.min(delay * 1.5, 8000)
+        delay = Math.min(delay * 1.2, 1000) // Much faster retry
         continue
       }
+      
+      // Return cached data on error if available
+      const cached = memoryCache.get(cacheKey)
+      if (cached) {
+        console.warn('API failed, returning cached data:', error)
+        return cached.data
+      }
+      
       throw error
     }
   }
@@ -357,8 +391,35 @@ const fetchFromApi = async (dataType: DataType = "both"): Promise<EnhancedMatchD
   throw new Error("Matchdata är inte tillgänglig just nu")
 }
 
+// Smart preloading system
+const preloadData = async () => {
+  try {
+    // Preload both current and old data in parallel
+    const [currentData, oldData] = await Promise.all([
+      fetchFromApi("current", true),
+      fetchFromApi("old", true)
+    ])
+    
+    // This populates the cache for instant access
+    console.log('🚀 Preloaded data:', {
+      current: currentData.matches.length,
+      old: oldData.matches.length
+    })
+  } catch (error) {
+    console.warn('Preload failed:', error)
+  }
+}
+
+// Preload data immediately when module loads
+if (typeof window !== "undefined") {
+  preloadData()
+  
+  // Preload again every 30 seconds to keep cache fresh
+  setInterval(preloadData, 30000)
+}
+
 export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: DataType }) => {
-  const refreshIntervalMs = options?.refreshIntervalMs ?? 1_000 // Default 1s for smooth real-time updates
+  const baseRefreshInterval = options?.refreshIntervalMs ?? 1_000
   const dataType = options?.dataType ?? "both"
 
   const [matches, setMatches] = useState<NormalizedMatch[]>([])
@@ -367,13 +428,25 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [hasLiveMatches, setHasLiveMatches] = useState(false)
 
-  const refresh = useCallback(async () => {
+  // Dynamic refresh interval based on live matches
+  const refreshIntervalMs = hasLiveMatches ? Math.min(baseRefreshInterval, 500) : baseRefreshInterval
+
+  const refresh = useCallback(async (bypassCache = false) => {
     try {
       setIsRefreshing(true)
-      const data = await fetchFromApi(dataType)
+      const data = await fetchFromApi(dataType, bypassCache)
       
-      // Always update immediately - no JSON comparison delays
+      // Queue updates through state manager for smooth transitions
+      data.matches.forEach(match => {
+        matchStateManager.queueUpdate(match.id, {
+          ...match,
+          lastUpdated: Date.now()
+        })
+      })
+      
+      // Always update immediately - no delays
       setMatches(data.matches)
       if (data.metadata) {
         setMetadata(data.metadata)
@@ -381,6 +454,10 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
       if (data.grouped) {
         setGrouped(data.grouped)
       }
+      
+      // Check for live matches to adjust refresh rate
+      const liveMatches = data.matches.filter(m => m.matchStatus === "live")
+      setHasLiveMatches(liveMatches.length > 0)
       
       setError(null)
       setLoading(false)
@@ -435,40 +512,17 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
       return
     }
 
-    const id = window.setInterval(async () => {
-      try {
-        const data = await fetchFromApi(dataType)
-        setMatches(data.matches)
-        if (data.metadata) {
-          setMetadata(data.metadata)
-        }
-        if (data.grouped) {
-          setGrouped(data.grouped)
-        }
-        setError(null)
-        
-        // Debug log for live matches
-        const liveMatches = data.matches.filter(m => m.matchStatus === "live")
-        if (liveMatches.length > 0) {
-          console.log(`🔴 Live matches updated:`, liveMatches.map(m => ({ id: m.id, result: m.result, feedLength: m.matchFeed?.length || 0 })))
-        }
-      } catch (caught) {
-        const message =
-          caught instanceof Error ? caught.message : "Kunde inte hämta matchdata just nu."
-        setError(message)
-      }
-    }, refreshIntervalMs)
-
-    return () => {
-      window.clearInterval(id)
-    }
-  }, [refreshIntervalMs, dataType])
-
-  useEffect(() => {
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState === "visible") {
+    let intervalId: NodeJS.Timeout
+    
+    const startInterval = (interval: number) => {
+      if (intervalId) clearInterval(intervalId)
+      
+      intervalId = setInterval(async () => {
         try {
-          const data = await fetchFromApi(dataType)
+          // Bypass cache every few calls for live matches
+          const shouldBypassCache = hasLiveMatches && Math.random() > 0.7
+          const data = await fetchFromApi(dataType, shouldBypassCache)
+          
           setMatches(data.matches)
           if (data.metadata) {
             setMetadata(data.metadata)
@@ -477,30 +531,51 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
             setGrouped(data.grouped)
           }
           setError(null)
+          
+          // Update live match status
+          const liveMatches = data.matches.filter(m => m.matchStatus === "live")
+          const newHasLiveMatches = liveMatches.length > 0
+          
+          if (newHasLiveMatches !== hasLiveMatches) {
+            setHasLiveMatches(newHasLiveMatches)
+          }
+          
+          // Performance and debug logging
+          performanceMonitor.recordUpdate()
+          
+          if (liveMatches.length > 0) {
+            console.log(`🔴 Live matches updated (${interval}ms):`, liveMatches.map(m => ({ 
+              id: m.id, 
+              result: m.result, 
+              feedLength: m.matchFeed?.length || 0,
+              lastEvent: m.matchFeed?.[0]?.type || 'none'
+            })))
+          }
         } catch (caught) {
-          const message =
-            caught instanceof Error ? caught.message : "Kunde inte hämta matchdata just nu."
+          const message = caught instanceof Error ? caught.message : "Kunde inte hämta matchdata just nu."
           setError(message)
         }
+      }, interval)
+    }
+
+    startInterval(refreshIntervalMs)
+
+    return () => {
+      if (intervalId) clearInterval(intervalId)
+    }
+  }, [refreshIntervalMs, dataType])
+
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === "visible") {
+        // Always bypass cache when window becomes visible
+        await refresh(true)
       }
     }
 
     const handleFocus = async () => {
-      try {
-        const data = await fetchFromApi(dataType)
-        setMatches(data.matches)
-        if (data.metadata) {
-          setMetadata(data.metadata)
-        }
-        if (data.grouped) {
-          setGrouped(data.grouped)
-        }
-        setError(null)
-      } catch (caught) {
-        const message =
-          caught instanceof Error ? caught.message : "Kunde inte hämta matchdata just nu."
-        setError(message)
-      }
+      // Always bypass cache when window gets focus
+      await refresh(true)
     }
 
     window.addEventListener("focus", handleFocus)
@@ -511,6 +586,31 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
       document.removeEventListener("visibilitychange", handleVisibilityChange)
     }
   }, [dataType])
+
+  // Performance monitoring
+  const performanceMonitor = {
+    lastUpdateTime: Date.now(),
+    updateTimes: [] as number[],
+    
+    recordUpdate() {
+      const now = Date.now()
+      const timeSinceLastUpdate = now - this.lastUpdateTime
+      this.updateTimes.push(timeSinceLastUpdate)
+      
+      // Keep only last 20 measurements
+      if (this.updateTimes.length > 20) {
+        this.updateTimes.shift()
+      }
+      
+      this.lastUpdateTime = now
+      
+      // Log performance stats every 10 updates
+      if (this.updateTimes.length % 10 === 0) {
+        const avgTime = this.updateTimes.reduce((a, b) => a + b, 0) / this.updateTimes.length
+        console.log(`📊 Update performance: ${avgTime.toFixed(0)}ms avg interval`)
+      }
+    }
+  }
 
   return {
     matches,
