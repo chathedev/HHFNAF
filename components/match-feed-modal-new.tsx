@@ -51,10 +51,30 @@ export function MatchFeedModal({
   const [finalScore, setFinalScore] = useState(initialFinalScore)
   const [isRefreshing, setIsRefreshing] = useState(false)
 
-  // Update local state immediately when props change
+  // Update local state but preserve newer data - prevent regression
   useEffect(() => {
-    setMatchFeed(initialMatchFeed ?? [])
-    setFinalScore(initialFinalScore)
+    const newFeed = initialMatchFeed ?? []
+    const newScore = initialFinalScore
+    
+    setMatchFeed(currentFeed => {
+      if (newFeed.length >= currentFeed.length || 
+          (newFeed.length > 0 && JSON.stringify(newFeed) !== JSON.stringify(currentFeed))) {
+        return newFeed
+      }
+      console.log(`🔒 New Modal preserving newer timeline: ${currentFeed.length} vs ${newFeed.length} events`)
+      return currentFeed
+    })
+    
+    setFinalScore(currentScore => {
+      // Always prefer non-zero scores over zero scores
+      if (newScore && newScore !== "0-0" && newScore !== "0–0") {
+        return newScore
+      }
+      if (currentScore && currentScore !== "0-0" && currentScore !== "0–0") {
+        return currentScore // Keep existing non-zero score
+      }
+      return newScore
+    })
   }, [initialMatchFeed, initialFinalScore])
 
   // Real-time refresh when modal is open

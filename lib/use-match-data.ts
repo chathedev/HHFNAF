@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { matchStateManager } from "./match-state-manager"
+import { dataFreshnessMonitor } from "./data-freshness-monitor"
 
 export type GameClock = {
   minutes: number
@@ -238,19 +239,45 @@ const normalizeMatches = (matches: ApiMatch[]) =>
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-// Add memory cache for ultra-fast responses
-const memoryCache = new Map<string, { data: EnhancedMatchData; timestamp: number }>()
-const CACHE_DURATION = 200 // Cache for 200ms to reduce API calls while maintaining freshness
+// Add memory cache for ultra-fast responses with versioning
+const memoryCache = new Map<string, { data: EnhancedMatchData; timestamp: number; version: number }>()
+const CACHE_DURATION = 100 // Reduced to 100ms for more frequent fresh data
+
+// Track latest match states to prevent regression
+const latestMatchStates = new Map<string, { 
+  result: string | undefined
+  feedLength: number
+  lastEventTime: string
+  timestamp: number
+}>()
+
+// Version counter for cache entries
+let cacheVersion = 0
 
 const fetchFromApi = async (dataType: DataType = "both", bypassCache = false): Promise<EnhancedMatchData> => {
   const endpoint = getDataEndpoint(dataType)
   const cacheKey = `${dataType}-${endpoint}`
   
-  // Check memory cache first (unless bypassed)
+  // Check memory cache first (unless bypassed) but verify data freshness
   if (!bypassCache) {
     const cached = memoryCache.get(cacheKey)
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      return cached.data
+      // Verify cached data isn't stale by checking if any match has regressed
+      const hasRegression = cached.data.matches.some(match => {
+        const latest = latestMatchStates.get(match.id)
+        if (!latest) return false
+        
+        const currentFeedLength = match.matchFeed?.length || 0
+        const currentResult = match.result || ""
+        
+        // Don't use cached data if it has fewer events or older result
+        return currentFeedLength < latest.feedLength || 
+               (currentResult !== latest.result && latest.timestamp > cached.timestamp)
+      })
+      
+      if (!hasRegression) {
+        return cached.data
+      }
     }
   }
 
@@ -365,8 +392,35 @@ const fetchFromApi = async (dataType: DataType = "both", bypassCache = false): P
         grouped: normalizedGrouped,
       }
 
-      // Cache the result for ultra-fast subsequent calls
-      memoryCache.set(cacheKey, { data: result, timestamp: Date.now() })
+      // Update latest match states to prevent regression
+      result.matches.forEach(match => {
+        const currentState = latestMatchStates.get(match.id)
+        const newFeedLength = match.matchFeed?.length || 0
+        const newResult = match.result || ""
+        const newLastEventTime = match.matchFeed?.[0]?.time || ""
+        
+        // Only update if this is newer data
+        if (!currentState || 
+            newFeedLength > currentState.feedLength ||
+            (newResult !== currentState.result && newResult !== "0-0" && newResult !== "0–0") ||
+            (newLastEventTime && newLastEventTime !== currentState.lastEventTime)) {
+          
+          latestMatchStates.set(match.id, {
+            result: newResult,
+            feedLength: newFeedLength,
+            lastEventTime: newLastEventTime,
+            timestamp: Date.now()
+          })
+        }
+      })
+      
+      // Cache the result with version for ultra-fast subsequent calls
+      cacheVersion++
+      memoryCache.set(cacheKey, { 
+        data: result, 
+        timestamp: Date.now(),
+        version: cacheVersion
+      })
       
       return result
     } catch (error) {
@@ -377,11 +431,24 @@ const fetchFromApi = async (dataType: DataType = "both", bypassCache = false): P
         continue
       }
       
-      // Return cached data on error if available
+      // Return cached data on error if available AND it's not stale
       const cached = memoryCache.get(cacheKey)
       if (cached) {
-        console.warn('API failed, returning cached data:', error)
-        return cached.data
+        // Only return cached data if it's not regressed
+        const hasRegression = cached.data.matches.some(match => {
+          const latest = latestMatchStates.get(match.id)
+          if (!latest) return false
+          
+          const cachedFeedLength = match.matchFeed?.length || 0
+          return cachedFeedLength < latest.feedLength
+        })
+        
+        if (!hasRegression) {
+          console.warn('API failed, returning cached data (verified fresh):', error)
+          return cached.data
+        } else {
+          console.warn('API failed and cached data is stale, throwing error:', error)
+        }
       }
       
       throw error
@@ -418,6 +485,27 @@ if (typeof window !== "undefined") {
   setInterval(preloadData, 30000)
 }
 
+// Cleanup old match states every 5 minutes to prevent memory leaks
+if (typeof window !== "undefined") {
+  setInterval(() => {
+    const now = Date.now()
+    const maxAge = 5 * 60 * 1000 // 5 minutes
+    
+    latestMatchStates.forEach((state, matchId) => {
+      if (now - state.timestamp > maxAge) {
+        latestMatchStates.delete(matchId)
+      }
+    })
+    
+    // Also cleanup old cache entries
+    memoryCache.forEach((cacheEntry, key) => {
+      if (now - cacheEntry.timestamp > maxAge) {
+        memoryCache.delete(key)
+      }
+    })
+  }, 5 * 60 * 1000)
+}
+
 export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: DataType }) => {
   const baseRefreshInterval = options?.refreshIntervalMs ?? 1_000
   const dataType = options?.dataType ?? "both"
@@ -438,6 +526,35 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
       setIsRefreshing(true)
       const data = await fetchFromApi(dataType, bypassCache)
       
+      // CRITICAL: Merge with existing data to preserve newest information
+      setMatches(currentMatches => {
+        const mergedMatches = [...data.matches]
+        
+        // For each new match, check if we should preserve existing data
+        data.matches.forEach((newMatch, index) => {
+          const existingMatch = currentMatches.find(m => m.id === newMatch.id)
+          if (existingMatch) {
+            const existingFeedLength = existingMatch.matchFeed?.length || 0
+            const newFeedLength = newMatch.matchFeed?.length || 0
+            
+            // Keep the match with more timeline events or newer result
+            if (existingFeedLength > newFeedLength || 
+                (existingMatch.result && existingMatch.result !== "0-0" && existingMatch.result !== "0–0" && 
+                 (!newMatch.result || newMatch.result === "0-0" || newMatch.result === "0–0"))) {
+              
+              const reason = existingFeedLength > newFeedLength ? 
+                `More timeline events (${existingFeedLength} vs ${newFeedLength})` :
+                `Non-zero score preserved (${existingMatch.result} vs ${newMatch.result})`
+              
+              dataFreshnessMonitor.logPreservation(newMatch.id, reason)
+              mergedMatches[index] = existingMatch // Keep existing newer data
+            }
+          }
+        })
+        
+        return mergedMatches
+      })
+      
       // Queue updates through state manager for smooth transitions
       data.matches.forEach(match => {
         matchStateManager.queueUpdate(match.id, {
@@ -446,8 +563,6 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
         })
       })
       
-      // Always update immediately - no delays
-      setMatches(data.matches)
       if (data.metadata) {
         setMetadata(data.metadata)
       }
@@ -520,10 +635,52 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
       intervalId = setInterval(async () => {
         try {
           // Bypass cache every few calls for live matches
-          const shouldBypassCache = hasLiveMatches && Math.random() > 0.7
+          const shouldBypassCache = hasLiveMatches && Math.random() > 0.8 // More frequent bypass
           const data = await fetchFromApi(dataType, shouldBypassCache)
           
-          setMatches(data.matches)
+          // CRITICAL: Preserve newest data during updates
+          setMatches(currentMatches => {
+            const mergedMatches = [...data.matches]
+            
+            data.matches.forEach((newMatch, index) => {
+              const existingMatch = currentMatches.find(m => m.id === newMatch.id)
+              if (existingMatch) {
+                const existingFeedLength = existingMatch.matchFeed?.length || 0
+                const newFeedLength = newMatch.matchFeed?.length || 0
+                const existingResult = existingMatch.result || ""
+                const newResult = newMatch.result || ""
+                
+                // Advanced freshness check
+                const shouldKeepExisting = (
+                  // Keep if existing has more events
+                  existingFeedLength > newFeedLength ||
+                  // Keep if existing has a real score and new is 0-0
+                  (existingResult && existingResult !== "0-0" && existingResult !== "0–0" &&
+                   (newResult === "0-0" || newResult === "0–0" || !newResult)) ||
+                  // Keep if existing has newer timestamp from latest states
+                  (() => {
+                    const latestState = latestMatchStates.get(newMatch.id)
+                    return latestState && existingMatch.result === latestState.result &&
+                           existingFeedLength === latestState.feedLength
+                  })()
+                )
+                
+                if (shouldKeepExisting) {
+                  const reason = existingFeedLength > newFeedLength ? 
+                    `Timeline regression prevented (${existingFeedLength} vs ${newFeedLength})` :
+                    existingResult !== newResult ? 
+                      `Score regression prevented (${existingResult} vs ${newResult})` :
+                      `Fresher state preserved`
+                  
+                  dataFreshnessMonitor.logPreservation(newMatch.id, reason)
+                  mergedMatches[index] = existingMatch
+                }
+              }
+            })
+            
+            return mergedMatches
+          })
+          
           if (data.metadata) {
             setMetadata(data.metadata)
           }

@@ -52,9 +52,29 @@ export function MatchFeedModal({
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   useEffect(() => {
-    // Always update immediately - no buffering delays
-    setMatchFeed(initialMatchFeed ?? [])
-    setFinalScore(initialFinalScore)
+    const newFeed = initialMatchFeed ?? []
+    const newScore = initialFinalScore
+    
+    // Only update if we have newer/more data - prevent regression
+    setMatchFeed(currentFeed => {
+      if (newFeed.length >= currentFeed.length || 
+          (newFeed.length > 0 && JSON.stringify(newFeed) !== JSON.stringify(currentFeed))) {
+        return newFeed
+      }
+      console.log(`🔒 Modal preserving newer timeline data: ${currentFeed.length} vs ${newFeed.length} events`)
+      return currentFeed // Keep existing if it has more events
+    })
+    
+    setFinalScore(currentScore => {
+      if (newScore && newScore !== "0-0" && newScore !== "0–0" && 
+          (!currentScore || currentScore === "0-0" || currentScore === "0–0")) {
+        return newScore
+      }
+      if (!newScore || newScore === "0-0" || newScore === "0–0") {
+        return currentScore // Keep existing score if new one is empty/zero
+      }
+      return newScore
+    })
   }, [initialMatchFeed, initialFinalScore])
 
   useEffect(() => {
