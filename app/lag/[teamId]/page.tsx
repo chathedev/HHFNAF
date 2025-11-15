@@ -48,37 +48,8 @@ const getStatusPriority = (status: NormalizedMatch["matchStatus"]) =>
   status ? MATCH_STATUS_PRIORITY[status] : 3
 
 const getDerivedStatus = (match: NormalizedMatch): NormalizedMatch["matchStatus"] => {
-  const now = Date.now()
-  const minutesSinceKickoff = (now - match.date.getTime()) / (1000 * 60)
-  
-  // Only auto-finish if more than 75 minutes have passed AND match is not explicitly marked as live
-  // This allows matches to stay live during halftime and normal play
-  if (minutesSinceKickoff > 75 && match.matchStatus !== "live") {
-    return "finished"
-  }
-  
-  // Trust backend/timeline status - if backend says live, keep it live
-  if (match.matchStatus === "live") {
-    // Only override to finished if way past reasonable time (2+ hours)
-    if (minutesSinceKickoff > 120) {
-      return "finished"
-    }
-    return "live"
-  }
-  
-  if (match.matchStatus) {
-    return match.matchStatus
-  }
-  
-  const kickoff = match.date.getTime()
-  const liveWindowEnd = kickoff + 1000 * 60 * 60 * 2.5
-  if (now >= kickoff && now <= liveWindowEnd) {
-    return "live"
-  }
-  if (now < kickoff) {
-    return "upcoming"
-  }
-  return match.result ? "finished" : "finished"
+  // TRUST BACKEND COMPLETELY - it knows the real match status
+  return match.matchStatus === "halftime" ? "live" : (match.matchStatus ?? "upcoming")
 }
 
 const extractOpponentName = (opponent: string) => opponent.replace(/\s*\((hemma|borta)\)\s*$/i, "").trim()

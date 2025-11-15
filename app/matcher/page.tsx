@@ -56,26 +56,8 @@ const getMatchOutcome = (rawResult?: string, isHome?: boolean, status?: string):
 }
 
 const getMatchStatus = (match: NormalizedMatch): StatusFilter => {
-  const now = Date.now()
-  const minutesSinceKickoff = (now - match.date.getTime()) / (1000 * 60)
-  
-  // Only auto-finish if more than 75 minutes have passed AND match is not explicitly marked as live
-  // This allows matches to stay live during halftime and normal play
-  if (minutesSinceKickoff > 75 && match.matchStatus !== "live") {
-    return "finished"
-  }
-  
-  // Trust backend/timeline status - if backend says live, keep it live
-  if (match.matchStatus === "live") {
-    // Only override to finished if way past reasonable time (2+ hours)
-    if (minutesSinceKickoff > 120) {
-      return "finished"
-    }
-    return "live"
-  }
-  
-  // Respect backend/timeline signals so live matches show even if kickoff shifts
-  return match.matchStatus ?? "upcoming"
+  // TRUST BACKEND COMPLETELY - it knows the real match status
+  return match.matchStatus === "halftime" ? "live" : (match.matchStatus ?? "upcoming")
 }
 
 const TEAM_OPTION_VALUES = [
