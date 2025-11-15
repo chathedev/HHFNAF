@@ -331,12 +331,21 @@ export function MatchFeedModal({
                           // Determine if event is for home or away team
                           const eventTeamLower = event.team?.toLowerCase() || ''
                           
-                          // ENHANCED: Härnösand is ALWAYS green, regardless of home/away status
-                          const isHarnosandEvent = eventTeamLower.includes("härnösand") || 
+                          // ENHANCED: Only Härnösand gets green, everyone else gets blue
+                          const isHarnosandEvent = (
+                            eventTeamLower.includes("härnösand") || 
                             eventTeamLower.includes("harnosand") || 
-                            eventTeamLower.includes("hhf") ||
-                            (event.isHomeGoal && homeTeam.toLowerCase().includes("härnösand")) ||
-                            (!event.isHomeGoal && awayTeam.toLowerCase().includes("härnösand"))
+                            eventTeamLower.includes("hhf")
+                          ) && !(
+                            // Exclude common opponent names that might contain similar patterns
+                            eventTeamLower.includes("sikeå") ||
+                            eventTeamLower.includes("sikea") ||
+                            eventTeamLower.includes("hudik") ||
+                            eventTeamLower.includes("sundsvall") ||
+                            eventTeamLower.includes("kramfors") ||
+                            eventTeamLower.includes("borlänge") ||
+                            eventTeamLower.includes("sandviken")
+                          )
                           const isGoal = event.type?.toLowerCase().includes("mål")
                           const isCard = event.type?.toLowerCase().includes("utvisning") || event.type?.toLowerCase().includes("varning")
                           

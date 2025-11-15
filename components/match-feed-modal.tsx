@@ -374,12 +374,21 @@ export function MatchFeedModal({
 
                             const eventTeam = event.team?.toLowerCase() ?? ""
                             
-                            // ENHANCED: Härnösand is ALWAYS green, regardless of home/away status
-                            const isHarnosandEvent = eventTeam.includes("härnösand") || 
+                            // ENHANCED: Only Härnösand gets green, everyone else gets blue
+                            const isHarnosandEvent = (
+                              eventTeam.includes("härnösand") || 
                               eventTeam.includes("harnosand") || 
-                              eventTeam.includes("hhf") ||
-                              (event.isHomeGoal && homeTeam.toLowerCase().includes("härnösand")) ||
-                              (!event.isHomeGoal && awayTeam.toLowerCase().includes("härnösand"))
+                              eventTeam.includes("hhf")
+                            ) && !(
+                              // Exclude common opponent names that might contain similar patterns
+                              eventTeam.includes("sikeå") ||
+                              eventTeam.includes("sikea") ||
+                              eventTeam.includes("hudik") ||
+                              eventTeam.includes("sundsvall") ||
+                              eventTeam.includes("kramfors") ||
+                              eventTeam.includes("borlänge") ||
+                              eventTeam.includes("sandviken")
+                            )
 
                             const tone = isGoal
                               ? isHarnosandEvent
