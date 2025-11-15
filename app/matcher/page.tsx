@@ -216,8 +216,8 @@ export default function MatcherPage() {
         return
       }
 
-      const currentHomeScore = Number.parseInt(scoreScoreMatch[1], 10)
-      const currentAwayScore = Number.parseInt(scoreScoreMatch[2], 10)
+      const currentHomeScore = Number.parseInt(scoreMatch[1], 10)
+      const currentAwayScore = Number.parseInt(scoreMatch[2], 10)
       if (Number.isNaN(currentHomeScore) || Number.isNaN(currentAwayScore)) {
         return
       }
@@ -491,11 +491,11 @@ export default function MatcherPage() {
     // eslint-disable-next-line
   }, [teamOptions])
 
-  // Auto-refresh match data every 3 seconds
+  // Enhanced auto-refresh for smoother updates
   useEffect(() => {
     const interval = setInterval(() => {
       refresh();
-    }, 3000);
+    }, 1000); // More frequent updates for better real-time experience
     return () => clearInterval(interval);
   }, [refresh]);
 

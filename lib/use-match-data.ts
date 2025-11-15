@@ -240,21 +240,28 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 const fetchFromApi = async (dataType: DataType = "both"): Promise<EnhancedMatchData> => {
   const endpoint = getDataEndpoint(dataType)
   let attempt = 0
-  let delay = 2000
+  let delay = 1000 // Reduced initial delay
 
-  while (attempt < 3) {
+  while (attempt < 2) { // Reduced retry attempts for faster response
     try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 3000) // Faster timeout
+
       const response = await fetch(endpoint, { 
         cache: "no-store",
+        signal: controller.signal,
         headers: {
           'Accept': 'application/json',
+          'Cache-Control': 'no-cache',
         }
       })
+      
+      clearTimeout(timeoutId)
       
       if (response.status === 503) {
         attempt += 1
         await sleep(delay)
-        delay = Math.min(delay * 1.5, 8000)
+        delay = Math.min(delay * 1.2, 3000) // Reduced max delay
         continue
       }
 
@@ -363,23 +370,15 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
 
   const refresh = useCallback(async () => {
     try {
-      // Set refreshing state for smooth UI feedback
       setIsRefreshing(true)
       const data = await fetchFromApi(dataType)
       
-      // Use JSON comparison to prevent unnecessary re-renders
-      const newMatchesStr = JSON.stringify(data.matches)
-      const currentMatchesStr = JSON.stringify(matches)
-      
-      if (newMatchesStr !== currentMatchesStr) {
-        setMatches(data.matches)
-      }
-      
-      if (JSON.stringify(data.metadata) !== JSON.stringify(metadata)) {
+      // Always update immediately - no JSON comparison delays
+      setMatches(data.matches)
+      if (data.metadata) {
         setMetadata(data.metadata)
       }
-      
-      if (JSON.stringify(data.grouped) !== JSON.stringify(grouped)) {
+      if (data.grouped) {
         setGrouped(data.grouped)
       }
       
@@ -395,7 +394,7 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
     } finally {
       setIsRefreshing(false)
     }
-  }, [dataType, matches, metadata, grouped])
+  }, [dataType])
 
   useEffect(() => {
     let isMounted = true
@@ -436,24 +435,72 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
       return
     }
 
-    const id = window.setInterval(() => {
-      void refresh()
+    const id = window.setInterval(async () => {
+      try {
+        const data = await fetchFromApi(dataType)
+        setMatches(data.matches)
+        if (data.metadata) {
+          setMetadata(data.metadata)
+        }
+        if (data.grouped) {
+          setGrouped(data.grouped)
+        }
+        setError(null)
+        
+        // Debug log for live matches
+        const liveMatches = data.matches.filter(m => m.matchStatus === "live")
+        if (liveMatches.length > 0) {
+          console.log(`🔴 Live matches updated:`, liveMatches.map(m => ({ id: m.id, result: m.result, feedLength: m.matchFeed?.length || 0 })))
+        }
+      } catch (caught) {
+        const message =
+          caught instanceof Error ? caught.message : "Kunde inte hämta matchdata just nu."
+        setError(message)
+      }
     }, refreshIntervalMs)
 
     return () => {
       window.clearInterval(id)
     }
-  }, [refresh, refreshIntervalMs])
+  }, [refreshIntervalMs, dataType])
 
   useEffect(() => {
-    const handleVisibilityChange = () => {
+    const handleVisibilityChange = async () => {
       if (document.visibilityState === "visible") {
-        void refresh()
+        try {
+          const data = await fetchFromApi(dataType)
+          setMatches(data.matches)
+          if (data.metadata) {
+            setMetadata(data.metadata)
+          }
+          if (data.grouped) {
+            setGrouped(data.grouped)
+          }
+          setError(null)
+        } catch (caught) {
+          const message =
+            caught instanceof Error ? caught.message : "Kunde inte hämta matchdata just nu."
+          setError(message)
+        }
       }
     }
 
-    const handleFocus = () => {
-      void refresh()
+    const handleFocus = async () => {
+      try {
+        const data = await fetchFromApi(dataType)
+        setMatches(data.matches)
+        if (data.metadata) {
+          setMetadata(data.metadata)
+        }
+        if (data.grouped) {
+          setGrouped(data.grouped)
+        }
+        setError(null)
+      } catch (caught) {
+        const message =
+          caught instanceof Error ? caught.message : "Kunde inte hämta matchdata just nu."
+        setError(message)
+      }
     }
 
     window.addEventListener("focus", handleFocus)
@@ -463,7 +510,7 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
       window.removeEventListener("focus", handleFocus)
       document.removeEventListener("visibilitychange", handleVisibilityChange)
     }
-  }, [refresh])
+  }, [dataType])
 
   return {
     matches,

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import { X } from "lucide-react"
 
 type MatchFeedEvent = {
@@ -37,14 +37,58 @@ type MatchFeedModalProps = {
 export function MatchFeedModal({
   isOpen,
   onClose,
-  matchFeed,
+  matchFeed: initialMatchFeed,
   homeTeam,
   awayTeam,
-  finalScore,
+  finalScore: initialFinalScore,
   matchStatus,
+  matchId,
+  onRefresh,
 }: MatchFeedModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
   const [activeTab, setActiveTab] = useState<"timeline" | "scorers">("timeline")
+  const [matchFeed, setMatchFeed] = useState<MatchFeedEvent[]>(initialMatchFeed ?? [])
+  const [finalScore, setFinalScore] = useState(initialFinalScore)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  // Update local state immediately when props change
+  useEffect(() => {
+    setMatchFeed(initialMatchFeed ?? [])
+    setFinalScore(initialFinalScore)
+  }, [initialMatchFeed, initialFinalScore])
+
+  // Real-time refresh when modal is open
+  useEffect(() => {
+    if (!isOpen || !onRefresh || !matchId) {
+      return
+    }
+
+    let isMounted = true
+
+    const refreshData = async () => {
+      if (!isMounted) return
+      
+      try {
+        setIsRefreshing(true)
+        await onRefresh()
+      } catch (error) {
+        console.error('Modal refresh error:', error)
+      } finally {
+        setIsRefreshing(false)
+      }
+    }
+
+    // Immediate refresh
+    refreshData()
+    
+    // Ultra-responsive refresh every 500ms
+    const intervalId = window.setInterval(refreshData, 500)
+
+    return () => {
+      isMounted = false
+      window.clearInterval(intervalId)
+    }
+  }, [isOpen, onRefresh, matchId])
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -150,6 +194,12 @@ export function MatchFeedModal({
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
                     <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
                     LIVE
+                  </span>
+                )}
+                {isRefreshing && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-500 text-white text-xs font-bold rounded-full">
+                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-spin"></span>
+                    Uppdaterar
                   </span>
                 )}
               </div>

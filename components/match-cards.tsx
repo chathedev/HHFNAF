@@ -46,11 +46,14 @@ export default function MatchCards() {
     const fetchMatches = async () => {
       try {
         const controller = new AbortController()
-        const timeoutId = window.setTimeout(() => controller.abort(), 5000)
+        const timeoutId = window.setTimeout(() => controller.abort(), 3000) // Faster timeout
 
         const response = await fetch(`${API_BASE_URL}/data/current`, {
           signal: controller.signal,
-          headers: { Accept: "application/json" },
+          headers: { 
+            Accept: "application/json",
+            'Cache-Control': 'no-cache'
+          },
           cache: "no-store",
         })
 
@@ -112,6 +115,11 @@ export default function MatchCards() {
     }
 
     fetchMatches()
+    
+    // Auto-refresh every second for real-time updates
+    const interval = setInterval(fetchMatches, 1000)
+    
+    return () => clearInterval(interval)
   }, [])
 
   const formatDate = (dateString?: string) => {

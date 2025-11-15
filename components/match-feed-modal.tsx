@@ -52,25 +52,10 @@ export function MatchFeedModal({
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   useEffect(() => {
-    // Always update state immediately when new data arrives
-    // Using optimized comparison to prevent unnecessary re-renders
-    const newFeedStr = JSON.stringify(initialMatchFeed ?? [])
-    const currentFeedStr = JSON.stringify(matchFeed)
-    
-    // Only update if data actually changed
-    if (newFeedStr !== currentFeedStr) {
-      // Use requestAnimationFrame for smooth updates
-      requestAnimationFrame(() => {
-        setMatchFeed(initialMatchFeed ?? [])
-      })
-    }
-    
-    if (initialFinalScore !== finalScore) {
-      requestAnimationFrame(() => {
-        setFinalScore(initialFinalScore)
-      })
-    }
-  }, [initialMatchFeed, initialFinalScore, matchFeed, finalScore])
+    // Always update immediately - no buffering delays
+    setMatchFeed(initialMatchFeed ?? [])
+    setFinalScore(initialFinalScore)
+  }, [initialMatchFeed, initialFinalScore])
 
   useEffect(() => {
     if (!isOpen) {
@@ -116,56 +101,43 @@ export function MatchFeedModal({
   const isUpcoming = !isLive && !isFinished
 
   useEffect(() => {
-    // Always refresh when modal is open - TRUST THE BACKEND ALWAYS
-    // This ensures continuous updates regardless of match status
     if (!isOpen || !onRefresh || !matchId) {
       return
     }
 
     let isMounted = true
-    let pending = false
-    let retryCount = 0
-    const maxRetries = 3
+    let isRefreshing = false
 
     const refreshData = async () => {
-      if (pending || !isMounted) {
+      if (isRefreshing || !isMounted) {
         return
       }
       
-      pending = true
+      isRefreshing = true
       setIsRefreshing(true)
       
       try {
         await onRefresh()
-        retryCount = 0 // Reset retry count on success
       } catch (error) {
-        retryCount++
-        console.error(`Failed to refresh match data (attempt ${retryCount}):`, error)
-        
-        // If we've failed multiple times, wait a bit longer before next attempt
-        if (retryCount >= maxRetries) {
-          console.warn('Multiple refresh failures, will keep trying...')
-          retryCount = 0 // Reset to keep trying
-        }
+        console.error('Modal refresh error:', error)
+        // Continue trying even on errors
       } finally {
-        pending = false
+        isRefreshing = false
         setIsRefreshing(false)
       }
     }
 
     // Immediate refresh on open
-    void refreshData()
+    refreshData()
     
-    // Update every 1 second for ultra-smooth live updates - ALWAYS ACTIVE
-    const intervalId = window.setInterval(() => {
-      void refreshData()
-    }, 1000)
+    // Ultra-fast refresh every 500ms for maximum responsiveness
+    const intervalId = window.setInterval(refreshData, 500)
 
     return () => {
       isMounted = false
       window.clearInterval(intervalId)
     }
-  }, [isOpen, onRefresh, matchId]) // Removed isFinished - ALWAYS REFRESH when modal open
+  }, [isOpen, onRefresh, matchId])
 
   const goalEvents = useMemo(
     () => matchFeed.filter((event) => event.type?.toLowerCase().includes("mål") && event.player),
