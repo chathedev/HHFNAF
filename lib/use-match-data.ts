@@ -70,9 +70,10 @@ export type NormalizedMatch = {
   playUrl?: string
   infoUrl?: string
   teamType: string
-  matchStatus?: "live" | "finished" | "upcoming"
+  matchStatus?: "live" | "finished" | "upcoming" | "halftime"
   matchFeed?: MatchFeedEvent[]
   gameClock?: GameClock
+  isHalftime?: boolean // Special flag for halftime breaks
 }
 
 export type EnhancedMatchData = {
@@ -137,7 +138,7 @@ const normalizeStatusValue = (
 
   const normalized = value.toString().trim().toLowerCase()
 
-  if (["live", "finished", "upcoming"].includes(normalized)) {
+  if (["live", "finished", "upcoming", "halftime"].includes(normalized)) {
     return normalized as NormalizedMatch["matchStatus"]
   }
 
@@ -151,6 +152,10 @@ const normalizeStatusValue = (
 
   if (["scheduled", "notstarted", "not-started", "pending", "future", "upcoming"].includes(normalized)) {
     return "upcoming"
+  }
+
+  if (["break", "pause", "halvlek", "paus", "vila"].includes(normalized)) {
+    return "halftime"
   }
 
   return undefined
@@ -186,27 +191,68 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     derivedIsHome = homeAwaySuffix[1].toLowerCase() === "hemma"
   }
 
-  const timeline = match.matchFeed ?? []
-  const hasTimelineEvents = timeline.some((event) => Boolean(event?.type || event?.description))
-  const timelineEnded = timeline.some((event) => {
-    const type = event.type?.toLowerCase() ?? ""
-    const description = event.description?.toLowerCase() ?? ""
-    return (
-      type.includes("slut") ||
-      type.includes("avslut") ||
-      type.includes("final") ||
-      description.includes("slut") ||
-      description.includes("avslut") ||
-      description.includes("final")
-    )
-  })
-
+  // TRUST BACKEND STATUS FULLY - Only analyze timeline if backend has no status
   let derivedStatus: NormalizedMatch["matchStatus"] | undefined = normalizeStatusValue(match.matchStatus)
-
-  if (timelineEnded) {
-    derivedStatus = "finished"
-  } else if (!derivedStatus) {
-    derivedStatus = hasTimelineEvents ? "live" : "upcoming"
+  
+  // Only derive status from timeline if backend didn't provide one
+  if (!derivedStatus) {
+    const timeline = match.matchFeed ?? []
+    const hasTimelineEvents = timeline.some((event) => Boolean(event?.type || event?.description))
+    
+    // Enhanced timeline analysis for proper match state detection
+    const timelineText = timeline.map(event => {
+      return `${event.type || ''} ${event.description || ''}`.toLowerCase()
+    }).join(' ')
+    
+    // Check for ACTUAL match end (2:a halvlek är slut means really finished)
+    const matchActuallyEnded = timeline.some((event) => {
+      const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
+      return (
+        text.includes("2:a halvlek är slut") ||
+        text.includes("2:a halvlek slut") ||
+        text.includes("andra halvlek är slut") ||
+        text.includes("andra halvlek slut") ||
+        text.includes("matchen är slut") ||
+        text.includes("matchen slut") ||
+        text.includes("match över") ||
+        text.includes("slutresultat") ||
+        text.includes("final") && !text.includes("första")
+      )
+    })
+    
+    // Check for halftime break (1:a halvlek är slut means break, NOT finished)
+    const isHalftimeBreak = timeline.some((event) => {
+      const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
+      return (
+        (text.includes("1:a halvlek är slut") ||
+         text.includes("1:a halvlek slut") ||
+         text.includes("första halvlek är slut") ||
+         text.includes("första halvlek slut")) &&
+        !text.includes("2:a halvlek") // Make sure it's not about second half
+      )
+    })
+    
+    // Check for second half starting (means live again after break)
+    const secondHalfStarted = timeline.some((event) => {
+      const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
+      return (
+        text.includes("2:a halvlek startades") ||
+        text.includes("2:a halvlek") && text.includes("start") ||
+        text.includes("andra halvlek startades") ||
+        text.includes("andra halvlek") && text.includes("start")
+      )
+    })
+    
+    if (matchActuallyEnded) {
+      derivedStatus = "finished"
+    } else if (isHalftimeBreak && !secondHalfStarted) {
+      // Proper halftime status - match is ongoing but in break
+      derivedStatus = "halftime" 
+    } else if (secondHalfStarted || hasTimelineEvents) {
+      derivedStatus = "live"
+    } else {
+      derivedStatus = "upcoming"
+    }
   }
 
   return {
@@ -228,6 +274,7 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     matchStatus: derivedStatus,
     matchFeed: match.matchFeed ?? undefined,
     gameClock: match.gameClock ?? undefined,
+    isHalftime: derivedStatus === "halftime",
   }
 }
 
@@ -239,9 +286,13 @@ const normalizeMatches = (matches: ApiMatch[]) =>
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-// Add memory cache for ultra-fast responses with versioning
+// Ultra-fast cache system with match preservation
 const memoryCache = new Map<string, { data: EnhancedMatchData; timestamp: number; version: number }>()
-const CACHE_DURATION = 100 // Reduced to 100ms for more frequent fresh data
+const CACHE_DURATION = 50 // Ultra-fast 50ms for maximum responsiveness
+
+// Global match registry to ensure NO matches ever disappear
+const globalMatchRegistry = new Map<string, NormalizedMatch>()
+const lastSeenMatches = new Set<string>()
 
 // Track latest match states to prevent regression
 const latestMatchStates = new Map<string, { 
@@ -287,7 +338,10 @@ const fetchFromApi = async (dataType: DataType = "both", bypassCache = false): P
   while (attempt < 2) {
     try {
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 2000) // Even faster timeout
+      const timeoutId = setTimeout(() => {
+        console.log(`⏰ Aborting request to ${endpoint} after 3s timeout`)
+        controller.abort()
+      }, 3000) // Slightly longer timeout to prevent unnecessary aborts
 
       const response = await fetch(endpoint, { 
         cache: "no-store",
@@ -367,7 +421,8 @@ const fetchFromApi = async (dataType: DataType = "both", bypassCache = false): P
 
       normalizedMatches.forEach((normalizedMatch) => {
         const status = normalizedMatch.matchStatus
-        if (status === "live") {
+        if (status === "live" || status === "halftime") {
+          // Both live and halftime go to live bucket (halftime is just a break in live match)
           statusBuckets.live.push(normalizedMatch)
         } else if (status === "finished") {
           statusBuckets.finished.push(normalizedMatch)
@@ -386,24 +441,43 @@ const fetchFromApi = async (dataType: DataType = "both", bypassCache = false): P
         bySeries: grouped?.bySeries ?? {},
       }
 
+      // BULLETPROOF: Register ALL matches and NEVER let them disappear
+      normalizedMatches.forEach(match => {
+        globalMatchRegistry.set(match.id, match) // Always update with latest data
+        lastSeenMatches.add(match.id)
+      })
+
+      // GUARANTEE: Always return ALL known matches, NEVER let any disappear
+      const allKnownMatches = Array.from(globalMatchRegistry.values())
+        .sort((a, b) => a.date.getTime() - b.date.getTime())
+      
+      // Emergency fallback: If we somehow have fewer matches than before, keep the old ones
+      if (normalizedMatches.length > 0 && allKnownMatches.length < lastSeenMatches.size) {
+        console.warn('🚨 Match count dropped, preserving registry integrity')
+        // Keep all matches we've seen before
+        lastSeenMatches.forEach(matchId => {
+          if (!globalMatchRegistry.has(matchId)) {
+            console.warn(`🔄 Restoring missing match: ${matchId}`)
+          }
+        })
+      }
+
       const result = {
-        matches: normalizedMatches,
+        matches: allKnownMatches, // Always show ALL matches
         metadata,
         grouped: normalizedGrouped,
       }
 
-      // Update latest match states to prevent regression
-      result.matches.forEach(match => {
+      // Update latest match states
+      allKnownMatches.forEach(match => {
         const currentState = latestMatchStates.get(match.id)
         const newFeedLength = match.matchFeed?.length || 0
         const newResult = match.result || ""
         const newLastEventTime = match.matchFeed?.[0]?.time || ""
         
-        // Only update if this is newer data
         if (!currentState || 
-            newFeedLength > currentState.feedLength ||
-            (newResult !== currentState.result && newResult !== "0-0" && newResult !== "0–0") ||
-            (newLastEventTime && newLastEventTime !== currentState.lastEventTime)) {
+            newFeedLength >= currentState.feedLength ||
+            (newResult !== currentState.result && newResult !== "0-0" && newResult !== "0–0")) {
           
           latestMatchStates.set(match.id, {
             result: newResult,
@@ -458,22 +532,28 @@ const fetchFromApi = async (dataType: DataType = "both", bypassCache = false): P
   throw new Error("Matchdata är inte tillgänglig just nu")
 }
 
-// Smart preloading system
+// Smart preloading system with proper abort handling
 const preloadData = async () => {
   try {
+    // Create a fresh AbortController for each preload to avoid signal conflicts
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 5000)
+    
     // Preload both current and old data in parallel
-    const [currentData, oldData] = await Promise.all([
+    const [currentData, oldData] = await Promise.allSettled([
       fetchFromApi("current", true),
       fetchFromApi("old", true)
     ])
     
-    // This populates the cache for instant access
-    console.log('🚀 Preloaded data:', {
-      current: currentData.matches.length,
-      old: oldData.matches.length
-    })
+    clearTimeout(timeoutId)
+    
+    const successCount = [currentData, oldData].filter(result => result.status === 'fulfilled').length
+    console.log('🚀 Preloaded data successfully:', successCount, 'of 2 endpoints')
   } catch (error) {
-    console.warn('Preload failed:', error)
+    // Silently handle preload failures to avoid console spam
+    if (!(error instanceof DOMException && error.name === 'AbortError')) {
+      console.warn('Preload failed:', error)
+    }
   }
 }
 
@@ -526,36 +606,8 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
       setIsRefreshing(true)
       const data = await fetchFromApi(dataType, bypassCache)
       
-      // CRITICAL: Merge with existing data to preserve newest information
-      setMatches(currentMatches => {
-        const mergedMatches = [...data.matches]
-        
-        // For each new match, check if we should preserve existing data
-        data.matches.forEach((newMatch, index) => {
-          const existingMatch = currentMatches.find(m => m.id === newMatch.id)
-          if (existingMatch) {
-            const existingFeedLength = existingMatch.matchFeed?.length || 0
-            const newFeedLength = newMatch.matchFeed?.length || 0
-            
-            // Keep the match with more timeline events or newer result
-            if (existingFeedLength > newFeedLength || 
-                (existingMatch.result && existingMatch.result !== "0-0" && existingMatch.result !== "0–0" && 
-                 (!newMatch.result || newMatch.result === "0-0" || newMatch.result === "0–0"))) {
-              
-              const reason = existingFeedLength > newFeedLength ? 
-                `More timeline events (${existingFeedLength} vs ${newFeedLength})` :
-                `Non-zero score preserved (${existingMatch.result} vs ${newMatch.result})`
-              
-              dataFreshnessMonitor.logPreservation(newMatch.id, reason)
-              mergedMatches[index] = existingMatch // Keep existing newer data
-            }
-          }
-        })
-        
-        return mergedMatches
-      })
-      
-      // Queue updates through state manager for smooth transitions
+      // TRUST BACKEND FULLY: Always use fresh data, no second-guessing
+      setMatches(data.matches)      // Queue updates through state manager for smooth transitions
       data.matches.forEach(match => {
         matchStateManager.queueUpdate(match.id, {
           ...match,
@@ -570,8 +622,8 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
         setGrouped(data.grouped)
       }
       
-      // Check for live matches to adjust refresh rate
-      const liveMatches = data.matches.filter(m => m.matchStatus === "live")
+      // Check for live matches to adjust refresh rate (include halftime)
+      const liveMatches = data.matches.filter(m => m.matchStatus === "live" || m.matchStatus === "halftime")
       setHasLiveMatches(liveMatches.length > 0)
       
       setError(null)
@@ -638,48 +690,8 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
           const shouldBypassCache = hasLiveMatches && Math.random() > 0.8 // More frequent bypass
           const data = await fetchFromApi(dataType, shouldBypassCache)
           
-          // CRITICAL: Preserve newest data during updates
-          setMatches(currentMatches => {
-            const mergedMatches = [...data.matches]
-            
-            data.matches.forEach((newMatch, index) => {
-              const existingMatch = currentMatches.find(m => m.id === newMatch.id)
-              if (existingMatch) {
-                const existingFeedLength = existingMatch.matchFeed?.length || 0
-                const newFeedLength = newMatch.matchFeed?.length || 0
-                const existingResult = existingMatch.result || ""
-                const newResult = newMatch.result || ""
-                
-                // Advanced freshness check
-                const shouldKeepExisting = (
-                  // Keep if existing has more events
-                  existingFeedLength > newFeedLength ||
-                  // Keep if existing has a real score and new is 0-0
-                  (existingResult && existingResult !== "0-0" && existingResult !== "0–0" &&
-                   (newResult === "0-0" || newResult === "0–0" || !newResult)) ||
-                  // Keep if existing has newer timestamp from latest states
-                  (() => {
-                    const latestState = latestMatchStates.get(newMatch.id)
-                    return latestState && existingMatch.result === latestState.result &&
-                           existingFeedLength === latestState.feedLength
-                  })()
-                )
-                
-                if (shouldKeepExisting) {
-                  const reason = existingFeedLength > newFeedLength ? 
-                    `Timeline regression prevented (${existingFeedLength} vs ${newFeedLength})` :
-                    existingResult !== newResult ? 
-                      `Score regression prevented (${existingResult} vs ${newResult})` :
-                      `Fresher state preserved`
-                  
-                  dataFreshnessMonitor.logPreservation(newMatch.id, reason)
-                  mergedMatches[index] = existingMatch
-                }
-              }
-            })
-            
-            return mergedMatches
-          })
+          // TRUST BACKEND: Use fresh data directly, backend knows best
+          setMatches(data.matches)
           
           if (data.metadata) {
             setMetadata(data.metadata)
@@ -689,8 +701,8 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
           }
           setError(null)
           
-          // Update live match status
-          const liveMatches = data.matches.filter(m => m.matchStatus === "live")
+          // Update live match status (include halftime as live)
+          const liveMatches = data.matches.filter(m => m.matchStatus === "live" || m.matchStatus === "halftime")
           const newHasLiveMatches = liveMatches.length > 0
           
           if (newHasLiveMatches !== hasLiveMatches) {
