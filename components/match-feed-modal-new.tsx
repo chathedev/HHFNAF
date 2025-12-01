@@ -49,7 +49,6 @@ export function MatchFeedModal({
   const [activeTab, setActiveTab] = useState<"timeline" | "scorers">("timeline")
   const [matchFeed, setMatchFeed] = useState<MatchFeedEvent[]>(initialMatchFeed ?? [])
   const [finalScore, setFinalScore] = useState(initialFinalScore)
-  const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Update local state but preserve newer data - prevent regression
   useEffect(() => {
@@ -84,17 +83,18 @@ export function MatchFeedModal({
     }
 
     let isMounted = true
+    let isRefreshing = false
 
     const refreshData = async () => {
-      if (!isMounted) return
-      
+      if (!isMounted || isRefreshing) return
+
       try {
-        setIsRefreshing(true)
+        isRefreshing = true
         await onRefresh()
       } catch (error) {
         console.error('Modal refresh error:', error)
       } finally {
-        setIsRefreshing(false)
+        isRefreshing = false
       }
     }
 
@@ -224,14 +224,8 @@ export function MatchFeedModal({
                     PAUS
                   </span>
                 )}
-                {isRefreshing && (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-500 text-white text-xs font-bold rounded-full">
-                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-spin"></span>
-                    Uppdaterar
-                  </span>
-                )}
               </div>
-              
+
               <div className="flex items-center justify-between text-sm">
                 <div className="font-semibold">{homeTeam} vs {awayTeam}</div>
                 {finalScore && (

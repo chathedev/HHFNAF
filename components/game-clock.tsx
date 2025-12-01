@@ -136,13 +136,6 @@ export function GameClock({
           </div>
         )}
 
-        {/* Live indicator */}
-        {gameClock.isLive && (
-          <div className="flex items-center justify-center gap-1 mt-1">
-            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-            <span className="text-xs font-semibold text-red-600">LIVE</span>
-          </div>
-        )}
       </div>
     </div>
   )
