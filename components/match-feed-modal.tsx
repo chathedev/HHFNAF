@@ -264,7 +264,6 @@ export function MatchFeedModal({
 
     return (
       <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full ${styles[tone]}`}>
-        {tone === "live" && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-500" />}
         {label}
       </span>
     )
