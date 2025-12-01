@@ -50,7 +50,6 @@ export function MatchFeedModal({
   const [activeTab, setActiveTab] = useState<"timeline" | "scorers">("timeline")
   const [matchFeed, setMatchFeed] = useState<MatchFeedEvent[]>(initialMatchFeed ?? [])
   const [finalScore, setFinalScore] = useState(initialFinalScore)
-  const [isRefreshing, setIsRefreshing] = useState(false)
 
   useEffect(() => {
     const newFeed = initialMatchFeed ?? []
@@ -147,7 +146,6 @@ export function MatchFeedModal({
       }
       
       isRefreshing = true
-      setIsRefreshing(true)
       
       try {
         await onRefresh()
@@ -156,7 +154,6 @@ export function MatchFeedModal({
         // Continue trying even on errors
       } finally {
         isRefreshing = false
-        setIsRefreshing(false)
       }
     }
 
@@ -294,12 +291,6 @@ export function MatchFeedModal({
                 {isHalftime && <StatusBadge tone="live" label="Paus" />}
                 {isUpcoming && <StatusBadge tone="upcoming" label="Kommande" />}
                 {isFinished && <StatusBadge tone="finished" label="Avslutad" />}
-                {isRefreshing && (
-                  <span className="text-xs text-slate-400 animate-pulse flex items-center gap-1">
-                    <span className="h-1 w-1 bg-slate-400 rounded-full animate-ping"></span>
-                    Live
-                  </span>
-                )}
               </div>
             </div>
 

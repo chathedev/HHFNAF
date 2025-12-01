@@ -332,13 +332,14 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     derivedIsHome = homeAwaySuffix[1].toLowerCase() === "hemma"
   }
 
+  const timeline = match.matchFeed ?? []
+  const hasTimelineEvents = timeline.some((event) => Boolean(event?.type || event?.description))
+
   // Start with backend status, but ALWAYS check timeline for halftime override
   let derivedStatus: NormalizedMatch["matchStatus"] | undefined = normalizeStatusValue(match.matchStatus)
-  
+
   // ALWAYS analyze timeline for halftime detection (override backend status if needed)
   {
-    const timeline = match.matchFeed ?? []
-    const hasTimelineEvents = timeline.some((event) => Boolean(event?.type || event?.description))
     
     // Enhanced timeline analysis for proper match state detection
     const timelineText = timeline.map(event => {
@@ -415,6 +416,16 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     // If backend provided status and no timeline override needed, keep backend status
   }
 
+  // Normalize and sanitize the result to avoid placeholder scores like "- -"
+  const rawResult = match.result?.trim() || ""
+  const scoreMatch = rawResult.match(/(\d+)\s*[–-]\s*(\d+)/)
+  const normalizedScore = scoreMatch ? `${scoreMatch[1]}–${scoreMatch[2]}` : undefined
+  const shouldForceZeroZero = !normalizedScore &&
+    (derivedStatus === "live" || derivedStatus === "halftime") &&
+    hasTimelineEvents
+
+  const normalizedResult = normalizedScore ?? (shouldForceZeroZero ? "0-0" : rawResult || undefined)
+
   return {
     id,
     homeTeam: match.home,
@@ -428,7 +439,7 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     venue: mapVenueIdToName(match.venue),
     series: match.series ?? undefined,
     infoUrl: match.infoUrl ?? undefined,
-    result: match.result ?? undefined,
+    result: normalizedResult,
     isHome: derivedIsHome,
     playUrl: match.playUrl && match.playUrl !== "null" ? match.playUrl : undefined,
     matchStatus: derivedStatus,
