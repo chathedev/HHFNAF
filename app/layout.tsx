@@ -11,7 +11,9 @@ import { deriveSiteVariant } from "@/lib/site-variant"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_VERCEL_URL || "http://localhost:3000"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_VERCEL_URL 
+    ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` 
+    : "https://www.harnosandshf.se"),
   title: {
     default: "Härnösands HF – Officiell hemsida för handboll i Härnösand",
     template: "%s | Härnösands HF – Officiell hemsida för handboll i Härnösand",
@@ -162,17 +164,23 @@ export const metadata: Metadata = {
   generator: "v0.dev",
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const requestHeaders = headers()
-  const host =
-    requestHeaders.get("x-forwarded-host") ||
-    requestHeaders.get("host") ||
-    process.env.NEXT_PUBLIC_VERCEL_URL ||
-    "localhost:3000"
+  let host: string
+  try {
+    const requestHeaders = await headers()
+    host =
+      requestHeaders.get("x-forwarded-host") ||
+      requestHeaders.get("host") ||
+      process.env.NEXT_PUBLIC_VERCEL_URL ||
+      "localhost:3000"
+  } catch (error) {
+    // Fallback for static generation or edge cases
+    host = process.env.NEXT_PUBLIC_VERCEL_URL || "www.harnosandshf.se"
+  }
 
   const siteVariant = deriveSiteVariant(host)
   const themeColor = siteVariant === "staging" ? "#db2777" : "#15803d"
