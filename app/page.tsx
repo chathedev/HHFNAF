@@ -324,7 +324,7 @@ export default function HomePage() {
         <Header />
         <main>
           {/* Hero Section */}
-          <section className={`relative w-full min-h-screen flex items-center justify-center overflow-hidden ${
+          <section className={`relative w-full h-[calc(100vh-80px)] md:h-[calc(100vh-96px)] flex items-center justify-center overflow-hidden ${
             isStaging ? "bg-gradient-to-br from-pink-50 via-pink-100 to-rose-200" : ""
           }`}>
             <Image
@@ -337,7 +337,10 @@ export default function HomePage() {
               className={`object-cover object-center z-0 transition-all duration-700 ${
                 isStaging ? "saturate-125 contrast-110 brightness-105 hue-rotate-15" : ""
               }`}
-              sizes="100vw"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 100vw"
+              style={{
+                objectPosition: 'center center'
+              }}
               onLoad={() => {
                 if (isStaging && !showHeroContent) {
                   setTimeout(() => setShowHeroContent(true), 1000)
@@ -370,12 +373,12 @@ export default function HomePage() {
               </>
             )}
             <div
-              className={`relative z-20 text-white text-center px-4 sm:px-6 md:px-8 max-w-5xl mx-auto transition-opacity duration-700 w-full ${
+              className={`relative z-20 text-white text-center px-4 sm:px-6 md:px-8 max-w-5xl mx-auto transition-opacity duration-700 w-full h-full flex flex-col justify-center items-center ${
                 showHeroContent ? "opacity-100" : "opacity-0"
               }`}
             >
               <h1
-                className={`text-4xl xs:text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold mb-4 sm:mb-6 leading-tight tracking-tight animate-fade-in-up text-shadow-outline ${
+                className={`text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold mb-3 sm:mb-4 md:mb-6 leading-tight tracking-tight animate-fade-in-up text-shadow-outline ${
                   isStaging ? "drop-shadow-2xl filter drop-shadow-[0_0_20px_rgba(236,72,153,0.3)]" : ""
                 }`}
                 {...(isEditorMode && {
@@ -390,7 +393,7 @@ export default function HomePage() {
                 )}
               </h1>
               <p
-                className="text-base sm:text-lg md:text-xl lg:text-2xl mb-8 sm:mb-10 max-w-3xl mx-auto animate-fade-in-up delay-200 text-shadow-md px-2 sm:px-0"
+                className="text-sm sm:text-base md:text-lg lg:text-xl mb-6 sm:mb-8 max-w-2xl sm:max-w-3xl mx-auto animate-fade-in-up delay-200 text-shadow-md px-4 sm:px-2 md:px-0 leading-relaxed"
                 {...(isEditorMode && {
                   "data-editable": "true",
                   "data-field-path": "home.hero.description",
