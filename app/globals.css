@@ -92,7 +92,9 @@ body {
     text-wrap: balance;
   }
   /* Custom text shadow for readability */
+  .text-shadow-soft {
     text-shadow: 0px 0px 10px rgba(0, 0, 0, 0.8);
+  }
 }
 
 /* Score update pulse animation */
