@@ -313,7 +313,7 @@ export default function HomePage() {
   const showResultCard = (status: string, hasResult: boolean) => status === "live" || status === "finished" || hasResult;
   const isStaging = siteVariant === "staging"
   const heroImageSrc =
-    isStaging ? "/7ea5a4bb-f938-43ea-b514-783a8fa1b236.png" : content.hero.imageUrl || "/heropic.png"
+    isStaging ? "/c38715eb-2128-43e0-b80b-48cc95620ffa.png" : content.hero.imageUrl || "/heropic.png"
   const heroOverlayClass = isStaging
     ? "from-pink-900/40 via-pink-800/20 to-rose-900/60"
     : "from-black/70 via-black/40 to-transparent"
@@ -324,7 +324,7 @@ export default function HomePage() {
         <Header />
         <main className="pt-20 md:pt-24">
           {/* Hero Section */}
-          <section className={`relative w-full h-[60vh] sm:h-[70vh] md:h-[75vh] lg:h-[80vh] flex items-center justify-center overflow-hidden ${
+          <section className={`relative w-full h-[65vh] sm:h-[70vh] md:h-[75vh] lg:h-[80vh] xl:h-[85vh] flex items-center justify-center overflow-hidden ${
             isStaging ? "bg-gradient-to-br from-pink-50 via-pink-100 to-rose-200" : ""
           }`}>
             <Image
@@ -334,12 +334,14 @@ export default function HomePage() {
               quality={100}
               priority={true}
               unoptimized={isStaging}
-              className={`z-0 transition-all duration-700 object-cover ${
-                isStaging ? "saturate-125 contrast-110 brightness-105 hue-rotate-15" : ""
+              className={`z-0 transition-all duration-700 ${
+                isStaging 
+                  ? "object-cover sm:object-cover saturate-125 contrast-110 brightness-105 hue-rotate-15" 
+                  : "object-cover"
               }`}
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 100vw"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 100vw"
               style={{
-                objectPosition: 'center center'
+                objectPosition: isStaging ? 'center center' : 'center center'
               }}
               onLoad={() => {
                 if (isStaging && !showHeroContent) {
