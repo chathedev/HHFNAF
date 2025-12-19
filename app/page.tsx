@@ -27,6 +27,7 @@ import Footer from "@/components/footer"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { defaultContent } from "@/lib/default-content"
 import type { FullContent, Partner } from "@/lib/content-types"
+import { deriveSiteVariant, type SiteVariant } from "@/lib/site-variant"
 import { canShowTicketForMatch } from "@/lib/matches"
 import { extendTeamDisplayName } from "@/lib/team-display"
 import { useMatchData, shouldShowFinishedMatch, getMatchEndTime, type NormalizedMatch } from "@/lib/use-match-data"
@@ -98,11 +99,25 @@ const getDisplayScore = (rawResult?: string, isHome?: boolean): string | null =>
   return `${homeScore}\u2013${awayScore}`
 }
 
+const getInitialVariant = (): SiteVariant => {
+  if (typeof document !== "undefined") {
+    const attr = document.documentElement.getAttribute("data-site-variant")
+    if (attr === "staging" || attr === "production" || attr === "development") {
+      return attr
+    }
+  }
+
+  return deriveSiteVariant(
+    typeof window !== "undefined" ? window.location.host : process.env.NEXT_PUBLIC_VERCEL_URL || undefined,
+  )
+}
+
 export default function HomePage() {
   const searchParams = useSearchParams()
   const isEditorMode = searchParams?.get("editor") === "true"
 
   const [content] = useState<FullContent>(defaultContent)
+  const [siteVariant, setSiteVariant] = useState<SiteVariant>(getInitialVariant)
   const [openTier, setOpenTier] = useState<string | null>("Diamantpartner")
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   const {
@@ -273,6 +288,14 @@ export default function HomePage() {
     })
   }, [matchesToDisplay])
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return
+    }
+    const resolved = deriveSiteVariant(window.location.host)
+    setSiteVariant(resolved)
+  }, [])
+
   function shouldShowTicketButton(match: NormalizedMatch): boolean {
     if (getMatchStatus(match) === "finished") {
       return false;
@@ -282,6 +305,8 @@ export default function HomePage() {
 
   // Helper for result card display logic
   const showResultCard = (status: string, hasResult: boolean) => status === "live" || status === "finished" || hasResult;
+  const heroImageSrc =
+    siteVariant === "staging" ? "/7ea5a4bb-f938-43ea-b514-783a8fa1b236.png" : content.hero.imageUrl || "/placeholder.svg"
 
   return (
     <ErrorBoundary>
@@ -289,14 +314,15 @@ export default function HomePage() {
         <Header />
         <main>
           {/* Hero Section */}
-          <section className="relative w-full h-screen flex items-center justify-center overflow-hidden">
+          <section className="relative w-full min-h-[72vh] sm:min-h-[80vh] md:min-h-[90vh] lg:min-h-screen flex items-center justify-center overflow-hidden">
             <Image
-              src={content.hero.imageUrl || "/placeholder.svg"}
+              src={heroImageSrc}
               alt="Härnösands HF herrlag och damlag 2025"
               fill
               quality={90}
               priority
-              className="object-cover z-0"
+              className="object-cover object-center z-0 transition-opacity duration-500"
+              sizes="(min-width: 1280px) 100vw, (min-width: 768px) 100vw, 100vw"
               {...(isEditorMode && {
                 "data-editable": "true",
                 "data-field-path": "home.hero.imageUrl",
