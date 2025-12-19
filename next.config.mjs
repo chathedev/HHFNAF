@@ -7,12 +7,13 @@ const __dirname = path.dirname(__filename);
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Add empty turbopack config to silence warnings
+  turbopack: {},
+  // Fix workspace root warning
+  outputFileTracingRoot: __dirname,
   images: {
     remotePatterns: [
       {
