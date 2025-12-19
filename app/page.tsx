@@ -118,6 +118,7 @@ export default function HomePage() {
 
   const [content] = useState<FullContent>(defaultContent)
   const [siteVariant, setSiteVariant] = useState<SiteVariant>(getInitialVariant)
+  const [showHeroContent, setShowHeroContent] = useState<boolean>(getInitialVariant() !== "staging")
   const [openTier, setOpenTier] = useState<string | null>("Diamantpartner")
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   const {
@@ -294,6 +295,11 @@ export default function HomePage() {
     }
     const resolved = deriveSiteVariant(window.location.host)
     setSiteVariant(resolved)
+
+    if (resolved === "staging") {
+      setShowHeroContent(false)
+      window.setTimeout(() => setShowHeroContent(true), 5000)
+    }
   }, [])
 
   function shouldShowTicketButton(match: NormalizedMatch): boolean {
@@ -305,8 +311,12 @@ export default function HomePage() {
 
   // Helper for result card display logic
   const showResultCard = (status: string, hasResult: boolean) => status === "live" || status === "finished" || hasResult;
+  const isStaging = siteVariant === "staging"
   const heroImageSrc =
-    siteVariant === "staging" ? "/7ea5a4bb-f938-43ea-b514-783a8fa1b236.png" : content.hero.imageUrl || "/placeholder.svg"
+    isStaging ? "/7ea5a4bb-f938-43ea-b514-783a8fa1b236.png" : content.hero.imageUrl || "/placeholder.svg"
+  const heroOverlayClass = isStaging
+    ? "from-black/30 via-black/20 to-pink-900/40"
+    : "from-black/70 via-black/40 to-transparent"
 
   return (
     <ErrorBoundary>
@@ -328,8 +338,12 @@ export default function HomePage() {
                 "data-field-path": "home.hero.imageUrl",
               })}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent z-10" />
-            <div className="relative z-20 text-white text-center px-4 max-w-5xl mx-auto">
+            <div className={`absolute inset-0 bg-gradient-to-t ${heroOverlayClass} z-10`} />
+            <div
+              className={`relative z-20 text-white text-center px-4 max-w-5xl mx-auto transition-opacity duration-700 ${
+                showHeroContent ? "opacity-100" : "opacity-0"
+              }`}
+            >
               <h1
                 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold mb-4 leading-tight tracking-tight animate-fade-in-up text-shadow-outline"
                 {...(isEditorMode && {
