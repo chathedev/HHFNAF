@@ -324,7 +324,7 @@ export default function HomePage() {
         <Header />
         <main>
           {/* Hero Section */}
-          <section className={`relative w-full min-h-[72vh] sm:min-h-[80vh] md:min-h-[90vh] lg:min-h-screen flex items-center justify-center overflow-hidden ${
+          <section className={`relative w-full min-h-screen flex items-center justify-center overflow-hidden ${
             isStaging ? "bg-gradient-to-br from-pink-50 via-pink-100 to-rose-200" : ""
           }`}>
             <Image
@@ -370,12 +370,12 @@ export default function HomePage() {
               </>
             )}
             <div
-              className={`relative z-20 text-white text-center px-4 max-w-5xl mx-auto transition-opacity duration-700 ${
+              className={`relative z-20 text-white text-center px-4 sm:px-6 md:px-8 max-w-5xl mx-auto transition-opacity duration-700 w-full ${
                 showHeroContent ? "opacity-100" : "opacity-0"
               }`}
             >
               <h1
-                className={`text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold mb-4 leading-tight tracking-tight animate-fade-in-up text-shadow-outline ${
+                className={`text-4xl xs:text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold mb-4 sm:mb-6 leading-tight tracking-tight animate-fade-in-up text-shadow-outline ${
                   isStaging ? "drop-shadow-2xl filter drop-shadow-[0_0_20px_rgba(236,72,153,0.3)]" : ""
                 }`}
                 {...(isEditorMode && {
@@ -390,7 +390,7 @@ export default function HomePage() {
                 )}
               </h1>
               <p
-                className="text-lg sm:text-xl md:text-2xl mb-10 max-w-3xl mx-auto animate-fade-in-up delay-200 text-shadow-md"
+                className="text-base sm:text-lg md:text-xl lg:text-2xl mb-8 sm:mb-10 max-w-3xl mx-auto animate-fade-in-up delay-200 text-shadow-md px-2 sm:px-0"
                 {...(isEditorMode && {
                   "data-editable": "true",
                   "data-field-path": "home.hero.description",
@@ -398,14 +398,14 @@ export default function HomePage() {
               >
                 {content.hero.description}
               </p>
-              <div className="flex flex-col sm:flex-row justify-center gap-6 animate-fade-in-up delay-400 mb-12">
+              <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 animate-fade-in-up delay-400 mb-8 sm:mb-12 px-2 sm:px-0">
                 <Button
                   asChild
                   className={`${
                     isStaging 
                       ? "bg-pink-500 hover:bg-pink-600 focus:ring-pink-300 shadow-pink-500/25" 
                       : "bg-orange-500 hover:bg-orange-600 focus:ring-orange-300"
-                  } text-white px-10 py-4 rounded-md text-lg font-semibold shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-4`}
+                  } text-white px-6 sm:px-10 py-3 sm:py-4 rounded-md text-base sm:text-lg font-semibold shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-4 w-full sm:w-auto`}
                 >
                   <Link href={content.hero.button1Link}>
                     <span
@@ -423,9 +423,9 @@ export default function HomePage() {
                   asChild
                   className={`${
                     isStaging 
-                      ? "bg-rose-600 hover:bg-rose-700 focus:ring-rose-300 shadow-rose-500/25" 
+                      ? "bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-300 shadow-emerald-500/25" 
                       : "bg-green-700 hover:bg-green-800 focus:ring-green-300"
-                  } text-white px-10 py-4 rounded-md text-lg font-semibold shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-4`}
+                  } text-white px-6 sm:px-10 py-3 sm:py-4 rounded-md text-base sm:text-lg font-semibold shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-4 w-full sm:w-auto`}
                 >
                   <Link href={content.hero.button2Link}>
                     <span
@@ -469,7 +469,7 @@ export default function HomePage() {
           </section>
 
           {/* Stats Section */}
-          <section className="text-white py-12 bg-green-600/90">
+          <section className={`text-white py-12 ${isStaging ? "bg-gradient-to-r from-pink-500/90 to-rose-600/90" : "bg-green-600/90"}`}>
             <div className="container mx-auto px-4">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
                 <div className="flex flex-col items-center">
@@ -755,8 +755,8 @@ export default function HomePage() {
                                           </span>
                                         )}
                                         {match.matchStatus === "halftime" && (
-                                          <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2.5 py-0.5 text-xs font-semibold text-orange-600">
-                                            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-orange-500" />
+                                          <span className={`inline-flex items-center gap-1 rounded-full bg-white/70 px-2.5 py-0.5 text-xs font-semibold ${isStaging ? "text-pink-600" : "text-orange-600"}`}>
+                                            <span className={`h-1.5 w-1.5 animate-pulse rounded-full ${isStaging ? "bg-pink-500" : "bg-orange-500"}`} />
                                             Paus
                                           </span>
                                         )}
@@ -801,7 +801,7 @@ export default function HomePage() {
                                           href={TICKET_URL}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600"
+                                          className={`inline-flex items-center gap-2 rounded-xl ${isStaging ? "bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600" : "bg-orange-500 hover:bg-orange-600"} px-5 py-2.5 text-sm font-semibold text-white transition`}
                                         >
                                           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
@@ -846,7 +846,7 @@ export default function HomePage() {
             <div className="container mx-auto px-4">
               <div className="text-center mb-8">
                 <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                  Upplev <span className="text-orange-500">Handboll</span> Live
+                  Upplev <span className={isStaging ? "text-pink-400" : "text-orange-500"}>Handboll</span> Live
                 </h2>
                 <p className="text-gray-600 max-w-xl mx-auto">
                   Följ våra matcher och stötta laget. Varje match är en upplevelse värd att dela.
@@ -855,11 +855,11 @@ export default function HomePage() {
 
               <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
                 {/* Se Matcher Card */}
-                <div className="group bg-white rounded-lg border border-gray-200 hover:border-green-300 transition-all duration-200 overflow-hidden">
+                <div className={`group bg-white rounded-lg border border-gray-200 ${isStaging ? "hover:border-pink-300" : "hover:border-green-300"} transition-all duration-200 overflow-hidden`}>
                   <div className="p-6">
                     <div className="flex items-center mb-4">
-                      <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                        <Trophy className="w-5 h-5 text-green-600" />
+                      <div className={`w-10 h-10 ${isStaging ? "bg-pink-100" : "bg-green-100"} rounded-lg flex items-center justify-center mr-3`}>
+                        <Trophy className={`w-5 h-5 ${isStaging ? "text-pink-600" : "text-green-600"}`} />
                       </div>
                       <h3 className="text-xl font-semibold text-gray-900">Se Matcher</h3>
                     </div>
@@ -871,7 +871,7 @@ export default function HomePage() {
 
                     <Link
                       href="/matcher"
-                      className="inline-flex items-center text-green-600 hover:text-green-700 font-medium text-sm group-hover:translate-x-1 transition-transform"
+                      className={`inline-flex items-center ${isStaging ? "text-pink-600 hover:text-pink-700" : "text-green-600 hover:text-green-700"} font-medium text-sm group-hover:translate-x-1 transition-transform`}
                     >
                       Se Alla Matcher
                       <ArrowRight className="ml-2 h-4 w-4" />
@@ -883,8 +883,8 @@ export default function HomePage() {
                 <div className="group bg-white rounded-lg border border-gray-200 hover:border-orange-300 transition-all duration-200 overflow-hidden">
                   <div className="p-6">
                     <div className="flex items-center mb-4">
-                      <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
-                        <Star className="w-5 h-5 text-orange-600" />
+                      <div className={`w-10 h-10 ${isStaging ? "bg-emerald-100" : "bg-orange-100"} rounded-lg flex items-center justify-center mr-3`}>
+                        <Star className={`w-5 h-5 ${isStaging ? "text-emerald-600" : "text-orange-600"}`} />
                       </div>
                       <h3 className="text-xl font-semibold text-gray-900">Köp Biljetter</h3>
                     </div>
@@ -898,7 +898,7 @@ export default function HomePage() {
                       href="https://clubs.clubmate.se/harnosandshf/overview/"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center text-orange-600 hover:text-orange-700 font-medium text-sm group-hover:translate-x-1 transition-transform"
+                      className={`inline-flex items-center ${isStaging ? "text-emerald-600 hover:text-emerald-700" : "text-orange-600 hover:text-orange-700"} font-medium text-sm group-hover:translate-x-1 transition-transform`}
                     >
                       Köp Biljetter Nu
                       <ArrowRight className="ml-2 h-4 w-4" />
@@ -918,7 +918,7 @@ export default function HomePage() {
               <div className="grid md:grid-cols-2 gap-12 items-center">
                 <div>
                   <h2
-                    className="text-4xl font-bold text-green-600 mb-2"
+                    className={`text-4xl font-bold ${isStaging ? "text-pink-600" : "text-green-600"} mb-2`}
                     {...(isEditorMode && {
                       "data-editable": "true",
                       "data-field-path": "home.aboutClub.title",
@@ -949,7 +949,7 @@ export default function HomePage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
                     <div className="border border-gray-200 rounded-lg p-6 text-center">
-                      <Heart className="w-8 h-8 text-green-600 mx-auto mb-3" />
+                      <Heart className={`w-8 h-8 ${isStaging ? "text-pink-600" : "text-green-600"} mx-auto mb-3`} />
                       <h4 className="font-medium mb-2 text-black text-base">Passion</h4>
                       <p
                         className="text-sm text-gray-600 leading-relaxed"
@@ -977,7 +977,7 @@ export default function HomePage() {
                     </div>
 
                     <div className="border border-gray-200 rounded-lg p-6 text-center">
-                      <Users className="w-8 h-8 text-green-600 mx-auto mb-3" />
+                      <Users className={`w-8 h-8 ${isStaging ? "text-emerald-600" : "text-green-600"} mx-auto mb-3`} />
                       <h4 className="font-medium mb-2 text-black text-base">Gemenskap</h4>
                       <p
                         className="text-sm text-gray-600 leading-relaxed"
@@ -1087,12 +1087,12 @@ export default function HomePage() {
                     >
                       <CollapsibleTrigger asChild>
                         <div className="flex justify-between items-center mb-4 cursor-pointer">
-                          <h3 className="text-3xl font-bold text-green-600">{tierName}</h3>
+                          <h3 className={`text-3xl font-bold ${isStaging ? "text-emerald-600" : "text-green-600"}`}>{tierName}</h3>
                           <Button variant="ghost" size="icon" aria-expanded={openTier === tierName}>
                             {openTier === tierName ? (
-                              <Minus className="w-6 h-6 text-green-700" />
+                              <Minus className={`w-6 h-6 ${isStaging ? "text-emerald-700" : "text-green-700"}`} />
                             ) : (
-                              <Plus className="w-6 h-6 text-green-700" />
+                              <Plus className={`w-6 h-6 ${isStaging ? "text-emerald-700" : "text-green-700"}`} />
                             )}
                           </Button>
                         </div>
@@ -1150,7 +1150,7 @@ export default function HomePage() {
                   ),
               )}
 
-              <section className="bg-green-700 text-white p-10 rounded-lg shadow-xl text-center mt-16">
+              <section className={`${isStaging ? "bg-gradient-to-r from-rose-600 to-pink-700" : "bg-green-700"} text-white p-10 rounded-lg shadow-xl text-center mt-16`}>
                 <h2 className="text-4xl font-bold mb-4">Vill du stödja Härnösands HF?</h2>
                 <p className="text-xl mb-8">
                   Vi välkomnar nya partners som vill stödja vår verksamhet och bidra till utvecklingen av handbollen i
@@ -1167,7 +1167,7 @@ export default function HomePage() {
               </section>
 
               <section className="py-16 text-center">
-                <h2 className="text-4xl font-bold text-green-700 mb-8">Bli en del av vårt lag!</h2>
+                <h2 className={`text-4xl font-bold ${isStaging ? "text-pink-100" : "text-green-700"} mb-8`}>Bli en del av vårt lag!</h2>
                 <p className="text-xl text-gray-700 mb-10 max-w-3xl mx-auto">
                   Oavsett om du är nybörjare eller erfaren spelare, finns det en plats för dig i Härnösands HF. Kom och
                   upplev glädjen med handboll!
