@@ -10,8 +10,6 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Add empty turbopack config to silence warnings
-  turbopack: {},
   // Fix workspace root warning
   outputFileTracingRoot: __dirname,
   images: {
