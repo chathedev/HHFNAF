@@ -313,9 +313,9 @@ export default function HomePage() {
   const showResultCard = (status: string, hasResult: boolean) => status === "live" || status === "finished" || hasResult;
   const isStaging = siteVariant === "staging"
   const heroImageSrc =
-    isStaging ? "/7ea5a4bb-f938-43ea-b514-783a8fa1b236.png" : content.hero.imageUrl || "/placeholder.svg"
+    isStaging ? "/7ea5a4bb-f938-43ea-b514-783a8fa1b236.png" : content.hero.imageUrl || "/heropic.png"
   const heroOverlayClass = isStaging
-    ? "from-black/30 via-black/20 to-pink-900/40"
+    ? "from-pink-900/40 via-pink-800/20 to-rose-900/60"
     : "from-black/70 via-black/40 to-transparent"
 
   return (
@@ -324,34 +324,70 @@ export default function HomePage() {
         <Header />
         <main>
           {/* Hero Section */}
-          <section className="relative w-full min-h-[72vh] sm:min-h-[80vh] md:min-h-[90vh] lg:min-h-screen flex items-center justify-center overflow-hidden">
+          <section className={`relative w-full min-h-[72vh] sm:min-h-[80vh] md:min-h-[90vh] lg:min-h-screen flex items-center justify-center overflow-hidden ${
+            isStaging ? "bg-gradient-to-br from-pink-50 via-pink-100 to-rose-200" : ""
+          }`}>
             <Image
               src={heroImageSrc}
-              alt="Härnösands HF herrlag och damlag 2025"
+              alt={isStaging ? "Härnösands HF Memorial - Laget Före Allt" : "Härnösands HF herrlag och damlag 2025"}
               fill
-              quality={90}
-              priority
-              className="object-cover object-center z-0 transition-opacity duration-500"
-              sizes="(min-width: 1280px) 100vw, (min-width: 768px) 100vw, 100vw"
+              quality={100}
+              priority={true}
+              unoptimized={isStaging}
+              className={`object-cover object-center z-0 transition-all duration-700 ${
+                isStaging ? "saturate-125 contrast-110 brightness-105 hue-rotate-15" : ""
+              }`}
+              sizes="100vw"
+              onLoad={() => {
+                if (isStaging && !showHeroContent) {
+                  setTimeout(() => setShowHeroContent(true), 1000)
+                }
+              }}
+              onError={(e) => {
+                console.error('Hero image failed to load:', heroImageSrc)
+                if (isStaging) {
+                  // Force reload attempt for staging
+                  const img = e.target as HTMLImageElement
+                  setTimeout(() => {
+                    img.src = heroImageSrc + '?v=' + Date.now()
+                  }, 1000)
+                }
+              }}
               {...(isEditorMode && {
                 "data-editable": "true",
                 "data-field-path": "home.hero.imageUrl",
               })}
             />
-            <div className={`absolute inset-0 bg-gradient-to-t ${heroOverlayClass} z-10`} />
+            <div className={`absolute inset-0 bg-gradient-to-t ${heroOverlayClass} z-10 ${
+              isStaging ? "backdrop-blur-[0.5px]" : ""
+            }`} />
+            {isStaging && (
+              <>
+                <div className="absolute inset-0 z-5 bg-gradient-to-br from-pink-500/8 via-rose-400/5 to-pink-900/15 pointer-events-none" />
+                <div className="absolute inset-0 z-6 pointer-events-none" style={{
+                  background: 'radial-gradient(circle at center, transparent 20%, rgba(236,72,153,0.05) 50%, rgba(190,24,93,0.12) 100%)'
+                }} />
+              </>
+            )}
             <div
               className={`relative z-20 text-white text-center px-4 max-w-5xl mx-auto transition-opacity duration-700 ${
                 showHeroContent ? "opacity-100" : "opacity-0"
               }`}
             >
               <h1
-                className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold mb-4 leading-tight tracking-tight animate-fade-in-up text-shadow-outline"
+                className={`text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold mb-4 leading-tight tracking-tight animate-fade-in-up text-shadow-outline ${
+                  isStaging ? "drop-shadow-2xl filter drop-shadow-[0_0_20px_rgba(236,72,153,0.3)]" : ""
+                }`}
                 {...(isEditorMode && {
                   "data-editable": "true",
                   "data-field-path": "home.hero.title",
                 })}
               >
-                LAGET <span className="text-orange-500">FÖRE ALLT</span>
+                {isStaging ? (
+                  <>LAGET <span className="text-pink-300 drop-shadow-[0_0_30px_rgba(244,114,182,0.8)] animate-pulse">FÖRE ALLT</span></>
+                ) : (
+                  <>LAGET <span className="text-orange-500">FÖRE ALLT</span></>
+                )}
               </h1>
               <p
                 className="text-lg sm:text-xl md:text-2xl mb-10 max-w-3xl mx-auto animate-fade-in-up delay-200 text-shadow-md"
@@ -365,7 +401,11 @@ export default function HomePage() {
               <div className="flex flex-col sm:flex-row justify-center gap-6 animate-fade-in-up delay-400 mb-12">
                 <Button
                   asChild
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-10 py-4 rounded-md text-lg font-semibold shadow-lg transition-transform duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-orange-300"
+                  className={`${
+                    isStaging 
+                      ? "bg-pink-500 hover:bg-pink-600 focus:ring-pink-300 shadow-pink-500/25" 
+                      : "bg-orange-500 hover:bg-orange-600 focus:ring-orange-300"
+                  } text-white px-10 py-4 rounded-md text-lg font-semibold shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-4`}
                 >
                   <Link href={content.hero.button1Link}>
                     <span
@@ -381,7 +421,11 @@ export default function HomePage() {
                 </Button>
                 <Button
                   asChild
-                  className="bg-green-700 hover:bg-green-800 text-white px-10 py-4 rounded-md text-lg font-semibold shadow-lg transition-transform duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-green-300"
+                  className={`${
+                    isStaging 
+                      ? "bg-rose-600 hover:bg-rose-700 focus:ring-rose-300 shadow-rose-500/25" 
+                      : "bg-green-700 hover:bg-green-800 focus:ring-green-300"
+                  } text-white px-10 py-4 rounded-md text-lg font-semibold shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-4`}
                 >
                   <Link href={content.hero.button2Link}>
                     <span
