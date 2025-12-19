@@ -322,9 +322,9 @@ export default function HomePage() {
     <ErrorBoundary>
       <div>
         <Header />
-        <main className="mt-20 md:mt-24">
+        <main>
           {/* Hero Section */}
-          <section className={`relative w-full h-[70vh] md:h-[80vh] lg:h-[85vh] flex items-center justify-center overflow-hidden ${
+          <section className={`relative w-full h-screen flex items-center justify-center overflow-hidden ${
             isStaging ? "bg-gradient-to-br from-pink-50 via-pink-100 to-rose-200" : ""
           }`}>
             <Image
@@ -334,12 +334,12 @@ export default function HomePage() {
               quality={100}
               priority={true}
               unoptimized={isStaging}
-              className={`z-0 transition-all duration-700 object-contain sm:object-cover ${
+              className={`z-0 transition-all duration-700 object-cover ${
                 isStaging ? "saturate-125 contrast-110 brightness-105 hue-rotate-15" : ""
               }`}
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 100vw"
               style={{
-                objectPosition: 'center center'
+                objectPosition: 'center top'
               }}
               onLoad={() => {
                 if (isStaging && !showHeroContent) {
