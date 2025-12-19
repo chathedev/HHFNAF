@@ -9,7 +9,23 @@ import { Button } from "@/components/ui/button"
 
 function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const pathname = usePathname()
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 50) {
+        setScrolled(true)
+      } else {
+        setScrolled(false)
+      }
+    }
+
+    window.addEventListener("scroll", handleScroll)
+    return () => {
+      window.removeEventListener("scroll", handleScroll)
+    }
+  }, [])
 
   const visiblePaths = ["/", "/nyheter", "/lag", "/matcher", "/kontakt", "/kop-biljett"]
 
@@ -29,7 +45,15 @@ function Header() {
   return (
     <>
       <header
-        className="fixed top-0 left-0 w-full z-50 text-white shadow-lg bg-black/90 backdrop-blur-md transition-all duration-300"
+        className={`fixed top-0 left-0 w-full z-50 text-white shadow-lg transition-all duration-300
+          ${
+            pathname === "/"
+              ? scrolled
+                ? "bg-black/90 backdrop-blur-md"
+                : "bg-transparent backdrop-blur-none"
+              : "bg-black/90 backdrop-blur-md"
+          }
+        `}
       >
         <div className="container mx-auto px-4 py-2 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3">

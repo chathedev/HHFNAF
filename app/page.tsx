@@ -312,8 +312,12 @@ export default function HomePage() {
   // Helper for result card display logic
   const showResultCard = (status: string, hasResult: boolean) => status === "live" || status === "finished" || hasResult;
   const isStaging = siteVariant === "staging"
-  const heroImageSrc =
-    isStaging ? "/c38715eb-2128-43e0-b80b-48cc95620ffa.png" : content.hero.imageUrl || "/heropic.png"
+  const heroImageSrc = isStaging 
+    ? {
+        mobile: "/c38715eb-2128-43e0-b80b-48cc95620ffa.png",
+        desktop: "/7ea5a4bb-f938-43ea-b514-783a8fa1b236.png"
+      }
+    : content.hero.imageUrl || "/heropic.png"
   const heroOverlayClass = isStaging
     ? "from-pink-900/40 via-pink-800/20 to-rose-900/60"
     : "from-black/70 via-black/40 to-transparent"
@@ -322,26 +326,52 @@ export default function HomePage() {
     <ErrorBoundary>
       <div>
         <Header />
-        <main className="pt-20 md:pt-24">
+        <main>
           {/* Hero Section */}
-          <section className={`relative w-full h-[65vh] sm:h-[70vh] md:h-[75vh] lg:h-[80vh] xl:h-[85vh] flex items-center justify-center overflow-hidden ${
+          <section className={`relative w-full h-screen flex items-center justify-center overflow-hidden ${
             isStaging ? "bg-gradient-to-br from-pink-50 via-pink-100 to-rose-200" : ""
           }`}>
+            {/* Mobile Image */}
+            {isStaging && (
+              <Image
+                src={heroImageSrc.mobile}
+                alt="Härnösands HF Memorial - Laget Före Allt"
+                fill
+                quality={100}
+                priority={true}
+                unoptimized={true}
+                className="z-0 transition-all duration-700 object-cover saturate-125 contrast-110 brightness-105 hue-rotate-15 block sm:hidden"
+                sizes="100vw"
+                style={{
+                  objectPosition: 'center center'
+                }}
+                onLoad={() => {
+                  if (!showHeroContent) {
+                    setTimeout(() => setShowHeroContent(true), 1000)
+                  }
+                }}
+                onError={(e) => {
+                  console.error('Mobile hero image failed to load:', heroImageSrc.mobile)
+                }}
+              />
+            )}
+            
+            {/* Desktop Image */}
             <Image
-              src={heroImageSrc}
+              src={isStaging ? heroImageSrc.desktop : heroImageSrc}
               alt={isStaging ? "Härnösands HF Memorial - Laget Före Allt" : "Härnösands HF herrlag och damlag 2025"}
               fill
               quality={100}
               priority={true}
               unoptimized={isStaging}
-              className={`z-0 transition-all duration-700 ${
+              className={`z-0 transition-all duration-700 object-cover ${
                 isStaging 
-                  ? "object-cover sm:object-cover saturate-125 contrast-110 brightness-105 hue-rotate-15" 
-                  : "object-cover"
+                  ? "saturate-125 contrast-110 brightness-105 hue-rotate-15 hidden sm:block" 
+                  : "block"
               }`}
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 100vw"
               style={{
-                objectPosition: isStaging ? 'center center' : 'center center'
+                objectPosition: 'center center'
               }}
               onLoad={() => {
                 if (isStaging && !showHeroContent) {
