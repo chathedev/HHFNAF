@@ -324,7 +324,7 @@ export default function HomePage() {
         <Header />
         <main className="pt-20 md:pt-24">
           {/* Hero Section */}
-          <section className={`relative w-full h-[calc(100dvh-5rem)] md:h-[calc(100dvh-6rem)] flex items-center justify-center overflow-hidden ${
+          <section className={`relative w-full h-[60vh] sm:h-[70vh] md:h-[75vh] lg:h-[80vh] flex items-center justify-center overflow-hidden ${
             isStaging ? "bg-gradient-to-br from-pink-50 via-pink-100 to-rose-200" : ""
           }`}>
             <Image
