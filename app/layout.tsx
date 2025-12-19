@@ -5,7 +5,6 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ScrollToTop } from "@/components/scroll-to-top"
-import { StagingBanner } from "@/components/staging-banner"
 import { deriveSiteVariant } from "@/lib/site-variant"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -322,7 +321,6 @@ export default async function RootLayout({
           </span>
         </div>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          {siteVariant === "staging" ? <StagingBanner /> : null}
           <ScrollToTop />
           {children}
         </ThemeProvider>
