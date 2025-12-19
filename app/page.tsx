@@ -324,7 +324,7 @@ export default function HomePage() {
         <Header />
         <main className="pt-20 md:pt-24">
           {/* Hero Section */}
-          <section className={`relative w-full h-[calc(100vh-5rem)] md:h-[calc(100vh-6rem)] flex items-center justify-center overflow-hidden ${
+          <section className={`relative w-full h-[calc(100dvh-5rem)] md:h-[calc(100dvh-6rem)] flex items-center justify-center overflow-hidden ${
             isStaging ? "bg-gradient-to-br from-pink-50 via-pink-100 to-rose-200" : ""
           }`}>
             <Image
@@ -339,7 +339,7 @@ export default function HomePage() {
               }`}
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 100vw"
               style={{
-                objectPosition: 'center top'
+                objectPosition: 'center center'
               }}
               onLoad={() => {
                 if (isStaging && !showHeroContent) {
