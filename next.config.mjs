@@ -12,6 +12,8 @@ const nextConfig = {
   },
   // Fix workspace root warning
   outputFileTracingRoot: __dirname,
+  // Add empty turbopack config to silence warnings and enable Turbopack compatibility
+  turbopack: {},
   images: {
     remotePatterns: [
       {

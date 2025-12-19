@@ -2,8 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@import '../styles/real-time-updates.css';
-
 :root {
   --foreground-rgb: 0, 0, 0;
   --background-rgb: 255, 255, 255;
@@ -493,5 +491,182 @@ body.hhf-staging .staging-ribbon__pulse {
   body.hhf-staging .staging-ribbon__inner {
     justify-content: center;
     text-align: center;
+  }
+}
+
+/* Real-time update animations and transitions */
+
+/* Smooth score updates */
+[data-score-value="true"] {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.score-updated {
+  animation: scoreUpdate 0.6s ease-out;
+}
+
+@keyframes scoreUpdate {
+  0% { 
+    transform: scale(1); 
+    color: inherit;
+  }
+  50% { 
+    transform: scale(1.15); 
+    color: rgb(16, 185, 129);
+  }
+  100% { 
+    transform: scale(1); 
+    color: inherit;
+  }
+}
+
+/* Live badge pulse animation */
+.live-badge {
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { 
+    opacity: 1; 
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.8; 
+    transform: scale(1.05);
+  }
+}
+
+/* Match card hover and update animations */
+.match-card {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.match-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Timeline event animations */
+.timeline-event {
+  transition: all 0.3s ease-out;
+}
+
+.timeline-event.new-event {
+  animation: slideInFromLeft 0.5s ease-out;
+}
+
+@keyframes slideInFromLeft {
+  0% {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Match status indicators */
+.status-live {
+  animation: statusPulse 2s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Smooth data refresh indication */
+.data-refreshing {
+  opacity: 0.7;
+  transition: opacity 0.3s ease-in-out;
+}
+
+/* Loading skeleton animation */
+.loading-skeleton {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Goal celebration animation */
+.goal-celebration {
+  animation: goalPulse 0.6s ease-out;
+}
+
+@keyframes goalPulse {
+  0% { 
+    transform: scale(1); 
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+  50% { 
+    transform: scale(1.015); 
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.25);
+  }
+  100% { 
+    transform: scale(1); 
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+/* Prevent layout shift during updates */
+.stable-layout {
+  contain: layout;
+}
+
+/* Smooth tab transitions */
+.tab-transition {
+  transition: all 0.15s ease-in-out;
+}
+
+/* Focus states for accessibility */
+.match-card:focus-visible {
+  outline: 2px solid rgb(16, 185, 129);
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .score-updated {
+    animation: scoreUpdateHighContrast 0.6s ease-out;
+  }
+  
+  @keyframes scoreUpdateHighContrast {
+    0%, 100% { 
+      transform: scale(1); 
+      background-color: transparent;
+    }
+    50% { 
+      transform: scale(1.15); 
+      background-color: yellow;
+      color: black;
+    }
+  }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .score-updated,
+  .live-badge,
+  .match-card,
+  .timeline-event,
+  .goal-celebration {
+    animation: none;
+  }
+  
+  .match-card,
+  .timeline-event,
+  [data-score-value="true"] {
+    transition: none;
   }
 }
