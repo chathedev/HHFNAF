@@ -22,6 +22,14 @@ Continue building your app on:
 
 **[https://v0.dev/chat/projects/boGcJCfXMAI](https://v0.dev/chat/projects/boGcJCfXMAI)**
 
+## Staging / test domain
+
+- Live stays on `harnosandshf.se` and staging runs on `hhf.wby.se` (same Vercel project).
+- The helper in `lib/site-variant.ts` inspects the request host (or `NEXT_PUBLIC_SITE_VARIANT`) to decide whether a request is `production` or `staging`.
+- A pink ribbon tribute theme and staging badge are applied only when the variant resolves to staging; the production host remains untouched.
+- Previewing staging locally: set `NEXT_PUBLIC_SITE_VARIANT=staging` before `npm run dev` to see the hhf.wby.se look without touching prod.
+- Ship experiments behind `deriveSiteVariant` / `isStagingVariant` guards so they live only on staging; remove the guard or flip the flag when explicitly promoting to live.
+
 ## How It Works
 
 1. Create and modify your project using [v0.dev](https://v0.dev)

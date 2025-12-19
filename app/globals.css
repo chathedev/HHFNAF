@@ -331,3 +331,165 @@ body {
     font-size: 11px;
   }
 }
+
+/* Staging-only pink ribbon theme (hhf.wby.se) */
+body.hhf-staging {
+  --staging-accent-50: #fdf2f8;
+  --staging-accent-100: #fce7f3;
+  --staging-accent-200: #fbcfe8;
+  --staging-accent-300: #f9a8d4;
+  --staging-accent-500: #ec4899;
+  --staging-accent-600: #db2777;
+  --staging-accent-700: #be185d;
+  --staging-glow: 0 10px 35px rgba(219, 39, 119, 0.25);
+  background-image: linear-gradient(180deg, rgba(252, 231, 243, 0.22), rgba(255, 255, 255, 0.75));
+  background-repeat: no-repeat;
+}
+
+body.hhf-staging .bg-orange-50,
+body.hhf-staging .from-orange-50,
+body.hhf-staging .to-orange-50 {
+  background-color: var(--staging-accent-50) !important;
+  background-image: none !important;
+}
+
+body.hhf-staging .bg-orange-100,
+body.hhf-staging .bg-orange-200,
+body.hhf-staging .from-orange-100,
+body.hhf-staging .from-orange-200,
+body.hhf-staging .to-orange-100,
+body.hhf-staging .to-orange-200 {
+  background-color: var(--staging-accent-100) !important;
+  background-image: none !important;
+}
+
+body.hhf-staging .bg-orange-500 {
+  background-color: var(--staging-accent-500) !important;
+}
+
+body.hhf-staging .bg-orange-600,
+body.hhf-staging .hover\:bg-orange-600:hover {
+  background-color: var(--staging-accent-600) !important;
+}
+
+body.hhf-staging .text-orange-500 {
+  color: var(--staging-accent-600) !important;
+}
+
+body.hhf-staging .text-orange-600,
+body.hhf-staging .text-orange-700,
+body.hhf-staging .text-orange-800 {
+  color: var(--staging-accent-700) !important;
+}
+
+body.hhf-staging .border-orange-200 {
+  border-color: var(--staging-accent-200) !important;
+}
+
+body.hhf-staging .shadow-orange-100 {
+  box-shadow: var(--staging-glow) !important;
+}
+
+body.hhf-staging .ring-orange-500,
+body.hhf-staging .focus\:ring-orange-500:focus {
+  --tw-ring-color: var(--staging-accent-500) !important;
+}
+
+body.hhf-staging .bg-orange-500\/10 {
+  background-color: rgba(236, 72, 153, 0.1) !important;
+}
+
+body.hhf-staging .bg-orange-100\/80 {
+  background-color: rgba(252, 231, 243, 0.8) !important;
+}
+
+body.hhf-staging .from-orange-500 {
+  --tw-gradient-from: var(--staging-accent-500) !important;
+  --tw-gradient-to: rgb(236 72 153 / 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+body.hhf-staging .to-orange-600 {
+  --tw-gradient-to: var(--staging-accent-600) !important;
+}
+
+body.hhf-staging .from-orange-600 {
+  --tw-gradient-from: var(--staging-accent-600) !important;
+  --tw-gradient-to: rgb(219 39 119 / 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+body.hhf-staging .to-orange-700 {
+  --tw-gradient-to: var(--staging-accent-700) !important;
+}
+
+body.hhf-staging .staging-ribbon {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 60;
+  max-width: 360px;
+  pointer-events: none;
+}
+
+body.hhf-staging .staging-ribbon__inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.95), rgba(190, 24, 93, 0.92));
+  color: #fff;
+  box-shadow: var(--staging-glow);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+body.hhf-staging .staging-ribbon__title {
+  margin: 0 0 4px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  font-size: 14px;
+}
+
+body.hhf-staging .staging-ribbon__copy {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.92;
+  line-height: 1.4;
+}
+
+body.hhf-staging .staging-ribbon__pulse {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: #fff;
+  box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.65);
+  animation: staging-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes staging-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.6);
+    transform: scale(0.94);
+  }
+  60% {
+    box-shadow: 0 0 0 14px rgba(255, 255, 255, 0);
+    transform: scale(1);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+    transform: scale(0.94);
+  }
+}
+
+@media (max-width: 640px) {
+  body.hhf-staging .staging-ribbon {
+    left: 1rem;
+    right: 1rem;
+  }
+
+  body.hhf-staging .staging-ribbon__inner {
+    justify-content: center;
+    text-align: center;
+  }
+}

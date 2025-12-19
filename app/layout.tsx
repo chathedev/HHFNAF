@@ -1,9 +1,12 @@
 import type React from "react"
 import type { Metadata } from "next"
+import { headers } from "next/headers"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ScrollToTop } from "@/components/scroll-to-top"
+import { StagingBanner } from "@/components/staging-banner"
+import { deriveSiteVariant } from "@/lib/site-variant"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -164,11 +167,21 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const requestHeaders = headers()
+  const host =
+    requestHeaders.get("x-forwarded-host") ||
+    requestHeaders.get("host") ||
+    process.env.NEXT_PUBLIC_VERCEL_URL ||
+    "localhost:3000"
+
+  const siteVariant = deriveSiteVariant(host)
+  const themeColor = siteVariant === "staging" ? "#db2777" : "#15803d"
+
   return (
-    <html lang="sv" suppressHydrationWarning>
+    <html lang="sv" suppressHydrationWarning data-site-variant={siteVariant}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#15803d" />
+        <meta name="theme-color" content={themeColor} />
         <meta name="format-detection" content="telephone=no" />
         <script
           type="application/ld+json"
@@ -288,7 +301,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${inter.className} bg-white`}>
+      <body className={`${inter.className} bg-white ${siteVariant === "staging" ? "hhf-staging" : ""}`}>
         <div style={{ display: "none", visibility: "hidden", position: "absolute", left: "-9999px" }}>
           <h1>Härnösands HF Handbollsförening</h1>
           <p>
@@ -301,6 +314,7 @@ export default function RootLayout({
           </span>
         </div>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          {siteVariant === "staging" ? <StagingBanner /> : null}
           <ScrollToTop />
           {children}
         </ThemeProvider>
