@@ -383,7 +383,7 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
       latestEventText.includes("1:a halvlek slut") ||
       latestEventText.includes("första halvlek är slut") ||
       latestEventText.includes("första halvlek slut")
-    
+
     // Check if second half has started (means no longer in break)
     const secondHalfStarted = timeline.some((event) => {
       const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
@@ -394,23 +394,40 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
         text.includes("andra halvlek") && text.includes("start")
       )
     })
-    
+
+    // Check for ACTUAL match start to avoid premature "live" states from pre-game events
+    const firstHalfStarted = timeline.some((event) => {
+      const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
+      return (
+        text.includes("start första halvlek") ||
+        text.includes("första halvlek start") ||
+        text.includes("första halvlek började") ||
+        text.includes("1:a halvlek start") ||
+        text.includes("1a halvlek start") ||
+        text.includes("matchstart")
+      )
+    })
+
+    const matchStarted = firstHalfStarted || secondHalfStarted || isHalftimeBreak
+
     // PRIORITY OVERRIDE: Timeline-based status always wins for halftime/finished detection
     if (matchActuallyEnded) {
       derivedStatus = "finished"
     } else if (isHalftimeBreak && !secondHalfStarted) {
       // OVERRIDE: Always show halftime when detected, regardless of backend status
-      derivedStatus = "halftime" 
+      derivedStatus = "halftime"
     } else if (secondHalfStarted) {
       // OVERRIDE: Force live when second half starts
       derivedStatus = "live"
+    } else if (firstHalfStarted) {
+      // Only mark live once the match has actually kicked off
+      derivedStatus = "live"
+    } else if (derivedStatus === "live" && !matchStarted) {
+      // Backend says live but we haven't seen an actual start event yet
+      derivedStatus = "upcoming"
     } else if (!derivedStatus) {
       // Fallback to timeline-based detection if backend provided no status
-      if (hasTimelineEvents) {
-        derivedStatus = "live"
-      } else {
-        derivedStatus = "upcoming"
-      }
+      derivedStatus = matchStarted ? "live" : "upcoming"
     }
     // If backend provided status and no timeline override needed, keep backend status
   }
