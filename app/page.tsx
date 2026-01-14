@@ -27,7 +27,7 @@ import Footer from "@/components/footer"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { defaultContent } from "@/lib/default-content"
 import type { FullContent, Partner } from "@/lib/content-types"
-import { deriveSiteVariant, type SiteVariant } from "@/lib/site-variant"
+import { deriveSiteVariant, type SiteVariant, getThemeVariant, getHeroImages, type ThemeVariant } from "@/lib/site-variant"
 import { canShowTicketForMatch } from "@/lib/matches"
 import { extendTeamDisplayName } from "@/lib/team-display"
 import { useMatchData, shouldShowFinishedMatch, getMatchEndTime, type NormalizedMatch } from "@/lib/use-match-data"
@@ -54,12 +54,12 @@ const getMatchOutcome = (rawResult?: string, isHome?: boolean, status?: string):
   if (Number.isNaN(homeScore) || Number.isNaN(awayScore)) {
     return null
   }
-  
+
   // Don't show outcome badges for live matches - only show for finished matches
   if (status === "live") {
     return null
   }
-  
+
   const isAway = isHome === false
   const ourScore = isAway ? awayScore : homeScore
   const opponentScore = isAway ? homeScore : awayScore
@@ -91,7 +91,7 @@ const getDisplayScore = (rawResult?: string, isHome?: boolean): string | null =>
   if (Number.isNaN(homeScore) || Number.isNaN(awayScore)) {
     return null
   }
-  
+
   // Match the team display order:
   // If we're home: "Härnösands HF vs Opponent" → show homeScore–awayScore
   // If we're away: "Opponent vs Härnösands HF" → show homeScore–awayScore (opponent is home)
@@ -118,7 +118,13 @@ export default function HomePage() {
 
   const [content] = useState<FullContent>(defaultContent)
   const [siteVariant, setSiteVariant] = useState<SiteVariant>(getInitialVariant)
-  const [showHeroContent, setShowHeroContent] = useState<boolean>(getInitialVariant() !== "staging")
+  const [themeVariant, setThemeVariant] = useState<ThemeVariant>(() => {
+    if (typeof window !== "undefined") {
+      return getThemeVariant(window.location.host)
+    }
+    return "orange"
+  })
+  const [showHeroContent, setShowHeroContent] = useState<boolean>(true)
   const [openTier, setOpenTier] = useState<string | null>("Diamantpartner")
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   const {
@@ -185,23 +191,23 @@ export default function HomePage() {
     const now = Date.now()
     const twoHoursAgo = now - 1000 * 60 * 60 * 2
     const liveLookbackMs = 1000 * 60 * 60 * 6
-    
+
     // Home page: Show upcoming, live (within window), and recently finished matches
     const statusOrder: Record<string, number> = { live: 0, upcoming: 1, finished: 2 }
-    
+
     const matchesInWindow = upcomingMatches.filter((match) => {
       const kickoff = match.date.getTime()
       const status = match.matchStatus ?? (kickoff >= now ? "upcoming" : "finished")
-      
+
       if (status === "finished") {
         // Use enhanced helper function for home page (4 hours retention = 2 extra hours after 2-hour match)
         return shouldShowFinishedMatch(match, 4)
       }
-      
+
       if (status === "live" || status === "halftime") {
         return kickoff >= now - liveLookbackMs
       }
-      
+
       return status === "upcoming"
     })
 
@@ -296,10 +302,8 @@ export default function HomePage() {
     const resolved = deriveSiteVariant(window.location.host)
     setSiteVariant(resolved)
 
-    if (resolved === "staging") {
-      setShowHeroContent(false)
-      window.setTimeout(() => setShowHeroContent(true), 5000)
-    }
+    const resolvedTheme = getThemeVariant(window.location.host)
+    setThemeVariant(resolvedTheme)
   }, [])
 
   function shouldShowTicketButton(match: NormalizedMatch): boolean {
@@ -311,14 +315,9 @@ export default function HomePage() {
 
   // Helper for result card display logic
   const showResultCard = (status: string, hasResult: boolean) => status === "live" || status === "finished" || hasResult;
-  const isStaging = siteVariant === "staging"
-  const heroImageSrc = isStaging 
-    ? {
-        mobile: "/c38715eb-2128-43e0-b80b-48cc95620ffa.png",
-        desktop: "/7ea5a4bb-f938-43ea-b514-783a8fa1b236.png"
-      }
-    : content.hero.imageUrl || "/heropic.png"
-  const heroOverlayClass = isStaging
+  const isPinkTheme = themeVariant === "pink"
+  const heroImages = typeof window !== "undefined" ? getHeroImages(window.location.host) : getHeroImages()
+  const heroOverlayClass = isPinkTheme
     ? "from-pink-900/40 via-pink-800/20 to-rose-900/60"
     : "from-black/70 via-black/40 to-transparent"
 
@@ -328,13 +327,12 @@ export default function HomePage() {
         <Header />
         <main>
           {/* Hero Section */}
-          <section className={`relative w-full h-screen flex items-center justify-center overflow-hidden ${
-            isStaging ? "bg-gradient-to-br from-pink-50 via-pink-100 to-rose-200" : ""
-          }`}>
+          <section className={`relative w-full h-screen flex items-center justify-center overflow-hidden ${isPinkTheme ? "bg-gradient-to-br from-pink-50 via-pink-100 to-rose-200" : ""
+            }`}>
             {/* Mobile Image */}
-            {isStaging && (
+            {isPinkTheme && (
               <Image
-                src={heroImageSrc.mobile}
+                src={heroImages.mobile}
                 alt="Härnösands HF Memorial - Laget Före Allt"
                 fill
                 quality={100}
@@ -351,40 +349,39 @@ export default function HomePage() {
                   }
                 }}
                 onError={(e) => {
-                  console.error('Mobile hero image failed to load:', heroImageSrc.mobile)
+                  console.error('Mobile hero image failed to load:', heroImages.mobile)
                 }}
               />
             )}
-            
+
             {/* Desktop Image */}
             <Image
-              src={isStaging ? heroImageSrc.desktop : heroImageSrc}
-              alt={isStaging ? "Härnösands HF Memorial - Laget Före Allt" : "Härnösands HF herrlag och damlag 2025"}
+              src={isPinkTheme ? heroImages.desktop : heroImages.desktop}
+              alt={isPinkTheme ? "Härnösands HF Memorial - Laget Före Allt" : "Härnösands HF herrlag och damlag 2025"}
               fill
               quality={100}
               priority={true}
-              unoptimized={isStaging}
-              className={`z-0 transition-all duration-700 object-cover ${
-                isStaging 
-                  ? "saturate-125 contrast-110 brightness-105 hue-rotate-15 hidden sm:block" 
+              unoptimized={isPinkTheme}
+              className={`z-0 transition-all duration-700 object-cover ${isPinkTheme
+                  ? "saturate-125 contrast-110 brightness-105 hue-rotate-15 hidden sm:block"
                   : "block"
-              }`}
+                }`}
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 100vw"
               style={{
                 objectPosition: 'center center'
               }}
               onLoad={() => {
-                if (isStaging && !showHeroContent) {
+                if (isPinkTheme && !showHeroContent) {
                   setTimeout(() => setShowHeroContent(true), 1000)
                 }
               }}
               onError={(e) => {
-                console.error('Hero image failed to load:', heroImageSrc)
-                if (isStaging) {
-                  // Force reload attempt for staging
+                console.error('Hero image failed to load:', heroImages.desktop)
+                if (isPinkTheme) {
+                  // Force reload attempt
                   const img = e.target as HTMLImageElement
                   setTimeout(() => {
-                    img.src = heroImageSrc + '?v=' + Date.now()
+                    img.src = heroImages.desktop + '?v=' + Date.now()
                   }, 1000)
                 }
               }}
@@ -393,10 +390,9 @@ export default function HomePage() {
                 "data-field-path": "home.hero.imageUrl",
               })}
             />
-            <div className={`absolute inset-0 bg-gradient-to-t ${heroOverlayClass} z-10 ${
-              isStaging ? "backdrop-blur-[0.5px]" : ""
-            }`} />
-            {isStaging && (
+            <div className={`absolute inset-0 bg-gradient-to-t ${heroOverlayClass} z-10 ${isPinkTheme ? "backdrop-blur-[0.5px]" : ""
+              }`} />
+            {isPinkTheme && (
               <>
                 <div className="absolute inset-0 z-5 bg-gradient-to-br from-pink-500/8 via-rose-400/5 to-pink-900/15 pointer-events-none" />
                 <div className="absolute inset-0 z-6 pointer-events-none" style={{
@@ -405,20 +401,18 @@ export default function HomePage() {
               </>
             )}
             <div
-              className={`relative z-20 text-white text-center px-4 sm:px-6 md:px-8 max-w-5xl mx-auto transition-opacity duration-700 w-full h-full flex flex-col justify-center items-center ${
-                showHeroContent ? "opacity-100" : "opacity-0"
-              }`}
+              className={`relative z-20 text-white text-center px-4 sm:px-6 md:px-8 max-w-5xl mx-auto transition-opacity duration-700 w-full h-full flex flex-col justify-center items-center ${showHeroContent ? "opacity-100" : "opacity-0"
+                }`}
             >
               <h1
-                className={`text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold mb-3 sm:mb-4 md:mb-6 leading-tight tracking-tight animate-fade-in-up text-shadow-outline ${
-                  isStaging ? "drop-shadow-2xl filter drop-shadow-[0_0_20px_rgba(236,72,153,0.3)]" : ""
-                }`}
+                className={`text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold mb-3 sm:mb-4 md:mb-6 leading-tight tracking-tight animate-fade-in-up text-shadow-outline ${isPinkTheme ? "drop-shadow-2xl filter drop-shadow-[0_0_20px_rgba(236,72,153,0.3)]" : ""
+                  }`}
                 {...(isEditorMode && {
                   "data-editable": "true",
                   "data-field-path": "home.hero.title",
                 })}
               >
-                {isStaging ? (
+                {isPinkTheme ? (
                   <>LAGET <span className="text-pink-300 drop-shadow-[0_0_30px_rgba(244,114,182,0.8)] animate-pulse">FÖRE ALLT</span></>
                 ) : (
                   <>LAGET <span className="text-orange-500">FÖRE ALLT</span></>
@@ -436,11 +430,10 @@ export default function HomePage() {
               <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 animate-fade-in-up delay-400 mb-8 sm:mb-12 px-2 sm:px-0">
                 <Button
                   asChild
-                  className={`${
-                    isStaging 
-                      ? "bg-pink-500 hover:bg-pink-600 focus:ring-pink-300 shadow-pink-500/25" 
+                  className={`${isPinkTheme
+                      ? "bg-pink-500 hover:bg-pink-600 focus:ring-pink-300 shadow-pink-500/25"
                       : "bg-orange-500 hover:bg-orange-600 focus:ring-orange-300"
-                  } text-white px-6 sm:px-10 py-3 sm:py-4 rounded-md text-base sm:text-lg font-semibold shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-4 w-full sm:w-auto`}
+                    } text-white px-6 sm:px-10 py-3 sm:py-4 rounded-md text-base sm:text-lg font-semibold shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-4 w-full sm:w-auto`}
                 >
                   <Link href={content.hero.button1Link}>
                     <span
@@ -456,11 +449,10 @@ export default function HomePage() {
                 </Button>
                 <Button
                   asChild
-                  className={`${
-                    isStaging 
-                      ? "bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-300 shadow-emerald-500/25" 
+                  className={`${isPinkTheme
+                      ? "bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-300 shadow-emerald-500/25"
                       : "bg-green-700 hover:bg-green-800 focus:ring-green-300"
-                  } text-white px-6 sm:px-10 py-3 sm:py-4 rounded-md text-base sm:text-lg font-semibold shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-4 w-full sm:w-auto`}
+                    } text-white px-6 sm:px-10 py-3 sm:py-4 rounded-md text-base sm:text-lg font-semibold shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-4 w-full sm:w-auto`}
                 >
                   <Link href={content.hero.button2Link}>
                     <span
@@ -504,7 +496,7 @@ export default function HomePage() {
           </section>
 
           {/* Stats Section */}
-          <section className={`text-white py-12 ${isStaging ? "bg-gradient-to-r from-pink-500/90 to-rose-600/90" : "bg-green-600/90"}`}>
+          <section className={`text-white py-12 ${isPinkTheme ? "bg-gradient-to-r from-pink-500/90 to-rose-600/90" : "bg-green-600/90"}`}>
             <div className="container mx-auto px-4">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
                 <div className="flex flex-col items-center">
@@ -600,26 +592,26 @@ export default function HomePage() {
                           const status = getMatchStatus(match)
                           const outcomeInfo = getMatchOutcome(match.result, match.isHome, status)
                           const displayScore = getDisplayScore(match.result, match.isHome)
-                          
+
                           // Check if result is stale (0-0 shown when match should be finished)
                           const now = Date.now()
                           const minutesSinceKickoff = (now - match.date.getTime()) / (1000 * 60)
                           const trimmedResult = typeof match.result === "string" ? match.result.trim() : null
-                          
+
                           // Normalize the result to check for any variation of 0-0
                           const normalizedResult = trimmedResult?.replace(/[–-]/g, '-').toLowerCase()
                           const isZeroZero = normalizedResult === "0-0" || normalizedResult === "00" || trimmedResult === "0-0" || trimmedResult === "0–0"
-                          
+
                           // A handball match typically lasts 60 minutes (2x30 min) + breaks ~10-15 min = ~75 minutes max
                           // Only consider match finished if backend says so OR if way past reasonable time (2+ hours) AND showing stale 0-0
                           const matchShouldBeFinished = minutesSinceKickoff > 120 && isZeroZero && status !== "live"
-                          
+
                           // If match shows 0-0 and should be finished, treat as unpublished result
                           const isStaleZeroResult = isZeroZero && matchShouldBeFinished
-                          
+
                           // Show LIVE badge if status is live (trust backend during halftime)
                           const shouldShowLive = status === "live"
-                          
+
                           const isFutureOrLive = match.date.getTime() >= Date.now() || (status === "live" && !matchShouldBeFinished)
                           const showTicket =
                             status !== "finished" &&
@@ -627,14 +619,14 @@ export default function HomePage() {
                             !outcomeInfo &&
                             canShowTicketForMatch(match) &&
                             isHome
-                          
+
                           // Only allow clicking timeline for live or finished matches
                           const canOpenTimeline = (status === "live" && !matchShouldBeFinished) || status === "finished"
 
                           // Enhanced logic: Only show finished matches with REAL results (greater than 0-0)
                           const result = match.result?.trim() || ""
                           let hasRealResult = false
-                          
+
                           if (result && result.toLowerCase() !== "inte publicerat") {
                             const scoreMatch = result.match(/(\d+)[-–](\d+)/)
                             if (scoreMatch) {
@@ -647,9 +639,9 @@ export default function HomePage() {
 
                           let scoreValue: string | null = null
                           let scoreSupportingText: string | null = null
-                          
+
                           // Helper for showing result card - show finished only if real result
-                          const shouldShowCard = (status: string, hasRealResult: boolean) => 
+                          const shouldShowCard = (status: string, hasRealResult: boolean) =>
                             status === "live" || (status === "finished" && hasRealResult) || hasRealResult;
 
                           if (hasRealResult) {
@@ -695,11 +687,10 @@ export default function HomePage() {
 
                           return (
                             <li key={match.id}>
-                              <div 
-                                id={`match-card-${match.id}`} 
-                                className={`bg-white rounded-lg border border-gray-200 hover:border-emerald-400 hover:shadow-lg transition-all p-6 group relative ${
-                                  canOpenTimeline ? "cursor-pointer" : ""
-                                }`}
+                              <div
+                                id={`match-card-${match.id}`}
+                                className={`bg-white rounded-lg border border-gray-200 hover:border-emerald-400 hover:shadow-lg transition-all p-6 group relative ${canOpenTimeline ? "cursor-pointer" : ""
+                                  }`}
                                 onClick={() => canOpenTimeline && setSelectedMatchId(match.id)}
                                 role={canOpenTimeline ? "button" : undefined}
                                 tabIndex={canOpenTimeline ? 0 : undefined}
@@ -721,7 +712,7 @@ export default function HomePage() {
                                     </span>
                                   </div>
                                 )}
-                                
+
                                 {/* Header */}
                                 <div className="flex items-start justify-between mb-4">
                                   <div className="flex-1">
@@ -750,7 +741,7 @@ export default function HomePage() {
                                       <p className="text-xs text-gray-500 mt-1">{match.series}</p>
                                     )}
                                   </div>
-                                  
+
                                   {match.infoUrl && (
                                     <Link
                                       href={match.infoUrl}
@@ -790,21 +781,20 @@ export default function HomePage() {
                                           </span>
                                         )}
                                         {match.matchStatus === "halftime" && (
-                                          <span className={`inline-flex items-center gap-1 rounded-full bg-white/70 px-2.5 py-0.5 text-xs font-semibold ${isStaging ? "text-pink-600" : "text-orange-600"}`}>
-                                            <span className={`h-1.5 w-1.5 animate-pulse rounded-full ${isStaging ? "bg-pink-500" : "bg-orange-500"}`} />
+                                          <span className={`inline-flex items-center gap-1 rounded-full bg-white/70 px-2.5 py-0.5 text-xs font-semibold ${isPinkTheme ? "text-pink-600" : "text-orange-600"}`}>
+                                            <span className={`h-1.5 w-1.5 animate-pulse rounded-full ${isPinkTheme ? "bg-pink-500" : "bg-orange-500"}`} />
                                             Paus
                                           </span>
                                         )}
                                       </div>
                                       {status === "finished" && outcomeInfo?.label && outcomeInfo.label !== "Ej publicerat" && (
                                         <span
-                                          className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                                            outcomeInfo.label === "Vinst"
+                                          className={`text-xs font-semibold px-2.5 py-1 rounded-full ${outcomeInfo.label === "Vinst"
                                               ? "bg-emerald-100 text-emerald-800"
                                               : outcomeInfo.label === "Förlust"
                                                 ? "bg-red-100 text-red-700"
                                                 : "bg-slate-200 text-slate-700"
-                                          }`}
+                                            }`}
                                         >
                                           {outcomeInfo.label}
                                         </span>
@@ -836,7 +826,7 @@ export default function HomePage() {
                                           href={TICKET_URL}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          className={`inline-flex items-center gap-2 rounded-xl ${isStaging ? "bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600" : "bg-orange-500 hover:bg-orange-600"} px-5 py-2.5 text-sm font-semibold text-white transition`}
+                                          className={`inline-flex items-center gap-2 rounded-xl ${isPinkTheme ? "bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600" : "bg-orange-500 hover:bg-orange-600"} px-5 py-2.5 text-sm font-semibold text-white transition`}
                                         >
                                           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
@@ -881,7 +871,7 @@ export default function HomePage() {
             <div className="container mx-auto px-4">
               <div className="text-center mb-8">
                 <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                  Upplev <span className={isStaging ? "text-pink-400" : "text-orange-500"}>Handboll</span> Live
+                  Upplev <span className={isPinkTheme ? "text-pink-400" : "text-orange-500"}>Handboll</span> Live
                 </h2>
                 <p className="text-gray-600 max-w-xl mx-auto">
                   Följ våra matcher och stötta laget. Varje match är en upplevelse värd att dela.
@@ -890,11 +880,11 @@ export default function HomePage() {
 
               <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
                 {/* Se Matcher Card */}
-                <div className={`group bg-white rounded-lg border border-gray-200 ${isStaging ? "hover:border-pink-300" : "hover:border-green-300"} transition-all duration-200 overflow-hidden`}>
+                <div className={`group bg-white rounded-lg border border-gray-200 ${isPinkTheme ? "hover:border-pink-300" : "hover:border-green-300"} transition-all duration-200 overflow-hidden`}>
                   <div className="p-6">
                     <div className="flex items-center mb-4">
-                      <div className={`w-10 h-10 ${isStaging ? "bg-pink-100" : "bg-green-100"} rounded-lg flex items-center justify-center mr-3`}>
-                        <Trophy className={`w-5 h-5 ${isStaging ? "text-pink-600" : "text-green-600"}`} />
+                      <div className={`w-10 h-10 ${isPinkTheme ? "bg-pink-100" : "bg-green-100"} rounded-lg flex items-center justify-center mr-3`}>
+                        <Trophy className={`w-5 h-5 ${isPinkTheme ? "text-pink-600" : "text-green-600"}`} />
                       </div>
                       <h3 className="text-xl font-semibold text-gray-900">Se Matcher</h3>
                     </div>
@@ -906,7 +896,7 @@ export default function HomePage() {
 
                     <Link
                       href="/matcher"
-                      className={`inline-flex items-center ${isStaging ? "text-pink-600 hover:text-pink-700" : "text-green-600 hover:text-green-700"} font-medium text-sm group-hover:translate-x-1 transition-transform`}
+                      className={`inline-flex items-center ${isPinkTheme ? "text-pink-600 hover:text-pink-700" : "text-green-600 hover:text-green-700"} font-medium text-sm group-hover:translate-x-1 transition-transform`}
                     >
                       Se Alla Matcher
                       <ArrowRight className="ml-2 h-4 w-4" />
@@ -918,8 +908,8 @@ export default function HomePage() {
                 <div className="group bg-white rounded-lg border border-gray-200 hover:border-orange-300 transition-all duration-200 overflow-hidden">
                   <div className="p-6">
                     <div className="flex items-center mb-4">
-                      <div className={`w-10 h-10 ${isStaging ? "bg-emerald-100" : "bg-orange-100"} rounded-lg flex items-center justify-center mr-3`}>
-                        <Star className={`w-5 h-5 ${isStaging ? "text-emerald-600" : "text-orange-600"}`} />
+                      <div className={`w-10 h-10 ${isPinkTheme ? "bg-emerald-100" : "bg-orange-100"} rounded-lg flex items-center justify-center mr-3`}>
+                        <Star className={`w-5 h-5 ${isPinkTheme ? "text-emerald-600" : "text-orange-600"}`} />
                       </div>
                       <h3 className="text-xl font-semibold text-gray-900">Köp Biljetter</h3>
                     </div>
@@ -933,7 +923,7 @@ export default function HomePage() {
                       href="https://clubs.clubmate.se/harnosandshf/overview/"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`inline-flex items-center ${isStaging ? "text-emerald-600 hover:text-emerald-700" : "text-orange-600 hover:text-orange-700"} font-medium text-sm group-hover:translate-x-1 transition-transform`}
+                      className={`inline-flex items-center ${isPinkTheme ? "text-emerald-600 hover:text-emerald-700" : "text-orange-600 hover:text-orange-700"} font-medium text-sm group-hover:translate-x-1 transition-transform`}
                     >
                       Köp Biljetter Nu
                       <ArrowRight className="ml-2 h-4 w-4" />
@@ -953,7 +943,7 @@ export default function HomePage() {
               <div className="grid md:grid-cols-2 gap-12 items-center">
                 <div>
                   <h2
-                    className={`text-4xl font-bold ${isStaging ? "text-pink-600" : "text-green-600"} mb-2`}
+                    className={`text-4xl font-bold ${isPinkTheme ? "text-pink-600" : "text-green-600"} mb-2`}
                     {...(isEditorMode && {
                       "data-editable": "true",
                       "data-field-path": "home.aboutClub.title",
@@ -984,7 +974,7 @@ export default function HomePage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
                     <div className="border border-gray-200 rounded-lg p-6 text-center">
-                      <Heart className={`w-8 h-8 ${isStaging ? "text-pink-600" : "text-green-600"} mx-auto mb-3`} />
+                      <Heart className={`w-8 h-8 ${isPinkTheme ? "text-pink-600" : "text-green-600"} mx-auto mb-3`} />
                       <h4 className="font-medium mb-2 text-black text-base">Passion</h4>
                       <p
                         className="text-sm text-gray-600 leading-relaxed"
@@ -1012,7 +1002,7 @@ export default function HomePage() {
                     </div>
 
                     <div className="border border-gray-200 rounded-lg p-6 text-center">
-                      <Users className={`w-8 h-8 ${isStaging ? "text-emerald-600" : "text-green-600"} mx-auto mb-3`} />
+                      <Users className={`w-8 h-8 ${isPinkTheme ? "text-emerald-600" : "text-green-600"} mx-auto mb-3`} />
                       <h4 className="font-medium mb-2 text-black text-base">Gemenskap</h4>
                       <p
                         className="text-sm text-gray-600 leading-relaxed"
@@ -1122,12 +1112,12 @@ export default function HomePage() {
                     >
                       <CollapsibleTrigger asChild>
                         <div className="flex justify-between items-center mb-4 cursor-pointer">
-                          <h3 className={`text-3xl font-bold ${isStaging ? "text-emerald-600" : "text-green-600"}`}>{tierName}</h3>
+                          <h3 className={`text-3xl font-bold ${isPinkTheme ? "text-emerald-600" : "text-green-600"}`}>{tierName}</h3>
                           <Button variant="ghost" size="icon" aria-expanded={openTier === tierName}>
                             {openTier === tierName ? (
-                              <Minus className={`w-6 h-6 ${isStaging ? "text-emerald-700" : "text-green-700"}`} />
+                              <Minus className={`w-6 h-6 ${isPinkTheme ? "text-emerald-700" : "text-green-700"}`} />
                             ) : (
-                              <Plus className={`w-6 h-6 ${isStaging ? "text-emerald-700" : "text-green-700"}`} />
+                              <Plus className={`w-6 h-6 ${isPinkTheme ? "text-emerald-700" : "text-green-700"}`} />
                             )}
                           </Button>
                         </div>
@@ -1185,7 +1175,7 @@ export default function HomePage() {
                   ),
               )}
 
-              <section className={`${isStaging ? "bg-gradient-to-r from-rose-600 to-pink-700" : "bg-green-700"} text-white p-10 rounded-lg shadow-xl text-center mt-16`}>
+              <section className={`${isPinkTheme ? "bg-gradient-to-r from-rose-600 to-pink-700" : "bg-green-700"} text-white p-10 rounded-lg shadow-xl text-center mt-16`}>
                 <h2 className="text-4xl font-bold mb-4">Vill du stödja Härnösands HF?</h2>
                 <p className="text-xl mb-8">
                   Vi välkomnar nya partners som vill stödja vår verksamhet och bidra till utvecklingen av handbollen i
@@ -1202,7 +1192,7 @@ export default function HomePage() {
               </section>
 
               <section className="py-16 text-center">
-                <h2 className={`text-4xl font-bold ${isStaging ? "text-pink-100" : "text-green-700"} mb-8`}>Bli en del av vårt lag!</h2>
+                <h2 className={`text-4xl font-bold ${isPinkTheme ? "text-pink-100" : "text-green-700"} mb-8`}>Bli en del av vårt lag!</h2>
                 <p className="text-xl text-gray-700 mb-10 max-w-3xl mx-auto">
                   Oavsett om du är nybörjare eller erfaren spelare, finns det en plats för dig i Härnösands HF. Kom och
                   upplev glädjen med handboll!
@@ -1290,14 +1280,14 @@ export default function HomePage() {
           </section>
         </main>
         <Footer />
-        
+
         {/* Match Feed Modal */}
         {selectedMatch && (() => {
           // Use the actual display names from the match card
           const displayOpponentName = selectedMatch.opponent.replace(/\s*\((hemma|borta)\)\s*$/i, '').trim()
           const displayHomeTeam = selectedMatch.isHome !== false ? "Härnösands HF" : displayOpponentName
           const displayAwayTeam = selectedMatch.isHome !== false ? displayOpponentName : "Härnösands HF"
-          
+
           return (
             <MatchFeedModal
               isOpen={true}

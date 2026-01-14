@@ -59,3 +59,32 @@ export const getThemeVariant = (host?: string | null): ThemeVariant => {
     return swapped ? "pink" : "orange"
   }
 }
+
+export type HeroImages = {
+  mobile: string
+  desktop: string
+}
+
+/**
+ * Get hero images based on theme variant
+ * Pink theme: Memorial hero images
+ * Orange theme: Default hero image
+ */
+export const getHeroImages = (host?: string | null): HeroImages => {
+  const themeVariant = getThemeVariant(host)
+
+  if (themeVariant === "pink") {
+    // Pink theme gets memorial images
+    return {
+      mobile: "/c38715eb-2128-43e0-b80b-48cc95620ffa.png",
+      desktop: "/7ea5a4bb-f938-43ea-b514-783a8fa1b236.png"
+    }
+  } else {
+    // Orange theme gets default hero
+    return {
+      mobile: "/heropic.png",
+      desktop: "/heropic.png"
+    }
+  }
+}
+
