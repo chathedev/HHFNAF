@@ -26,7 +26,7 @@ Continue building your app on:
 
 - Live stays on `harnosandshf.se` and staging runs on `hhf.wby.se` (same Vercel project).
 - The helper in `lib/site-variant.ts` inspects the request host (or `NEXT_PUBLIC_SITE_VARIANT`) to decide whether a request is `production` or `staging`.
-- Staging now shares the same normal hero and orange/green look as the production domain; the special pink memorial theme only appears when you explicitly set `NEXT_PUBLIC_MEMORIAL_THEME=pink` (it automatically expires after 2026-01-18 23:00 CET / 22:00 UTC).
+- The production domain (`www.harnosandshf.se`) shows the pink memorial hero and palette while the `NEXT_PUBLIC_MEMORIAL_THEME=pink` flag is active (it expires after 2026-01-18 23:00 CET / 22:00 UTC); staging (`hhf.wby.se`) always stays on the normal orange/green hero so you can safely preview without the memorial look.
 - Previewing staging locally: set `NEXT_PUBLIC_SITE_VARIANT=staging` before `npm run dev` to see the hhf.wby.se look without touching prod.
 - Ship experiments behind `deriveSiteVariant` / `isStagingVariant` guards so they live only on staging; remove the guard or flip the flag when explicitly promoting to live.
 

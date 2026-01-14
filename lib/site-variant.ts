@@ -44,12 +44,18 @@ export const isMemorialThemeActive = (): boolean => {
 }
 
 /**
- * The default theme variant for both production and staging is the normal look.
- * The memorial (pink) variant can be re-enabled via `NEXT_PUBLIC_MEMORIAL_THEME=pink`
- * and only remains active until 2026-01-18 23:00 CET (22:00 UTC).
+ * Production sites use the pink memorial theme (and hero) when the memorial
+ * flag is enabled until 2026-01-18 23:00 CET / 22:00 UTC. Staging and other
+ * variants always stay on the standard orange/green look.
  */
-export const getThemeVariant = (_host?: string | null): ThemeVariant => {
-  return isMemorialThemeActive() ? "pink" : "orange"
+export const getThemeVariant = (host?: string | null): ThemeVariant => {
+  const siteVariant = deriveSiteVariant(host)
+
+  if (siteVariant === "production" && isMemorialThemeActive()) {
+    return "pink"
+  }
+
+  return "orange"
 }
 
 export type HeroImages = {
