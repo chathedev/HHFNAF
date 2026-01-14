@@ -1192,7 +1192,7 @@ export default function HomePage() {
               </section>
 
               <section className="py-16 text-center">
-                <h2 className={`text-4xl font-bold ${isPinkTheme ? "text-pink-100" : "text-green-700"} mb-8`}>Bli en del av vårt lag!</h2>
+                <h2 className={`text-4xl font-bold ${isPinkTheme ? "text-white" : "text-green-700"} mb-8`}>Bli en del av vårt lag!</h2>
                 <p className="text-xl text-gray-700 mb-10 max-w-3xl mx-auto">
                   Oavsett om du är nybörjare eller erfaren spelare, finns det en plats för dig i Härnösands HF. Kom och
                   upplev glädjen med handboll!

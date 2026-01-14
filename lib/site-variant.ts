@@ -48,10 +48,18 @@ export const isMemorialThemeActive = (): boolean => {
  * flag is enabled until 2026-01-18 23:00 CET / 22:00 UTC. Staging and other
  * variants always stay on the standard orange/green look.
  */
+const isStagingHost = (host?: string | null) => STAGING_HOSTS.includes(normalizeHost(host))
+const isProductionHost = (host?: string | null) => PRODUCTION_HOSTS.includes(normalizeHost(host))
+
 export const getThemeVariant = (host?: string | null): ThemeVariant => {
   const siteVariant = deriveSiteVariant(host)
 
-  if (siteVariant === "production" && isMemorialThemeActive()) {
+  if (isStagingHost(host) || siteVariant === "staging") {
+    return "orange"
+  }
+
+  const productionCandidate = isProductionHost(host) || siteVariant === "production"
+  if (productionCandidate && isMemorialThemeActive()) {
     return "pink"
   }
 
