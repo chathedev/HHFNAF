@@ -3,7 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { notFound } from "next/navigation"
-import { useEffect, useMemo, useState } from "react"
+import { use, useEffect, useMemo, useState } from "react"
 
 import lagContent from "@/public/content/lag.json"
 import Footer from "@/components/footer"
@@ -109,14 +109,15 @@ const teams = CLUB_TEAM_METADATA.map((meta) => {
 })
 
 type TeamPageProps = {
-  params: { teamId: string }
+  params: Promise<{ teamId: string }>
 }
 
 const getTeamDisplayName = (team: (typeof teams)[number]) =>
   extendTeamDisplayNameFromCandidates([team.displayName, team.name, team.id])
 
 export default function TeamPage({ params }: TeamPageProps) {
-  const team = teams.find((item) => item.id === params.teamId);
+  const { teamId } = use(params);
+  const team = teams.find((item) => item.id === teamId);
   if (!team) {
     notFound();
   }
@@ -136,7 +137,7 @@ export default function TeamPage({ params }: TeamPageProps) {
   const teamMatches = useMemo(() => {
     const now = Date.now()
     const oneHourAgo = now - 1000 * 60 * 60 * 1 // 1 hour for team pages
-    
+
     const filtered = allMatches.filter((match) => {
       if (teamMatchKeys.has(match.normalizedTeam)) {
         return true
@@ -149,22 +150,22 @@ export default function TeamPage({ params }: TeamPageProps) {
       }
       return false
     })
-    
+
     const relevant = filtered.filter((match) => {
       const status = getDerivedStatus(match)
-      
+
       // Show all live and upcoming matches
       if (status !== "finished") {
         return true
       }
-      
+
       // For finished matches: show for 2 hours AFTER actual match end
       if (status === "finished") {
         // Use enhanced helper function for team page (4 hours retention = 2 extra hours after 2-hour match)
         // Team pages show ALL finished matches (including 0-0 results)
         return shouldShowFinishedMatchForTeam(match, 4)
       }
-      
+
       return false
     })
 
@@ -291,38 +292,37 @@ export default function TeamPage({ params }: TeamPageProps) {
                 const homeAwayLabel = isHome ? "hemma" : "borta"
                 const scheduleLine = buildScheduleLine(match)
                 const trimmedResult = match.result?.trim()
-                
+
                 // Check if match should be finished based on time
                 const now = Date.now()
                 const minutesSinceKickoff = (now - match.date.getTime()) / (1000 * 60)
                 const normalizedResult = trimmedResult?.replace(/[–-]/g, '-').toLowerCase()
                 const isZeroZero = normalizedResult === "0-0" || normalizedResult === "00" || trimmedResult === "0-0" || trimmedResult === "0–0"
-                
+
                 // A handball match typically lasts 60 minutes (2x30 min) + breaks ~10-15 min = ~75 minutes max
                 // Only consider finished if way past reasonable time (2+ hours) AND showing stale 0-0
                 const matchShouldBeFinished = minutesSinceKickoff > 120 && isZeroZero && status !== "live"
                 const isStaleZeroResult = isZeroZero && matchShouldBeFinished
-                
+
                 const hasResult =
-                  Boolean(trimmedResult) && 
-                  trimmedResult?.toLowerCase() !== "inte publicerat" && 
-                  trimmedResult !== "0-0" && 
+                  Boolean(trimmedResult) &&
+                  trimmedResult?.toLowerCase() !== "inte publicerat" &&
+                  trimmedResult !== "0-0" &&
                   trimmedResult !== "0–0"
-                  
+
                 const playLabel = status === "finished" ? "Se repris" : "Se live"
                 const canOpenTimeline = (status === "live" && !matchShouldBeFinished) || status === "finished"
                 const showTicket = shouldShowTicketButton(match, status) && !matchShouldBeFinished
                 const matchTeamLabel = extendTeamDisplayName(match.teamType)
-                
+
                 // Don't show LIVE badge if match should be finished
                 const shouldShowLive = status === "live" && !matchShouldBeFinished
 
                 return (
                   <Card
                     key={match.id}
-                    className={`group relative rounded-2xl border border-emerald-100/80 bg-white p-6 text-left shadow-sm transition ${
-                      canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:shadow-lg" : ""
-                    }`}
+                    className={`group relative rounded-2xl border border-emerald-100/80 bg-white p-6 text-left shadow-sm transition ${canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:shadow-lg" : ""
+                      }`}
                     onClick={() => {
                       if (canOpenTimeline) {
                         setSelectedMatch(match)

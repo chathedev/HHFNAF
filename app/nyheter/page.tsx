@@ -154,7 +154,7 @@ export default function NyheterPage() {
       <Header />
       <main className="flex-1 bg-white">
         <div className="h-24"></div>
-        <div className="container max-w-full px-2 sm:px-4 md:px-6 py-6 md:py-10 lg:py-14">
+        <div className="container max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-10 lg:py-14">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-6 text-green-700 text-center">
             Senaste Nyheterna
           </h1>
@@ -184,11 +184,11 @@ export default function NyheterPage() {
             </div>
           )}
           {!loading && !error && (
-            <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 justify-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {filteredNews.map((item, index) => (
                 <div
                   key={`${item.link}-${index}`}
-                  className="rounded-2xl border border-gray-200 bg-white/80 shadow-sm backdrop-blur p-4 flex flex-col justify-between min-h-[280px]"
+                  className="rounded-2xl border border-gray-200 bg-white/80 shadow-sm backdrop-blur p-4 flex flex-col justify-between min-h-[280px] w-full"
                 >
                   {item.imageUrl && (
                     <img

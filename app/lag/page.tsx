@@ -77,8 +77,8 @@ const categoryStats = lagContent.teamCategories.map((category) => ({
     typeof category.count === "number"
       ? category.count
       : Array.isArray(category.teams)
-      ? category.teams.length
-      : 0,
+        ? category.teams.length
+        : 0,
   description: category.description,
 }))
 
@@ -147,13 +147,14 @@ export default function LagPage() {
                         key={team.id}
                         className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-emerald-300 hover:shadow-lg"
                       >
-                        <div className="relative h-32 w-full overflow-hidden bg-gray-200">
+                        <div className="relative h-32 w-full overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
                           <div
                             className="h-full w-full transition group-hover:scale-[1.02]"
                             style={{
                               backgroundImage: `url(${team.heroImage})`,
-                              backgroundSize: "cover",
+                              backgroundSize: "contain",
                               backgroundPosition: "center",
+                              backgroundRepeat: "no-repeat",
                             }}
                             aria-hidden
                           />
@@ -204,13 +205,14 @@ export default function LagPage() {
                   key={team.id}
                   className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-emerald-300 hover:shadow-lg"
                 >
-                  <div className="relative h-32 w-full overflow-hidden bg-gray-200">
+                  <div className="relative h-32 w-full overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
                     <div
                       className="h-full w-full transition group-hover:scale-[1.02]"
                       style={{
                         backgroundImage: `url(${team.heroImage})`,
-                        backgroundSize: "cover",
+                        backgroundSize: "contain",
                         backgroundPosition: "center",
+                        backgroundRepeat: "no-repeat",
                       }}
                       aria-hidden
                     />
