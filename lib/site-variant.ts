@@ -51,6 +51,9 @@ export const isMemorialThemeActive = (): boolean => {
 const isStagingHost = (host?: string | null) => STAGING_HOSTS.includes(normalizeHost(host))
 const isProductionHost = (host?: string | null) => PRODUCTION_HOSTS.includes(normalizeHost(host))
 
+const isProductionEnvironment = () =>
+  process.env.NEXT_PUBLIC_SITE_VARIANT === "production" || process.env.VERCEL_ENV === "production"
+
 export const getThemeVariant = (host?: string | null): ThemeVariant => {
   const siteVariant = deriveSiteVariant(host)
 
@@ -58,7 +61,8 @@ export const getThemeVariant = (host?: string | null): ThemeVariant => {
     return "orange"
   }
 
-  const productionCandidate = isProductionHost(host) || siteVariant === "production"
+  const productionCandidate =
+    isProductionHost(host) || (!host && isProductionEnvironment()) || siteVariant === "production"
   if (productionCandidate && isMemorialThemeActive()) {
     return "pink"
   }
