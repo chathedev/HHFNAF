@@ -5,13 +5,13 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ScrollToTop } from "@/components/scroll-to-top"
-import { deriveSiteVariant } from "@/lib/site-variant"
+import { deriveSiteVariant, getThemeVariant } from "@/lib/site-variant"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_VERCEL_URL 
-    ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` 
+  metadataBase: new URL(process.env.NEXT_PUBLIC_VERCEL_URL
+    ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
     : "https://www.harnosandshf.se"),
   title: {
     default: "Härnösands HF – Officiell hemsida för handboll i Härnösand",
@@ -182,7 +182,8 @@ export default async function RootLayout({
   }
 
   const siteVariant = deriveSiteVariant(host)
-  const themeColor = siteVariant === "staging" ? "#db2777" : "#15803d"
+  const themeVariant = getThemeVariant(host)
+  const themeColor = themeVariant === "pink" ? "#db2777" : "#15803d"
 
   return (
     <html lang="sv" suppressHydrationWarning data-site-variant={siteVariant}>
@@ -308,7 +309,7 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className={`${inter.className} bg-white ${siteVariant === "staging" ? "hhf-staging" : ""}`}>
+      <body className={`${inter.className} bg-white ${themeVariant === "pink" ? "hhf-staging" : ""}`}>
         <div style={{ display: "none", visibility: "hidden", position: "absolute", left: "-9999px" }}>
           <h1>Härnösands HF Handbollsförening</h1>
           <p>

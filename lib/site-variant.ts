@@ -28,3 +28,34 @@ export const deriveSiteVariant = (host?: string | null): SiteVariant => {
 }
 
 export const isStagingVariant = (host?: string | null) => deriveSiteVariant(host) === "staging"
+
+/**
+ * Check if themes should be swapped (temporary until 2026-01-18 23:00 CET)
+ * During swap: production gets pink, staging gets orange
+ */
+export const shouldSwapThemes = (): boolean => {
+  // End date: 2026-01-18 23:00 CET (which is 22:00 UTC)
+  const swapEndDate = new Date("2026-01-18T22:00:00Z")
+  const now = new Date()
+  return now < swapEndDate
+}
+
+export type ThemeVariant = "pink" | "orange"
+
+/**
+ * Get the theme variant based on site variant and swap status
+ * Normal: production = orange, staging = pink
+ * Swapped: production = pink, staging = orange
+ */
+export const getThemeVariant = (host?: string | null): ThemeVariant => {
+  const siteVariant = deriveSiteVariant(host)
+  const swapped = shouldSwapThemes()
+
+  if (siteVariant === "staging") {
+    // Staging normally gets pink, but during swap gets orange
+    return swapped ? "orange" : "pink"
+  } else {
+    // Production normally gets orange, but during swap gets pink
+    return swapped ? "pink" : "orange"
+  }
+}

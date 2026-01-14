@@ -4,8 +4,8 @@ type StagingBannerProps = {
 }
 
 export function StagingBanner({
-  title = "Testmiljö – Rosa bandet-hyllning",
-  message = "Detta är staging (hhf.wby.se). Rosa accent syns bara här och påverkar inte harnosandshf.se.",
+  title = "Testmiljö – Temporärt bytt tema",
+  message = "Detta är staging (hhf.wby.se). Orange accent t.o.m 2026-01-18 23:00. Harnosandshf.se visar rosa tema under samma period.",
 }: StagingBannerProps) {
   return (
     <div className="staging-ribbon" role="status" aria-live="polite">
