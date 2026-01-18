@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 
-import { useMatchData, shouldShowFinishedMatch, type NormalizedMatch } from "@/lib/use-match-data"
+import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 import { canShowTicketForMatch, normalizeMatchKey } from "@/lib/matches"
 import { extendTeamDisplayName, createTeamMatchKeySet } from "@/lib/team-display"
@@ -12,7 +12,7 @@ import type { EnhancedMatchData } from "@/lib/use-match-data"
 
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 
-type StatusFilter = "all" | "upcoming" | "live" | "finished"
+type StatusFilter = "current" | "live" | "upcoming" | "finished"
 
 type MatchOutcome = {
   text: string
@@ -114,7 +114,7 @@ const TEAM_OPTIONS = TEAM_OPTION_VALUES.map((value) => ({
 }))
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
-  { value: "all", label: "Alla matcher" },
+  { value: "current", label: "Live + Kommande" },
   { value: "live", label: "Live nu" },
   { value: "upcoming", label: "Kommande" },
   { value: "finished", label: "Avslutade" },
@@ -123,7 +123,7 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
 export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatchData }) {
   const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   const [selectedTeam, setSelectedTeam] = useState<string>("all")
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("current")
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
 
   // Track previous scores to highlight live updates
@@ -173,51 +173,54 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
         }
       }
 
-      const status = getMatchStatus(match);
+      const status = getMatchStatus(match)
 
-      // Status filtering FIRST - if user wants only finished matches, show ALL finished matches
-      if (statusFilter !== "all" && status !== statusFilter) {
-        return false;
+      if (status === "finished" && statusFilter !== "finished") {
+        return false
       }
 
-      // Enhanced visibility logic: if showing finished matches specifically, show ALL finished matches with valid results
-      if (status === "finished") {
-        if (statusFilter === "finished") {
-          // Enhanced logic: Show only finished matches with REAL results (> 0-0)
-          const result = match.result?.trim() || ""
+      if (statusFilter === "live" && status !== "live") {
+        return false
+      }
 
-          if (!result || result.toLowerCase() === "inte publicerat") {
-            return false
-          }
+      if (statusFilter === "upcoming" && status !== "upcoming") {
+        return false
+      }
 
-          const scoreMatch = result.match(/(\d+)[-–](\d+)/)
-          if (!scoreMatch) {
-            return false
-          }
+      if (statusFilter === "current" && status !== "live" && status !== "upcoming") {
+        return false
+      }
 
-          const homeScore = parseInt(scoreMatch[1])
-          const awayScore = parseInt(scoreMatch[2])
+      if (status === "finished" && statusFilter === "finished") {
+        const result = match.result?.trim() || ""
 
-          // Must have at least one goal scored (not 0-0)
-          return homeScore > 0 || awayScore > 0
-        } else {
-          // When showing "all" matches, use time-based retention (4 hours = 2 extra hours after 2-hour match)
-          return shouldShowFinishedMatch(match, 4)
+        if (!result || result.toLowerCase() === "inte publicerat") {
+          return false
         }
+
+        const scoreMatch = result.match(/(\d+)[-–](\d+)/)
+        if (!scoreMatch) {
+          return false
+        }
+
+        const homeScore = parseInt(scoreMatch[1])
+        const awayScore = parseInt(scoreMatch[2])
+
+        return homeScore > 0 || awayScore > 0
       }
 
-      return true;
+      return true
     });
   }, [matches, selectedTeamKeys, statusFilter])
 
   // Group matches by status - use server-provided grouped data when available
   const groupedMatches = useMemo(() => {
     // If we have pre-grouped data from the enhanced endpoint, use it and filter
-    if (grouped?.byStatus && statusFilter === "all" && selectedTeam === "all") {
+    if (grouped?.byStatus && statusFilter === "current" && selectedTeam === "all") {
       return {
         live: grouped.byStatus.live,
         upcoming: grouped.byStatus.upcoming,
-        finished: grouped.byStatus.finished,
+        finished: [],
       }
     }
 
@@ -672,7 +675,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
             <button
               onClick={() => {
                 setSelectedTeam("all")
-                setStatusFilter("all")
+                setStatusFilter("current")
               }}
               className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors"
             >
