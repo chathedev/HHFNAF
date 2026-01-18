@@ -518,6 +518,22 @@ const updateLatestMatchStates = (matches: NormalizedMatch[]) => {
 // Version counter for cache entries
 let cacheVersion = 0
 
+const applyEntryToCaches = (entry: SharedMatchCacheEntry, endpoints: string[] = [getDataEndpoint()]) => {
+  updateLatestMatchStates([...entry.current, ...entry.old])
+  const version = ++cacheVersion
+  endpoints.forEach((endpoint) => {
+    sharedMatchCache.set(endpoint, entry)
+    ;(["liveUpcoming", "live", "old"] as DataType[]).forEach((dataType) => {
+      const cacheKey = `${dataType}-${endpoint}`
+      memoryCache.set(cacheKey, {
+        data: buildEnhancedMatchData(entry, dataType),
+        timestamp: Date.now(),
+        version,
+      })
+    })
+  })
+}
+
 const resolveCurrentMatchPayload = (payload: any): ApiMatch[] => {
   if (!payload) {
     return []
@@ -563,25 +579,157 @@ const resolveOldMatchPayload = (payload: any): ApiMatch[] => {
   return []
 }
 
+const MATCH_WS_URL = "wss://api.harnosandshf.se/matcher/ws"
+const CHANNEL_ENDPOINT = getDataEndpoint()
+type MatchChannelPayload = {
+  current: NormalizedMatch[]
+  old: NormalizedMatch[]
+  lastUpdated: string | null
+}
+
+const createMatchDataChannel = () => {
+  const isBrowser = typeof window !== "undefined"
+  let socket: WebSocket | null = null
+  let reconnectDelay = 1000
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  let latestEntry: SharedMatchCacheEntry | null = sharedMatchCache.get(CHANNEL_ENDPOINT) ?? null
+  let latestPayload: MatchChannelPayload | null = latestEntry
+    ? { current: latestEntry.current, old: latestEntry.old, lastUpdated: latestEntry.lastUpdated }
+    : null
+  const subscribers = new Set<(payload: MatchChannelPayload) => void>()
+
+  const notifySubscribers = () => {
+    if (!latestPayload) {
+      return
+    }
+    subscribers.forEach((subscriber) => subscriber(latestPayload!))
+  }
+
+  const scheduleReconnect = () => {
+    if (!isBrowser || reconnectTimer) {
+      return
+    }
+    reconnectTimer = globalThis.setTimeout(() => {
+      reconnectTimer = null
+      connect()
+    }, reconnectDelay)
+    reconnectDelay = Math.min(30_000, reconnectDelay * 1.5)
+  }
+
+  const connect = () => {
+    if (!isBrowser) {
+      return
+    }
+    if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+      return
+    }
+    if (socket) {
+      socket.close()
+      socket = null
+    }
+    if (reconnectTimer) {
+      globalThis.clearTimeout(reconnectTimer)
+      reconnectTimer = null
+    }
+
+    try {
+      socket = new WebSocket(MATCH_WS_URL)
+    } catch (error) {
+      console.warn("Unable to open match data socket", error)
+      scheduleReconnect()
+      return
+    }
+
+    socket.addEventListener("open", () => {
+      reconnectDelay = 1000
+    })
+
+    socket.addEventListener("message", (event) => {
+      try {
+        const raw = JSON.parse(event.data)
+        const entry: SharedMatchCacheEntry = {
+          current: normalizeMatches(resolveCurrentMatchPayload(raw)),
+          old: normalizeMatches(resolveOldMatchPayload(raw)),
+          lastUpdated: typeof raw?.lastUpdated === "string" ? raw.lastUpdated : null,
+          timestamp: Date.now(),
+        }
+
+        applyEntryToCaches(entry, [CHANNEL_ENDPOINT])
+        latestEntry = entry
+        latestPayload = { current: entry.current, old: entry.old, lastUpdated: entry.lastUpdated }
+        notifySubscribers()
+      } catch (error) {
+        console.warn("Failed to parse match websocket payload", error)
+      }
+    })
+
+    socket.addEventListener("close", () => {
+      socket = null
+      scheduleReconnect()
+    })
+
+    socket.addEventListener("error", () => {
+      socket?.close()
+    })
+  }
+
+  const subscribe = (listener: (payload: MatchChannelPayload) => void) => {
+    subscribers.add(listener)
+    if (latestPayload) {
+      listener(latestPayload)
+    }
+    connect()
+    return () => {
+      subscribers.delete(listener)
+    }
+  }
+
+  const broadcastEntry = (entry: SharedMatchCacheEntry) => {
+    latestEntry = entry
+    latestPayload = { current: entry.current, old: entry.old, lastUpdated: entry.lastUpdated }
+    notifySubscribers()
+  }
+
+  return {
+    subscribe,
+    getLatest: () => latestPayload,
+    broadcastEntry,
+  }
+}
+
+const matchDataChannel = createMatchDataChannel()
+
 export const getMatchData = async (
   dataType: DataType = "liveUpcoming",
   bypassCache = false,
   params?: QueryParams,
 ): Promise<EnhancedMatchData> => {
   const { queryString } = buildQueryMeta(params)
-  const endpoint = `${getDataEndpoint()}${queryString}`
+  const baseEndpoint = getDataEndpoint()
+  const endpoint = `${baseEndpoint}${queryString}`
   const cacheKey = `${dataType}-${endpoint}`
+  const baseCacheKey = `${dataType}-${baseEndpoint}`
+  const applyParamsToResult = (result: EnhancedMatchData) => {
+    const limitParam = typeof params?.limit === "number" && params.limit >= 0 ? params.limit : undefined
+    if (limitParam !== undefined) {
+      return {
+        ...result,
+        matches: result.matches.slice(0, limitParam),
+      }
+    }
+    return result
+  }
   const sharedKey = endpoint
 
   if (!bypassCache) {
-    const sharedCached = sharedMatchCache.get(sharedKey)
+    const sharedCached = sharedMatchCache.get(sharedKey) ?? sharedMatchCache.get(baseEndpoint)
     if (sharedCached) {
-      return buildEnhancedMatchData(sharedCached, dataType)
+      return applyParamsToResult(buildEnhancedMatchData(sharedCached, dataType))
     }
   }
 
   if (!bypassCache) {
-    const cached = memoryCache.get(cacheKey)
+    const cached = memoryCache.get(cacheKey) ?? memoryCache.get(baseCacheKey)
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
       const hasRegression = cached.data.matches.some((match) => {
         const latest = latestMatchStates.get(match.id)
@@ -599,7 +747,7 @@ export const getMatchData = async (
       })
 
       if (!hasRegression) {
-        return cached.data
+        return applyParamsToResult(cached.data)
       }
     }
   }
@@ -612,9 +760,9 @@ export const getMatchData = async (
       // ignore
     }
     if (!bypassCache) {
-      const sharedCached = sharedMatchCache.get(sharedKey)
+      const sharedCached = sharedMatchCache.get(sharedKey) ?? sharedMatchCache.get(baseEndpoint)
       if (sharedCached) {
-        return buildEnhancedMatchData(sharedCached, dataType)
+        return applyParamsToResult(buildEnhancedMatchData(sharedCached, dataType))
       }
     }
   }
@@ -664,7 +812,8 @@ export const getMatchData = async (
           timestamp: Date.now(),
         }
 
-        updateLatestMatchStates([...normalizedCurrent, ...normalizedOld])
+        applyEntryToCaches(entry, [endpoint, baseEndpoint])
+        matchDataChannel.broadcastEntry(entry)
 
         return entry
       } catch (error) {
@@ -689,34 +838,24 @@ export const getMatchData = async (
 
   try {
     const sharedEntry = await fetchPromise
-    sharedMatchCache.set(sharedKey, sharedEntry)
-    const result = buildEnhancedMatchData(sharedEntry, dataType)
-
-    cacheVersion++
-    memoryCache.set(cacheKey, {
-      data: result,
-      timestamp: Date.now(),
-      version: cacheVersion,
-    })
-
-    return result
+    return applyParamsToResult(buildEnhancedMatchData(sharedEntry, dataType))
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      const cached = memoryCache.get(cacheKey)
+      const cached = memoryCache.get(cacheKey) ?? memoryCache.get(baseCacheKey)
       if (cached) {
         console.log("Timeout reached, using cached data")
-        return cached.data
+        return applyParamsToResult(cached.data)
       }
     }
 
-    const sharedCached = sharedMatchCache.get(sharedKey)
+    const sharedCached = sharedMatchCache.get(sharedKey) ?? sharedMatchCache.get(baseEndpoint)
     if (sharedCached) {
       const fallback = buildEnhancedMatchData(sharedCached, dataType)
       console.warn("API failed, returning cached shared data:", error)
-      return fallback
+      return applyParamsToResult(fallback)
     }
 
-    const cached = memoryCache.get(cacheKey)
+    const cached = memoryCache.get(cacheKey) ?? memoryCache.get(baseCacheKey)
     if (cached) {
       const hasRegression = cached.data.matches.some((match) => {
         const latest = latestMatchStates.get(match.id)
@@ -730,7 +869,7 @@ export const getMatchData = async (
 
       if (!hasRegression) {
         console.warn("API failed, returning cached data (verified fresh):", error)
-        return cached.data
+        return applyParamsToResult(cached.data)
       }
       console.warn("API failed and cached data is stale, throwing error:", error)
     }
@@ -804,36 +943,47 @@ export const useMatchData = (options?: {
   const paramsSignature = useMemo(() => buildQueryMeta(options?.params).signature, [options?.params])
   const params = options?.params
   const enabled = options?.enabled ?? true
-  const refreshDelayMs = Math.max(options?.refreshIntervalMs ?? 3000, 3000)
+  const paramsLimit = typeof params?.limit === "number" && params.limit >= 0 ? params.limit : undefined
 
   const [matches, setMatches] = useState<NormalizedMatch[]>(options?.initialData?.matches ?? [])
   const [loading, setLoading] = useState(!options?.initialData && enabled)
   const [error, setError] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
 
-  const fetchLockRef = useRef<Promise<EnhancedMatchData> | null>(null)
-  const matchesRef = useRef<NormalizedMatch[]>(matches)
+  const processPayload = useCallback(
+    (payload: MatchChannelPayload) => {
+      let selectedMatches =
+        dataType === "old"
+          ? payload.old
+          : dataType === "live"
+            ? payload.current.filter(isLiveMatch)
+            : payload.current
 
-  useEffect(() => {
-    matchesRef.current = matches
-  }, [matches])
+      if (paramsLimit !== undefined) {
+        selectedMatches = selectedMatches.slice(0, paramsLimit)
+      }
 
-  const fetchAndUpdate = useCallback(
-    async (bypassCache = false) => {
-      const data = await getMatchData(dataType, bypassCache, params)
-
-      setMatches(data.matches)
-      data.matches.forEach((match) => {
+      setMatches(selectedMatches)
+      selectedMatches.forEach((match) => {
         matchStateManager.queueUpdate(match.id, {
           ...match,
           lastUpdated: Date.now(),
         })
       })
-
-      return data
+      setError(null)
+      setLoading(false)
     },
-    [dataType, paramsSignature],
+    [dataType, paramsLimit],
   )
+
+  useEffect(() => {
+    if (!enabled) {
+      return
+    }
+
+    const unsubscribe = matchDataChannel.subscribe(processPayload)
+    return () => unsubscribe()
+  }, [enabled, processPayload, paramsSignature])
 
   const refresh = useCallback(
     async (bypassCache = false) => {
@@ -841,106 +991,36 @@ export const useMatchData = (options?: {
         return null
       }
 
-      while (fetchLockRef.current) {
-        try {
-          await fetchLockRef.current
-        } catch {
-          // Ignore errors from the previous fetch; we only waited for it to finish
-        }
-      }
-
       setIsRefreshing(true)
-      const fetchPromise = (async () => {
-        try {
-          const data = await fetchAndUpdate(bypassCache)
-          setError(null)
-          setLoading(false)
-          return data
-        } catch (caught) {
-          const message =
-            caught instanceof Error ? caught.message : "Kunde inte hämta matchdata just nu. Försök igen om en liten stund."
-          setError(message)
-          setLoading(false)
-          throw caught
-        } finally {
-          setIsRefreshing(false)
-        }
-      })()
-
-      fetchLockRef.current = fetchPromise
       try {
-        return await fetchPromise
-      } finally {
-        if (fetchLockRef.current === fetchPromise) {
-          fetchLockRef.current = null
+        const data = await getMatchData(dataType, bypassCache, params)
+        let refreshedMatches = data.matches
+        if (paramsLimit !== undefined) {
+          refreshedMatches = refreshedMatches.slice(0, paramsLimit)
         }
+
+        setMatches(refreshedMatches)
+        refreshedMatches.forEach((match) => {
+          matchStateManager.queueUpdate(match.id, {
+            ...match,
+            lastUpdated: Date.now(),
+          })
+        })
+        setError(null)
+        setLoading(false)
+        return data
+      } catch (caught) {
+        const message =
+          caught instanceof Error ? caught.message : "Kunde inte hämta matchdata just nu. Försök igen om en liten stund."
+        setError(message)
+        setLoading(false)
+        throw caught
+      } finally {
+        setIsRefreshing(false)
       }
     },
-    [enabled, fetchAndUpdate],
+    [enabled, dataType, params, paramsLimit, paramsSignature],
   )
-
-  useEffect(() => {
-    if (!enabled) {
-      return
-    }
-
-    let cancelled = false
-    let timerId: ReturnType<typeof setTimeout> | null = null
-
-    if (matchesRef.current.length === 0) {
-      setLoading(true)
-    }
-
-    const runLoop = async () => {
-      if (cancelled) {
-        return
-      }
-
-      try {
-        await refresh(true)
-      } catch {
-        // Refresh already sets error state; avoid unhandled rejection
-      } finally {
-        if (cancelled) {
-          return
-        }
-        timerId = setTimeout(runLoop, refreshDelayMs)
-      }
-    }
-
-    void runLoop()
-
-    return () => {
-      cancelled = true
-      if (timerId) {
-        clearTimeout(timerId)
-      }
-    }
-  }, [enabled, refresh, refreshDelayMs])
-
-  useEffect(() => {
-    if (!enabled) {
-      return
-    }
-
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState === "visible") {
-        await refresh(true)
-      }
-    }
-
-    const handleFocus = async () => {
-      await refresh(true)
-    }
-
-    window.addEventListener("focus", handleFocus)
-    document.addEventListener("visibilitychange", handleVisibilityChange)
-
-    return () => {
-      window.removeEventListener("focus", handleFocus)
-      document.removeEventListener("visibilitychange", handleVisibilityChange)
-    }
-  }, [refresh, enabled])
 
   return {
     matches,
