@@ -498,9 +498,9 @@ export const getMatchData = async (dataType: DataType = "both", bypassCache = fa
     try {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => {
-        console.log(`⏰ Aborting request to ${endpoint} after 3s timeout`)
+        // console.log(`⏰ Aborting request to ${endpoint} after 5s timeout`) // Reduced log spam
         controller.abort()
-      }, 3000) // Slightly longer timeout to prevent unnecessary aborts
+      }, 5000) // Increased timeout to 5s for slower connections
 
       const response = await fetch(endpoint, {
         cache: "no-store",
@@ -664,6 +664,15 @@ export const getMatchData = async (dataType: DataType = "both", bypassCache = fa
         continue
       }
 
+      // Catch abort errors specifically and try to return cache
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        const cached = memoryCache.get(cacheKey)
+        if (cached) {
+          console.log('Timeout reached, using cached data')
+          return cached.data
+        }
+      }
+
       // Return cached data on error if available AND it's not stale
       const cached = memoryCache.get(cacheKey)
       if (cached) {
@@ -688,6 +697,12 @@ export const getMatchData = async (dataType: DataType = "both", bypassCache = fa
     }
   }
 
+  // Graceful fallback if everything fails
+  const cached = memoryCache.get(cacheKey)
+  if (cached) {
+    return cached.data
+  }
+
   throw new Error("Matchdata är inte tillgänglig just nu")
 }
 
@@ -709,10 +724,7 @@ const preloadData = async () => {
     const successCount = [currentData, oldData].filter(result => result.status === 'fulfilled').length
     console.log('🚀 Preloaded data successfully:', successCount, 'of 2 endpoints')
   } catch (error) {
-    // Silently handle preload failures to avoid console spam
-    if (!(error instanceof DOMException && error.name === 'AbortError')) {
-      console.warn('Preload failed:', error)
-    }
+    // Silently handle preload failures
   }
 }
 
