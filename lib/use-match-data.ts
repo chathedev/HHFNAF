@@ -587,6 +587,11 @@ type MatchChannelPayload = {
   lastUpdated: string | null
 }
 
+type ConnectionState = {
+  isConnected: boolean
+  hasData: boolean
+}
+
 const createMatchDataChannel = () => {
   const isBrowser = typeof window !== "undefined"
   let socket: WebSocket | null = null
@@ -596,13 +601,37 @@ const createMatchDataChannel = () => {
   let latestPayload: MatchChannelPayload | null = latestEntry
     ? { current: latestEntry.current, old: latestEntry.old, lastUpdated: latestEntry.lastUpdated }
     : null
+  let isConnected = false
+  let hasData = Boolean(latestPayload)
+
   const subscribers = new Set<(payload: MatchChannelPayload) => void>()
+  const connectionListeners = new Set<(state: ConnectionState) => void>()
 
   const notifySubscribers = () => {
     if (!latestPayload) {
       return
     }
     subscribers.forEach((subscriber) => subscriber(latestPayload!))
+  }
+
+  const notifyConnectionState = () => {
+    const state = { isConnected, hasData }
+    connectionListeners.forEach((listener) => listener(state))
+  }
+
+  const updateConnectionState = (changes: Partial<ConnectionState>) => {
+    let changed = false
+    if (typeof changes.isConnected === "boolean" && changes.isConnected !== isConnected) {
+      isConnected = changes.isConnected
+      changed = true
+    }
+    if (typeof changes.hasData === "boolean" && changes.hasData !== hasData) {
+      hasData = changes.hasData
+      changed = true
+    }
+    if (changed) {
+      notifyConnectionState()
+    }
   }
 
   const scheduleReconnect = () => {
@@ -640,8 +669,11 @@ const createMatchDataChannel = () => {
       return
     }
 
+    updateConnectionState({ isConnected: false })
+
     socket.addEventListener("open", () => {
       reconnectDelay = 1000
+      updateConnectionState({ isConnected: true })
     })
 
     socket.addEventListener("message", (event) => {
@@ -657,6 +689,7 @@ const createMatchDataChannel = () => {
         applyEntryToCaches(entry, [CHANNEL_ENDPOINT])
         latestEntry = entry
         latestPayload = { current: entry.current, old: entry.old, lastUpdated: entry.lastUpdated }
+        updateConnectionState({ hasData: true })
         notifySubscribers()
       } catch (error) {
         console.warn("Failed to parse match websocket payload", error)
@@ -665,6 +698,7 @@ const createMatchDataChannel = () => {
 
     socket.addEventListener("close", () => {
       socket = null
+      updateConnectionState({ isConnected: false })
       scheduleReconnect()
     })
 
@@ -684,14 +718,39 @@ const createMatchDataChannel = () => {
     }
   }
 
+  const subscribeConnection = (listener: (state: ConnectionState) => void) => {
+    connectionListeners.add(listener)
+    listener({ isConnected, hasData })
+    return () => connectionListeners.delete(listener)
+  }
+
+  const waitForConnection = () => {
+    connect()
+    if (isConnected) {
+      return Promise.resolve()
+    }
+    return new Promise<void>((resolve) => {
+      const unsubscribe = subscribeConnection((state) => {
+        if (state.isConnected) {
+          unsubscribe()
+          resolve()
+        }
+      })
+    })
+  }
+
   const broadcastEntry = (entry: SharedMatchCacheEntry) => {
     latestEntry = entry
     latestPayload = { current: entry.current, old: entry.old, lastUpdated: entry.lastUpdated }
+    updateConnectionState({ hasData: true })
     notifySubscribers()
   }
 
   return {
     subscribe,
+    subscribeConnection,
+    waitForConnection,
+    getConnectionState: () => ({ isConnected, hasData }),
     getLatest: () => latestPayload,
     broadcastEntry,
   }
@@ -919,10 +978,14 @@ export const useMatchData = (options?: {
   const enabled = options?.enabled ?? true
   const paramsLimit = typeof params?.limit === "number" && params.limit >= 0 ? params.limit : undefined
 
+  const initialConnectionState = matchDataChannel.getConnectionState()
+  const initialHasData = initialConnectionState.hasData || Boolean(options?.initialData?.matches?.length)
   const [matches, setMatches] = useState<NormalizedMatch[]>(options?.initialData?.matches ?? [])
-  const [loading, setLoading] = useState(!options?.initialData && enabled)
+  const [loading, setLoading] = useState(!initialHasData && enabled)
   const [error, setError] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isConnected, setIsConnected] = useState(initialConnectionState.isConnected)
+  const [hasData, setHasData] = useState(initialHasData)
 
   const selectMatchesFromPayload = useCallback(
     (payload: MatchChannelPayload) => {
@@ -952,6 +1015,7 @@ export const useMatchData = (options?: {
           lastUpdated: Date.now(),
         })
       })
+      setHasData(true)
       setError(null)
       setLoading(false)
       return selectedMatches
@@ -968,6 +1032,25 @@ export const useMatchData = (options?: {
     return () => unsubscribe()
   }, [enabled, applyPayload, paramsSignature])
 
+  useEffect(() => {
+    if (!enabled) {
+      return
+    }
+
+    const unsubscribe = matchDataChannel.subscribeConnection(({ isConnected, hasData: payloadHasData }) => {
+      setIsConnected(isConnected)
+      setHasData((prev) => prev || payloadHasData)
+    })
+
+    return unsubscribe
+  }, [enabled])
+
+  useEffect(() => {
+    if (isConnected && !hasData) {
+      setLoading(true)
+    }
+  }, [isConnected, hasData])
+
   const refresh = useCallback(
     async (bypassCache = false) => {
       if (!enabled) {
@@ -976,9 +1059,13 @@ export const useMatchData = (options?: {
 
       setIsRefreshing(true)
       try {
+        await matchDataChannel.waitForConnection()
         const payload = matchDataChannel.getLatest()
+
         if (!payload) {
-          throw new Error("Matchströmmen har inte laddats än.")
+          setLoading(true)
+          setError(null)
+          return { matches: [] }
         }
 
         const selectedMatches = applyPayload(payload)
