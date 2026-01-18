@@ -12,7 +12,7 @@ import { MatchFeedModal } from "@/components/match-feed-modal"
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 
 type StatusFilter = "all" | "upcoming" | "live" | "finished"
-type DataTypeFilter = "both" | "current" | "old"
+type DataTypeFilter = "current" | "old" | "enhanced"
 
 type MatchOutcome = {
   text: string
@@ -273,7 +273,7 @@ export default function MatcherPage() {
               onChange={(event) => setDataTypeFilter(event.target.value as DataTypeFilter)}
             >
               <option value="current">Aktuella & kommande</option>
-              <option value="both">Alla matcher</option>
+              <option value="enhanced">Alla matcher</option>
               <option value="old">Gamla matcher</option>
             </select>
           </label>

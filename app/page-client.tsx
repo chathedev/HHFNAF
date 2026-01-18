@@ -131,13 +131,19 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const [showHeroContent, setShowHeroContent] = useState<boolean>(true)
   const [openTier, setOpenTier] = useState<string | null>("Diamantpartner")
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
+  const limitedParams = useMemo(() => ({ limit: 10 }), [])
   const {
     matches: upcomingMatches,
     loading: matchLoading,
     error: matchErrorMessage,
     refresh,
     isRefreshing: isRefreshingMatches,
-  } = useMatchData({ refreshIntervalMs: 1_000, initialData })
+  } = useMatchData({
+    refreshIntervalMs: 1_000,
+    dataType: "current",
+    params: limitedParams,
+    initialData,
+  })
   const matchError = Boolean(matchErrorMessage)
 
   const selectedMatch = useMemo(() => {

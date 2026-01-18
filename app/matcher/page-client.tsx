@@ -13,7 +13,6 @@ import type { EnhancedMatchData } from "@/lib/use-match-data"
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 
 type StatusFilter = "all" | "upcoming" | "live" | "finished"
-type DataTypeFilter = "both" | "current" | "old"
 
 type MatchOutcome = {
   text: string
@@ -114,7 +113,12 @@ const TEAM_OPTIONS = TEAM_OPTION_VALUES.map((value) => ({
   label: extendTeamDisplayName(value),
 }))
 
-
+const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
+  { value: "all", label: "Alla matcher" },
+  { value: "live", label: "Live nu" },
+  { value: "upcoming", label: "Kommande" },
+  { value: "finished", label: "Avslutade" },
+]
 
 export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatchData }) {
   const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
@@ -125,13 +129,10 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   // Track previous scores to highlight live updates
   const prevScoresRef = useRef<Map<string, { home: number; away: number }>>(new Map())
 
-  // Use "both" endpoint to get current + old matches (unified endpoint)
-  const dataType: "current" | "old" | "both" | "enhanced" = "both"
-
   const { matches, metadata, grouped, loading, error, refresh, isRefreshing } = useMatchData({
     refreshIntervalMs: 1_000,
-    dataType,
-    initialData
+    dataType: "enhanced",
+    initialData,
   })
 
   const selectedMatch = useMemo(() => {
@@ -584,17 +585,20 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
 
         {/* Filters */}
         <div className="mb-8 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <div>
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex-1 min-w-0">
               <label
                 htmlFor="team-filter"
-                className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider"
+                className="block text-sm font-semibold text-gray-700 uppercase tracking-wide"
               >
                 Filtrera lag
               </label>
+              <p className="text-xs text-gray-500 mb-2">
+                Välj ett lag för att zooma in på deras matcher.
+              </p>
               <select
                 id="team-filter"
-                className="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-gray-900 font-medium focus:border-emerald-400 focus:outline-none transition-colors"
+                className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 focus:border-emerald-400 focus:outline-none transition-colors"
                 value={selectedTeam}
                 onChange={(e) => setSelectedTeam(e.target.value)}
               >
@@ -606,24 +610,33 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                 ))}
               </select>
             </div>
-            <div>
-              <label
-                htmlFor="status-filter"
-                className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider"
-              >
+            <div className="lg:w-[320px]">
+              <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wide">
                 Matchstatus
               </label>
-              <select
-                id="status-filter"
-                className="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-gray-900 font-medium focus:border-emerald-400 focus:outline-none transition-colors"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-              >
-                <option value="all">📋 Alla matcher</option>
-                <option value="live">🔴 Live nu</option>
-                <option value="upcoming">📅 Kommande</option>
-                <option value="finished">✅ Avslutade</option>
-              </select>
+              <p className="text-xs text-gray-500 mb-2">
+                Visa matcher baserat på status – live, kommande eller avslutade.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {STATUS_OPTIONS.map((option) => {
+                  const isActive = statusFilter === option.value
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-pressed={isActive}
+                      onClick={() => setStatusFilter(option.value)}
+                      className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition ${
+                        isActive
+                          ? "bg-emerald-600 border-emerald-600 text-white shadow-lg"
+                          : "bg-white border-gray-200 text-gray-700 hover:border-emerald-400"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           </div>
         </div>

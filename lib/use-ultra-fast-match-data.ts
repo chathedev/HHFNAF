@@ -102,7 +102,7 @@ const API_BASE_URL =
   (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
   "https://api.harnosandshf.se"
 
-type DataType = "current" | "old" | "both" | "enhanced"
+type DataType = "current" | "old" | "enhanced"
 
 const getDataEndpoint = (type: DataType) => {
   switch (type) {
@@ -112,14 +112,11 @@ const getDataEndpoint = (type: DataType) => {
       return `${API_BASE_URL}/matcher/data/old`
     case "enhanced":
       return `${API_BASE_URL}/matcher/data/enhanced`
-    case "both":
-    default:
-      return `${API_BASE_URL}/matcher/data`
   }
 }
 
 // Fast API fetch with minimal retry and timeout
-const fetchFromApiUltraFast = async (dataType: DataType = "both"): Promise<ApiMatch[]> => {
+const fetchFromApiUltraFast = async (dataType: DataType = "current"): Promise<ApiMatch[]> => {
   const endpoint = getDataEndpoint(dataType)
   
   const controller = new AbortController()
@@ -149,10 +146,8 @@ const fetchFromApiUltraFast = async (dataType: DataType = "both"): Promise<ApiMa
       matches = Array.isArray(payload.current) ? payload.current : []
     } else if (dataType === "old" && payload.old) {
       matches = Array.isArray(payload.old) ? payload.old : []
-    } else if (dataType === "both") {
-      const current = Array.isArray(payload.current) ? payload.current : []
-      const old = Array.isArray(payload.old) ? payload.old : []
-      matches = [...current, ...old]
+    } else if (dataType === "enhanced" && payload.matches) {
+      matches = Array.isArray(payload.matches) ? payload.matches : []
     } else {
       matches = Array.isArray(payload) ? payload : []
     }
@@ -170,7 +165,7 @@ export const useUltraFastMatchData = (options?: {
   enabled?: boolean 
 }) => {
   const refreshIntervalMs = options?.refreshIntervalMs ?? 500 // Ultra-fast updates
-  const dataType = options?.dataType ?? "both"
+  const dataType = options?.dataType ?? "current"
   const enabled = options?.enabled ?? true
   
   const [matches, setMatches] = useState<ApiMatch[]>([])

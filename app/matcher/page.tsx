@@ -9,7 +9,7 @@ export default async function MatcherPage() {
   let initialData = undefined
   try {
     // Fetch initial data on the server
-    initialData = await getMatchData("both", true)
+    initialData = await getMatchData("enhanced", true)
   } catch (error) {
     console.error("Failed to fetch match data on server:", error)
   }

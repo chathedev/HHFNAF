@@ -89,7 +89,28 @@ const API_BASE_URL =
   (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
   "https://api.harnosandshf.se"
 
-type DataType = "current" | "old" | "both" | "enhanced"
+type DataType = "current" | "old" | "enhanced"
+type QueryParams = Record<string, string | number | boolean | undefined>
+
+const buildQueryMeta = (params?: QueryParams) => {
+  const entries = Object.entries(params ?? {})
+    .filter(([, value]) => value !== undefined)
+    .map(([key, value]) => [key, String(value)] as const)
+    .sort(([a], [b]) => a.localeCompare(b))
+
+  if (entries.length === 0) {
+    return { queryString: "", signature: "" }
+  }
+
+  const searchParams = new URLSearchParams()
+  entries.forEach(([key, value]) => searchParams.append(key, value))
+  const serialized = searchParams.toString()
+
+  return {
+    queryString: `?${serialized}`,
+    signature: serialized,
+  }
+}
 
 const getDataEndpoint = (type: DataType) => {
   switch (type) {
@@ -99,9 +120,6 @@ const getDataEndpoint = (type: DataType) => {
       return `${API_BASE_URL}/matcher/data/old`
     case "enhanced":
       return `${API_BASE_URL}/matcher/data/enhanced`
-    case "both":
-    default:
-      return `${API_BASE_URL}/matcher/data`
   }
 }
 
@@ -464,8 +482,13 @@ const latestMatchStates = new Map<string, {
 // Version counter for cache entries
 let cacheVersion = 0
 
-export const getMatchData = async (dataType: DataType = "both", bypassCache = false): Promise<EnhancedMatchData> => {
-  const endpoint = getDataEndpoint(dataType)
+export const getMatchData = async (
+  dataType: DataType = "current",
+  bypassCache = false,
+  params?: QueryParams,
+): Promise<EnhancedMatchData> => {
+  const { queryString } = buildQueryMeta(params)
+  const endpoint = `${getDataEndpoint(dataType)}${queryString}`
   const cacheKey = `${dataType}-${endpoint}`
 
   // Check memory cache first (unless bypassed) but verify data freshness
@@ -555,16 +578,6 @@ export const getMatchData = async (dataType: DataType = "both", bypassCache = fa
       } else if (dataType === "old" && payload.old) {
         // /matcher/data/old returns { old: [...] }
         matches = Array.isArray(payload.old) ? payload.old : []
-      } else if (dataType === "both") {
-        // /matcher/data returns { current: [...], old: [...] }
-        const current = Array.isArray(payload.current) ? payload.current : []
-        const old = Array.isArray(payload.old) ? payload.old : []
-
-        // Prioritize live matches for instant display
-        const liveMatches = [...current, ...old].filter(m => m.matchStatus === "live")
-        const otherMatches = [...current, ...old].filter(m => m.matchStatus !== "live")
-
-        matches = [...liveMatches, ...otherMatches] // Live matches first
       } else {
         // Fallback: check if payload itself is an array
         matches = Array.isArray(payload) ? payload : []
@@ -760,9 +773,15 @@ if (typeof window !== "undefined") {
 // Export helper functions for other components
 export { getMatchEndTime, shouldShowFinishedMatch, shouldShowFinishedMatchForTeam }
 
-export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: DataType; initialData?: EnhancedMatchData }) => {
+export const useMatchData = (options?: {
+  refreshIntervalMs?: number
+  dataType?: DataType
+  initialData?: EnhancedMatchData
+  params?: QueryParams
+}) => {
   const baseRefreshInterval = options?.refreshIntervalMs ?? 1_000
-  const dataType = options?.dataType ?? "both"
+  const dataType = options?.dataType ?? "current"
+  const paramsSignature = useMemo(() => buildQueryMeta(options?.params).signature, [options?.params])
 
   const [matches, setMatches] = useState<NormalizedMatch[]>(options?.initialData?.matches ?? [])
   const [metadata, setMetadata] = useState<EnhancedMatchData['metadata']>(options?.initialData?.metadata)
@@ -778,7 +797,7 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
   const refresh = useCallback(async (bypassCache = false) => {
     try {
       setIsRefreshing(true)
-      const data = await getMatchData(dataType, bypassCache)
+      const data = await getMatchData(dataType, bypassCache, options?.params)
 
       // TRUST BACKEND FULLY: Always use fresh data, no second-guessing
       setMatches(data.matches)      // Queue updates through state manager for smooth transitions
@@ -812,7 +831,7 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
     } finally {
       setIsRefreshing(false)
     }
-  }, [dataType])
+  }, [dataType, paramsSignature])
 
   useEffect(() => {
     let isMounted = true
@@ -823,7 +842,7 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
       }
 
       try {
-        const data = await getMatchData(dataType)
+        const data = await getMatchData(dataType, false, options?.params)
         if (!isMounted) {
           return
         }
@@ -855,7 +874,7 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
     return () => {
       isMounted = false
     }
-  }, [dataType])
+  }, [dataType, paramsSignature])
 
   useEffect(() => {
     if (!refreshIntervalMs || refreshIntervalMs <= 0) {
@@ -871,7 +890,7 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
         try {
           // Bypass cache every few calls for live matches
           const shouldBypassCache = hasLiveMatches && Math.random() > 0.8 // More frequent bypass
-          const data = await getMatchData(dataType, shouldBypassCache)
+          const data = await getMatchData(dataType, shouldBypassCache, options?.params)
 
           // TRUST BACKEND: Use fresh data directly, backend knows best
           setMatches(data.matches)
@@ -915,7 +934,7 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
     return () => {
       if (intervalId) clearInterval(intervalId)
     }
-  }, [refreshIntervalMs, dataType])
+  }, [refreshIntervalMs, dataType, paramsSignature])
 
   useEffect(() => {
     const handleVisibilityChange = async () => {
@@ -937,7 +956,7 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
       window.removeEventListener("focus", handleFocus)
       document.removeEventListener("visibilitychange", handleVisibilityChange)
     }
-  }, [dataType])
+  }, [dataType, paramsSignature, refresh])
 
   // Performance monitoring
   const performanceMonitor = {

@@ -9,7 +9,7 @@ export default async function HomePage() {
   let initialData = undefined
   try {
     // Fetch initial data on the server to prevent layout shift and show content immediately
-    initialData = await getMatchData("both", true)
+    initialData = await getMatchData("current", true, { limit: 10 })
   } catch (error) {
     console.error("Failed to fetch match data on server:", error)
   }
