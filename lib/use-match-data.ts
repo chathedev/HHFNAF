@@ -168,10 +168,10 @@ const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matc
   if (match.matchStatus !== "finished") {
     return null
   }
-  
+
   const matchStart = match.date.getTime()
   const timeline = match.matchFeed ?? []
-  
+
   // PRIORITY 1: Look for actual match end events with time played
   const endEvent = timeline.find((event) => {
     const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
@@ -188,7 +188,7 @@ const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matc
       (text.includes("final") && !text.includes("första"))
     )
   })
-  
+
   if (endEvent?.time) {
     try {
       const timeStr = endEvent.time.replace(/[^\d:+]/g, '')
@@ -197,7 +197,7 @@ const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matc
         const baseMinutes = parseInt(parts[0].split(':')[0]) || 0
         const overtimeMinutes = parts[1] ? parseInt(parts[1]) : 0
         const totalMinutes = baseMinutes + overtimeMinutes
-        
+
         if (totalMinutes > 0) {
           // Return actual match end: start time + time played
           return new Date(matchStart + totalMinutes * 60 * 1000)
@@ -207,7 +207,7 @@ const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matc
       // Continue to next method
     }
   }
-  
+
   // PRIORITY 2: Use the last meaningful timeline event with actual time played
   if (timeline.length > 0) {
     // Sort timeline events by time to get the actual last event
@@ -220,7 +220,7 @@ const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matc
         const bMinutes = parseInt(bTime.split(':')[0]) || 0
         return bMinutes - aMinutes // Latest time first
       })
-    
+
     const lastEvent = sortedEvents[0]
     if (lastEvent?.time) {
       try {
@@ -230,7 +230,7 @@ const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matc
           const baseMinutes = parseInt(parts[0].split(':')[0]) || 0
           const overtimeMinutes = parts[1] ? parseInt(parts[1]) : 0
           const totalMinutes = baseMinutes + overtimeMinutes
-          
+
           // Use actual time played from timeline
           if (totalMinutes > 0) {
             return new Date(matchStart + totalMinutes * 60 * 1000)
@@ -241,7 +241,7 @@ const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matc
       }
     }
   }
-  
+
   // PRIORITY 3: Fallback - assume match just ended if no timeline data
   // Return current time as best guess for match end
   return new Date()
@@ -252,40 +252,40 @@ const shouldShowFinishedMatch = (match: { date: Date; matchFeed?: MatchFeedEvent
   if (match.matchStatus !== "finished") {
     return false // Not finished, handled elsewhere
   }
-  
+
   // Enhanced logic: Only show finished matches with REAL results (greater than 0-0)
   const result = match.result?.trim() || ""
-  
+
   if (!result || result.toLowerCase() === "inte publicerat") {
     return false // No result or not published
   }
-  
+
   // Parse score to check if it's greater than 0-0
   const scoreMatch = result.match(/(\d+)[-–](\d+)/)
   if (!scoreMatch) {
     return false // Invalid score format
   }
-  
+
   const homeScore = parseInt(scoreMatch[1])
   const awayScore = parseInt(scoreMatch[2])
-  
+
   // Must have at least one goal scored (not 0-0)
   if (homeScore === 0 && awayScore === 0) {
     return false // Don't show 0-0 results
   }
-  
+
   // Valid result with actual goals scored - now check time window
   const now = Date.now()
-  
+
   // ENHANCED LOGIC: start time + time played + retention hours
   const matchEndTime = getMatchEndTime(match)
-  
+
   if (matchEndTime) {
     // Perfect: start time + actual time played + retention period
     const retentionWindowEnd = matchEndTime.getTime() + (retentionHours * 60 * 60 * 1000)
     return now <= retentionWindowEnd
   }
-  
+
   // Fallback: If we can't determine match end time, be generous and show it
   // This ensures newly finished matches are never hidden incorrectly
   return true
@@ -296,19 +296,19 @@ const shouldShowFinishedMatchForTeam = (match: { date: Date; matchFeed?: MatchFe
   if (match.matchStatus !== "finished") {
     return false // Not finished, handled elsewhere
   }
-  
+
   // Team pages show ALL finished matches regardless of result (including 0-0)
   const now = Date.now()
-  
+
   // ENHANCED LOGIC: start time + time played + retention hours
   const matchEndTime = getMatchEndTime(match)
-  
+
   if (matchEndTime) {
     // Perfect: start time + actual time played + retention period
     const retentionWindowEnd = matchEndTime.getTime() + (retentionHours * 60 * 60 * 1000)
     return now <= retentionWindowEnd
   }
-  
+
   // Fallback: If we can't determine match end time, be generous and show it
   // This ensures newly finished matches are never hidden incorrectly
   return true
@@ -334,17 +334,17 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
 
   // Start with backend status, but ALWAYS check timeline for halftime override
   let derivedStatus: NormalizedMatch["matchStatus"] | undefined = normalizeStatusValue(match.matchStatus)
-  
+
   // ALWAYS analyze timeline for halftime detection (override backend status if needed)
   {
     const timeline = match.matchFeed ?? []
     const hasTimelineEvents = timeline.some((event) => Boolean(event?.type || event?.description))
-    
+
     // Enhanced timeline analysis for proper match state detection
     const timelineText = timeline.map(event => {
       return `${event.type || ''} ${event.description || ''}`.toLowerCase()
     }).join(' ')
-    
+
     // Check for ACTUAL match end (2:a halvlek är slut means really finished)
     const matchActuallyEnded = timeline.some((event) => {
       const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
@@ -360,7 +360,7 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
         text.includes("final") && !text.includes("första")
       )
     })
-    
+
     // Check for halftime break - look at the LATEST event to determine current state
     const sortedTimeline = timeline
       .filter(event => event.time && (event.type || event.description))
@@ -374,7 +374,7 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
       })
 
     const latestEvent = sortedTimeline[0]
-    const latestEventText = latestEvent 
+    const latestEventText = latestEvent
       ? `${latestEvent.type || ''} ${latestEvent.description || ''}`.toLowerCase()
       : ''
 
@@ -383,7 +383,7 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
       latestEventText.includes("1:a halvlek slut") ||
       latestEventText.includes("första halvlek är slut") ||
       latestEventText.includes("första halvlek slut")
-    
+
     // Check if second half has started (means no longer in break)
     const secondHalfStarted = timeline.some((event) => {
       const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
@@ -394,13 +394,13 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
         text.includes("andra halvlek") && text.includes("start")
       )
     })
-    
+
     // PRIORITY OVERRIDE: Timeline-based status always wins for halftime/finished detection
     if (matchActuallyEnded) {
       derivedStatus = "finished"
     } else if (isHalftimeBreak && !secondHalfStarted) {
       // OVERRIDE: Always show halftime when detected, regardless of backend status
-      derivedStatus = "halftime" 
+      derivedStatus = "halftime"
     } else if (secondHalfStarted) {
       // OVERRIDE: Force live when second half starts
       derivedStatus = "live"
@@ -454,7 +454,7 @@ const globalMatchRegistry = new Map<string, NormalizedMatch>()
 const lastSeenMatches = new Set<string>()
 
 // Track latest match states to prevent regression
-const latestMatchStates = new Map<string, { 
+const latestMatchStates = new Map<string, {
   result: string | undefined
   feedLength: number
   lastEventTime: string
@@ -464,10 +464,10 @@ const latestMatchStates = new Map<string, {
 // Version counter for cache entries
 let cacheVersion = 0
 
-const fetchFromApi = async (dataType: DataType = "both", bypassCache = false): Promise<EnhancedMatchData> => {
+export const getMatchData = async (dataType: DataType = "both", bypassCache = false): Promise<EnhancedMatchData> => {
   const endpoint = getDataEndpoint(dataType)
   const cacheKey = `${dataType}-${endpoint}`
-  
+
   // Check memory cache first (unless bypassed) but verify data freshness
   if (!bypassCache) {
     const cached = memoryCache.get(cacheKey)
@@ -476,15 +476,15 @@ const fetchFromApi = async (dataType: DataType = "both", bypassCache = false): P
       const hasRegression = cached.data.matches.some(match => {
         const latest = latestMatchStates.get(match.id)
         if (!latest) return false
-        
+
         const currentFeedLength = match.matchFeed?.length || 0
         const currentResult = match.result || ""
-        
+
         // Don't use cached data if it has fewer events or older result
-        return currentFeedLength < latest.feedLength || 
-               (currentResult !== latest.result && latest.timestamp > cached.timestamp)
+        return currentFeedLength < latest.feedLength ||
+          (currentResult !== latest.result && latest.timestamp > cached.timestamp)
       })
-      
+
       if (!hasRegression) {
         return cached.data
       }
@@ -502,7 +502,7 @@ const fetchFromApi = async (dataType: DataType = "both", bypassCache = false): P
         controller.abort()
       }, 3000) // Slightly longer timeout to prevent unnecessary aborts
 
-      const response = await fetch(endpoint, { 
+      const response = await fetch(endpoint, {
         cache: "no-store",
         signal: controller.signal,
         headers: {
@@ -511,9 +511,9 @@ const fetchFromApi = async (dataType: DataType = "both", bypassCache = false): P
           'Pragma': 'no-cache',
         }
       })
-      
+
       clearTimeout(timeoutId)
-      
+
       if (response.status === 503) {
         attempt += 1
         await sleep(delay)
@@ -526,17 +526,17 @@ const fetchFromApi = async (dataType: DataType = "both", bypassCache = false): P
       }
 
       const payload = await response.json()
-      
+
       // Handle different response structures based on endpoint
       let matches: ApiMatch[] = []
       let metadata = undefined
       let grouped = undefined
-      
+
       if (dataType === "enhanced") {
         // /matcher/data/enhanced returns { matches: [...], metadata: {...}, grouped: {...} }
         matches = Array.isArray(payload.matches) ? payload.matches : []
         metadata = payload.metadata
-        
+
         // If grouped data exists, normalize the matches in it
         if (payload.grouped) {
           grouped = {
@@ -559,17 +559,17 @@ const fetchFromApi = async (dataType: DataType = "both", bypassCache = false): P
         // /matcher/data returns { current: [...], old: [...] }
         const current = Array.isArray(payload.current) ? payload.current : []
         const old = Array.isArray(payload.old) ? payload.old : []
-        
+
         // Prioritize live matches for instant display
         const liveMatches = [...current, ...old].filter(m => m.matchStatus === "live")
         const otherMatches = [...current, ...old].filter(m => m.matchStatus !== "live")
-        
+
         matches = [...liveMatches, ...otherMatches] // Live matches first
       } else {
         // Fallback: check if payload itself is an array
         matches = Array.isArray(payload) ? payload : []
       }
-      
+
       const normalizedMatches = normalizeMatches(matches)
 
       const statusBuckets: NonNullable<EnhancedMatchData['grouped']>['byStatus'] = {
@@ -609,7 +609,7 @@ const fetchFromApi = async (dataType: DataType = "both", bypassCache = false): P
       // GUARANTEE: Always return ALL known matches, NEVER let any disappear
       const allKnownMatches = Array.from(globalMatchRegistry.values())
         .sort((a, b) => a.date.getTime() - b.date.getTime())
-      
+
       // Emergency fallback: If we somehow have fewer matches than before, keep the old ones
       if (normalizedMatches.length > 0 && allKnownMatches.length < lastSeenMatches.size) {
         console.warn('🚨 Match count dropped, preserving registry integrity')
@@ -633,11 +633,11 @@ const fetchFromApi = async (dataType: DataType = "both", bypassCache = false): P
         const newFeedLength = match.matchFeed?.length || 0
         const newResult = match.result || ""
         const newLastEventTime = match.matchFeed?.[0]?.time || ""
-        
-        if (!currentState || 
-            newFeedLength >= currentState.feedLength ||
-            (newResult !== currentState.result && newResult !== "0-0" && newResult !== "0–0")) {
-          
+
+        if (!currentState ||
+          newFeedLength >= currentState.feedLength ||
+          (newResult !== currentState.result && newResult !== "0-0" && newResult !== "0–0")) {
+
           latestMatchStates.set(match.id, {
             result: newResult,
             feedLength: newFeedLength,
@@ -646,15 +646,15 @@ const fetchFromApi = async (dataType: DataType = "both", bypassCache = false): P
           })
         }
       })
-      
+
       // Cache the result with version for ultra-fast subsequent calls
       cacheVersion++
-      memoryCache.set(cacheKey, { 
-        data: result, 
+      memoryCache.set(cacheKey, {
+        data: result,
         timestamp: Date.now(),
         version: cacheVersion
       })
-      
+
       return result
     } catch (error) {
       if (attempt < 1) { // Only 1 retry for speed
@@ -663,7 +663,7 @@ const fetchFromApi = async (dataType: DataType = "both", bypassCache = false): P
         delay = Math.min(delay * 1.2, 1000) // Much faster retry
         continue
       }
-      
+
       // Return cached data on error if available AND it's not stale
       const cached = memoryCache.get(cacheKey)
       if (cached) {
@@ -671,11 +671,11 @@ const fetchFromApi = async (dataType: DataType = "both", bypassCache = false): P
         const hasRegression = cached.data.matches.some(match => {
           const latest = latestMatchStates.get(match.id)
           if (!latest) return false
-          
+
           const cachedFeedLength = match.matchFeed?.length || 0
           return cachedFeedLength < latest.feedLength
         })
-        
+
         if (!hasRegression) {
           console.warn('API failed, returning cached data (verified fresh):', error)
           return cached.data
@@ -683,7 +683,7 @@ const fetchFromApi = async (dataType: DataType = "both", bypassCache = false): P
           console.warn('API failed and cached data is stale, throwing error:', error)
         }
       }
-      
+
       throw error
     }
   }
@@ -697,15 +697,15 @@ const preloadData = async () => {
     // Create a fresh AbortController for each preload to avoid signal conflicts
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 5000)
-    
+
     // Preload both current and old data in parallel
     const [currentData, oldData] = await Promise.allSettled([
-      fetchFromApi("current", true),
-      fetchFromApi("old", true)
+      getMatchData("current", true),
+      getMatchData("old", true)
     ])
-    
+
     clearTimeout(timeoutId)
-    
+
     const successCount = [currentData, oldData].filter(result => result.status === 'fulfilled').length
     console.log('🚀 Preloaded data successfully:', successCount, 'of 2 endpoints')
   } catch (error) {
@@ -719,7 +719,7 @@ const preloadData = async () => {
 // Preload data immediately when module loads
 if (typeof window !== "undefined") {
   preloadData()
-  
+
   // Preload again every 30 seconds to keep cache fresh
   setInterval(preloadData, 30000)
 }
@@ -729,13 +729,13 @@ if (typeof window !== "undefined") {
   setInterval(() => {
     const now = Date.now()
     const maxAge = 5 * 60 * 1000 // 5 minutes
-    
+
     latestMatchStates.forEach((state, matchId) => {
       if (now - state.timestamp > maxAge) {
         latestMatchStates.delete(matchId)
       }
     })
-    
+
     // Also cleanup old cache entries
     memoryCache.forEach((cacheEntry, key) => {
       if (now - cacheEntry.timestamp > maxAge) {
@@ -748,14 +748,14 @@ if (typeof window !== "undefined") {
 // Export helper functions for other components
 export { getMatchEndTime, shouldShowFinishedMatch, shouldShowFinishedMatchForTeam }
 
-export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: DataType }) => {
+export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: DataType; initialData?: EnhancedMatchData }) => {
   const baseRefreshInterval = options?.refreshIntervalMs ?? 1_000
   const dataType = options?.dataType ?? "both"
 
-  const [matches, setMatches] = useState<NormalizedMatch[]>([])
-  const [metadata, setMetadata] = useState<EnhancedMatchData['metadata']>()
-  const [grouped, setGrouped] = useState<EnhancedMatchData['grouped']>()
-  const [loading, setLoading] = useState(true)
+  const [matches, setMatches] = useState<NormalizedMatch[]>(options?.initialData?.matches ?? [])
+  const [metadata, setMetadata] = useState<EnhancedMatchData['metadata']>(options?.initialData?.metadata)
+  const [grouped, setGrouped] = useState<EnhancedMatchData['grouped']>(options?.initialData?.grouped)
+  const [loading, setLoading] = useState(!options?.initialData)
   const [error, setError] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [hasLiveMatches, setHasLiveMatches] = useState(false)
@@ -766,8 +766,8 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
   const refresh = useCallback(async (bypassCache = false) => {
     try {
       setIsRefreshing(true)
-      const data = await fetchFromApi(dataType, bypassCache)
-      
+      const data = await getMatchData(dataType, bypassCache)
+
       // TRUST BACKEND FULLY: Always use fresh data, no second-guessing
       setMatches(data.matches)      // Queue updates through state manager for smooth transitions
       data.matches.forEach(match => {
@@ -776,18 +776,18 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
           lastUpdated: Date.now()
         })
       })
-      
+
       if (data.metadata) {
         setMetadata(data.metadata)
       }
       if (data.grouped) {
         setGrouped(data.grouped)
       }
-      
+
       // Check for live matches to adjust refresh rate (include halftime)
       const liveMatches = data.matches.filter(m => m.matchStatus === "live" || m.matchStatus === "halftime")
       setHasLiveMatches(liveMatches.length > 0)
-      
+
       setError(null)
       setLoading(false)
       return data
@@ -842,19 +842,19 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
     }
 
     let intervalId: NodeJS.Timeout
-    
+
     const startInterval = (interval: number) => {
       if (intervalId) clearInterval(intervalId)
-      
+
       intervalId = setInterval(async () => {
         try {
           // Bypass cache every few calls for live matches
           const shouldBypassCache = hasLiveMatches && Math.random() > 0.8 // More frequent bypass
           const data = await fetchFromApi(dataType, shouldBypassCache)
-          
+
           // TRUST BACKEND: Use fresh data directly, backend knows best
           setMatches(data.matches)
-          
+
           if (data.metadata) {
             setMetadata(data.metadata)
           }
@@ -862,22 +862,22 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
             setGrouped(data.grouped)
           }
           setError(null)
-          
+
           // Update live match status (include halftime as live)
           const liveMatches = data.matches.filter(m => m.matchStatus === "live" || m.matchStatus === "halftime")
           const newHasLiveMatches = liveMatches.length > 0
-          
+
           if (newHasLiveMatches !== hasLiveMatches) {
             setHasLiveMatches(newHasLiveMatches)
           }
-          
+
           // Performance and debug logging
           performanceMonitor.recordUpdate()
-          
+
           if (liveMatches.length > 0) {
-            console.log(`🔴 Live matches updated (${interval}ms):`, liveMatches.map(m => ({ 
-              id: m.id, 
-              result: m.result, 
+            console.log(`🔴 Live matches updated (${interval}ms):`, liveMatches.map(m => ({
+              id: m.id,
+              result: m.result,
               feedLength: m.matchFeed?.length || 0,
               lastEvent: m.matchFeed?.[0]?.type || 'none'
             })))
@@ -922,19 +922,19 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
   const performanceMonitor = {
     lastUpdateTime: Date.now(),
     updateTimes: [] as number[],
-    
+
     recordUpdate() {
       const now = Date.now()
       const timeSinceLastUpdate = now - this.lastUpdateTime
       this.updateTimes.push(timeSinceLastUpdate)
-      
+
       // Keep only last 20 measurements
       if (this.updateTimes.length > 20) {
         this.updateTimes.shift()
       }
-      
+
       this.lastUpdateTime = now
-      
+
       // Log performance stats every 10 updates
       if (this.updateTimes.length % 10 === 0) {
         const avgTime = this.updateTimes.reduce((a, b) => a + b, 0) / this.updateTimes.length
