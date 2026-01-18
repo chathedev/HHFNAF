@@ -43,6 +43,9 @@ export default function MatchCards() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    let active = true
+    let timerId: ReturnType<typeof setTimeout> | null = null
+
     const fetchMatches = async () => {
       try {
         const controller = new AbortController()
@@ -50,9 +53,9 @@ export default function MatchCards() {
 
         const response = await fetch(`${API_BASE_URL}/data/current`, {
           signal: controller.signal,
-          headers: { 
+          headers: {
             Accept: "application/json",
-            'Cache-Control': 'no-cache'
+            'Cache-Control': 'no-cache',
           },
           cache: "no-store",
         })
@@ -114,12 +117,28 @@ export default function MatchCards() {
       }
     }
 
-    fetchMatches()
-    
-    // Auto-refresh every second for real-time updates
-    const interval = setInterval(fetchMatches, 1000)
-    
-    return () => clearInterval(interval)
+    const runLoop = async () => {
+      if (!active) {
+        return
+      }
+
+      await fetchMatches()
+
+      if (!active) {
+        return
+      }
+
+      timerId = window.setTimeout(runLoop, 3000)
+    }
+
+    void runLoop()
+
+    return () => {
+      active = false
+      if (timerId) {
+        clearTimeout(timerId)
+      }
+    }
   }, [])
 
   const formatDate = (dateString?: string) => {

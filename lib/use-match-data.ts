@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { matchStateManager } from "./match-state-manager"
 import { dataFreshnessMonitor } from "./data-freshness-monitor"
 import { mapVenueIdToName } from "./venue-mapper"
@@ -674,24 +674,29 @@ export const getMatchData = async (
 }
 
 // Smart preloading system with proper abort handling
+let preloadInFlight = false
 const preloadData = async () => {
+  if (preloadInFlight) {
+    return
+  }
+
+  const endpoints: DataType[] = ["liveUpcoming", "old"]
+  let successCount = 0
+  preloadInFlight = true
+
   try {
-    // Create a fresh AbortController for each preload to avoid signal conflicts
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 5000)
+    for (const endpoint of endpoints) {
+      try {
+        await getMatchData(endpoint, true)
+        successCount += 1
+      } catch (error) {
+        console.warn("Preload failed for", endpoint, error)
+      }
+    }
 
-    // Preload both current and old data in parallel
-    const [currentData, oldData] = await Promise.allSettled([
-      getMatchData("liveUpcoming", true),
-      getMatchData("old", true)
-    ])
-
-    clearTimeout(timeoutId)
-
-    const successCount = [currentData, oldData].filter(result => result.status === 'fulfilled').length
-    console.log('🚀 Preloaded data successfully:', successCount, 'of 2 endpoints')
-  } catch (error) {
-    // Silently handle preload failures
+    console.log("🚀 Preloaded data successfully:", successCount, "of 2 endpoints")
+  } finally {
+    preloadInFlight = false
   }
 }
 
@@ -734,133 +739,123 @@ export const useMatchData = (options?: {
   params?: QueryParams
   enabled?: boolean
 }) => {
-  const baseRefreshInterval = options?.refreshIntervalMs ?? 1_000
   const dataType = options?.dataType ?? "liveUpcoming"
   const paramsSignature = useMemo(() => buildQueryMeta(options?.params).signature, [options?.params])
+  const params = options?.params
   const enabled = options?.enabled ?? true
+  const refreshDelayMs = Math.max(options?.refreshIntervalMs ?? 3000, 3000)
 
   const [matches, setMatches] = useState<NormalizedMatch[]>(options?.initialData?.matches ?? [])
   const [loading, setLoading] = useState(!options?.initialData && enabled)
   const [error, setError] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [hasLiveMatches, setHasLiveMatches] = useState(false)
 
-  const refreshIntervalMs = hasLiveMatches ? Math.min(baseRefreshInterval, 500) : baseRefreshInterval
+  const fetchLockRef = useRef<Promise<EnhancedMatchData> | null>(null)
+  const matchesRef = useRef<NormalizedMatch[]>(matches)
 
-  const refresh = useCallback(async (bypassCache = false) => {
-    if (!enabled) {
-      return null
-    }
+  useEffect(() => {
+    matchesRef.current = matches
+  }, [matches])
 
-    try {
-      setIsRefreshing(true)
-      const data = await getMatchData(dataType, bypassCache, options?.params)
+  const fetchAndUpdate = useCallback(
+    async (bypassCache = false) => {
+      const data = await getMatchData(dataType, bypassCache, params)
 
       setMatches(data.matches)
-      data.matches.forEach(match => {
+      data.matches.forEach((match) => {
         matchStateManager.queueUpdate(match.id, {
           ...match,
-          lastUpdated: Date.now()
+          lastUpdated: Date.now(),
         })
       })
 
-      const liveMatches = data.matches.filter((match) => match.matchStatus === "live" || match.matchStatus === "halftime")
-      setHasLiveMatches(liveMatches.length > 0)
-
-      setError(null)
-      setLoading(false)
       return data
-    } catch (caught) {
-      const message =
-        caught instanceof Error ? caught.message : "Kunde inte hämta matchdata just nu. Försök igen om en liten stund."
-      setError(message)
-      setLoading(false)
-      throw caught
-    } finally {
-      setIsRefreshing(false)
-    }
-  }, [dataType, paramsSignature, enabled])
+    },
+    [dataType, paramsSignature],
+  )
+
+  const refresh = useCallback(
+    async (bypassCache = false) => {
+      if (!enabled) {
+        return null
+      }
+
+      while (fetchLockRef.current) {
+        try {
+          await fetchLockRef.current
+        } catch {
+          // Ignore errors from the previous fetch; we only waited for it to finish
+        }
+      }
+
+      setIsRefreshing(true)
+      const fetchPromise = (async () => {
+        try {
+          const data = await fetchAndUpdate(bypassCache)
+          setError(null)
+          setLoading(false)
+          return data
+        } catch (caught) {
+          const message =
+            caught instanceof Error ? caught.message : "Kunde inte hämta matchdata just nu. Försök igen om en liten stund."
+          setError(message)
+          setLoading(false)
+          throw caught
+        } finally {
+          setIsRefreshing(false)
+        }
+      })()
+
+      fetchLockRef.current = fetchPromise
+      try {
+        return await fetchPromise
+      } finally {
+        if (fetchLockRef.current === fetchPromise) {
+          fetchLockRef.current = null
+        }
+      }
+    },
+    [enabled, fetchAndUpdate],
+  )
 
   useEffect(() => {
     if (!enabled) {
       return
     }
 
-    let isMounted = true
-    const run = async () => {
-      if (matches.length === 0) {
-        setLoading(true)
+    let cancelled = false
+    let timerId: ReturnType<typeof setTimeout> | null = null
+
+    if (matchesRef.current.length === 0) {
+      setLoading(true)
+    }
+
+    const runLoop = async () => {
+      if (cancelled) {
+        return
       }
 
       try {
-        const data = await getMatchData(dataType, false, options?.params)
-        if (!isMounted) {
-          return
-        }
-        setMatches(data.matches)
-        setError(null)
-      } catch (caught) {
-        if (!isMounted) {
-          return
-        }
-        if (matches.length === 0) {
-          const message =
-            caught instanceof Error ? caught.message : "Kunde inte hämta matchdata just nu. Försök igen om en liten stund."
-          setError(message)
-        } else {
-          console.warn("Background refresh failed:", caught)
-        }
+        await refresh(true)
+      } catch {
+        // Refresh already sets error state; avoid unhandled rejection
       } finally {
-        if (isMounted) {
-          setLoading(false)
+        if (cancelled) {
+          return
         }
+        timerId = setTimeout(runLoop, refreshDelayMs)
       }
     }
 
-    void run()
+    void runLoop()
 
     return () => {
-      isMounted = false
+      cancelled = true
+      if (timerId) {
+        clearTimeout(timerId)
+      }
     }
-  }, [dataType, paramsSignature, enabled])
-
-  useEffect(() => {
-    if (!enabled || !refreshIntervalMs || refreshIntervalMs <= 0) {
-      return
-    }
-
-    let intervalId: NodeJS.Timeout
-
-    const startInterval = (interval: number) => {
-      if (intervalId) clearInterval(intervalId)
-
-      intervalId = setInterval(async () => {
-        try {
-          const shouldBypassCache = hasLiveMatches && Math.random() > 0.8
-          const data = await getMatchData(dataType, shouldBypassCache, options?.params)
-
-          setMatches(data.matches)
-          const liveMatches = data.matches.filter((match) => match.matchStatus === "live" || match.matchStatus === "halftime")
-          const newHasLiveMatches = liveMatches.length > 0
-
-          if (newHasLiveMatches !== hasLiveMatches) {
-            setHasLiveMatches(newHasLiveMatches)
-          }
-
-          setError(null)
-        } catch (caught) {
-          const message = caught instanceof Error ? caught.message : "Kunde inte hämta matchdata just nu."
-          setError(message)
-        }
-      }, interval)
-    }
-
-    startInterval(refreshIntervalMs)
-
-    return () => {
-      if (intervalId) clearInterval(intervalId)
-    }
-  }, [refreshIntervalMs, dataType, paramsSignature, enabled])
+  }, [enabled, refresh, refreshDelayMs])
 
   useEffect(() => {
     if (!enabled) {
@@ -884,7 +879,7 @@ export const useMatchData = (options?: {
       window.removeEventListener("focus", handleFocus)
       document.removeEventListener("visibilitychange", handleVisibilityChange)
     }
-  }, [dataType, paramsSignature, refresh, enabled])
+  }, [refresh, enabled])
 
   return {
     matches,
