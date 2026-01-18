@@ -817,9 +817,13 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
   useEffect(() => {
     let isMounted = true
     const run = async () => {
-      setLoading(true)
+      // Only show loading state if we don't have any matches yet
+      if (matches.length === 0) {
+        setLoading(true)
+      }
+
       try {
-        const data = await fetchFromApi(dataType)
+        const data = await getMatchData(dataType)
         if (!isMounted) {
           return
         }
@@ -831,9 +835,14 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
         if (!isMounted) {
           return
         }
-        const message =
-          caught instanceof Error ? caught.message : "Kunde inte hämta matchdata just nu. Försök igen om en liten stund."
-        setError(message)
+        // Only show error if we don't have any matches
+        if (matches.length === 0) {
+          const message =
+            caught instanceof Error ? caught.message : "Kunde inte hämta matchdata just nu. Försök igen om en liten stund."
+          setError(message)
+        } else {
+          console.warn("Background refresh failed:", caught)
+        }
       } finally {
         if (isMounted) {
           setLoading(false)
@@ -862,7 +871,7 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
         try {
           // Bypass cache every few calls for live matches
           const shouldBypassCache = hasLiveMatches && Math.random() > 0.8 // More frequent bypass
-          const data = await fetchFromApi(dataType, shouldBypassCache)
+          const data = await getMatchData(dataType, shouldBypassCache)
 
           // TRUST BACKEND: Use fresh data directly, backend knows best
           setMatches(data.matches)
@@ -876,7 +885,7 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
           setError(null)
 
           // Update live match status (include halftime as live)
-          const liveMatches = data.matches.filter(m => m.matchStatus === "live" || m.matchStatus === "halftime")
+          const liveMatches = data.matches.filter((m: NormalizedMatch) => m.matchStatus === "live" || m.matchStatus === "halftime")
           const newHasLiveMatches = liveMatches.length > 0
 
           if (newHasLiveMatches !== hasLiveMatches) {
@@ -887,7 +896,7 @@ export const useMatchData = (options?: { refreshIntervalMs?: number; dataType?: 
           performanceMonitor.recordUpdate()
 
           if (liveMatches.length > 0) {
-            console.log(`🔴 Live matches updated (${interval}ms):`, liveMatches.map(m => ({
+            console.log(`🔴 Live matches updated (${interval}ms):`, liveMatches.map((m: NormalizedMatch) => ({
               id: m.id,
               result: m.result,
               feedLength: m.matchFeed?.length || 0,
