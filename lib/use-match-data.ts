@@ -882,32 +882,6 @@ export const getMatchData = async (
   }
 }
 
-// Smart preloading system with proper abort handling
-let preloadInFlight = false
-const preloadData = async () => {
-  if (preloadInFlight) {
-    return
-  }
-
-  preloadInFlight = true
-  try {
-    await getMatchData("liveUpcoming", true)
-    console.log("🚀 Preloaded match data via /matcher/data")
-  } catch (error) {
-    console.warn("Preload failed", error)
-  } finally {
-    preloadInFlight = false
-  }
-}
-
-// Preload data immediately when module loads
-if (typeof window !== "undefined") {
-  preloadData()
-
-  // Preload again every 30 seconds to keep cache fresh
-  setInterval(preloadData, 30000)
-}
-
 // Cleanup old match states every 5 minutes to prevent memory leaks
 if (typeof window !== "undefined") {
   setInterval(() => {
@@ -950,7 +924,7 @@ export const useMatchData = (options?: {
   const [error, setError] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
 
-  const processPayload = useCallback(
+  const selectMatchesFromPayload = useCallback(
     (payload: MatchChannelPayload) => {
       let selectedMatches =
         dataType === "old"
@@ -963,6 +937,14 @@ export const useMatchData = (options?: {
         selectedMatches = selectedMatches.slice(0, paramsLimit)
       }
 
+      return selectedMatches
+    },
+    [dataType, paramsLimit],
+  )
+
+  const applyPayload = useCallback(
+    (payload: MatchChannelPayload) => {
+      const selectedMatches = selectMatchesFromPayload(payload)
       setMatches(selectedMatches)
       selectedMatches.forEach((match) => {
         matchStateManager.queueUpdate(match.id, {
@@ -972,8 +954,9 @@ export const useMatchData = (options?: {
       })
       setError(null)
       setLoading(false)
+      return selectedMatches
     },
-    [dataType, paramsLimit],
+    [selectMatchesFromPayload],
   )
 
   useEffect(() => {
@@ -981,9 +964,9 @@ export const useMatchData = (options?: {
       return
     }
 
-    const unsubscribe = matchDataChannel.subscribe(processPayload)
+    const unsubscribe = matchDataChannel.subscribe(applyPayload)
     return () => unsubscribe()
-  }, [enabled, processPayload, paramsSignature])
+  }, [enabled, applyPayload, paramsSignature])
 
   const refresh = useCallback(
     async (bypassCache = false) => {
@@ -993,22 +976,17 @@ export const useMatchData = (options?: {
 
       setIsRefreshing(true)
       try {
-        const data = await getMatchData(dataType, bypassCache, params)
-        let refreshedMatches = data.matches
-        if (paramsLimit !== undefined) {
-          refreshedMatches = refreshedMatches.slice(0, paramsLimit)
+        const payload = matchDataChannel.getLatest()
+        if (!payload) {
+          throw new Error("Matchströmmen har inte laddats än.")
         }
 
-        setMatches(refreshedMatches)
-        refreshedMatches.forEach((match) => {
-          matchStateManager.queueUpdate(match.id, {
-            ...match,
-            lastUpdated: Date.now(),
-          })
-        })
+        const selectedMatches = applyPayload(payload)
         setError(null)
         setLoading(false)
-        return data
+        return {
+          matches: selectedMatches,
+        }
       } catch (caught) {
         const message =
           caught instanceof Error ? caught.message : "Kunde inte hämta matchdata just nu. Försök igen om en liten stund."
@@ -1019,7 +997,7 @@ export const useMatchData = (options?: {
         setIsRefreshing(false)
       }
     },
-    [enabled, dataType, params, paramsLimit, paramsSignature],
+    [enabled, applyPayload],
   )
 
   return {
