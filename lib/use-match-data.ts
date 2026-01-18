@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { matchStateManager } from "./match-state-manager"
-import { dataFreshnessMonitor } from "./data-freshness-monitor"
 import { mapVenueIdToName } from "./venue-mapper"
 
 export type MatchFeedEvent = {
@@ -85,6 +84,13 @@ export type EnhancedMatchData = {
   }
 }
 
+type SharedMatchCacheEntry = {
+  current: NormalizedMatch[]
+  old: NormalizedMatch[]
+  lastUpdated: string | null
+  timestamp: number
+}
+
 const API_BASE_URL =
   (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
   "https://api.harnosandshf.se"
@@ -112,16 +118,7 @@ const buildQueryMeta = (params?: QueryParams) => {
   }
 }
 
-const getDataEndpoint = (type: DataType) => {
-  switch (type) {
-    case "liveUpcoming":
-      return `${API_BASE_URL}/matcher/data/live-upcoming`
-    case "old":
-      return `${API_BASE_URL}/matcher/data/old`
-    case "live":
-      return `${API_BASE_URL}/matcher/data/live`
-  }
-}
+const getDataEndpoint = () => `${API_BASE_URL}/matcher/data`
 
 const createNormalizedTeamKey = (value: string) =>
   value
@@ -475,8 +472,96 @@ const latestMatchStates = new Map<string, {
   timestamp: number
 }>()
 
+const sharedMatchCache = new Map<string, SharedMatchCacheEntry>()
+const sharedFetchPromises = new Map<string, Promise<SharedMatchCacheEntry>>()
+
+const isLiveMatch = (match: NormalizedMatch) =>
+  match.matchStatus === "live" || match.matchStatus === "halftime"
+
+const buildEnhancedMatchData = (entry: SharedMatchCacheEntry, dataType: DataType): EnhancedMatchData => {
+  const matches =
+    dataType === "old"
+      ? entry.old
+      : dataType === "live"
+        ? entry.current.filter(isLiveMatch)
+        : entry.current
+
+  return {
+    matches,
+  }
+}
+
+const recordLatestMatchState = (match: NormalizedMatch) => {
+  const currentState = latestMatchStates.get(match.id)
+  const newFeedLength = match.matchFeed?.length || 0
+  const newResult = match.result || ""
+  const newLastEventTime = match.matchFeed?.[0]?.time || ""
+
+  if (
+    !currentState ||
+    newFeedLength >= currentState.feedLength ||
+    (newResult !== currentState.result && newResult !== "0-0" && newResult !== "0–0")
+  ) {
+    latestMatchStates.set(match.id, {
+      result: newResult,
+      feedLength: newFeedLength,
+      lastEventTime: newLastEventTime,
+      timestamp: Date.now(),
+    })
+  }
+}
+
+const updateLatestMatchStates = (matches: NormalizedMatch[]) => {
+  matches.forEach(recordLatestMatchState)
+}
+
 // Version counter for cache entries
 let cacheVersion = 0
+
+const resolveCurrentMatchPayload = (payload: any): ApiMatch[] => {
+  if (!payload) {
+    return []
+  }
+
+  if (Array.isArray(payload.current)) {
+    return payload.current
+  }
+  if (Array.isArray(payload.currentMatches)) {
+    return payload.currentMatches
+  }
+  if (Array.isArray(payload.liveUpcoming)) {
+    return payload.liveUpcoming
+  }
+  if (Array.isArray(payload.live)) {
+    return payload.live
+  }
+  if (Array.isArray(payload.matches)) {
+    return payload.matches.filter((match) => {
+      const status = normalizeStatusValue(match.matchStatus)
+      return status !== "finished"
+    })
+  }
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
+  return []
+}
+
+const resolveOldMatchPayload = (payload: any): ApiMatch[] => {
+  if (!payload) {
+    return []
+  }
+
+  if (Array.isArray(payload.old)) {
+    return payload.old
+  }
+  if (Array.isArray(payload.matches)) {
+    return payload.matches.filter((match) => normalizeStatusValue(match.matchStatus) === "finished")
+  }
+
+  return []
+}
 
 export const getMatchData = async (
   dataType: DataType = "liveUpcoming",
@@ -484,24 +569,33 @@ export const getMatchData = async (
   params?: QueryParams,
 ): Promise<EnhancedMatchData> => {
   const { queryString } = buildQueryMeta(params)
-  const endpoint = `${getDataEndpoint(dataType)}${queryString}`
+  const endpoint = `${getDataEndpoint()}${queryString}`
   const cacheKey = `${dataType}-${endpoint}`
+  const sharedKey = endpoint
 
-  // Check memory cache first (unless bypassed) but verify data freshness
+  if (!bypassCache) {
+    const sharedCached = sharedMatchCache.get(sharedKey)
+    if (sharedCached) {
+      return buildEnhancedMatchData(sharedCached, dataType)
+    }
+  }
+
   if (!bypassCache) {
     const cached = memoryCache.get(cacheKey)
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      // Verify cached data isn't stale by checking if any match has regressed
-      const hasRegression = cached.data.matches.some(match => {
+      const hasRegression = cached.data.matches.some((match) => {
         const latest = latestMatchStates.get(match.id)
-        if (!latest) return false
+        if (!latest) {
+          return false
+        }
 
         const currentFeedLength = match.matchFeed?.length || 0
         const currentResult = match.result || ""
 
-        // Don't use cached data if it has fewer events or older result
-        return currentFeedLength < latest.feedLength ||
+        return (
+          currentFeedLength < latest.feedLength ||
           (currentResult !== latest.result && latest.timestamp > cached.timestamp)
+        )
       })
 
       if (!hasRegression) {
@@ -510,167 +604,143 @@ export const getMatchData = async (
     }
   }
 
-  let attempt = 0
-  let delay = 500 // Even faster initial delay
-
-  while (attempt < 2) {
+  const existingFetch = sharedFetchPromises.get(sharedKey)
+  if (existingFetch) {
     try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => {
-        // console.log(`⏰ Aborting request to ${endpoint} after 5s timeout`) // Reduced log spam
-        controller.abort()
-      }, 5000) // Increased timeout to 5s for slower connections
-
-      const response = await fetch(endpoint, {
-        cache: "no-store",
-        signal: controller.signal,
-        headers: {
-          'Accept': 'application/json',
-          'Cache-Control': 'no-cache, must-revalidate',
-          'Pragma': 'no-cache',
-        }
-      })
-
-      clearTimeout(timeoutId)
-
-      if (response.status === 503) {
-        attempt += 1
-        await sleep(delay)
-        delay = Math.min(delay * 1.1, 1500) // Much faster max delay
-        continue
+      await existingFetch
+    } catch {
+      // ignore
+    }
+    if (!bypassCache) {
+      const sharedCached = sharedMatchCache.get(sharedKey)
+      if (sharedCached) {
+        return buildEnhancedMatchData(sharedCached, dataType)
       }
-
-      if (!response.ok) {
-        throw new Error(`Kunde inte hämta matcher (HTTP ${response.status})`)
-      }
-
-      const payload = await response.json()
-
-      // Handle different response structures based on endpoint
-      let matches: ApiMatch[] = []
-
-      if (dataType === "liveUpcoming") {
-        if (Array.isArray(payload.matches)) {
-          matches = payload.matches
-        } else if (Array.isArray(payload.liveUpcoming)) {
-          matches = payload.liveUpcoming
-        } else if (Array.isArray(payload.current)) {
-          matches = payload.current
-        } else if (Array.isArray(payload)) {
-          matches = payload
-        }
-      } else if (dataType === "live") {
-        if (Array.isArray(payload.live)) {
-          matches = payload.live
-        } else if (Array.isArray(payload.matches)) {
-          matches = payload.matches
-        } else if (Array.isArray(payload.current)) {
-          matches = payload.current.filter((match) => {
-            const status = normalizeStatusValue(match.matchStatus)
-            return status === "live" || status === "halftime"
-          })
-        } else if (Array.isArray(payload.liveUpcoming)) {
-          matches = payload.liveUpcoming.filter((match) => {
-            const status = normalizeStatusValue(match.matchStatus)
-            return status === "live" || status === "halftime"
-          })
-        } else if (Array.isArray(payload)) {
-          matches = payload
-        }
-      } else if (dataType === "old") {
-        if (Array.isArray(payload.old)) {
-          matches = payload.old
-        } else if (Array.isArray(payload.matches)) {
-          matches = payload.matches
-        } else if (Array.isArray(payload)) {
-          matches = payload
-        }
-      }
-
-      const normalizedMatches = normalizeMatches(matches)
-
-      const finalMatches = normalizedMatches
-      const result: EnhancedMatchData = {
-        matches: finalMatches,
-      }
-
-      // Update latest match states
-      finalMatches.forEach(match => {
-        const currentState = latestMatchStates.get(match.id)
-        const newFeedLength = match.matchFeed?.length || 0
-        const newResult = match.result || ""
-        const newLastEventTime = match.matchFeed?.[0]?.time || ""
-
-        if (!currentState ||
-          newFeedLength >= currentState.feedLength ||
-          (newResult !== currentState.result && newResult !== "0-0" && newResult !== "0–0")) {
-
-          latestMatchStates.set(match.id, {
-            result: newResult,
-            feedLength: newFeedLength,
-            lastEventTime: newLastEventTime,
-            timestamp: Date.now()
-          })
-        }
-      })
-
-      // Cache the result with version for ultra-fast subsequent calls
-      cacheVersion++
-      memoryCache.set(cacheKey, {
-        data: result,
-        timestamp: Date.now(),
-        version: cacheVersion
-      })
-
-      return result
-    } catch (error) {
-      if (attempt < 1) { // Only 1 retry for speed
-        attempt += 1
-        await sleep(delay)
-        delay = Math.min(delay * 1.2, 1000) // Much faster retry
-        continue
-      }
-
-      // Catch abort errors specifically and try to return cache
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        const cached = memoryCache.get(cacheKey)
-        if (cached) {
-          console.log('Timeout reached, using cached data')
-          return cached.data
-        }
-      }
-
-      // Return cached data on error if available AND it's not stale
-      const cached = memoryCache.get(cacheKey)
-      if (cached) {
-        // Only return cached data if it's not regressed
-        const hasRegression = cached.data.matches.some(match => {
-          const latest = latestMatchStates.get(match.id)
-          if (!latest) return false
-
-          const cachedFeedLength = match.matchFeed?.length || 0
-          return cachedFeedLength < latest.feedLength
-        })
-
-        if (!hasRegression) {
-          console.warn('API failed, returning cached data (verified fresh):', error)
-          return cached.data
-        } else {
-          console.warn('API failed and cached data is stale, throwing error:', error)
-        }
-      }
-
-      throw error
     }
   }
 
-  // Graceful fallback if everything fails
-  const cached = memoryCache.get(cacheKey)
-  if (cached) {
-    return cached.data
+  const fetchRunner = async (): Promise<SharedMatchCacheEntry> => {
+    let attempt = 0
+    let delay = 500
+
+    while (attempt < 2) {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000)
+
+      try {
+        const response = await fetch(endpoint, {
+          cache: "no-store",
+          signal: controller.signal,
+          headers: {
+            Accept: "application/json",
+            "Cache-Control": "no-cache, must-revalidate",
+            Pragma: "no-cache",
+          },
+        })
+
+        if (response.status === 503) {
+          attempt += 1
+          await sleep(delay)
+          delay = Math.min(delay * 1.1, 1500)
+          continue
+        }
+
+        if (!response.ok) {
+          throw new Error(`Kunde inte hämta matcher (HTTP ${response.status})`)
+        }
+
+        const payload = await response.json()
+
+        const currentPayload = resolveCurrentMatchPayload(payload)
+        const oldPayload = resolveOldMatchPayload(payload)
+
+        const normalizedCurrent = normalizeMatches(currentPayload)
+        const normalizedOld = normalizeMatches(oldPayload)
+
+        const entry: SharedMatchCacheEntry = {
+          current: normalizedCurrent,
+          old: normalizedOld,
+          lastUpdated: typeof payload.lastUpdated === "string" ? payload.lastUpdated : null,
+          timestamp: Date.now(),
+        }
+
+        updateLatestMatchStates([...normalizedCurrent, ...normalizedOld])
+
+        return entry
+      } catch (error) {
+        if (attempt < 1) {
+          attempt += 1
+          await sleep(delay)
+          delay = Math.min(delay * 1.2, 1000)
+          continue
+        }
+
+        throw error
+      } finally {
+        clearTimeout(timeoutId)
+      }
+    }
+
+    throw new Error("Matchdata är inte tillgänglig just nu")
   }
 
-  throw new Error("Matchdata är inte tillgänglig just nu")
+  const fetchPromise = fetchRunner()
+  sharedFetchPromises.set(sharedKey, fetchPromise)
+
+  try {
+    const sharedEntry = await fetchPromise
+    sharedMatchCache.set(sharedKey, sharedEntry)
+    const result = buildEnhancedMatchData(sharedEntry, dataType)
+
+    cacheVersion++
+    memoryCache.set(cacheKey, {
+      data: result,
+      timestamp: Date.now(),
+      version: cacheVersion,
+    })
+
+    return result
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      const cached = memoryCache.get(cacheKey)
+      if (cached) {
+        console.log("Timeout reached, using cached data")
+        return cached.data
+      }
+    }
+
+    const sharedCached = sharedMatchCache.get(sharedKey)
+    if (sharedCached) {
+      const fallback = buildEnhancedMatchData(sharedCached, dataType)
+      console.warn("API failed, returning cached shared data:", error)
+      return fallback
+    }
+
+    const cached = memoryCache.get(cacheKey)
+    if (cached) {
+      const hasRegression = cached.data.matches.some((match) => {
+        const latest = latestMatchStates.get(match.id)
+        if (!latest) {
+          return false
+        }
+
+        const cachedFeedLength = match.matchFeed?.length || 0
+        return cachedFeedLength < latest.feedLength
+      })
+
+      if (!hasRegression) {
+        console.warn("API failed, returning cached data (verified fresh):", error)
+        return cached.data
+      }
+      console.warn("API failed and cached data is stale, throwing error:", error)
+    }
+
+    throw error
+  } finally {
+    if (sharedFetchPromises.get(sharedKey) === fetchPromise) {
+      sharedFetchPromises.delete(sharedKey)
+    }
+  }
 }
 
 // Smart preloading system with proper abort handling
@@ -680,21 +750,12 @@ const preloadData = async () => {
     return
   }
 
-  const endpoints: DataType[] = ["liveUpcoming", "old"]
-  let successCount = 0
   preloadInFlight = true
-
   try {
-    for (const endpoint of endpoints) {
-      try {
-        await getMatchData(endpoint, true)
-        successCount += 1
-      } catch (error) {
-        console.warn("Preload failed for", endpoint, error)
-      }
-    }
-
-    console.log("🚀 Preloaded data successfully:", successCount, "of 2 endpoints")
+    await getMatchData("liveUpcoming", true)
+    console.log("🚀 Preloaded match data via /matcher/data")
+  } catch (error) {
+    console.warn("Preload failed", error)
   } finally {
     preloadInFlight = false
   }
@@ -730,7 +791,7 @@ if (typeof window !== "undefined") {
 }
 
 // Export helper functions for other components
-export { getMatchEndTime, shouldShowFinishedMatch, shouldShowFinishedMatchForTeam }
+export { getMatchEndTime, shouldShowFinishedMatch, shouldShowFinishedMatchForTeam, normalizeStatusValue }
 
 export const useMatchData = (options?: {
   refreshIntervalMs?: number

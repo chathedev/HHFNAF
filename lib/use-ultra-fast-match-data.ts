@@ -6,6 +6,7 @@
 "use client"
 
 import { useCallback, useEffect, useState, useRef } from "react"
+import { normalizeStatusValue } from "./use-match-data"
 
 export type GameClock = {
   minutes: number
@@ -104,20 +105,53 @@ const API_BASE_URL =
 
 type DataType = "liveUpcoming" | "live" | "old"
 
-const getDataEndpoint = (type: DataType) => {
-  switch (type) {
-    case "liveUpcoming":
-      return `${API_BASE_URL}/matcher/data/live-upcoming`
-    case "old":
-      return `${API_BASE_URL}/matcher/data/old`
-    case "live":
-      return `${API_BASE_URL}/matcher/data/live`
+const getDataEndpoint = () => `${API_BASE_URL}/matcher/data`
+
+const resolveCurrentMatchPayload = (payload: any): ApiMatch[] => {
+  if (!payload) {
+    return []
   }
+
+  if (Array.isArray(payload.current)) {
+    return payload.current
+  }
+  if (Array.isArray(payload.liveUpcoming)) {
+    return payload.liveUpcoming
+  }
+  if (Array.isArray(payload.matches)) {
+    return payload.matches.filter((match) => normalizeStatusValue(match.matchStatus) !== "finished")
+  }
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
+  return []
 }
+
+const resolveOldMatchPayload = (payload: any): ApiMatch[] => {
+  if (!payload) {
+    return []
+  }
+
+  if (Array.isArray(payload.old)) {
+    return payload.old
+  }
+  if (Array.isArray(payload.matches)) {
+    return payload.matches.filter((match) => normalizeStatusValue(match.matchStatus) === "finished")
+  }
+
+  return []
+}
+
+const filterLiveMatches = (matches: ApiMatch[]) =>
+  matches.filter((match) => {
+    const status = normalizeStatusValue(match.matchStatus)
+    return status === "live" || status === "halftime"
+  })
 
 // Fast API fetch with minimal retry and timeout
 const fetchFromApiUltraFast = async (dataType: DataType = "liveUpcoming"): Promise<ApiMatch[]> => {
-  const endpoint = getDataEndpoint(dataType)
+  const endpoint = getDataEndpoint()
   
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 2000) // Super fast timeout
@@ -131,42 +165,24 @@ const fetchFromApiUltraFast = async (dataType: DataType = "liveUpcoming"): Promi
         'Cache-Control': 'no-cache',
       }
     })
-    
-    clearTimeout(timeoutId)
-    
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`)
     }
 
     const payload = await response.json()
-    
-    // Handle different response structures
-    let matches: ApiMatch[] = []
-    if (dataType === "liveUpcoming") {
-      if (Array.isArray(payload.matches)) {
-        matches = payload.matches
-      } else if (Array.isArray(payload.liveUpcoming)) {
-        matches = payload.liveUpcoming
-      } else if (Array.isArray(payload.current)) {
-        matches = payload.current
-      } else if (Array.isArray(payload)) {
-        matches = payload
-      }
-    } else if (dataType === "old" && payload.old) {
-      matches = Array.isArray(payload.old) ? payload.old : []
-    } else if (dataType === "live") {
-      if (Array.isArray(payload.live)) {
-        matches = payload.live
-      } else if (Array.isArray(payload.matches)) {
-        matches = payload.matches
-      } else if (Array.isArray(payload)) {
-        matches = payload
-      }
-    } else {
-      matches = Array.isArray(payload) ? payload : []
+    const currentPayload = resolveCurrentMatchPayload(payload)
+    const oldPayload = resolveOldMatchPayload(payload)
+
+    if (dataType === "old") {
+      return oldPayload
     }
-    
-    return matches
+
+    if (dataType === "live") {
+      return filterLiveMatches(currentPayload)
+    }
+
+    return currentPayload
   } finally {
     clearTimeout(timeoutId)
   }
