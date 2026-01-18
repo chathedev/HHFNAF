@@ -89,7 +89,7 @@ const API_BASE_URL =
   (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
   "https://api.harnosandshf.se"
 
-type DataType = "current" | "old" | "live" | "enhanced"
+type DataType = "liveUpcoming" | "live" | "old"
 type QueryParams = Record<string, string | number | boolean | undefined>
 
 const buildQueryMeta = (params?: QueryParams) => {
@@ -114,14 +114,12 @@ const buildQueryMeta = (params?: QueryParams) => {
 
 const getDataEndpoint = (type: DataType) => {
   switch (type) {
-    case "current":
-      return `${API_BASE_URL}/matcher/data/current`
+    case "liveUpcoming":
+      return `${API_BASE_URL}/matcher/data/live-upcoming`
     case "old":
       return `${API_BASE_URL}/matcher/data/old`
     case "live":
       return `${API_BASE_URL}/matcher/data/live`
-    case "enhanced":
-      return `${API_BASE_URL}/matcher/data/enhanced`
   }
 }
 
@@ -469,10 +467,6 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 const memoryCache = new Map<string, { data: EnhancedMatchData; timestamp: number; version: number }>()
 const CACHE_DURATION = 50 // Ultra-fast 50ms for maximum responsiveness
 
-// Global match registry to ensure NO matches ever disappear
-const globalMatchRegistry = new Map<string, NormalizedMatch>()
-const lastSeenMatches = new Set<string>()
-
 // Track latest match states to prevent regression
 const latestMatchStates = new Map<string, {
   result: string | undefined
@@ -485,7 +479,7 @@ const latestMatchStates = new Map<string, {
 let cacheVersion = 0
 
 export const getMatchData = async (
-  dataType: DataType = "current",
+  dataType: DataType = "liveUpcoming",
   bypassCache = false,
   params?: QueryParams,
 ): Promise<EnhancedMatchData> => {
@@ -554,29 +548,17 @@ export const getMatchData = async (
 
       // Handle different response structures based on endpoint
       let matches: ApiMatch[] = []
-      let metadata = undefined
-      let grouped = undefined
 
-      if (dataType === "enhanced") {
-        // /matcher/data/enhanced returns { matches: [...], metadata: {...}, grouped: {...} }
-        matches = Array.isArray(payload.matches) ? payload.matches : []
-        metadata = payload.metadata
-
-        // If grouped data exists, normalize the matches in it
-        if (payload.grouped) {
-          grouped = {
-            byTeam: payload.grouped.byTeam || {},
-            byStatus: {
-              live: normalizeMatches(payload.grouped.byStatus?.live || []),
-              upcoming: normalizeMatches(payload.grouped.byStatus?.upcoming || []),
-              finished: normalizeMatches(payload.grouped.byStatus?.finished || []),
-            },
-            bySeries: payload.grouped.bySeries || {},
-          }
+      if (dataType === "liveUpcoming") {
+        if (Array.isArray(payload.matches)) {
+          matches = payload.matches
+        } else if (Array.isArray(payload.liveUpcoming)) {
+          matches = payload.liveUpcoming
+        } else if (Array.isArray(payload.current)) {
+          matches = payload.current
+        } else if (Array.isArray(payload)) {
+          matches = payload
         }
-      } else if (dataType === "current" && payload.current) {
-        // /matcher/data/current returns { current: [...] }
-        matches = Array.isArray(payload.current) ? payload.current : []
       } else if (dataType === "live") {
         if (Array.isArray(payload.live)) {
           matches = payload.live
@@ -587,73 +569,29 @@ export const getMatchData = async (
             const status = normalizeStatusValue(match.matchStatus)
             return status === "live" || status === "halftime"
           })
+        } else if (Array.isArray(payload.liveUpcoming)) {
+          matches = payload.liveUpcoming.filter((match) => {
+            const status = normalizeStatusValue(match.matchStatus)
+            return status === "live" || status === "halftime"
+          })
         } else if (Array.isArray(payload)) {
           matches = payload
         }
-      } else if (dataType === "old" && payload.old) {
-        // /matcher/data/old returns { old: [...] }
-        matches = Array.isArray(payload.old) ? payload.old : []
-      } else {
-        // Fallback: check if payload itself is an array
-        matches = Array.isArray(payload) ? payload : []
+      } else if (dataType === "old") {
+        if (Array.isArray(payload.old)) {
+          matches = payload.old
+        } else if (Array.isArray(payload.matches)) {
+          matches = payload.matches
+        } else if (Array.isArray(payload)) {
+          matches = payload
+        }
       }
 
       const normalizedMatches = normalizeMatches(matches)
 
-      const statusBuckets: NonNullable<EnhancedMatchData['grouped']>['byStatus'] = {
-        live: [],
-        upcoming: [],
-        finished: [],
-      }
-
-      normalizedMatches.forEach((normalizedMatch) => {
-        const status = normalizedMatch.matchStatus
-        if (status === "live" || status === "halftime") {
-          // Both live and halftime go to live bucket (halftime is just a break in live match)
-          statusBuckets.live.push(normalizedMatch)
-        } else if (status === "finished") {
-          statusBuckets.finished.push(normalizedMatch)
-        } else {
-          statusBuckets.upcoming.push(normalizedMatch)
-        }
-      })
-
-      statusBuckets.live.sort((a, b) => a.date.getTime() - b.date.getTime())
-      statusBuckets.upcoming.sort((a, b) => a.date.getTime() - b.date.getTime())
-      statusBuckets.finished.sort((a, b) => b.date.getTime() - a.date.getTime())
-
-      const normalizedGrouped: EnhancedMatchData['grouped'] | undefined = {
-        byTeam: grouped?.byTeam ?? {},
-        byStatus: statusBuckets,
-        bySeries: grouped?.bySeries ?? {},
-      }
-
-      // BULLETPROOF: Register ALL matches and NEVER let them disappear
-      normalizedMatches.forEach(match => {
-        globalMatchRegistry.set(match.id, match) // Always update with latest data
-        lastSeenMatches.add(match.id)
-      })
-
-      // GUARANTEE: Always return ALL known matches, NEVER let any disappear
-      const allKnownMatches = Array.from(globalMatchRegistry.values())
-        .sort((a, b) => a.date.getTime() - b.date.getTime())
-
-      // Emergency fallback: If we somehow have fewer matches than before, keep the old ones
-      if (normalizedMatches.length > 0 && allKnownMatches.length < lastSeenMatches.size) {
-        console.warn('🚨 Match count dropped, preserving registry integrity')
-        // Keep all matches we've seen before
-        lastSeenMatches.forEach(matchId => {
-          if (!globalMatchRegistry.has(matchId)) {
-            console.warn(`🔄 Restoring missing match: ${matchId}`)
-          }
-        })
-      }
-
-      const finalMatches = dataType === "enhanced" ? allKnownMatches : normalizedMatches
+      const finalMatches = normalizedMatches
       const result: EnhancedMatchData = {
         matches: finalMatches,
-        metadata: dataType === "enhanced" ? metadata : undefined,
-        grouped: dataType === "enhanced" ? normalizedGrouped : undefined,
       }
 
       // Update latest match states
@@ -744,7 +682,7 @@ const preloadData = async () => {
 
     // Preload both current and old data in parallel
     const [currentData, oldData] = await Promise.allSettled([
-      getMatchData("current", true),
+      getMatchData("liveUpcoming", true),
       getMatchData("old", true)
     ])
 
@@ -794,29 +732,31 @@ export const useMatchData = (options?: {
   dataType?: DataType
   initialData?: EnhancedMatchData
   params?: QueryParams
+  enabled?: boolean
 }) => {
   const baseRefreshInterval = options?.refreshIntervalMs ?? 1_000
-  const dataType = options?.dataType ?? "current"
+  const dataType = options?.dataType ?? "liveUpcoming"
   const paramsSignature = useMemo(() => buildQueryMeta(options?.params).signature, [options?.params])
+  const enabled = options?.enabled ?? true
 
   const [matches, setMatches] = useState<NormalizedMatch[]>(options?.initialData?.matches ?? [])
-  const [metadata, setMetadata] = useState<EnhancedMatchData['metadata']>(options?.initialData?.metadata)
-  const [grouped, setGrouped] = useState<EnhancedMatchData['grouped']>(options?.initialData?.grouped)
-  const [loading, setLoading] = useState(!options?.initialData)
+  const [loading, setLoading] = useState(!options?.initialData && enabled)
   const [error, setError] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [hasLiveMatches, setHasLiveMatches] = useState(false)
 
-  // Dynamic refresh interval based on live matches
   const refreshIntervalMs = hasLiveMatches ? Math.min(baseRefreshInterval, 500) : baseRefreshInterval
 
   const refresh = useCallback(async (bypassCache = false) => {
+    if (!enabled) {
+      return null
+    }
+
     try {
       setIsRefreshing(true)
       const data = await getMatchData(dataType, bypassCache, options?.params)
 
-      // TRUST BACKEND FULLY: Always use fresh data, no second-guessing
-      setMatches(data.matches)      // Queue updates through state manager for smooth transitions
+      setMatches(data.matches)
       data.matches.forEach(match => {
         matchStateManager.queueUpdate(match.id, {
           ...match,
@@ -824,15 +764,7 @@ export const useMatchData = (options?: {
         })
       })
 
-      if (data.metadata) {
-        setMetadata(data.metadata)
-      }
-      if (data.grouped) {
-        setGrouped(data.grouped)
-      }
-
-      // Check for live matches to adjust refresh rate (include halftime)
-      const liveMatches = data.matches.filter(m => m.matchStatus === "live" || m.matchStatus === "halftime")
+      const liveMatches = data.matches.filter((match) => match.matchStatus === "live" || match.matchStatus === "halftime")
       setHasLiveMatches(liveMatches.length > 0)
 
       setError(null)
@@ -847,12 +779,15 @@ export const useMatchData = (options?: {
     } finally {
       setIsRefreshing(false)
     }
-  }, [dataType, paramsSignature])
+  }, [dataType, paramsSignature, enabled])
 
   useEffect(() => {
+    if (!enabled) {
+      return
+    }
+
     let isMounted = true
     const run = async () => {
-      // Only show loading state if we don't have any matches yet
       if (matches.length === 0) {
         setLoading(true)
       }
@@ -863,14 +798,11 @@ export const useMatchData = (options?: {
           return
         }
         setMatches(data.matches)
-        setMetadata(data.metadata)
-        setGrouped(data.grouped)
         setError(null)
       } catch (caught) {
         if (!isMounted) {
           return
         }
-        // Only show error if we don't have any matches
         if (matches.length === 0) {
           const message =
             caught instanceof Error ? caught.message : "Kunde inte hämta matchdata just nu. Försök igen om en liten stund."
@@ -890,10 +822,10 @@ export const useMatchData = (options?: {
     return () => {
       isMounted = false
     }
-  }, [dataType, paramsSignature])
+  }, [dataType, paramsSignature, enabled])
 
   useEffect(() => {
-    if (!refreshIntervalMs || refreshIntervalMs <= 0) {
+    if (!enabled || !refreshIntervalMs || refreshIntervalMs <= 0) {
       return
     }
 
@@ -904,40 +836,18 @@ export const useMatchData = (options?: {
 
       intervalId = setInterval(async () => {
         try {
-          // Bypass cache every few calls for live matches
-          const shouldBypassCache = hasLiveMatches && Math.random() > 0.8 // More frequent bypass
+          const shouldBypassCache = hasLiveMatches && Math.random() > 0.8
           const data = await getMatchData(dataType, shouldBypassCache, options?.params)
 
-          // TRUST BACKEND: Use fresh data directly, backend knows best
           setMatches(data.matches)
-
-          if (data.metadata) {
-            setMetadata(data.metadata)
-          }
-          if (data.grouped) {
-            setGrouped(data.grouped)
-          }
-          setError(null)
-
-          // Update live match status (include halftime as live)
-          const liveMatches = data.matches.filter((m: NormalizedMatch) => m.matchStatus === "live" || m.matchStatus === "halftime")
+          const liveMatches = data.matches.filter((match) => match.matchStatus === "live" || match.matchStatus === "halftime")
           const newHasLiveMatches = liveMatches.length > 0
 
           if (newHasLiveMatches !== hasLiveMatches) {
             setHasLiveMatches(newHasLiveMatches)
           }
 
-          // Performance and debug logging
-          performanceMonitor.recordUpdate()
-
-          if (liveMatches.length > 0) {
-            console.log(`🔴 Live matches updated (${interval}ms):`, liveMatches.map((m: NormalizedMatch) => ({
-              id: m.id,
-              result: m.result,
-              feedLength: m.matchFeed?.length || 0,
-              lastEvent: m.matchFeed?.[0]?.type || 'none'
-            })))
-          }
+          setError(null)
         } catch (caught) {
           const message = caught instanceof Error ? caught.message : "Kunde inte hämta matchdata just nu."
           setError(message)
@@ -950,18 +860,20 @@ export const useMatchData = (options?: {
     return () => {
       if (intervalId) clearInterval(intervalId)
     }
-  }, [refreshIntervalMs, dataType, paramsSignature])
+  }, [refreshIntervalMs, dataType, paramsSignature, enabled])
 
   useEffect(() => {
+    if (!enabled) {
+      return
+    }
+
     const handleVisibilityChange = async () => {
       if (document.visibilityState === "visible") {
-        // Always bypass cache when window becomes visible
         await refresh(true)
       }
     }
 
     const handleFocus = async () => {
-      // Always bypass cache when window gets focus
       await refresh(true)
     }
 
@@ -972,37 +884,10 @@ export const useMatchData = (options?: {
       window.removeEventListener("focus", handleFocus)
       document.removeEventListener("visibilitychange", handleVisibilityChange)
     }
-  }, [dataType, paramsSignature, refresh])
-
-  // Performance monitoring
-  const performanceMonitor = {
-    lastUpdateTime: Date.now(),
-    updateTimes: [] as number[],
-
-    recordUpdate() {
-      const now = Date.now()
-      const timeSinceLastUpdate = now - this.lastUpdateTime
-      this.updateTimes.push(timeSinceLastUpdate)
-
-      // Keep only last 20 measurements
-      if (this.updateTimes.length > 20) {
-        this.updateTimes.shift()
-      }
-
-      this.lastUpdateTime = now
-
-      // Log performance stats every 10 updates
-      if (this.updateTimes.length % 10 === 0) {
-        const avgTime = this.updateTimes.reduce((a, b) => a + b, 0) / this.updateTimes.length
-        console.log(`📊 Update performance: ${avgTime.toFixed(0)}ms avg interval`)
-      }
-    }
-  }
+  }, [dataType, paramsSignature, refresh, enabled])
 
   return {
     matches,
-    metadata,
-    grouped,
     loading,
     error,
     refresh,

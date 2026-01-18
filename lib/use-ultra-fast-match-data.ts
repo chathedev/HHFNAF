@@ -102,23 +102,21 @@ const API_BASE_URL =
   (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
   "https://api.harnosandshf.se"
 
-type DataType = "current" | "old" | "live" | "enhanced"
+type DataType = "liveUpcoming" | "live" | "old"
 
 const getDataEndpoint = (type: DataType) => {
   switch (type) {
-    case "current":
-      return `${API_BASE_URL}/matcher/data/current`
+    case "liveUpcoming":
+      return `${API_BASE_URL}/matcher/data/live-upcoming`
     case "old":
       return `${API_BASE_URL}/matcher/data/old`
     case "live":
       return `${API_BASE_URL}/matcher/data/live`
-    case "enhanced":
-      return `${API_BASE_URL}/matcher/data/enhanced`
   }
 }
 
 // Fast API fetch with minimal retry and timeout
-const fetchFromApiUltraFast = async (dataType: DataType = "current"): Promise<ApiMatch[]> => {
+const fetchFromApiUltraFast = async (dataType: DataType = "liveUpcoming"): Promise<ApiMatch[]> => {
   const endpoint = getDataEndpoint(dataType)
   
   const controller = new AbortController()
@@ -144,8 +142,16 @@ const fetchFromApiUltraFast = async (dataType: DataType = "current"): Promise<Ap
     
     // Handle different response structures
     let matches: ApiMatch[] = []
-    if (dataType === "current" && payload.current) {
-      matches = Array.isArray(payload.current) ? payload.current : []
+    if (dataType === "liveUpcoming") {
+      if (Array.isArray(payload.matches)) {
+        matches = payload.matches
+      } else if (Array.isArray(payload.liveUpcoming)) {
+        matches = payload.liveUpcoming
+      } else if (Array.isArray(payload.current)) {
+        matches = payload.current
+      } else if (Array.isArray(payload)) {
+        matches = payload
+      }
     } else if (dataType === "old" && payload.old) {
       matches = Array.isArray(payload.old) ? payload.old : []
     } else if (dataType === "live") {
@@ -156,8 +162,6 @@ const fetchFromApiUltraFast = async (dataType: DataType = "current"): Promise<Ap
       } else if (Array.isArray(payload)) {
         matches = payload
       }
-    } else if (dataType === "enhanced" && payload.matches) {
-      matches = Array.isArray(payload.matches) ? payload.matches : []
     } else {
       matches = Array.isArray(payload) ? payload : []
     }
@@ -175,7 +179,7 @@ export const useUltraFastMatchData = (options?: {
   enabled?: boolean 
 }) => {
   const refreshIntervalMs = options?.refreshIntervalMs ?? 500 // Ultra-fast updates
-  const dataType = options?.dataType ?? "current"
+  const dataType = options?.dataType ?? "liveUpcoming"
   const enabled = options?.enabled ?? true
   
   const [matches, setMatches] = useState<ApiMatch[]>([])

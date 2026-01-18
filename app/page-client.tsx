@@ -140,7 +140,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     isRefreshing: isRefreshingMatches,
   } = useMatchData({
     refreshIntervalMs: 1_000,
-    dataType: "current",
+    dataType: "liveUpcoming",
     params: limitedParams,
     initialData,
   })

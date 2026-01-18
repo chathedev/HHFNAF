@@ -60,6 +60,29 @@ const getMatchStatus = (match: NormalizedMatch): StatusFilter => {
   return match.matchStatus === "halftime" ? "live" : (match.matchStatus ?? "upcoming")
 }
 
+const hasPublishedResult = (match: NormalizedMatch) => {
+  const result = match.result?.trim()
+  if (!result) {
+    return false
+  }
+  if (result.toLowerCase() === "inte publicerat") {
+    return false
+  }
+
+  const scoreMatch = result.match(/(\d+)[-–](\d+)/)
+  if (!scoreMatch) {
+    return false
+  }
+
+  const homeScore = Number.parseInt(scoreMatch[1], 10)
+  const awayScore = Number.parseInt(scoreMatch[2], 10)
+  if (Number.isNaN(homeScore) || Number.isNaN(awayScore)) {
+    return false
+  }
+
+  return homeScore > 0 || awayScore > 0
+}
+
 const TEAM_OPTION_VALUES = [
   "Dam/utv",
   "A-lag Herrar",
@@ -129,27 +152,86 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   // Track previous scores to highlight live updates
   const prevScoresRef = useRef<Map<string, { home: number; away: number }>>(new Map())
 
-  const { matches, metadata, grouped, loading, error, refresh, isRefreshing } = useMatchData({
+  const [hasLoadedOldMatches, setHasLoadedOldMatches] = useState(statusFilter === "finished")
+
+  const {
+    matches: liveUpcomingMatches,
+    loading: liveLoading,
+    error: liveError,
+    refresh,
+    isRefreshing,
+  } = useMatchData({
     refreshIntervalMs: 1_000,
-    dataType: "enhanced",
+    dataType: "liveUpcoming",
     initialData,
+    params: { limit: 80 },
   })
+
+  const {
+    matches: oldMatches,
+    loading: oldLoading,
+    error: oldError,
+  } = useMatchData({
+    refreshIntervalMs: 60_000,
+    dataType: "old",
+    params: { limit: 60 },
+    enabled: hasLoadedOldMatches,
+  })
+
+  useEffect(() => {
+    if (statusFilter === "finished") {
+      setHasLoadedOldMatches(true)
+    }
+  }, [statusFilter])
+
+  const isLoading = statusFilter === "finished" ? oldLoading : liveLoading
+  const activeError = statusFilter === "finished" ? oldError : liveError
+
+  const liveMatchesCount = useMemo(
+    () => liveUpcomingMatches.filter((match) => getMatchStatus(match) === "live").length,
+    [liveUpcomingMatches],
+  )
+
+  const upcomingMatchesCount = useMemo(
+    () => liveUpcomingMatches.filter((match) => getMatchStatus(match) === "upcoming").length,
+    [liveUpcomingMatches],
+  )
+
+  const finishedMatchesWithResult = useMemo(
+    () => oldMatches.filter((match) => hasPublishedResult(match)),
+    [oldMatches],
+  )
+
+  const matchStats = useMemo(
+    () => ({
+      totalMatches: liveUpcomingMatches.length + finishedMatchesWithResult.length,
+      liveMatches: liveMatchesCount,
+      upcomingMatches: upcomingMatchesCount,
+      finishedMatches: finishedMatchesWithResult.length,
+    }),
+    [liveUpcomingMatches.length, liveMatchesCount, upcomingMatchesCount, finishedMatchesWithResult.length],
+  )
+
+  const allMatches = useMemo(() => [...liveUpcomingMatches, ...oldMatches], [liveUpcomingMatches, oldMatches])
 
   const selectedMatch = useMemo(() => {
     if (!selectedMatchId) {
       return null
     }
-    return matches.find((match) => match.id === selectedMatchId) ?? null
-  }, [selectedMatchId, matches])
+    return (
+      allMatches.find((match) => match.id === selectedMatchId) ??
+      null
+    )
+  }, [selectedMatchId, allMatches])
 
   useEffect(() => {
-    if (!selectedMatchId || loading) {
+    if (!selectedMatchId || isLoading) {
       return
     }
     if (!selectedMatch) {
       setSelectedMatchId(null)
     }
-  }, [selectedMatchId, selectedMatch, loading])
+  }, [selectedMatchId, selectedMatch, isLoading])
 
   const teamOptions = TEAM_OPTIONS
 
@@ -160,24 +242,23 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     return TEAM_MATCH_KEY_MAP[selectedTeam] ?? buildTeamKeys(selectedTeam)
   }, [selectedTeam])
 
+  const matchesForFilter = useMemo(() => {
+    return statusFilter === "finished" ? oldMatches : liveUpcomingMatches
+  }, [statusFilter, liveUpcomingMatches, oldMatches])
+
   const filteredMatches = useMemo(() => {
-    return matches.filter((match) => {
-      // Team filtering
+    return matchesForFilter.filter((match) => {
       if (selectedTeamKeys) {
         const normalizedKey = match.normalizedTeam
         if (!selectedTeamKeys.has(normalizedKey)) {
           const fallbackKey = match.teamType ? normalizeMatchKey(match.teamType) : ""
           if (!fallbackKey || !selectedTeamKeys.has(fallbackKey)) {
-            return false;
+            return false
           }
         }
       }
 
       const status = getMatchStatus(match)
-
-      if (status === "finished" && statusFilter !== "finished") {
-        return false
-      }
 
       if (statusFilter === "live" && status !== "live") {
         return false
@@ -191,40 +272,15 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
         return false
       }
 
-      if (status === "finished" && statusFilter === "finished") {
-        const result = match.result?.trim() || ""
-
-        if (!result || result.toLowerCase() === "inte publicerat") {
-          return false
-        }
-
-        const scoreMatch = result.match(/(\d+)[-–](\d+)/)
-        if (!scoreMatch) {
-          return false
-        }
-
-        const homeScore = parseInt(scoreMatch[1])
-        const awayScore = parseInt(scoreMatch[2])
-
-        return homeScore > 0 || awayScore > 0
+      if (statusFilter === "finished") {
+        return status === "finished" && hasPublishedResult(match)
       }
 
       return true
-    });
-  }, [matches, selectedTeamKeys, statusFilter])
+    })
+  }, [matchesForFilter, selectedTeamKeys, statusFilter])
 
-  // Group matches by status - use server-provided grouped data when available
   const groupedMatches = useMemo(() => {
-    // If we have pre-grouped data from the enhanced endpoint, use it and filter
-    if (grouped?.byStatus && statusFilter === "current" && selectedTeam === "all") {
-      return {
-        live: grouped.byStatus.live,
-        upcoming: grouped.byStatus.upcoming,
-        finished: [],
-      }
-    }
-
-    // Otherwise, group client-side
     const live: NormalizedMatch[] = []
     const upcoming: NormalizedMatch[] = []
     const finished: NormalizedMatch[] = []
@@ -236,13 +292,12 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
       else finished.push(match)
     })
 
-    // Sort each group
     live.sort((a, b) => a.date.getTime() - b.date.getTime())
     upcoming.sort((a, b) => a.date.getTime() - b.date.getTime())
-    finished.sort((a, b) => b.date.getTime() - a.date.getTime()) // Most recent first
+    finished.sort((a, b) => b.date.getTime() - a.date.getTime())
 
     return { live, upcoming, finished }
-  }, [filteredMatches, grouped, statusFilter, selectedTeam])
+  }, [filteredMatches])
 
   useEffect(() => {
     groupedMatches.live.forEach((match) => {
@@ -565,26 +620,24 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
         </div>
 
         {/* Metadata Stats */}
-        {metadata && (
-          <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-4 border-2 border-emerald-200">
-              <div className="text-sm font-semibold text-emerald-700 mb-1">Totalt</div>
-              <div className="text-2xl font-black text-emerald-900">{metadata.totalMatches}</div>
-            </div>
-            <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-xl p-4 border-2 border-red-200">
-              <div className="text-sm font-semibold text-red-700 mb-1">Live nu</div>
-              <div className="text-2xl font-black text-red-900">{metadata.liveMatches}</div>
-            </div>
-            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-4 border-2 border-blue-200">
-              <div className="text-sm font-semibold text-blue-700 mb-1">Kommande</div>
-              <div className="text-2xl font-black text-blue-900">{metadata.upcomingMatches}</div>
-            </div>
-            <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-xl p-4 border-2 border-gray-200">
-              <div className="text-sm font-semibold text-gray-700 mb-1">Avslutade</div>
-              <div className="text-2xl font-black text-gray-900">{metadata.finishedMatches}</div>
-            </div>
+        <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-4 border-2 border-emerald-200">
+            <div className="text-sm font-semibold text-emerald-700 mb-1">Totalt</div>
+            <div className="text-2xl font-black text-emerald-900">{matchStats.totalMatches}</div>
           </div>
-        )}
+          <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-xl p-4 border-2 border-red-200">
+            <div className="text-sm font-semibold text-red-700 mb-1">Live nu</div>
+            <div className="text-2xl font-black text-red-900">{matchStats.liveMatches}</div>
+          </div>
+          <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-4 border-2 border-blue-200">
+            <div className="text-sm font-semibold text-blue-700 mb-1">Kommande</div>
+            <div className="text-2xl font-black text-blue-900">{matchStats.upcomingMatches}</div>
+          </div>
+          <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-xl p-4 border-2 border-gray-200">
+            <div className="text-sm font-semibold text-gray-700 mb-1">Avslutade</div>
+            <div className="text-2xl font-black text-gray-900">{matchStats.finishedMatches}</div>
+          </div>
+        </div>
 
         {/* Filters */}
         <div className="mb-8 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
@@ -645,19 +698,19 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
         </div>
 
         {/* Error state */}
-        {error && (
+        {activeError && (
           <div className="mb-8 rounded-2xl border-2 border-red-200 bg-red-50 p-6">
             <div className="flex items-center gap-3">
               <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <p className="text-red-800 font-medium">{error}</p>
+              <p className="text-red-800 font-medium">{activeError}</p>
             </div>
           </div>
         )}
 
         {/* Loading state */}
-        {loading && filteredMatches.length === 0 && (
+        {isLoading && filteredMatches.length === 0 && (
           <div className="text-center py-20">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-emerald-600 mb-4"></div>
             <p className="text-gray-600 font-medium">Hämtar matcher...</p>
@@ -665,7 +718,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
         )}
 
         {/* Empty state */}
-        {!loading && filteredMatches.length === 0 && !error && (
+        {!isLoading && filteredMatches.length === 0 && !activeError && (
           <div className="text-center py-20 bg-white rounded-2xl border-2 border-gray-100">
             <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -685,7 +738,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
         )}
 
         {/* Match sections */}
-        {!loading && filteredMatches.length > 0 && (
+        {!isLoading && filteredMatches.length > 0 && (
           <div className="space-y-12">
             {/* Live matches */}
             {groupedMatches.live.length > 0 && (
@@ -760,26 +813,32 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
               matchId={selectedMatch.id}
               onRefresh={async () => {
                 console.log('🔄 Matcher page: Starting refresh...')
-                await refresh()
-                console.log('🔄 Matcher page: Refresh complete, updating selectedMatch...')
-                // Only update selectedMatchId if modal is still open (selectedMatchId is not null)
-                setSelectedMatchId(prevMatchId => {
+                let refreshedMatches: NormalizedMatch[] | undefined
+                try {
+                  const refreshedData = await refresh()
+                  refreshedMatches = refreshedData?.matches
+                  console.log('🔄 Matcher page: Refresh complete, updating selectedMatch...')
+                } catch (refreshError) {
+                  console.warn('⚠️ Matcher page: Refresh failed', refreshError)
+                }
+
+                setSelectedMatchId((prevMatchId) => {
                   if (!prevMatchId) {
                     console.log('🔄 Matcher page: Modal closed, skipping update')
                     return null
                   }
-                  const updatedMatch = matches.find(m => m.id === prevMatchId)
+                  const searchSpace = refreshedMatches ?? allMatches
+                  const updatedMatch = searchSpace.find((match) => match.id === prevMatchId)
                   if (updatedMatch) {
                     console.log('🔄 Matcher page: Found updated match:', {
                       matchFeedLength: updatedMatch.matchFeed?.length || 0,
                       result: updatedMatch.result,
-                      status: updatedMatch.matchStatus
+                      status: updatedMatch.matchStatus,
                     })
                     return updatedMatch.id
-                  } else {
-                    console.log('⚠️ Matcher page: Match not found in matches array')
-                    return prevMatchId
                   }
+                  console.log('⚠️ Matcher page: Match not found after refresh')
+                  return prevMatchId
                 })
               }}
             />

@@ -12,7 +12,7 @@ import { MatchFeedModal } from "@/components/match-feed-modal"
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 
 type StatusFilter = "all" | "upcoming" | "live" | "finished"
-type DataTypeFilter = "current" | "old" | "enhanced"
+type DataTypeFilter = "liveUpcoming" | "old"
 
 type MatchOutcome = {
   text: string
@@ -103,7 +103,7 @@ const getMatchStatus = (match: NormalizedMatch): StatusFilter => {
 export default function MatcherPage() {
   const [selectedTeam, setSelectedTeam] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
-  const [dataTypeFilter, setDataTypeFilter] = useState<DataTypeFilter>("current")
+  const [dataTypeFilter, setDataTypeFilter] = useState<DataTypeFilter>("liveUpcoming")
   const [selectedMatch, setSelectedMatch] = useState<NormalizedMatch | null>(null)
   
   const { matches, loading, error, refresh } = useMatchData({ 
@@ -144,7 +144,7 @@ export default function MatcherPage() {
       }
       
       // Time filter: For finished matches in current view, only show those from the last 3 hours
-      if (dataTypeFilter === "current") {
+      if (dataTypeFilter === "liveUpcoming") {
         const kickoff = match.date.getTime()
         if (status === "finished") {
           // Only show finished matches if they started within the last 3 hours
@@ -272,8 +272,7 @@ export default function MatcherPage() {
               value={dataTypeFilter}
               onChange={(event) => setDataTypeFilter(event.target.value as DataTypeFilter)}
             >
-              <option value="current">Aktuella & kommande</option>
-              <option value="enhanced">Alla matcher</option>
+              <option value="liveUpcoming">Aktuella & kommande</option>
               <option value="old">Gamla matcher</option>
             </select>
           </label>

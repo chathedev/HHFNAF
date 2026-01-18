@@ -125,7 +125,7 @@ export default function TeamPage({ params }: TeamPageProps) {
 
   const [selectedMatch, setSelectedMatch] = useState<NormalizedMatch | null>(null);
   const { matches: allMatches, loading, error, refresh, isRefreshing } = useMatchData({
-    dataType: "current",
+    dataType: "liveUpcoming",
     refreshIntervalMs: 1_000, // 1 second for smooth real-time updates
   });
 

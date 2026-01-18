@@ -92,7 +92,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   // ALL HOOKS MUST BE AT THE TOP - before any conditional returns
   const { matches, loading, error, refresh } = useMatchData({ 
     refreshIntervalMs: 1_000,
-    dataType: "current"
+    dataType: "liveUpcoming"
   })
 
   const teamKeys = useMemo(() => {
