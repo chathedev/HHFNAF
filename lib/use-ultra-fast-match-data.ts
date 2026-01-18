@@ -102,7 +102,7 @@ const API_BASE_URL =
   (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
   "https://api.harnosandshf.se"
 
-type DataType = "current" | "old" | "enhanced"
+type DataType = "current" | "old" | "live" | "enhanced"
 
 const getDataEndpoint = (type: DataType) => {
   switch (type) {
@@ -110,6 +110,8 @@ const getDataEndpoint = (type: DataType) => {
       return `${API_BASE_URL}/matcher/data/current`
     case "old":
       return `${API_BASE_URL}/matcher/data/old`
+    case "live":
+      return `${API_BASE_URL}/matcher/data/live`
     case "enhanced":
       return `${API_BASE_URL}/matcher/data/enhanced`
   }
@@ -146,6 +148,14 @@ const fetchFromApiUltraFast = async (dataType: DataType = "current"): Promise<Ap
       matches = Array.isArray(payload.current) ? payload.current : []
     } else if (dataType === "old" && payload.old) {
       matches = Array.isArray(payload.old) ? payload.old : []
+    } else if (dataType === "live") {
+      if (Array.isArray(payload.live)) {
+        matches = payload.live
+      } else if (Array.isArray(payload.matches)) {
+        matches = payload.matches
+      } else if (Array.isArray(payload)) {
+        matches = payload
+      }
     } else if (dataType === "enhanced" && payload.matches) {
       matches = Array.isArray(payload.matches) ? payload.matches : []
     } else {

@@ -30,7 +30,7 @@ import type { FullContent, Partner } from "@/lib/content-types"
 import { deriveSiteVariant, type SiteVariant, getThemeVariant, getHeroImages, type ThemeVariant } from "@/lib/site-variant"
 import { canShowTicketForMatch } from "@/lib/matches"
 import { extendTeamDisplayName } from "@/lib/team-display"
-import { useMatchData, shouldShowFinishedMatch, getMatchEndTime, type NormalizedMatch } from "@/lib/use-match-data"
+import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 import { InstagramFeed } from "@/components/instagram-feed"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
@@ -144,6 +144,15 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     params: limitedParams,
     initialData,
   })
+  const liveParams = useMemo(() => ({ limit: 3 }), [])
+  const {
+    matches: liveMatches,
+    loading: liveLoading,
+  } = useMatchData({
+    refreshIntervalMs: 1_000,
+    dataType: "live",
+    params: liveParams,
+  })
   const matchError = Boolean(matchErrorMessage)
 
   const selectedMatch = useMemo(() => {
@@ -199,22 +208,16 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
   const matchesTodayForward = useMemo(() => {
     const now = Date.now()
-    const twoHoursAgo = now - 1000 * 60 * 60 * 2
     const liveLookbackMs = 1000 * 60 * 60 * 6
 
-    // Home page: Show upcoming, live (within window), and recently finished matches
-    const statusOrder: Record<string, number> = { live: 0, upcoming: 1, finished: 2 }
+    // Home page: Show only live (within window) and upcoming matches
+    const statusOrder: Record<string, number> = { live: 0, upcoming: 1 }
 
     const matchesInWindow = upcomingMatches.filter((match) => {
-      const kickoff = match.date.getTime()
-      const status = match.matchStatus ?? (kickoff >= now ? "upcoming" : "finished")
+      const status = match.matchStatus === "halftime" ? "live" : (match.matchStatus ?? "upcoming")
 
-      if (status === "finished") {
-        // Use enhanced helper function for home page (4 hours retention = 2 extra hours after 2-hour match)
-        return shouldShowFinishedMatch(match, 4)
-      }
-
-      if (status === "live" || status === "halftime") {
+      if (status === "live") {
+        const kickoff = match.date.getTime()
         return kickoff >= now - liveLookbackMs
       }
 
@@ -227,9 +230,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       const statusDiff = (statusOrder[statusA] ?? 3) - (statusOrder[statusB] ?? 3)
       if (statusDiff !== 0) {
         return statusDiff
-      }
-      if (statusA === "finished") {
-        return b.date.getTime() - a.date.getTime()
       }
       return a.date.getTime() - b.date.getTime()
     })
@@ -587,6 +587,36 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                         ))}
                       </div>
                     )}
+
+                    <section className="mb-6 rounded-2xl border border-rose-100 bg-rose-50 p-4 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.4em] text-rose-600">Live just nu</p>
+                          <p className="text-2xl font-black text-rose-700">
+                            {liveLoading ? "Laddar..." : `${liveMatches.length} matcher`}
+                          </p>
+                        </div>
+                        <span className="text-xs font-medium text-slate-500">
+                          {!liveLoading && liveMatches.length === 0 ? "Inga live-matcher" : "Uppdateras var 1s"}
+                        </span>
+                      </div>
+                      {liveLoading ? (
+                        <p className="mt-3 text-sm text-slate-600">Live-läge synkas med servern...</p>
+                      ) : liveMatches.length > 0 ? (
+                        <ul className="mt-3 space-y-2 text-sm text-slate-700">
+                          {liveMatches.slice(0, 3).map((match) => (
+                            <li key={match.id} className="flex items-center justify-between">
+                              <div className="font-semibold text-slate-900">
+                                {match.homeTeam} <span className="text-gray-500 font-normal">vs</span> {match.awayTeam}
+                              </div>
+                              <span className="text-sm font-black text-slate-900">{match.result ?? "0–0"}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-3 text-sm text-gray-500">Inga pågående matcher just nu.</p>
+                      )}
+                    </section>
 
                     {!matchLoading && !matchError && matchesToDisplay.length > 0 && (
                       <ul className="grid gap-4">

@@ -89,7 +89,7 @@ const API_BASE_URL =
   (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
   "https://api.harnosandshf.se"
 
-type DataType = "current" | "old" | "enhanced"
+type DataType = "current" | "old" | "live" | "enhanced"
 type QueryParams = Record<string, string | number | boolean | undefined>
 
 const buildQueryMeta = (params?: QueryParams) => {
@@ -118,6 +118,8 @@ const getDataEndpoint = (type: DataType) => {
       return `${API_BASE_URL}/matcher/data/current`
     case "old":
       return `${API_BASE_URL}/matcher/data/old`
+    case "live":
+      return `${API_BASE_URL}/matcher/data/live`
     case "enhanced":
       return `${API_BASE_URL}/matcher/data/enhanced`
   }
@@ -575,6 +577,19 @@ export const getMatchData = async (
       } else if (dataType === "current" && payload.current) {
         // /matcher/data/current returns { current: [...] }
         matches = Array.isArray(payload.current) ? payload.current : []
+      } else if (dataType === "live") {
+        if (Array.isArray(payload.live)) {
+          matches = payload.live
+        } else if (Array.isArray(payload.matches)) {
+          matches = payload.matches
+        } else if (Array.isArray(payload.current)) {
+          matches = payload.current.filter((match) => {
+            const status = normalizeStatusValue(match.matchStatus)
+            return status === "live" || status === "halftime"
+          })
+        } else if (Array.isArray(payload)) {
+          matches = payload
+        }
       } else if (dataType === "old" && payload.old) {
         // /matcher/data/old returns { old: [...] }
         matches = Array.isArray(payload.old) ? payload.old : []
@@ -634,14 +649,15 @@ export const getMatchData = async (
         })
       }
 
-      const result = {
-        matches: allKnownMatches, // Always show ALL matches
-        metadata,
-        grouped: normalizedGrouped,
+      const finalMatches = dataType === "enhanced" ? allKnownMatches : normalizedMatches
+      const result: EnhancedMatchData = {
+        matches: finalMatches,
+        metadata: dataType === "enhanced" ? metadata : undefined,
+        grouped: dataType === "enhanced" ? normalizedGrouped : undefined,
       }
 
       // Update latest match states
-      allKnownMatches.forEach(match => {
+      finalMatches.forEach(match => {
         const currentState = latestMatchStates.get(match.id)
         const newFeedLength = match.matchFeed?.length || 0
         const newResult = match.result || ""
