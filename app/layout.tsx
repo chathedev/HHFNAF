@@ -1,13 +1,14 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { headers } from "next/headers"
-import { Inter } from "next/font/google"
+import { Inter, Space_Grotesk } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ScrollToTop } from "@/components/scroll-to-top"
 import { deriveSiteVariant, getThemeVariant } from "@/lib/site-variant"
 
 const inter = Inter({ subsets: ["latin"] })
+const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["400", "500", "600"] })
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_VERCEL_URL
@@ -308,7 +309,7 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className={`${inter.className} bg-white ${themeVariant === "pink" ? "hhf-staging" : ""}`}>
+      <body className={`${inter.className} ${spaceGrotesk.className} bg-white ${themeVariant === "pink" ? "hhf-staging" : ""}`}>
         <div style={{ display: "none", visibility: "hidden", position: "absolute", left: "-9999px" }}>
           <h1>Härnösands HF Handbollsförening</h1>
           <p>

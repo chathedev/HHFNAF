@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useEffect, useRef } from "react"
+import { useMemo, useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
@@ -111,8 +111,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   }, [selectedMatchId, selectedMatch, matchLoading])
 
   // Track previous scores to highlight live updates
-  const prevScoresRef = useRef<Map<string, { home: number; away: number }>>(new Map())
-
   const partnersForDisplay = Array.isArray(content.partners) ? content.partners.filter((p) => p.visibleInCarousel) : []
 
   const grannstadenPartner: Partner = {
@@ -248,72 +246,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   }
 
   const matchesToDisplay = matchesTodayForward.slice(0, 10)
-
-  useEffect(() => {
-    matchesToDisplay.forEach((match) => {
-      const status = getMatchStatus(match)
-      const scoreMatch = match.result?.match(/(\d+)\s*[–-]\s*(\d+)/)
-      if (!scoreMatch) {
-        prevScoresRef.current.set(match.id, { home: 0, away: 0 })
-        return
-      }
-
-      const currentHomeScore = Number.parseInt(scoreMatch[1], 10)
-      const currentAwayScore = Number.parseInt(scoreMatch[2], 10)
-      if (Number.isNaN(currentHomeScore) || Number.isNaN(currentAwayScore)) {
-        return
-      }
-
-      const previousScore = prevScoresRef.current.get(match.id)
-      const currentSnapshot = { home: currentHomeScore, away: currentAwayScore }
-
-      if (!previousScore) {
-        prevScoresRef.current.set(match.id, currentSnapshot)
-        return
-      }
-
-      let hhfScored = false
-      if (match.isHome !== false) {
-        hhfScored = currentHomeScore > previousScore.home
-      } else {
-        hhfScored = currentAwayScore > previousScore.away
-      }
-
-      if (status === "live" && hhfScored) {
-        const card = document.getElementById("match-card-" + match.id)
-        if (card && typeof card.animate === "function") {
-          card.animate(
-            [
-              { transform: "scale(1)", boxShadow: "0 0 0 0 rgba(16,185,129,0)" },
-              { transform: "scale(1.015)", boxShadow: "0 0 0 6px rgba(16,185,129,0.25)" },
-              { transform: "scale(1)", boxShadow: "0 0 0 0 rgba(16,185,129,0)" },
-            ],
-            { duration: 600, easing: "ease-out" },
-          )
-        }
-
-        if (card) {
-          const scoreElement = card.querySelector('[data-score-value="true"]')
-          if (scoreElement && typeof scoreElement.animate === "function") {
-            scoreElement.animate(
-              [
-                { transform: "scale(1)", color: "inherit" },
-                { transform: "scale(1.15)", color: "rgb(16, 185, 129)" },
-                { transform: "scale(1)", color: "inherit" },
-              ],
-              { duration: 450, easing: "ease-out" },
-            )
-          }
-          if (scoreElement) {
-            scoreElement.classList.add('score-updated')
-            window.setTimeout(() => scoreElement.classList.remove('score-updated'), 600)
-          }
-        }
-      }
-
-      prevScoresRef.current.set(match.id, currentSnapshot)
-    })
-  }, [matchesToDisplay])
 
   useEffect(() => {
     if (typeof window === "undefined") {
