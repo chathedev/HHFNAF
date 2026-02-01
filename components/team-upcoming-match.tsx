@@ -436,6 +436,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
           finalScore={selectedMatch.result}
           matchStatus={selectedMatch.matchStatus}
           matchId={selectedMatch.id}
+          matchData={selectedMatch}
           onRefresh={async () => {
             console.log('🔄 Team component: Starting refresh...')
             await refresh()

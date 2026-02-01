@@ -535,6 +535,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
               finalScore={selectedMatch.result}
               matchStatus={selectedMatch.matchStatus}
               matchId={selectedMatch.id}
+              matchData={selectedMatch}
               onRefresh={async () => {
                 console.log('🔄 Matcher page: Starting refresh...')
                 let refreshedMatches: NormalizedMatch[] | undefined

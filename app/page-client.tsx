@@ -994,6 +994,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
               finalScore={selectedMatch.result}
               matchStatus={selectedMatch.matchStatus}
               matchId={selectedMatch.id}
+              matchData={selectedMatch}
               onRefresh={async () => {
                 console.log("🔄 Home page: Starting refresh...")
                 await refresh()

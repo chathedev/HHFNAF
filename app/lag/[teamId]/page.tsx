@@ -487,6 +487,7 @@ export default function TeamPage({ params }: TeamPageProps) {
           finalScore={selectedMatch.result}
           matchStatus={getDerivedStatus(selectedMatch)}
           matchId={selectedMatch.id}
+          matchData={selectedMatch}
           onRefresh={async () => {
             try {
               await refresh()

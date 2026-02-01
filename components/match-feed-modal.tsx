@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react"
 import { X } from "lucide-react"
+import type { NormalizedMatch } from "@/lib/use-match-data"
+import { downloadJsonFile } from "@/lib/download-json"
 
 
 type MatchFeedEvent = {
@@ -33,6 +35,7 @@ type MatchFeedModalProps = {
   matchStatus?: "live" | "finished" | "upcoming" | "halftime"
   matchId?: string
   onRefresh?: () => Promise<void>
+  matchData?: NormalizedMatch
 }
 
 export function MatchFeedModal({
@@ -85,7 +88,28 @@ export function MatchFeedModal({
     }
   }, [])
 
+  const triggerDownload = useCallback(() => {
+    if (!matchId || !matchData) {
+      return
+    }
+
+    const payload = {
+      match: matchData,
+      timeline: matchFeed,
+      metadata: {
+        homeTeam,
+        awayTeam,
+        finalScore,
+        matchStatus,
+        exportedAt: new Date().toISOString(),
+      },
+    }
+
+    downloadJsonFile(`match-${matchId}.json`, payload)
+  }, [matchId, matchData, matchFeed, finalScore, homeTeam, awayTeam, matchStatus])
+
   const lastAutoRefreshMatchId = useRef<string | null>(null)
+  const lastDownloadedMatchId = useRef<string | null>(null)
 
   useEffect(() => {
     const newFeed = initialMatchFeed ?? []
@@ -124,6 +148,18 @@ export function MatchFeedModal({
     lastAutoRefreshMatchId.current = matchId
     triggerRefresh()
   }, [isOpen, matchId, triggerRefresh])
+
+  useEffect(() => {
+    if (!isOpen || !matchId || !matchData) {
+      lastDownloadedMatchId.current = null
+      return
+    }
+    if (lastDownloadedMatchId.current === matchId) {
+      return
+    }
+    lastDownloadedMatchId.current = matchId
+    triggerDownload()
+  }, [isOpen, matchId, matchData, triggerDownload])
 
   useEffect(() => {
     if (!isOpen) {

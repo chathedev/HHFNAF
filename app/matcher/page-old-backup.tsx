@@ -517,6 +517,8 @@ export default function MatcherPage() {
             awayTeam={selectedMatch.awayTeam}
             finalScore={selectedMatch.result}
             matchStatus={selectedMatch.matchStatus}
+            matchId={selectedMatch.id}
+            matchData={selectedMatch}
           />
         )}
       </div>
