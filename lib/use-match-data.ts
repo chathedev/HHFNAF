@@ -21,6 +21,8 @@ export type MatchFeedEvent = {
   score?: string
   scoringTeam?: string
   isHomeGoal?: boolean
+  eventId?: string | number
+  matchId?: string
 }
 
 type ApiMatch = {
@@ -62,6 +64,7 @@ export type NormalizedMatch = {
   matchStatus?: "live" | "finished" | "upcoming" | "halftime"
   matchFeed?: MatchFeedEvent[]
   isHalftime?: boolean // Special flag for halftime breaks
+  apiMatchId?: string
 }
 
 export type EnhancedMatchData = {
@@ -449,6 +452,7 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     matchStatus: derivedStatus,
     matchFeed: match.matchFeed ?? undefined,
     isHalftime: derivedStatus === "halftime",
+    apiMatchId: match.id,
   }
 }
 
@@ -456,7 +460,12 @@ const normalizeMatches = (matches: ApiMatch[]) =>
   matches
     .map(normalizeMatch)
     .filter((match): match is NormalizedMatch => Boolean(match))
-    .sort((a, b) => a.date.getTime() - b.date.getTime())
+
+const compareMatchesByDateAsc = (a: NormalizedMatch, b: NormalizedMatch) => a.date.getTime() - b.date.getTime()
+const compareMatchesByDateDesc = (a: NormalizedMatch, b: NormalizedMatch) => b.date.getTime() - a.date.getTime()
+
+const sortMatchesAscending = (matches: NormalizedMatch[]) => [...matches].sort(compareMatchesByDateAsc)
+const sortMatchesDescending = (matches: NormalizedMatch[]) => [...matches].sort(compareMatchesByDateDesc)
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -598,14 +607,199 @@ const createMatchDataChannel = () => {
   let reconnectDelay = 1000
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null
   let latestEntry: SharedMatchCacheEntry | null = sharedMatchCache.get(CHANNEL_ENDPOINT) ?? null
-  let latestPayload: MatchChannelPayload | null = latestEntry
-    ? { current: latestEntry.current, old: latestEntry.old, lastUpdated: latestEntry.lastUpdated }
-    : null
-  let isConnected = false
-  let hasData = Boolean(latestPayload)
+  let lastEventId: string | number | null = null
+  let lastUpdated: string | null = latestEntry?.lastUpdated ?? null
+
+  let currentMatches: NormalizedMatch[] = []
+  let oldMatches: NormalizedMatch[] = []
+
+  const matchMap = new Map<string, NormalizedMatch>()
+  const rawMatchStore = new Map<string, ApiMatch>()
+  const apiIdToNormalizedId = new Map<string, string>()
+  const matchEventIds = new Map<string, Set<string>>()
 
   const subscribers = new Set<(payload: MatchChannelPayload) => void>()
   const connectionListeners = new Set<(state: ConnectionState) => void>()
+
+  let latestPayload: MatchChannelPayload | null = null
+  let isConnected = false
+  let hasData = false
+
+  type DeltaMatchUpdate = {
+    type: "insert" | "update" | "delete"
+    match?: ApiMatch
+    matchId?: string
+    changes?: Partial<ApiMatch>
+  }
+
+  const getEventFingerprint = (event: MatchFeedEvent) => {
+    if (event.eventId !== undefined && event.eventId !== null) {
+      return String(event.eventId)
+    }
+    if (event.time || event.type || event.description) {
+      return `${event.time ?? ""}|${event.type ?? ""}|${event.description ?? ""}|${event.homeScore ?? ""}-${event.awayScore ?? ""}`
+    }
+    return undefined
+  }
+
+  const parseEventTimeToMinutes = (value?: string) => {
+    if (!value) {
+      return 0
+    }
+    const normalized = value.replace(/[^\d:+]/g, "")
+    if (!normalized) {
+      return 0
+    }
+    const [primary, overtime] = normalized.split("+")
+    const [minutes] = (primary ?? "").split(":")
+    const base = Number.parseInt(minutes ?? "0", 10)
+    const extra = Number.parseInt(overtime ?? "0", 10)
+    const safeBase = Number.isNaN(base) ? 0 : base
+    const safeExtra = Number.isNaN(extra) ? 0 : extra
+    return safeBase + safeExtra
+  }
+
+  const compareFeedEvents = (a: MatchFeedEvent, b: MatchFeedEvent) =>
+    parseEventTimeToMinutes(b.time) - parseEventTimeToMinutes(a.time)
+
+  const getNormalizedIdFromMatchId = (matchId?: string) => {
+    if (!matchId) {
+      return undefined
+    }
+    if (matchMap.has(matchId)) {
+      return matchId
+    }
+    return apiIdToNormalizedId.get(matchId)
+  }
+
+  const cacheEventIdsForMatch = (match: NormalizedMatch) => {
+    const ids = new Set<string>()
+    ;(match.matchFeed ?? []).forEach((event) => {
+      const fingerprint = getEventFingerprint(event)
+      if (fingerprint) {
+        ids.add(fingerprint)
+      }
+    })
+    if (ids.size > 0) {
+      matchEventIds.set(match.id, ids)
+    } else {
+      matchEventIds.delete(match.id)
+    }
+  }
+
+  const registerMatch = (match: NormalizedMatch, raw: ApiMatch) => {
+    matchMap.set(match.id, match)
+    rawMatchStore.set(match.id, raw)
+    const apiId = raw.id ?? match.apiMatchId
+    if (apiId) {
+      apiIdToNormalizedId.set(apiId, match.id)
+    }
+    cacheEventIdsForMatch(match)
+  }
+
+  const removeMatchById = (normalizedId: string) => {
+    matchMap.delete(normalizedId)
+    rawMatchStore.delete(normalizedId)
+    matchEventIds.delete(normalizedId)
+    apiIdToNormalizedId.forEach((value, key) => {
+      if (value === normalizedId) {
+        apiIdToNormalizedId.delete(key)
+      }
+    })
+    currentMatches = currentMatches.filter((match) => match.id !== normalizedId)
+    oldMatches = oldMatches.filter((match) => match.id !== normalizedId)
+  }
+
+  const insertIntoSortedList = (
+    list: NormalizedMatch[],
+    match: NormalizedMatch,
+    comparator: (a: NormalizedMatch, b: NormalizedMatch) => number,
+  ) => {
+    const filtered = list.filter((item) => item.id !== match.id)
+    const next = [...filtered, match]
+    next.sort(comparator)
+    return next
+  }
+
+  const updateMatchCollections = (match: NormalizedMatch) => {
+    currentMatches = currentMatches.filter((item) => item.id !== match.id)
+    oldMatches = oldMatches.filter((item) => item.id !== match.id)
+
+    if (match.matchStatus === "finished") {
+      oldMatches = insertIntoSortedList(oldMatches, match, compareMatchesByDateDesc)
+    } else {
+      currentMatches = insertIntoSortedList(currentMatches, match, compareMatchesByDateAsc)
+    }
+  }
+
+  const reconstructApiMatch = (match: NormalizedMatch): ApiMatch => ({
+    id: match.apiMatchId ?? match.id,
+    home: match.homeTeam,
+    away: match.awayTeam,
+    date: match.date.toISOString().split("T")[0],
+    time: match.time ?? undefined,
+    result: match.result ?? undefined,
+    venue: match.venue ?? undefined,
+    series: match.series ?? undefined,
+    playUrl: match.playUrl ?? undefined,
+    infoUrl: match.infoUrl ?? undefined,
+    matchStatus: match.matchStatus ?? undefined,
+    matchFeed: match.matchFeed ?? undefined,
+    teamType: match.teamType,
+    opponent: match.opponent,
+    isHome: match.isHome,
+    homeImg: undefined,
+    awayImg: undefined,
+  })
+
+  const hydrateFromEntry = (entry: SharedMatchCacheEntry | null) => {
+    matchMap.clear()
+    rawMatchStore.clear()
+    apiIdToNormalizedId.clear()
+    matchEventIds.clear()
+
+    if (!entry) {
+      currentMatches = []
+      oldMatches = []
+      lastUpdated = null
+      updatePayload()
+      updateConnectionState({ hasData: false })
+      return
+    }
+
+    const normalizedCurrent = sortMatchesAscending(entry.current)
+    const normalizedOld = sortMatchesDescending(entry.old)
+
+    currentMatches = normalizedCurrent
+    oldMatches = normalizedOld
+
+    normalizedCurrent.forEach((match) => registerMatch(match, reconstructApiMatch(match)))
+    normalizedOld.forEach((match) => registerMatch(match, reconstructApiMatch(match)))
+
+    lastUpdated = entry.lastUpdated ?? null
+    updatePayload()
+    updateConnectionState({ hasData: currentMatches.length > 0 || oldMatches.length > 0 })
+  }
+
+  const normalizeAndRegisterMatches = (matches: ApiMatch[]) => {
+    const normalized: NormalizedMatch[] = []
+    matches.forEach((raw) => {
+      const match = normalizeMatch(raw)
+      if (match) {
+        normalized.push(match)
+        registerMatch(match, raw)
+      }
+    })
+    return normalized
+  }
+
+  const updatePayload = () => {
+    latestPayload = {
+      current: currentMatches,
+      old: oldMatches,
+      lastUpdated,
+    }
+  }
 
   const notifySubscribers = () => {
     if (!latestPayload) {
@@ -634,6 +828,8 @@ const createMatchDataChannel = () => {
     }
   }
 
+  hydrateFromEntry(latestEntry)
+
   const scheduleReconnect = () => {
     if (!isBrowser || reconnectTimer) {
       return
@@ -643,6 +839,157 @@ const createMatchDataChannel = () => {
       connect()
     }, reconnectDelay)
     reconnectDelay = Math.min(30_000, reconnectDelay * 1.5)
+  }
+
+  const buildSocketUrl = () => {
+    if (lastEventId !== null && lastEventId !== undefined) {
+      const encoded = encodeURIComponent(String(lastEventId))
+      return `${MATCH_WS_URL}?sinceEventId=${encoded}`
+    }
+    return MATCH_WS_URL
+  }
+
+  const applyMatchUpdate = (update: DeltaMatchUpdate) => {
+    if (update.type === "delete") {
+      const normalizedId = getNormalizedIdFromMatchId(update.matchId)
+      if (!normalizedId) {
+        return false
+      }
+      removeMatchById(normalizedId)
+      return true
+    }
+
+    const normalizedFromMatch = update.match ? normalizeMatch(update.match) : undefined
+    const existingNormalizedId =
+      normalizedFromMatch?.id ?? (update.matchId ? getNormalizedIdFromMatchId(update.matchId) : undefined)
+    const existingRaw = existingNormalizedId ? rawMatchStore.get(existingNormalizedId) : undefined
+
+    const mergedRaw: ApiMatch = {
+      ...(existingRaw ?? {}),
+      ...(update.match ?? {}),
+      ...(update.changes ?? {}),
+    }
+
+    if (!mergedRaw.date || !mergedRaw.teamType || !mergedRaw.opponent) {
+      return false
+    }
+
+    const normalizedMatch = normalizeMatch(mergedRaw)
+    if (!normalizedMatch) {
+      return false
+    }
+
+    if (existingNormalizedId) {
+      removeMatchById(existingNormalizedId)
+    }
+
+    registerMatch(normalizedMatch, mergedRaw)
+    updateMatchCollections(normalizedMatch)
+    return true
+  }
+
+  const mergeMatchFeed = (existing: MatchFeedEvent[] | undefined, additions: MatchFeedEvent[]) => {
+    const combined = [...(existing ?? []), ...additions]
+    combined.sort(compareFeedEvents)
+    return combined
+  }
+
+  const applyMatchEvent = (event: MatchFeedEvent) => {
+    const normalizedId = getNormalizedIdFromMatchId(event.matchId)
+    if (!normalizedId) {
+      return false
+    }
+    const existingMatch = matchMap.get(normalizedId)
+    if (!existingMatch) {
+      return false
+    }
+
+    const fingerprint = getEventFingerprint(event)
+    const seen = matchEventIds.get(normalizedId)
+    if (fingerprint && seen?.has(fingerprint)) {
+      return false
+    }
+
+    const updatedFeed = mergeMatchFeed(existingMatch.matchFeed, [event])
+    const updatedMatch = { ...existingMatch, matchFeed: updatedFeed }
+    registerMatch(updatedMatch, reconstructApiMatch(updatedMatch))
+    updateMatchCollections(updatedMatch)
+
+    if (fingerprint) {
+      const nextSet = seen ? new Set(seen) : new Set<string>()
+      nextSet.add(fingerprint)
+      matchEventIds.set(normalizedId, nextSet)
+    }
+
+    return true
+  }
+
+  const handleSnapshot = (payload: any) => {
+    matchMap.clear()
+    rawMatchStore.clear()
+    apiIdToNormalizedId.clear()
+    matchEventIds.clear()
+
+    const normalizedCurrent = normalizeAndRegisterMatches(resolveCurrentMatchPayload(payload))
+    const normalizedOld = normalizeAndRegisterMatches(resolveOldMatchPayload(payload))
+
+    currentMatches = sortMatchesAscending(normalizedCurrent)
+    oldMatches = sortMatchesDescending(normalizedOld)
+
+    lastUpdated = typeof payload?.lastUpdated === "string" ? payload.lastUpdated : null
+    lastEventId = typeof payload?.lastEventId !== "undefined" ? payload.lastEventId : lastEventId
+
+    latestEntry = {
+      current: currentMatches,
+      old: oldMatches,
+      lastUpdated,
+      timestamp: Date.now(),
+    }
+
+    applyEntryToCaches(latestEntry, [CHANNEL_ENDPOINT])
+    updatePayload()
+    updateConnectionState({ hasData: currentMatches.length > 0 || oldMatches.length > 0 })
+    notifySubscribers()
+  }
+
+  const handleDelta = (payload: any) => {
+    const updates = Array.isArray(payload?.matchUpdates) ? payload.matchUpdates : []
+    const events = Array.isArray(payload?.events) ? payload.events : []
+    let changed = false
+
+    updates.forEach((update: DeltaMatchUpdate) => {
+      if (applyMatchUpdate(update)) {
+        changed = true
+      }
+    })
+
+    events.forEach((event: MatchFeedEvent) => {
+      if (applyMatchEvent(event)) {
+        changed = true
+      }
+    })
+
+    if (typeof payload?.lastEventId !== "undefined" && payload.lastEventId !== null) {
+      lastEventId = payload.lastEventId
+    }
+
+    if (!changed) {
+      return
+    }
+
+    lastUpdated = typeof payload?.serverTime === "string" ? payload.serverTime : lastUpdated
+
+    latestEntry = {
+      current: currentMatches,
+      old: oldMatches,
+      lastUpdated,
+      timestamp: Date.now(),
+    }
+
+    applyEntryToCaches(latestEntry, [CHANNEL_ENDPOINT])
+    updatePayload()
+    updateConnectionState({ hasData: currentMatches.length > 0 || oldMatches.length > 0 })
+    notifySubscribers()
   }
 
   const connect = () => {
@@ -662,7 +1009,7 @@ const createMatchDataChannel = () => {
     }
 
     try {
-      socket = new WebSocket(MATCH_WS_URL)
+      socket = new WebSocket(buildSocketUrl())
     } catch (error) {
       console.warn("Unable to open match data socket", error)
       scheduleReconnect()
@@ -679,18 +1026,19 @@ const createMatchDataChannel = () => {
     socket.addEventListener("message", (event) => {
       try {
         const raw = JSON.parse(event.data)
-        const entry: SharedMatchCacheEntry = {
-          current: normalizeMatches(resolveCurrentMatchPayload(raw)),
-          old: normalizeMatches(resolveOldMatchPayload(raw)),
-          lastUpdated: typeof raw?.lastUpdated === "string" ? raw.lastUpdated : null,
-          timestamp: Date.now(),
+        lastEventId = typeof raw?.lastEventId !== "undefined" ? raw.lastEventId : lastEventId
+
+        if (raw?.type === "snapshot") {
+          handleSnapshot(raw)
+          return
         }
 
-        applyEntryToCaches(entry, [CHANNEL_ENDPOINT])
-        latestEntry = entry
-        latestPayload = { current: entry.current, old: entry.old, lastUpdated: entry.lastUpdated }
-        updateConnectionState({ hasData: true })
-        notifySubscribers()
+        if (raw?.type === "delta") {
+          handleDelta(raw)
+          return
+        }
+
+        handleSnapshot(raw)
       } catch (error) {
         console.warn("Failed to parse match websocket payload", error)
       }
@@ -741,8 +1089,8 @@ const createMatchDataChannel = () => {
 
   const broadcastEntry = (entry: SharedMatchCacheEntry) => {
     latestEntry = entry
-    latestPayload = { current: entry.current, old: entry.old, lastUpdated: entry.lastUpdated }
-    updateConnectionState({ hasData: true })
+    hydrateFromEntry(entry)
+    updateConnectionState({ hasData: currentMatches.length > 0 || oldMatches.length > 0 })
     notifySubscribers()
   }
 
@@ -861,8 +1209,8 @@ export const getMatchData = async (
         const currentPayload = resolveCurrentMatchPayload(payload)
         const oldPayload = resolveOldMatchPayload(payload)
 
-        const normalizedCurrent = normalizeMatches(currentPayload)
-        const normalizedOld = normalizeMatches(oldPayload)
+        const normalizedCurrent = sortMatchesAscending(normalizeMatches(currentPayload))
+        const normalizedOld = sortMatchesDescending(normalizeMatches(oldPayload))
 
         const entry: SharedMatchCacheEntry = {
           current: normalizedCurrent,
