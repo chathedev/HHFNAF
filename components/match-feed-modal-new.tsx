@@ -84,6 +84,8 @@ export function MatchFeedModal({
     }
   }, [])
 
+  const lastAutoRefreshMatchId = useRef<string | null>(null)
+
   // Update local state but preserve newer data - prevent regression
   useEffect(() => {
     const newFeed = initialMatchFeed ?? []
@@ -109,6 +111,18 @@ export function MatchFeedModal({
       return newScore
     })
   }, [initialMatchFeed, initialFinalScore])
+
+  useEffect(() => {
+    if (!isOpen || !matchId) {
+      lastAutoRefreshMatchId.current = null
+      return
+    }
+    if (lastAutoRefreshMatchId.current === matchId) {
+      return
+    }
+    lastAutoRefreshMatchId.current = matchId
+    triggerRefresh()
+  }, [isOpen, matchId, triggerRefresh])
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {

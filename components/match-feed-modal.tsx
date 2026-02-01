@@ -85,6 +85,8 @@ export function MatchFeedModal({
     }
   }, [])
 
+  const lastAutoRefreshMatchId = useRef<string | null>(null)
+
   useEffect(() => {
     const newFeed = initialMatchFeed ?? []
     const newScore = initialFinalScore
@@ -110,6 +112,18 @@ export function MatchFeedModal({
       return newScore
     })
   }, [initialMatchFeed, initialFinalScore])
+
+  useEffect(() => {
+    if (!isOpen || !matchId) {
+      lastAutoRefreshMatchId.current = null
+      return
+    }
+    if (lastAutoRefreshMatchId.current === matchId) {
+      return
+    }
+    lastAutoRefreshMatchId.current = matchId
+    triggerRefresh()
+  }, [isOpen, matchId, triggerRefresh])
 
   useEffect(() => {
     if (!isOpen) {
