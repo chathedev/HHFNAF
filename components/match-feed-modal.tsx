@@ -112,13 +112,6 @@ export function MatchFeedModal({
   }, [initialMatchFeed, initialFinalScore])
 
   useEffect(() => {
-    if (!isOpen || !matchId) {
-      return
-    }
-    triggerRefresh()
-  }, [isOpen, matchId, triggerRefresh])
-
-  useEffect(() => {
     if (!isOpen) {
       return
     }
