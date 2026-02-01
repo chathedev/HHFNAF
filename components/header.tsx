@@ -27,7 +27,7 @@ function Header() {
     }
   }, [])
 
-  const visiblePaths = ["/", "/nyheter", "/lag", "/matcher", "/kontakt", "/kop-biljett"]
+  const visiblePaths = ["/", "/shop", "/lag", "/matcher", "/kontakt", "/kop-biljett"]
 
   if (!visiblePaths.includes(pathname)) {
     return null
@@ -35,7 +35,7 @@ function Header() {
 
   const navLinks = [
     { name: "Hem", href: "/" },
-    { name: "Nyheter", href: "/nyheter" },
+    { name: "Shop", href: "/shop" },
     { name: "Lag", href: "/lag" },
     { name: "Matcher", href: "/matcher" },
     { name: "Köp biljett", href: "https://clubs.clubmate.se/harnosandshf/overview/" },

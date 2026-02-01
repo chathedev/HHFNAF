@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState, memo } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react"
 import { X } from "lucide-react"
 
 
@@ -51,6 +51,39 @@ export function MatchFeedModal({
   const [matchFeed, setMatchFeed] = useState<MatchFeedEvent[]>(initialMatchFeed ?? [])
   const [finalScore, setFinalScore] = useState(initialFinalScore)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const refreshCallbackRef = useRef(onRefresh)
+  const isMountedRef = useRef(true)
+
+  useEffect(() => {
+    refreshCallbackRef.current = onRefresh
+  }, [onRefresh])
+
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  const triggerRefresh = useCallback(async () => {
+    const handler = refreshCallbackRef.current
+    if (!handler) {
+      return
+    }
+
+    if (isMountedRef.current) {
+      setIsRefreshing(true)
+    }
+    try {
+      await handler()
+    } catch (error) {
+      console.error("Modal refresh error:", error)
+    } finally {
+      if (isMountedRef.current) {
+        setIsRefreshing(false)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     const newFeed = initialMatchFeed ?? []
@@ -77,6 +110,13 @@ export function MatchFeedModal({
       return newScore
     })
   }, [initialMatchFeed, initialFinalScore])
+
+  useEffect(() => {
+    if (!isOpen || !matchId) {
+      return
+    }
+    triggerRefresh()
+  }, [isOpen, matchId, triggerRefresh])
 
   useEffect(() => {
     if (!isOpen) {
@@ -132,47 +172,6 @@ export function MatchFeedModal({
   const isLive = !isFinished && (matchStatus === "live" || matchStatus === "halftime")
   const isHalftime = matchStatus === "halftime"
   const isUpcoming = !isLive && !isFinished
-
-  useEffect(() => {
-    if (!isOpen || !onRefresh || !matchId) {
-      return
-    }
-
-    let isMounted = true
-    let isRefreshing = false
-
-    const refreshData = async () => {
-      if (isRefreshing || !isMounted) {
-        return
-      }
-      
-      isRefreshing = true
-      setIsRefreshing(true)
-      
-      try {
-        await onRefresh()
-      } catch (error) {
-        console.error('Modal refresh error:', error)
-        // Continue trying even on errors
-      } finally {
-        isRefreshing = false
-        setIsRefreshing(false)
-      }
-    }
-
-    // Immediate refresh on open
-    refreshData()
-    
-    // Ultra-responsive refresh - 300ms for live matches, 500ms for others
-    const isLive = matchStatus === "live"
-    const refreshInterval = isLive ? 300 : 500
-    const intervalId = window.setInterval(refreshData, refreshInterval)
-
-    return () => {
-      isMounted = false
-      window.clearInterval(intervalId)
-    }
-  }, [isOpen, onRefresh, matchId])
 
   const goalEvents = useMemo(
     () => matchFeed.filter((event) => event.type?.toLowerCase().includes("mål") && event.player),
@@ -299,6 +298,16 @@ export function MatchFeedModal({
                     <span className="h-1 w-1 bg-slate-400 rounded-full animate-ping"></span>
                     Live
                   </span>
+                )}
+                {onRefresh && (
+                  <button
+                    type="button"
+                    onClick={triggerRefresh}
+                    disabled={isRefreshing}
+                    className="text-xs font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-900 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isRefreshing ? "Uppdaterar..." : "Uppdatera"}
+                  </button>
                 )}
               </div>
             </div>

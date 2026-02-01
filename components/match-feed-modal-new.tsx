@@ -50,6 +50,39 @@ export function MatchFeedModal({
   const [matchFeed, setMatchFeed] = useState<MatchFeedEvent[]>(initialMatchFeed ?? [])
   const [finalScore, setFinalScore] = useState(initialFinalScore)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const refreshCallbackRef = useRef(onRefresh)
+  const isMountedRef = useRef(true)
+
+  useEffect(() => {
+    refreshCallbackRef.current = onRefresh
+  }, [onRefresh])
+
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  const triggerRefresh = useCallback(async () => {
+    const handler = refreshCallbackRef.current
+    if (!handler) {
+      return
+    }
+
+    if (isMountedRef.current) {
+      setIsRefreshing(true)
+    }
+    try {
+      await handler()
+    } catch (error) {
+      console.error("Modal refresh error:", error)
+    } finally {
+      if (isMountedRef.current) {
+        setIsRefreshing(false)
+      }
+    }
+  }, [])
 
   // Update local state but preserve newer data - prevent regression
   useEffect(() => {
@@ -77,40 +110,12 @@ export function MatchFeedModal({
     })
   }, [initialMatchFeed, initialFinalScore])
 
-  // Real-time refresh when modal is open
   useEffect(() => {
-    if (!isOpen || !onRefresh || !matchId) {
+    if (!isOpen || !matchId) {
       return
     }
-
-    let isMounted = true
-
-    const refreshData = async () => {
-      if (!isMounted) return
-      
-      try {
-        setIsRefreshing(true)
-        await onRefresh()
-      } catch (error) {
-        console.error('Modal refresh error:', error)
-      } finally {
-        setIsRefreshing(false)
-      }
-    }
-
-    // Immediate refresh
-    refreshData()
-    
-    // Ultra-responsive refresh - adaptive based on match status (halftime is still live)
-    const isLive = matchStatus === "live" || matchStatus === "halftime"
-    const refreshInterval = isLive ? 250 : 500 // Even faster for live matches
-    const intervalId = window.setInterval(refreshData, refreshInterval)
-
-    return () => {
-      isMounted = false
-      window.clearInterval(intervalId)
-    }
-  }, [isOpen, onRefresh, matchId])
+    triggerRefresh()
+  }, [isOpen, matchId, triggerRefresh])
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -229,6 +234,16 @@ export function MatchFeedModal({
                     <span className="w-1.5 h-1.5 bg-white rounded-full animate-spin"></span>
                     Uppdaterar
                   </span>
+                )}
+                {onRefresh && (
+                  <button
+                    type="button"
+                    onClick={triggerRefresh}
+                    disabled={isRefreshing}
+                    className="text-[11px] font-semibold uppercase tracking-[0.3em] border border-white/70 px-3 py-1 rounded-full hover:border-white transition disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {isRefreshing ? "Uppdaterar..." : "Uppdatera"}
+                  </button>
                 )}
               </div>
               

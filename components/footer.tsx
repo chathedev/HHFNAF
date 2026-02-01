@@ -30,9 +30,9 @@ export default function Footer() {
             <h3 className="text-lg font-bold text-emerald-400 uppercase tracking-wider">Navigation</h3>
             <ul className="space-y-3">
               <li>
-                <Link href="/nyheter" className="text-gray-300 hover:text-emerald-400 transition-colors text-sm flex items-center gap-2 group">
+                <Link href="/shop" className="text-gray-300 hover:text-emerald-400 transition-colors text-sm flex items-center gap-2 group">
                   <span className="w-1 h-1 bg-emerald-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                  Nyheter
+                  Shop
                 </Link>
               </li>
               <li>
