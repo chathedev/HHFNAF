@@ -392,14 +392,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     // eslint-disable-next-line
   }, [teamOptions])
 
-  // Enhanced auto-refresh for smoother updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refresh();
-    }, 1000); // More frequent updates for better real-time experience
-    return () => clearInterval(interval);
-  }, [refresh]);
-
   return (
     <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-24">
       <div className="container mx-auto px-4 max-w-7xl">

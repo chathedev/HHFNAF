@@ -624,6 +624,7 @@ const createMatchDataChannel = () => {
   let latestPayload: MatchChannelPayload | null = null
   let isConnected = false
   let hasData = false
+  let pendingFrame: number | null = null
 
   type DeltaMatchUpdate = {
     type: "insert" | "update" | "delete"
@@ -808,6 +809,21 @@ const createMatchDataChannel = () => {
     subscribers.forEach((subscriber) => subscriber(latestPayload!))
   }
 
+  const scheduleSubscriberNotification = () => {
+    if (pendingFrame !== null) {
+      return
+    }
+    const raf =
+      typeof globalThis.requestAnimationFrame === "function"
+        ? globalThis.requestAnimationFrame.bind(globalThis)
+        : (callback: FrameRequestCallback) => globalThis.setTimeout(callback, 16)
+
+    pendingFrame = raf(() => {
+      pendingFrame = null
+      notifySubscribers()
+    })
+  }
+
   const notifyConnectionState = () => {
     const state = { isConnected, hasData }
     connectionListeners.forEach((listener) => listener(state))
@@ -949,7 +965,7 @@ const createMatchDataChannel = () => {
     applyEntryToCaches(latestEntry, [CHANNEL_ENDPOINT])
     updatePayload()
     updateConnectionState({ hasData: currentMatches.length > 0 || oldMatches.length > 0 })
-    notifySubscribers()
+    scheduleSubscriberNotification()
   }
 
   const handleDelta = (payload: any) => {
@@ -989,7 +1005,7 @@ const createMatchDataChannel = () => {
     applyEntryToCaches(latestEntry, [CHANNEL_ENDPOINT])
     updatePayload()
     updateConnectionState({ hasData: currentMatches.length > 0 || oldMatches.length > 0 })
-    notifySubscribers()
+    scheduleSubscriberNotification()
   }
 
   const connect = () => {
@@ -1091,7 +1107,7 @@ const createMatchDataChannel = () => {
     latestEntry = entry
     hydrateFromEntry(entry)
     updateConnectionState({ hasData: currentMatches.length > 0 || oldMatches.length > 0 })
-    notifySubscribers()
+    scheduleSubscriberNotification()
   }
 
   return {
