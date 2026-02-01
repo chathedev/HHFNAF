@@ -30,6 +30,7 @@ import type { FullContent, Partner } from "@/lib/content-types"
 import { deriveSiteVariant, type SiteVariant, getThemeVariant, getHeroImages, type ThemeVariant } from "@/lib/site-variant"
 import { canShowTicketForMatch } from "@/lib/matches"
 import { extendTeamDisplayName } from "@/lib/team-display"
+import { buildMatchScheduleLabel, getMatchupLabel, getSimplifiedMatchStatus, canOpenMatchTimeline } from "@/lib/match-card-utils"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 import { InstagramFeed } from "@/components/instagram-feed"
@@ -37,68 +38,6 @@ import type { EnhancedMatchData } from "@/lib/use-match-data"
 
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 
-type MatchOutcome = {
-  text: string
-  label: "Vinst" | "Förlust" | "Oavgjort" | "Ej publicerat"
-}
-
-const getMatchOutcome = (rawResult?: string, isHome?: boolean, status?: string): MatchOutcome | null => {
-  if (!rawResult) {
-    return null
-  }
-  const scoreboardMatch = rawResult.match(/(\d+)\s*[–-]\s*(\d+)/)
-  if (!scoreboardMatch) {
-    return null
-  }
-  const homeScore = Number.parseInt(scoreboardMatch[1], 10)
-  const awayScore = Number.parseInt(scoreboardMatch[2], 10)
-  if (Number.isNaN(homeScore) || Number.isNaN(awayScore)) {
-    return null
-  }
-
-  // Don't show outcome badges for live matches - only show for finished matches
-  if (status === "live") {
-    return null
-  }
-
-  const isAway = isHome === false
-  const ourScore = isAway ? awayScore : homeScore
-  const opponentScore = isAway ? homeScore : awayScore
-
-  let label: MatchOutcome["label"] = "Oavgjort"
-  if (ourScore > opponentScore) {
-    label = "Vinst"
-  } else if (ourScore < opponentScore) {
-    label = "Förlust"
-  }
-
-  return {
-    text: `${ourScore}\u2013${opponentScore}`,
-    label,
-  }
-}
-
-// Helper to get score in correct display order (always Härnösands HF score first)
-const getDisplayScore = (rawResult?: string, isHome?: boolean): string | null => {
-  if (!rawResult) {
-    return null
-  }
-  const scoreboardMatch = rawResult.match(/(\d+)\s*[–-]\s*(\d+)/)
-  if (!scoreboardMatch) {
-    return null
-  }
-  const homeScore = Number.parseInt(scoreboardMatch[1], 10)
-  const awayScore = Number.parseInt(scoreboardMatch[2], 10)
-  if (Number.isNaN(homeScore) || Number.isNaN(awayScore)) {
-    return null
-  }
-
-  // Match the team display order:
-  // If we're home: "Härnösands HF vs Opponent" → show homeScore–awayScore
-  // If we're away: "Opponent vs Härnösands HF" → show homeScore–awayScore (opponent is home)
-  // The API always returns homeScore–awayScore, so we keep it as is
-  return `${homeScore}\u2013${awayScore}`
-}
 
 const getInitialVariant = (): SiteVariant => {
   if (typeof document !== "undefined") {
@@ -202,8 +141,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const tierOrder = ["Diamantpartner", "Platinapartner", "Guldpartner", "Silverpartner", "Bronspartner"]
 
   function getMatchStatus(match: NormalizedMatch): "live" | "finished" | "upcoming" {
-    // TRUST BACKEND COMPLETELY - it knows the real match status
-    return match.matchStatus === "halftime" ? "live" : (match.matchStatus ?? "upcoming")
+    return getSimplifiedMatchStatus(match)
   }
 
   const matchesTodayForward = useMemo(() => {
@@ -236,6 +174,78 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
     return matchesInWindow
   }, [upcomingMatches])
+
+  const renderHomeMatchCard = (match: NormalizedMatch) => {
+    const status = getMatchStatus(match)
+    const canOpenTimeline = canOpenMatchTimeline(match)
+    const scheduleLabel = buildMatchScheduleLabel(match)
+    const matchupLabel = getMatchupLabel(match)
+    const teamTypeRaw = match.teamType?.trim() || ""
+    const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
+    const scoreValue =
+      status !== "upcoming" && match.result && match.result.trim().length > 0
+        ? match.result.trim()
+        : null
+
+    const statusBadge = (() => {
+      if (status === "live") {
+        return { label: "LIVE", tone: "bg-rose-50 text-rose-600" }
+      }
+      if (status === "finished") {
+        return { label: "SLUT", tone: "bg-gray-100 text-gray-600" }
+      }
+      return { label: "KOMMANDE", tone: "bg-blue-50 text-blue-600" }
+    })()
+
+    return (
+      <li key={match.id}>
+        <article
+          id={`match-card-${match.id}`}
+          className={`group relative flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white px-5 py-4 transition-all ${canOpenTimeline ? "cursor-pointer hover:border-emerald-300 hover:shadow-lg" : ""
+            }`}
+          onClick={() => canOpenTimeline && setSelectedMatchId(match.id)}
+          role={canOpenTimeline ? "button" : undefined}
+          tabIndex={canOpenTimeline ? 0 : undefined}
+          onKeyDown={(event) => {
+            if (canOpenTimeline && (event.key === "Enter" || event.key === " ")) {
+              event.preventDefault()
+              setSelectedMatchId(match.id)
+            }
+          }}
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.5em] text-gray-400">
+                {teamTypeLabel}
+              </p>
+              <h3 className="text-base font-semibold text-gray-900 leading-tight">
+                {matchupLabel}
+              </h3>
+              {scheduleLabel && <p className="text-sm text-gray-500">{scheduleLabel}</p>}
+            </div>
+            <span className={`rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.35em] ${statusBadge.tone}`}>
+              {statusBadge.label}
+            </span>
+          </div>
+
+          {scoreValue && (
+            <div className="flex items-center justify-between">
+              <span className="text-2xl font-black text-gray-900" data-score-value="true">
+                {scoreValue}
+              </span>
+              <span className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-400">
+                {status === "live" ? "Pågår" : "Resultat"}
+              </span>
+            </div>
+          )}
+
+          {match.series && (
+            <p className="text-xs text-slate-400">{match.series}</p>
+          )}
+        </article>
+      </li>
+    )
+  }
 
   const matchesToDisplay = matchesTodayForward.slice(0, 10)
 
@@ -568,339 +578,53 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
             </div>
           </section>
           {(matchLoading || matchesToDisplay.length > 0 || matchError) && (
-            <section className="bg-white py-12">
+            <section className="py-10 bg-white">
               <div className="container mx-auto px-4">
-                <div className="mx-auto max-w-5xl">
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">Matcher</p>
-                    <h3 className="text-2xl font-bold text-emerald-900 md:text-3xl">Kommande matcher</h3>
-                    <p className="text-sm text-emerald-700">
-                      Här ser du de 10 kommande matcherna – listan uppdateras automatiskt under säsongen.
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="max-w-2xl">
+                    <p className="text-xs font-semibold uppercase tracking-[0.4em] text-emerald-600">Matcher</p>
+                    <h3 className="text-3xl font-black text-gray-900 sm:text-4xl">Live & Kommande</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Här visas matcher som är live eller på väg att starta – listan uppdateras automatiskt.
                     </p>
                   </div>
-
-                  <div className="mt-6 space-y-4">
-                    {matchLoading && (
-                      <div className="grid gap-4">
-                        {[0, 1].map((item) => (
-                          <div key={item} className="h-28 rounded-2xl border border-emerald-100 bg-emerald-50 animate-pulse" />
-                        ))}
-                      </div>
-                    )}
-
-                    <section className="mb-6 rounded-2xl border border-rose-100 bg-rose-50 p-4 shadow-sm">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-[0.4em] text-rose-600">Live just nu</p>
-                          <p className="text-2xl font-black text-rose-700">
-                            {liveLoading ? "Laddar..." : `${liveMatches.length} matcher`}
-                          </p>
-                        </div>
-                        <span className="text-xs font-medium text-slate-500">
-                          {!liveLoading && liveMatches.length === 0 ? "Inga live-matcher" : "Uppdateras var 1s"}
-                        </span>
-                      </div>
-                      {liveLoading ? (
-                        <p className="mt-3 text-sm text-slate-600">Live-läge synkas med servern...</p>
-                      ) : liveMatches.length > 0 ? (
-                        <ul className="mt-3 space-y-2 text-sm text-slate-700">
-                          {liveMatches.slice(0, 3).map((match) => (
-                            <li key={match.id} className="flex items-center justify-between">
-                              <div className="font-semibold text-slate-900">
-                                {match.homeTeam} <span className="text-gray-500 font-normal">vs</span> {match.awayTeam}
-                              </div>
-                              <span className="text-sm font-black text-slate-900">{match.result ?? "0–0"}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="mt-3 text-sm text-gray-500">Inga pågående matcher just nu.</p>
-                      )}
-                    </section>
-
-                    {!matchLoading && !matchError && matchesToDisplay.length > 0 && (
-                      <ul className="grid gap-4">
-                        {matchesToDisplay.map((match) => {
-                          const primaryTeamLabel = extendTeamDisplayName(match.teamType?.trim() || "Härnösands HF")
-                          const opponentName = match.opponent.replace(/\s*\((hemma|borta)\)\s*$/i, '').trim()
-                          const homeAwayLabel = match.isHome === false ? 'borta' : 'hemma'
-                          const isHome = match.isHome !== false
-                          const scheduleParts = [match.displayDate, match.time, match.venue].filter(
-                            (value): value is string => Boolean(value),
-                          )
-                          const scheduleInfo = scheduleParts.join(" • ")
-                          const status = getMatchStatus(match)
-                          const outcomeInfo = getMatchOutcome(match.result, match.isHome, status)
-                          const displayScore = getDisplayScore(match.result, match.isHome)
-
-                          // Check if result is stale (0-0 shown when match should be finished)
-                          const now = Date.now()
-                          const minutesSinceKickoff = (now - match.date.getTime()) / (1000 * 60)
-                          const trimmedResult = typeof match.result === "string" ? match.result.trim() : null
-
-                          // Normalize the result to check for any variation of 0-0
-                          const normalizedResult = trimmedResult?.replace(/[–-]/g, '-').toLowerCase()
-                          const isZeroZero = normalizedResult === "0-0" || normalizedResult === "00" || trimmedResult === "0-0" || trimmedResult === "0–0"
-
-                          // A handball match typically lasts 60 minutes (2x30 min) + breaks ~10-15 min = ~75 minutes max
-                          // Only consider match finished if backend says so OR if way past reasonable time (2+ hours) AND showing stale 0-0
-                          const matchShouldBeFinished = minutesSinceKickoff > 120 && isZeroZero && status !== "live"
-
-                          // If match shows 0-0 and should be finished, treat as unpublished result
-                          const isStaleZeroResult = isZeroZero && matchShouldBeFinished
-
-                          // Show LIVE badge if status is live (trust backend during halftime)
-                          const shouldShowLive = status === "live"
-
-                          const isFutureOrLive = match.date.getTime() >= Date.now() || (status === "live" && !matchShouldBeFinished)
-                          const showTicket =
-                            status !== "finished" &&
-                            isFutureOrLive &&
-                            !outcomeInfo &&
-                            canShowTicketForMatch(match) &&
-                            isHome
-
-                          // Only allow clicking timeline for live or finished matches
-                          const canOpenTimeline = (status === "live" && !matchShouldBeFinished) || status === "finished"
-
-                          // Enhanced logic: Only show finished matches with REAL results (greater than 0-0)
-                          const result = match.result?.trim() || ""
-                          let hasRealResult = false
-
-                          if (result && result.toLowerCase() !== "inte publicerat") {
-                            const scoreMatch = result.match(/(\d+)[-–](\d+)/)
-                            if (scoreMatch) {
-                              const homeScore = parseInt(scoreMatch[1])
-                              const awayScore = parseInt(scoreMatch[2])
-                              // Must have at least one goal scored (not 0-0)
-                              hasRealResult = homeScore > 0 || awayScore > 0
-                            }
-                          }
-
-                          let scoreValue: string | null = null
-                          let scoreSupportingText: string | null = null
-
-                          // Helper for showing result card - show finished only if real result
-                          const shouldShowCard = (status: string, hasRealResult: boolean) =>
-                            status === "live" || (status === "finished" && hasRealResult) || hasRealResult;
-
-                          if (hasRealResult) {
-                            scoreValue = match.result || null
-                            if (status === "finished" && outcomeInfo?.label === "Ej publicerat") {
-                              scoreSupportingText = "Resultat ej publicerat"
-                            }
-                          } else if (status === "finished" || isStaleZeroResult) {
-                            scoreValue = "—"
-                            scoreSupportingText = "Resultat ej publicerat"
-                          } else if (status === "live" && !matchShouldBeFinished) {
-                            const trimmed = match.result?.trim()
-                            scoreValue = trimmed && trimmed.length > 0 && trimmed !== "0-0" && trimmed !== "0–0" ? trimmed : "0–0"
-                            if (!trimmed || trimmed === "0-0" || trimmed === "0–0") {
-                              if (minutesSinceKickoff > 10) {
-                                scoreSupportingText = "Ingen uppdatering ännu"
-                              }
-                            }
-                          }
-
-                          if (!scoreValue && shouldShowCard(status, !!hasRealResult)) {
-                            scoreValue = "—"
-                          }
-
-                          const resultBoxTone = (() => {
-                            if (status === "live") {
-                              return "border-rose-200 bg-rose-50"
-                            }
-                            if (status === "finished") {
-                              if (outcomeInfo?.label === "Vinst") {
-                                return "border-emerald-200 bg-emerald-50"
-                              }
-                              if (outcomeInfo?.label === "Förlust") {
-                                return "border-red-200 bg-red-50"
-                              }
-                              return "border-slate-200 bg-slate-50"
-                            }
-                            return "border-gray-200 bg-gray-50"
-                          })()
-
-                          const resultLabelClass = status === "live" ? "text-rose-600" : status === "finished" ? "text-slate-600" : "text-slate-500"
-                          const resultLabelText = status === "finished" ? "Slutresultat" : status === "live" ? "Ställning just nu" : "Resultat"
-
-                          return (
-                            <li key={match.id}>
-                              <div
-                                id={`match-card-${match.id}`}
-                                className={`bg-white rounded-lg border border-gray-200 hover:border-emerald-400 hover:shadow-lg transition-all p-6 group relative ${canOpenTimeline ? "cursor-pointer" : ""
-                                  }`}
-                                onClick={() => canOpenTimeline && setSelectedMatchId(match.id)}
-                                role={canOpenTimeline ? "button" : undefined}
-                                tabIndex={canOpenTimeline ? 0 : undefined}
-                                onKeyDown={(e) => {
-                                  if (canOpenTimeline && (e.key === "Enter" || e.key === " ")) {
-                                    e.preventDefault()
-                                    setSelectedMatchId(match.id)
-                                  }
-                                }}
-                              >
-                                {/* Click hint badge - only show if timeline is clickable */}
-                                {canOpenTimeline && (
-                                  <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded flex items-center gap-1">
-                                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                      </svg>
-                                      Se matchhändelser
-                                    </span>
-                                  </div>
-                                )}
-
-                                {/* Header */}
-                                <div className="flex items-start justify-between mb-4">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-3 mb-2">
-                                      <span className="text-sm font-semibold text-emerald-700">
-                                        {primaryTeamLabel}
-                                      </span>
-                                      {shouldShowLive && (
-                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded">
-                                          <span className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse"></span>
-                                          LIVE
-                                        </span>
-                                      )}
-                                    </div>
-                                    <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                                      {isHome ? (
-                                        <>Härnösands HF <span className="text-gray-400">vs</span> {opponentName} ({homeAwayLabel})</>
-                                      ) : (
-                                        <>{opponentName} <span className="text-gray-400">vs</span> Härnösands HF ({homeAwayLabel})</>
-                                      )}
-                                    </h3>
-                                    {scheduleInfo && (
-                                      <p className="text-sm text-gray-600">{scheduleInfo}</p>
-                                    )}
-                                    {match.series && (
-                                      <p className="text-xs text-gray-500 mt-1">{match.series}</p>
-                                    )}
-                                  </div>
-
-                                  {match.infoUrl && (
-                                    <Link
-                                      href={match.infoUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-emerald-600 hover:text-emerald-700 transition-colors"
-                                      title="Matchsida"
-                                    >
-                                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                      </svg>
-                                    </Link>
-                                  )}
-                                </div>
-
-                                <div className="mt-5 space-y-4 border-t border-gray-100 pt-4">
-                                  {shouldShowCard(status, !!hasRealResult) && scoreValue && (
-                                    <div className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border px-4 py-3 ${resultBoxTone}`}>
-                                      <div className="flex flex-wrap items-end gap-3">
-                                        <div>
-                                          <p className={`text-[11px] font-semibold uppercase tracking-[0.3em] ${resultLabelClass}`}>
-                                            {resultLabelText}
-                                          </p>
-                                          <div className="mt-1 flex items-end gap-3">
-                                            <span className="text-3xl font-bold text-slate-900" data-score-value="true">
-                                              {scoreValue}
-                                            </span>
-                                            {scoreSupportingText && (
-                                              <span className="text-xs text-slate-500">{scoreSupportingText}</span>
-                                            )}
-                                          </div>
-                                        </div>
-                                        {shouldShowLive && match.matchStatus !== "halftime" && (
-                                          <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2.5 py-0.5 text-xs font-semibold text-red-600">
-                                            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
-                                            Pågår
-                                          </span>
-                                        )}
-                                        {match.matchStatus === "halftime" && (
-                                          <span className={`inline-flex items-center gap-1 rounded-full bg-white/70 px-2.5 py-0.5 text-xs font-semibold ${isPinkTheme ? "text-pink-600" : "text-orange-600"}`}>
-                                            <span className={`h-1.5 w-1.5 animate-pulse rounded-full ${isPinkTheme ? "bg-pink-500" : "bg-orange-500"}`} />
-                                            Paus
-                                          </span>
-                                        )}
-                                      </div>
-                                      {status === "finished" && outcomeInfo?.label && outcomeInfo.label !== "Ej publicerat" && (
-                                        <span
-                                          className={`text-xs font-semibold px-2.5 py-1 rounded-full ${outcomeInfo.label === "Vinst"
-                                            ? "bg-emerald-100 text-emerald-800"
-                                            : outcomeInfo.label === "Förlust"
-                                              ? "bg-red-100 text-red-700"
-                                              : "bg-slate-200 text-slate-700"
-                                            }`}
-                                        >
-                                          {outcomeInfo.label}
-                                        </span>
-                                      )}
-                                    </div>
-                                  )}
-
-                                  {(match.playUrl && match.playUrl !== "null") || showTicket ? (
-                                    <div className="flex flex-wrap items-center justify-end gap-3">
-                                      {match.playUrl && match.playUrl !== "null" && (
-                                        <a
-                                          href={match.playUrl}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-                                          title={status === "finished" ? "Se repris" : "Se matchen live"}
-                                        >
-                                          <img
-                                            src="/handbollplay_mini.png"
-                                            alt=""
-                                            className="h-4 w-4 brightness-0 invert"
-                                          />
-                                          {status === "finished" ? "Se repris" : "Se live"}
-                                        </a>
-                                      )}
-
-                                      {showTicket && (
-                                        <Link
-                                          href={TICKET_URL}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className={`inline-flex items-center gap-2 rounded-xl ${isPinkTheme ? "bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600" : "bg-orange-500 hover:bg-orange-600"} px-5 py-2.5 text-sm font-semibold text-white transition`}
-                                        >
-                                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                                          </svg>
-                                          Köp biljett
-                                        </Link>
-                                      )}
-                                    </div>
-                                  ) : null}
-                                </div>
-                              </div>
-                            </li>
-                          )
-                        })}
-                      </ul>
-                    )}
-
-                    {!matchLoading && !matchError && matchesToDisplay.length === 0 && (
-                      <div className="text-center py-8 px-4 bg-emerald-50 rounded-lg border border-emerald-100">
-                        <p className="text-emerald-700 mb-4">
-                          Inga kommande matcher just nu.
-                        </p>
-                        <Link
-                          href="/matcher"
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition-colors"
-                        >
-                          Se Tidigare Matcher
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </Link>
-                      </div>
-                    )}
+                  <div className="flex items-center gap-3 text-right">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.35em] text-gray-400">
+                      {!matchLoading && !matchError ? "Uppdateras varje sekund" : "Uppdateras snart..."}
+                    </span>
+                    <Link
+                      href="/matcher"
+                      className="text-[11px] font-semibold uppercase tracking-[0.35em] text-emerald-600 hover:text-emerald-800"
+                    >
+                      Se alla matcher →
+                    </Link>
                   </div>
+                </div>
+
+                <div className="mt-8">
+                  {matchLoading && (
+                    <div className="space-y-3">
+                      {[0, 1, 2].map((item) => (
+                        <div key={item} className="h-24 rounded-2xl border border-gray-100 bg-gray-50 animate-pulse" />
+                      ))}
+                    </div>
+                  )}
+
+                  {!matchLoading && matchError && (
+                    <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                      {matchErrorMessage}
+                    </div>
+                  )}
+
+                  {!matchLoading && !matchError && matchesToDisplay.length === 0 && (
+                    <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-500">
+                      Inga matcher att visa just nu.
+                    </div>
+                  )}
+
+                  {!matchLoading && !matchError && matchesToDisplay.length > 0 && (
+                    <ul className="mt-3 space-y-3">{matchesToDisplay.map(renderHomeMatchCard)}</ul>
+                  )}
                 </div>
               </div>
             </section>

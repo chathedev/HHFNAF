@@ -91,8 +91,8 @@ export default function Footer() {
         </div>
 
         {/* Bottom Section */}
-        <div className="border-t border-gray-800 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="border-t border-gray-800 pt-8">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             {/* Copyright */}
             <div className="text-center md:text-left">
               <p className="text-gray-400 text-sm mb-1">
@@ -100,6 +100,9 @@ export default function Footer() {
               </p>
               <p className="text-gray-600 text-xs">
                 Officiell hemsida för Härnösands Handbollsförening
+              </p>
+              <p className="text-gray-400 text-xs font-semibold mt-1">
+                HÄRNÖSANDS HANDBOLLSFÖRENING · 888000-3713
               </p>
             </div>
 

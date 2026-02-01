@@ -4,56 +4,16 @@ import { useMemo, useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 
+import { buildMatchScheduleLabel, getMatchupLabel, canOpenMatchTimeline, getSimplifiedMatchStatus } from "@/lib/match-card-utils"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
-import { canShowTicketForMatch, normalizeMatchKey } from "@/lib/matches"
+import { normalizeMatchKey } from "@/lib/matches"
 import { extendTeamDisplayName, createTeamMatchKeySet } from "@/lib/team-display"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
 
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 
 type StatusFilter = "current" | "live" | "upcoming" | "finished"
-
-type MatchOutcome = {
-  text: string
-  label: "Vinst" | "Förlust" | "Oavgjort" | "Ej publicerat"
-}
-
-const getMatchOutcome = (rawResult?: string, isHome?: boolean, status?: string): MatchOutcome | null => {
-  if (!rawResult) {
-    return null
-  }
-  const scoreboardMatch = rawResult.match(/(\d+)\s*[–-]\s*(\d+)/)
-  if (!scoreboardMatch) {
-    return null
-  }
-  const homeScore = Number.parseInt(scoreboardMatch[1], 10)
-  const awayScore = Number.parseInt(scoreboardMatch[2], 10)
-  if (Number.isNaN(homeScore) || Number.isNaN(awayScore)) {
-    return null
-  }
-
-  // Don't show outcome badges for live matches - only show for finished matches
-  if (status === "live") {
-    return null
-  }
-
-  const isAway = isHome === false
-  const ourScore = isAway ? awayScore : homeScore
-  const opponentScore = isAway ? homeScore : awayScore
-
-  let label: MatchOutcome["label"] = "Oavgjort"
-  if (ourScore > opponentScore) {
-    label = "Vinst"
-  } else if (ourScore < opponentScore) {
-    label = "Förlust"
-  }
-
-  return {
-    text: `${ourScore}\u2013${opponentScore}`,
-    label,
-  }
-}
 
 const getMatchStatus = (match: NormalizedMatch): StatusFilter => {
   // TRUST BACKEND COMPLETELY - it knows the real match status
@@ -152,8 +112,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   // Track previous scores to highlight live updates
   const prevScoresRef = useRef<Map<string, { home: number; away: number }>>(new Map())
 
-  const [hasLoadedOldMatches, setHasLoadedOldMatches] = useState(statusFilter === "finished")
-
   const {
     matches: liveUpcomingMatches,
     loading: liveLoading,
@@ -175,14 +133,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     refreshIntervalMs: 60_000,
     dataType: "old",
     params: { limit: 60 },
-    enabled: hasLoadedOldMatches,
   })
-
-  useEffect(() => {
-    if (statusFilter === "finished") {
-      setHasLoadedOldMatches(true)
-    }
-  }, [statusFilter])
 
   const isLoading = statusFilter === "finished" ? oldLoading : liveLoading
   const activeError = statusFilter === "finished" ? oldError : liveError
@@ -197,19 +148,14 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     [liveUpcomingMatches],
   )
 
-  const finishedMatchesWithResult = useMemo(
-    () => oldMatches.filter((match) => hasPublishedResult(match)),
-    [oldMatches],
-  )
-
   const matchStats = useMemo(
     () => ({
-      totalMatches: liveUpcomingMatches.length + finishedMatchesWithResult.length,
+      totalMatches: liveUpcomingMatches.length + oldMatches.length,
       liveMatches: liveMatchesCount,
       upcomingMatches: upcomingMatchesCount,
-      finishedMatches: finishedMatchesWithResult.length,
+      finishedMatches: oldMatches.length,
     }),
-    [liveUpcomingMatches.length, liveMatchesCount, upcomingMatchesCount, finishedMatchesWithResult.length],
+    [liveUpcomingMatches.length, liveMatchesCount, upcomingMatchesCount, oldMatches.length],
   )
 
   const allMatches = useMemo(() => [...liveUpcomingMatches, ...oldMatches], [liveUpcomingMatches, oldMatches])
@@ -366,224 +312,79 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   }, [groupedMatches.live])
 
   const renderMatchCard = (match: NormalizedMatch) => {
-    const opponentName = match.opponent.replace(/\s*\((hemma|borta)\)\s*$/i, '').trim()
-    const homeAwayLabel = match.isHome === false ? 'borta' : 'hemma'
-    const isHome = match.isHome !== false
-    const scheduleLine = [match.displayDate, match.time, match.venue].filter(Boolean).join(" • ")
-    const status = getMatchStatus(match)
+    const status = getSimplifiedMatchStatus(match)
+    const canOpenTimeline = canOpenMatchTimeline(match)
+    const scheduleLabel = buildMatchScheduleLabel(match)
+    const matchupLabel = getMatchupLabel(match)
+    const teamTypeRaw = match.teamType?.trim() || ""
+    const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
+    const cleanedResult = match.result?.trim()
+    const scoreValue =
+      status === "upcoming"
+        ? null
+        : cleanedResult && cleanedResult.length > 0
+          ? cleanedResult
+          : status === "live"
+            ? "0-0"
+            : "—"
 
-    const hasValidResult = match.result &&
-      match.result.trim() !== "" &&
-      match.result.toLowerCase() !== "inte publicerat" &&
-      !match.result.match(/^0[-–]0$/)
-    const outcomeInfo = getMatchOutcome(match.result, match.isHome, status)
-
-    // Check if match should be finished based on time
-    const now = Date.now()
-    const minutesSinceKickoff = (now - match.date.getTime()) / (1000 * 60)
-    const trimmedResult = typeof match.result === "string" ? match.result.trim() : null
-    const normalizedResult = trimmedResult?.replace(/[–-]/g, '-').toLowerCase()
-    const isZeroZero = normalizedResult === "0-0" || normalizedResult === "00" || trimmedResult === "0-0" || trimmedResult === "0–0"
-
-    // A handball match typically lasts 60 minutes (2x30 min) + breaks ~10-15 min = ~75 minutes max
-    // Only consider match finished if backend says so OR if way past reasonable time (2+ hours) AND showing stale 0-0
-    const matchShouldBeFinished = minutesSinceKickoff > 120 && isZeroZero && status !== "live"
-    const isStaleZeroResult = isZeroZero && matchShouldBeFinished
-
-    // Only allow clicking timeline for live or finished matches (but not if match should be finished)
-    const canOpenTimeline = (status === "live" && !matchShouldBeFinished) || status === "finished"
-
-    // Ticket button logic: shared eligibility + upcoming/live guard
-    const showTicket = status !== "finished" && !matchShouldBeFinished && canShowTicketForMatch(match)
-
-    const showResultCard = (status === "live" && !matchShouldBeFinished) || status === "finished" || hasValidResult || isStaleZeroResult
-
-    let scoreValue: string | null = null
-    let scoreSupportingText: string | null = null
-
-    if (hasValidResult) {
-      scoreValue = match.result || null
-      if (status === "finished" && outcomeInfo?.label === "Ej publicerat") {
-        scoreSupportingText = "Resultat ej publicerat"
-      }
-    } else if (status === "finished" || isStaleZeroResult) {
-      scoreValue = "—"
-      scoreSupportingText = "Resultat ej publicerat"
-    } else if (status === "live" && !matchShouldBeFinished) {
-      const trimmed = match.result?.trim()
-      scoreValue = trimmed && trimmed.length > 0 && trimmed !== "0-0" && trimmed !== "0–0" ? trimmed : "0–0"
-      if (!trimmed || trimmed === "0-0" || trimmed === "0–0") {
-        if (minutesSinceKickoff > 10) {
-          scoreSupportingText = "Ingen uppdatering ännu"
-        }
-      }
-    }
-
-    if (!scoreValue && showResultCard) {
-      scoreValue = "—"
-      scoreSupportingText = "Resultat ej publicerat"
-    }
-
-    const resultBoxTone = (() => {
+    const statusBadge = (() => {
       if (status === "live") {
-        return "border-rose-200 bg-rose-50"
+        return { label: "LIVE", tone: "bg-rose-50 text-rose-600" }
       }
       if (status === "finished") {
-        if (outcomeInfo?.label === "Vinst") {
-          return "border-emerald-200 bg-emerald-50"
-        }
-        if (outcomeInfo?.label === "Förlust") {
-          return "border-red-200 bg-red-50"
-        }
-        return "border-slate-200 bg-slate-50"
+        return { label: "SLUT", tone: "bg-gray-100 text-gray-600" }
       }
-      return "border-gray-200 bg-gray-50"
+      return { label: "KOMMANDE", tone: "bg-blue-50 text-blue-600" }
     })()
 
-    const resultLabelClass = status === "live" ? "text-rose-600" : status === "finished" ? "text-slate-600" : "text-slate-500"
-    const resultLabelText = status === "finished" ? "Slutresultat" : status === "live" ? "Ställning just nu" : "Resultat"
-    const teamTypeLabel = extendTeamDisplayName(match.teamType)
-    // --- REDESIGN START ---
-    // Layout: Score/result area is more prominent, buttons below, clear separation
     return (
       <article
         key={match.id}
         id={`match-card-${match.id}`}
-        className={`bg-white rounded-lg border border-gray-200 hover:border-emerald-400 hover:shadow-lg transition-all p-6 group relative flex flex-col gap-6`}
+        className={`relative flex flex-col gap-3 rounded-3xl border bg-white px-5 py-6 transition-all ${canOpenTimeline ? "cursor-pointer border-gray-200 hover:border-emerald-300 hover:shadow-xl" : "border-gray-100"}`}
         onClick={() => canOpenTimeline && setSelectedMatchId(match.id)}
         role={canOpenTimeline ? "button" : undefined}
         tabIndex={canOpenTimeline ? 0 : undefined}
-        onKeyDown={(e) => {
-          if (canOpenTimeline && (e.key === "Enter" || e.key === " ")) {
-            e.preventDefault()
+        onKeyDown={(event) => {
+          if (canOpenTimeline && (event.key === "Enter" || event.key === " ")) {
+            event.preventDefault()
             setSelectedMatchId(match.id)
           }
         }}
       >
-        {/* Header */}
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              {teamTypeLabel && (
-                <span className="text-sm font-semibold text-emerald-700">
-                  {teamTypeLabel}
-                </span>
-              )}
-              {status === "live" && match.matchStatus !== "halftime" && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded">
-                  <span className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse"></span>
-                  LIVE
-                </span>
-              )}
-              {match.matchStatus === "halftime" && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-orange-100 text-orange-700 text-xs font-semibold rounded">
-                  <span className="w-1.5 h-1.5 bg-orange-600 rounded-full animate-pulse"></span>
-                  PAUS
-                </span>
-              )}
-            </div>
-            <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">
-              {isHome ? (
-                <>Härnösands HF <span className="text-gray-400">vs</span> {opponentName} ({homeAwayLabel})</>
-              ) : (
-                <>{opponentName} <span className="text-gray-400">vs</span> Härnösands HF ({homeAwayLabel})</>
-              )}
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-gray-400">
+              {teamTypeLabel}
+            </p>
+            <h3 className="text-2xl font-semibold text-gray-900 leading-tight">
+              {matchupLabel}
             </h3>
-            {scheduleLine && (
-              <p className="text-sm text-gray-600">{scheduleLine}</p>
-            )}
-            {match.series && (
-              <p className="text-xs text-gray-500 mt-1">{match.series}</p>
-            )}
+            {scheduleLabel && <p className="text-sm text-gray-500">{scheduleLabel}</p>}
           </div>
-          {match.infoUrl && (
-            <Link
-              href={match.infoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-emerald-600 hover:text-emerald-700 transition-colors"
-              title="Matchsida"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-            </Link>
-          )}
+          <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] ${statusBadge.tone}`}>
+            {statusBadge.label}
+          </span>
         </div>
 
-        {/* Score/Result Area - prominent, separated */}
-        {showResultCard && scoreValue !== null && (
-          <div className={`flex flex-col items-center gap-2 rounded-2xl border-2 px-6 py-5 ${resultBoxTone} shadow-sm`}>
-            <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${resultLabelClass} mb-1`}>{resultLabelText}</p>
-            <div className="flex items-end gap-3">
-              <span className="text-4xl md:text-5xl font-extrabold text-slate-900" data-score-value="true">
-                {scoreValue}
-              </span>
-              {scoreSupportingText && (
-                <span className="text-xs text-slate-500">{scoreSupportingText}</span>
-              )}
-            </div>
-            {status === "live" && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2.5 py-0.5 text-xs font-semibold text-rose-600 mt-2">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-500" />
-                Pågår
-              </span>
-            )}
-            {status === "finished" && outcomeInfo?.label && outcomeInfo.label !== "Ej publicerat" && (
-              <span
-                className={`text-xs font-semibold px-3 py-1 rounded-full mt-2 ${outcomeInfo.label === "Vinst"
-                  ? "bg-emerald-100 text-emerald-800"
-                  : outcomeInfo.label === "Förlust"
-                    ? "bg-red-100 text-red-700"
-                    : "bg-slate-200 text-slate-700"
-                  }`}
-              >
-                {outcomeInfo.label}
-              </span>
-            )}
+        {scoreValue && (
+          <div className="flex items-end justify-between">
+            <span className="text-3xl font-black text-gray-900" data-score-value="true">
+              {scoreValue}
+            </span>
+            <span className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-400">
+              {status === "live" ? "Pågår" : "Resultat"}
+            </span>
           </div>
         )}
 
-        {/* Action Buttons - moved below score/result, spaced out */}
-        {(match.playUrl && match.playUrl !== "null") || showTicket ? (
-          <div className="flex flex-wrap items-center justify-center gap-4 mt-2">
-            {match.playUrl && match.playUrl !== "null" && (
-              <a
-                href={match.playUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 shadow"
-                title={status === "finished" ? "Se repris" : "Se matchen live"}
-              >
-                <img
-                  src="/handbollplay_mini.png"
-                  alt=""
-                  className="h-4 w-4 brightness-0 invert"
-                />
-                {status === "finished" ? "Se repris" : "Se live"}
-              </a>
-            )}
-            {showTicket && (
-              <Link
-                href={TICKET_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600 shadow"
-              >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                </svg>
-                Köp biljett
-              </Link>
-            )}
-          </div>
-        ) : null}
+        {match.series && (
+          <p className="text-xs text-slate-400">{match.series}</p>
+        )}
       </article>
     )
   }
-
   useEffect(() => {
     // Remove ?team filtering from URL, only set selectedTeam from dropdown
     // This disables auto-select from URL and fixes jumping back to 'Alla lag'
