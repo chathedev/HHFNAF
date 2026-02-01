@@ -48,6 +48,7 @@ export function MatchFeedModal({
   matchStatus,
   matchId,
   onRefresh,
+  matchData,
 }: MatchFeedModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
   const [activeTab, setActiveTab] = useState<"timeline" | "scorers">("timeline")
