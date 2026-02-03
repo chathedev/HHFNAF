@@ -32,6 +32,7 @@ import { canShowTicketForMatch } from "@/lib/matches"
 import { extendTeamDisplayName } from "@/lib/team-display"
 import { buildMatchScheduleLabel, getMatchupLabel, getSimplifiedMatchStatus } from "@/lib/match-card-utils"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
+import { MatchCardCTA } from "@/components/match-card-cta"
 import { InstagramFeed } from "@/components/instagram-feed"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
 
@@ -208,10 +209,11 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
             </div>
           )}
 
-          {match.series && (
-            <p className="text-xs text-slate-400">{match.series}</p>
-          )}
-        </article>
+        {match.series && (
+          <p className="text-xs text-slate-400">{match.series}</p>
+        )}
+        <MatchCardCTA match={match} status={status} />
+      </article>
       </li>
     )
   }

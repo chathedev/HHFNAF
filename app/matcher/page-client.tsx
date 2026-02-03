@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation"
 
 import { buildMatchScheduleLabel, getMatchupLabel, getSimplifiedMatchStatus } from "@/lib/match-card-utils"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
+import { MatchCardCTA } from "@/components/match-card-cta"
 import { normalizeMatchKey } from "@/lib/matches"
 import { extendTeamDisplayName, createTeamMatchKeySet } from "@/lib/team-display"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
@@ -282,6 +283,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
         {match.series && (
           <p className="text-xs text-slate-400">{match.series}</p>
         )}
+        <MatchCardCTA match={match} status={status} />
       </article>
     )
   }
