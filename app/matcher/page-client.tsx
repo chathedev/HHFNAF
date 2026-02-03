@@ -314,23 +314,22 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
           </p>
         </div>
 
-        {/* Metadata Stats */}
-        <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-4 border-2 border-emerald-200">
-            <div className="text-sm font-semibold text-emerald-700 mb-1">Totalt</div>
-            <div className="text-2xl font-black text-emerald-900">{matchStats.totalMatches}</div>
+        {/* Minimal Stats Row */}
+        <div className="mb-6 flex flex-wrap items-center gap-4 text-sm font-semibold text-gray-600">
+          <div className="flex items-center gap-2 rounded-[10px] border border-gray-200 bg-white px-4 py-2 shadow-sm">
+            <span className="h-2 w-2 rounded-full bg-red-500"></span>
+            <span className="uppercase tracking-[0.3em] text-[10px] text-gray-500">Live</span>
+            <span className="text-lg font-bold text-gray-900">{matchStats.liveMatches}</span>
           </div>
-          <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-xl p-4 border-2 border-red-200">
-            <div className="text-sm font-semibold text-red-700 mb-1">Live nu</div>
-            <div className="text-2xl font-black text-red-900">{matchStats.liveMatches}</div>
+          <div className="flex items-center gap-2 rounded-[10px] border border-gray-200 bg-white px-4 py-2 shadow-sm">
+            <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+            <span className="uppercase tracking-[0.3em] text-[10px] text-gray-500">Kommande</span>
+            <span className="text-lg font-bold text-gray-900">{matchStats.upcomingMatches}</span>
           </div>
-          <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-4 border-2 border-blue-200">
-            <div className="text-sm font-semibold text-blue-700 mb-1">Kommande</div>
-            <div className="text-2xl font-black text-blue-900">{matchStats.upcomingMatches}</div>
-          </div>
-          <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-xl p-4 border-2 border-gray-200">
-            <div className="text-sm font-semibold text-gray-700 mb-1">Avslutade</div>
-            <div className="text-2xl font-black text-gray-900">{matchStats.finishedMatches}</div>
+          <div className="flex items-center gap-2 rounded-[10px] border border-gray-200 bg-white px-4 py-2 shadow-sm">
+            <span className="h-2 w-2 rounded-full bg-slate-500"></span>
+            <span className="uppercase tracking-[0.3em] text-[10px] text-gray-500">Avslutade</span>
+            <span className="text-lg font-bold text-gray-900">{matchStats.finishedMatches}</span>
           </div>
         </div>
 
