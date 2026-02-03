@@ -4,9 +4,8 @@ import { useMemo, useState, useEffect } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 
-import { buildMatchScheduleLabel, getMatchupLabel, canOpenMatchTimeline, getSimplifiedMatchStatus } from "@/lib/match-card-utils"
+import { buildMatchScheduleLabel, getMatchupLabel, getSimplifiedMatchStatus } from "@/lib/match-card-utils"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
-import { MatchFeedModal } from "@/components/match-feed-modal"
 import { normalizeMatchKey } from "@/lib/matches"
 import { extendTeamDisplayName, createTeamMatchKeySet } from "@/lib/team-display"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
@@ -107,7 +106,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   const [selectedTeam, setSelectedTeam] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("current")
-  const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
 
   const {
     matches: liveUpcomingMatches,
@@ -156,25 +154,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   )
 
   const allMatches = useMemo(() => [...liveUpcomingMatches, ...oldMatches], [liveUpcomingMatches, oldMatches])
-
-  const selectedMatch = useMemo(() => {
-    if (!selectedMatchId) {
-      return null
-    }
-    return (
-      allMatches.find((match) => match.id === selectedMatchId) ??
-      null
-    )
-  }, [selectedMatchId, allMatches])
-
-  useEffect(() => {
-    if (!selectedMatchId || isLoading) {
-      return
-    }
-    if (!selectedMatch) {
-      setSelectedMatchId(null)
-    }
-  }, [selectedMatchId, selectedMatch, isLoading])
 
   const teamOptions = TEAM_OPTIONS
 
@@ -244,7 +223,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
 
   const renderMatchCard = (match: NormalizedMatch) => {
     const status = getSimplifiedMatchStatus(match)
-    const canOpenTimeline = canOpenMatchTimeline(match)
     const scheduleLabel = buildMatchScheduleLabel(match)
     const matchupLabel = getMatchupLabel(match)
     const teamTypeRaw = match.teamType?.trim() || ""
@@ -273,38 +251,29 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
       <article
         key={match.id}
         id={`match-card-${match.id}`}
-        className={`relative flex flex-col gap-3 rounded-3xl border bg-white px-5 py-6 transition-all ${canOpenTimeline ? "cursor-pointer border-gray-200 hover:border-emerald-300 hover:shadow-xl" : "border-gray-100"}`}
-        onClick={() => canOpenTimeline && setSelectedMatchId(match.id)}
-        role={canOpenTimeline ? "button" : undefined}
-        tabIndex={canOpenTimeline ? 0 : undefined}
-        onKeyDown={(event) => {
-          if (canOpenTimeline && (event.key === "Enter" || event.key === " ")) {
-            event.preventDefault()
-            setSelectedMatchId(match.id)
-          }
-        }}
+        className="relative flex flex-col gap-4 rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm transition hover:shadow-lg"
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-gray-400">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
               {teamTypeLabel}
             </p>
-            <h3 className="text-2xl font-semibold text-gray-900 leading-tight">
+            <h3 className="text-lg font-semibold text-gray-900 leading-tight">
               {matchupLabel}
             </h3>
             {scheduleLabel && <p className="text-sm text-gray-500">{scheduleLabel}</p>}
           </div>
-          <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] ${statusBadge.tone}`}>
+          <span className={`inline-flex items-center justify-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${statusBadge.tone}`}>
             {statusBadge.label}
           </span>
         </div>
 
         {scoreValue && (
           <div className="flex items-end justify-between">
-            <span className="text-3xl font-black text-gray-900" data-score-value="true">
+            <span className="text-3xl font-extrabold text-gray-900" data-score-value="true">
               {scoreValue}
             </span>
-            <span className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-400">
+            <span className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-500">
               {status === "live" ? "Pågår" : "Resultat"}
             </span>
           </div>
@@ -518,57 +487,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
           </div>
         )}
 
-        {/* Match Feed Modal */}
-        {selectedMatch && (() => {
-          // Use the actual display names from the match card
-          const displayOpponentName = selectedMatch.opponent.replace(/\s*\((hemma|borta)\)\s*$/i, '').trim()
-          const displayHomeTeam = selectedMatch.isHome !== false ? "Härnösands HF" : displayOpponentName
-          const displayAwayTeam = selectedMatch.isHome !== false ? displayOpponentName : "Härnösands HF"
-
-          return (
-            <MatchFeedModal
-              isOpen={true}
-              onClose={() => setSelectedMatchId(null)}
-              matchFeed={selectedMatch.matchFeed || []}
-              homeTeam={displayHomeTeam}
-              awayTeam={displayAwayTeam}
-              finalScore={selectedMatch.result}
-              matchStatus={selectedMatch.matchStatus}
-              matchId={selectedMatch.id}
-              matchData={selectedMatch}
-              onRefresh={async () => {
-                console.log('🔄 Matcher page: Starting refresh...')
-                let refreshedMatches: NormalizedMatch[] | undefined
-                try {
-                  const refreshedData = await refresh()
-                  refreshedMatches = refreshedData?.matches
-                  console.log('🔄 Matcher page: Refresh complete, updating selectedMatch...')
-                } catch (refreshError) {
-                  console.warn('⚠️ Matcher page: Refresh failed', refreshError)
-                }
-
-                setSelectedMatchId((prevMatchId) => {
-                  if (!prevMatchId) {
-                    console.log('🔄 Matcher page: Modal closed, skipping update')
-                    return null
-                  }
-                  const searchSpace = refreshedMatches ?? allMatches
-                  const updatedMatch = searchSpace.find((match) => match.id === prevMatchId)
-                  if (updatedMatch) {
-                    console.log('🔄 Matcher page: Found updated match:', {
-                      matchFeedLength: updatedMatch.matchFeed?.length || 0,
-                      result: updatedMatch.result,
-                      status: updatedMatch.matchStatus,
-                    })
-                    return updatedMatch.id
-                  }
-                  console.log('⚠️ Matcher page: Match not found after refresh')
-                  return prevMatchId
-                })
-              }}
-            />
-          )
-        })()}
       </div>
     </main>
   )

@@ -8,8 +8,8 @@ export const defaultContent: FullContent = {
     description: "Härnösands HF - En förening med stolthet, gemenskap och passion för sporten.",
     button1Text: "Våra 23 Lag",
     button1Link: "/lag",
-    button2Text: "Shoppa Merch",
-    button2Link: "/shop",
+    button2Text: "Senaste matcherna",
+    button2Link: "/matcher",
   },
   stats: {
     totalTeams: 23,

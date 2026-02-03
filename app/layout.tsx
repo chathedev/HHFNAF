@@ -18,8 +18,8 @@ export const metadata: Metadata = {
     default: "Härnösands HF – Officiell hemsida för handboll i Härnösand",
     template: "%s | Härnösands HF – Officiell hemsida för handboll i Härnösand",
   },
-  description:
-    "Härnösands HF – Officiell hemsida för handboll i Härnösand. Matcher, shop, lag, ungdomsverksamhet och kontakt.",
+    description:
+      "Härnösands HF – Officiell hemsida för handboll i Härnösand. Matcher, lag, ungdomsverksamhet och kontakt.",
   keywords: [
     "Härnösands HF",
     "Härnösands Handbollsförening",
@@ -288,8 +288,8 @@ export default async function RootLayout({
                   {
                     "@type": "ListItem",
                     position: 3,
-                    name: "Shop",
-                    item: "https://www.harnosandshf.se/shop",
+                    name: "Matcher",
+                    item: "https://www.harnosandshf.se/matcher",
                   },
                   {
                     "@type": "ListItem",

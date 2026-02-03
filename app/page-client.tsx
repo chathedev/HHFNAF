@@ -30,9 +30,8 @@ import type { FullContent, Partner } from "@/lib/content-types"
 import { deriveSiteVariant, type SiteVariant, getThemeVariant, getHeroImages, type ThemeVariant } from "@/lib/site-variant"
 import { canShowTicketForMatch } from "@/lib/matches"
 import { extendTeamDisplayName } from "@/lib/team-display"
-import { buildMatchScheduleLabel, getMatchupLabel, getSimplifiedMatchStatus, canOpenMatchTimeline } from "@/lib/match-card-utils"
+import { buildMatchScheduleLabel, getMatchupLabel, getSimplifiedMatchStatus } from "@/lib/match-card-utils"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
-import { MatchFeedModal } from "@/components/match-feed-modal"
 import { InstagramFeed } from "@/components/instagram-feed"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
 
@@ -69,7 +68,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   })
   const [showHeroContent, setShowHeroContent] = useState<boolean>(true)
   const [openTier, setOpenTier] = useState<string | null>("Diamantpartner")
-  const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   const limitedParams = useMemo(() => ({ limit: 10 }), [])
   const {
     matches: upcomingMatches,
@@ -93,22 +91,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     params: liveParams,
   })
   const matchError = Boolean(matchErrorMessage)
-
-  const selectedMatch = useMemo(() => {
-    if (!selectedMatchId) {
-      return null
-    }
-    return upcomingMatches.find((match) => match.id === selectedMatchId) ?? null
-  }, [selectedMatchId, upcomingMatches])
-
-  useEffect(() => {
-    if (!selectedMatchId || matchLoading) {
-      return
-    }
-    if (!selectedMatch) {
-      setSelectedMatchId(null)
-    }
-  }, [selectedMatchId, selectedMatch, matchLoading])
 
   // Track previous scores to highlight live updates
   const partnersForDisplay = Array.isArray(content.partners) ? content.partners.filter((p) => p.visibleInCarousel) : []
@@ -175,7 +157,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
   const renderHomeMatchCard = (match: NormalizedMatch) => {
     const status = getMatchStatus(match)
-    const canOpenTimeline = canOpenMatchTimeline(match)
     const scheduleLabel = buildMatchScheduleLabel(match)
     const matchupLabel = getMatchupLabel(match)
     const teamTypeRaw = match.teamType?.trim() || ""
@@ -199,39 +180,29 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       <li key={match.id}>
         <article
           id={`match-card-${match.id}`}
-          className={`group relative flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white px-5 py-4 transition-all ${canOpenTimeline ? "cursor-pointer hover:border-emerald-300 hover:shadow-lg" : ""
-            }`}
-          onClick={() => canOpenTimeline && setSelectedMatchId(match.id)}
-          role={canOpenTimeline ? "button" : undefined}
-          tabIndex={canOpenTimeline ? 0 : undefined}
-          onKeyDown={(event) => {
-            if (canOpenTimeline && (event.key === "Enter" || event.key === " ")) {
-              event.preventDefault()
-              setSelectedMatchId(match.id)
-            }
-          }}
+          className="group relative flex flex-col gap-4 rounded-[28px] border border-slate-200 bg-white px-5 py-6 shadow-sm transition hover:shadow-lg"
         >
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.5em] text-gray-400">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                 {teamTypeLabel}
               </p>
-              <h3 className="text-base font-semibold text-gray-900 leading-tight">
+              <h3 className="text-lg font-semibold text-gray-900 leading-tight">
                 {matchupLabel}
               </h3>
               {scheduleLabel && <p className="text-sm text-gray-500">{scheduleLabel}</p>}
             </div>
-            <span className={`rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.35em] ${statusBadge.tone}`}>
+            <span className={`inline-flex items-center justify-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${statusBadge.tone}`}>
               {statusBadge.label}
             </span>
           </div>
 
           {scoreValue && (
             <div className="flex items-center justify-between">
-              <span className="text-2xl font-black text-gray-900" data-score-value="true">
+              <span className="text-2xl font-extrabold text-gray-900" data-score-value="true">
                 {scoreValue}
               </span>
-              <span className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-400">
+              <span className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-500">
                 {status === "live" ? "Pågår" : "Resultat"}
               </span>
             </div>
@@ -977,31 +948,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
         </main>
         <Footer />
 
-        {/* Match Feed Modal */}
-        {selectedMatch && (() => {
-          // Use the actual display names from the match card
-          const displayOpponentName = selectedMatch.opponent.replace(/\s*\((hemma|borta)\)\s*$/i, '').trim()
-          const displayHomeTeam = selectedMatch.isHome !== false ? "Härnösands HF" : displayOpponentName
-          const displayAwayTeam = selectedMatch.isHome !== false ? displayOpponentName : "Härnösands HF"
-
-          return (
-            <MatchFeedModal
-              isOpen={true}
-              onClose={() => setSelectedMatchId(null)}
-              matchFeed={selectedMatch.matchFeed || []}
-              homeTeam={displayHomeTeam}
-              awayTeam={displayAwayTeam}
-              finalScore={selectedMatch.result}
-              matchStatus={selectedMatch.matchStatus}
-              matchId={selectedMatch.id}
-              matchData={selectedMatch}
-              onRefresh={async () => {
-                console.log("🔄 Home page: Starting refresh...")
-                await refresh()
-              }}
-            />
-          )
-        })()}
       </div>
     </ErrorBoundary>
   )
