@@ -1341,6 +1341,7 @@ export const useMatchData = (options?: {
   const params = options?.params
   const enabled = options?.enabled ?? true
   const paramsLimit = typeof params?.limit === "number" && params.limit >= 0 ? params.limit : undefined
+  const [hasPayload, setHasPayload] = useState(Boolean(options?.initialData))
 
   const initialConnectionState = matchDataChannel.getConnectionState()
   const initialHasData = initialConnectionState.hasData || Boolean(options?.initialData?.matches?.length)
@@ -1382,6 +1383,7 @@ export const useMatchData = (options?: {
       setHasData(true)
       setError(null)
       setLoading(false)
+      setHasPayload(true)
       return selectedMatches
     },
     [selectMatchesFromPayload],
@@ -1457,5 +1459,6 @@ export const useMatchData = (options?: {
     error,
     refresh,
     isRefreshing,
+    hasPayload,
   }
 }

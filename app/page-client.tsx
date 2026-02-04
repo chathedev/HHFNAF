@@ -76,6 +76,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     error: matchErrorMessage,
     refresh,
     isRefreshing: isRefreshingMatches,
+    hasPayload: hasMatchPayload,
   } = useMatchData({
     refreshIntervalMs: 1_000,
     dataType: "liveUpcoming",
@@ -219,6 +220,8 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   }
 
   const matchesToDisplay = matchesTodayForward.slice(0, 10)
+  const shouldRenderMatchSection =
+    !hasMatchPayload || matchLoading || matchesToDisplay.length > 0 || Boolean(matchErrorMessage)
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -482,7 +485,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
               </div>
             </div>
           </section>
-          {(matchLoading || matchesToDisplay.length > 0 || matchError) && (
+          {shouldRenderMatchSection && (
             <section className="py-10 bg-white">
               <div className="container mx-auto px-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -507,7 +510,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                 </div>
 
                 <div className="mt-8">
-                  {matchLoading && (
+                  {(!hasMatchPayload || matchLoading) && (
                     <div className="space-y-3">
                       {[0, 1, 2].map((item) => (
                         <div key={item} className="h-24 rounded-2xl border border-gray-100 bg-gray-50 animate-pulse" />
@@ -521,7 +524,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                     </div>
                   )}
 
-                  {!matchLoading && !matchError && matchesToDisplay.length === 0 && (
+                  {hasMatchPayload && !matchLoading && !matchError && matchesToDisplay.length === 0 && (
                     <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-500">
                       Inga matcher att visa just nu.
                     </div>
