@@ -206,6 +206,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   const isLoading = statusFilter === "finished" ? oldLoading || !hasOldPayload : liveLoading || !hasLivePayload
   const activeError = statusFilter === "finished" ? oldError : liveError
   const hasResolvedActiveData = statusFilter === "finished" ? hasResolvedOldData : hasResolvedLiveData
+  const hasLoadedAnyMatches = liveUpcomingMatches.length > 0 || oldMatches.length > 0
 
   useEffect(() => {
     if (!hasAttemptedLiveFetch && !liveLoading) {
@@ -558,7 +559,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
         )}
 
         {/* Loading state */}
-        {isLoading && filteredMatches.length === 0 && (
+        {(isLoading || (!activeError && !hasLoadedAnyMatches)) && filteredMatches.length === 0 && (
           <div className="text-center py-20">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-emerald-600 mb-4"></div>
             <p className="text-gray-600 font-medium">Hämtar matcher...</p>
@@ -571,6 +572,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
           !activeError &&
           hasCurrentPayload &&
           hasResolvedActiveData &&
+          hasLoadedAnyMatches &&
           (statusFilter === "finished" ? hasAttemptedOldFetch : hasAttemptedLiveFetch) && (
           <div className="text-center py-20 bg-white rounded-2xl border-2 border-gray-100">
             <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
