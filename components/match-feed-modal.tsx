@@ -405,16 +405,19 @@ export function MatchFeedModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/65 p-2 sm:items-center sm:p-6">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/65 p-0 sm:items-center sm:p-6">
       <div
         ref={modalRef}
-        className="flex h-[78vh] w-full max-w-2xl flex-col overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-2xl"
+        className="flex h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white shadow-2xl sm:h-[78vh] sm:rounded-[18px]"
       >
-        <header className="border-b border-slate-200 bg-slate-900 px-4 py-3 text-white sm:px-5 sm:py-4">
+        <header className="sticky top-0 z-20 border-b border-slate-200 bg-slate-900 px-3 py-3 text-white sm:px-5 sm:py-4">
+          <div className="mb-2 flex justify-center sm:hidden">
+            <span className="h-1.5 w-12 rounded-full bg-white/40" />
+          </div>
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-300">Matchtimeline</p>
-              <h2 className="mt-1 text-lg font-bold sm:text-2xl">
+              <h2 className="mt-1 text-base font-bold sm:text-2xl">
                 {homeTeam} <span className="text-slate-400">vs</span> {awayTeam}
               </h2>
               <div className="mt-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em]">
@@ -428,15 +431,15 @@ export function MatchFeedModal({
               </div>
             </div>
 
-            <div className="flex items-start gap-3">
-              <div className="rounded-xl bg-white/10 px-4 py-2 text-center">
+            <div className="flex items-start gap-2 sm:gap-3">
+              <div className="rounded-xl bg-white/10 px-3 py-2 text-center sm:px-4">
                 <p className="text-[10px] uppercase tracking-[0.18em] text-slate-300">Score</p>
-                <p className="text-2xl font-black leading-none">{scoreboard}</p>
+                <p className="text-xl font-black leading-none sm:text-2xl">{scoreboard}</p>
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-full border border-white/40 p-2 text-white transition hover:bg-white/10"
+                className="rounded-full border border-white/40 p-2.5 text-white transition hover:bg-white/10"
                 aria-label="Stäng modal"
               >
                 <X className="h-5 w-5" />
@@ -445,11 +448,11 @@ export function MatchFeedModal({
           </div>
         </header>
 
-        <nav className="grid grid-cols-2 border-b border-slate-200 bg-slate-50">
+        <nav className="sticky top-[84px] z-10 grid grid-cols-2 border-b border-slate-200 bg-slate-50 sm:top-[102px]">
           <button
             type="button"
             onClick={() => setActiveTab("timeline")}
-            className={`px-4 py-3 text-sm font-semibold ${
+            className={`px-3 py-3 text-sm font-semibold sm:px-4 ${
               activeTab === "timeline" ? "bg-white text-slate-900" : "text-slate-600"
             }`}
           >
@@ -458,15 +461,15 @@ export function MatchFeedModal({
           <button
             type="button"
             onClick={() => setActiveTab("scorers")}
-            className={`px-4 py-3 text-sm font-semibold ${activeTab === "scorers" ? "bg-white text-slate-900" : "text-slate-600"}`}
+            className={`px-3 py-3 text-sm font-semibold sm:px-4 ${activeTab === "scorers" ? "bg-white text-slate-900" : "text-slate-600"}`}
           >
             Top 3 målskyttar
           </button>
         </nav>
 
-        <div className="flex-1 overflow-y-auto bg-slate-50 px-4 py-6 sm:px-8">
+        <div className="flex-1 overflow-y-auto bg-slate-50 px-3 py-4 sm:px-8 sm:py-6">
           {activeTab === "timeline" && (
-            <div className="space-y-8">
+            <div className="space-y-6 sm:space-y-8">
               {sortedFeed.length === 0 && (
                 <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center">
                   <p className="text-base font-semibold text-slate-700">{emptyTimelineMessage}</p>
@@ -475,16 +478,16 @@ export function MatchFeedModal({
               {periodKeys.map((period) => (
                 <section key={period} className="space-y-3">
                   <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">{getPeriodLabel(period)}</h3>
-                  <ul className="space-y-3">
+                  <ul className="space-y-2.5 sm:space-y-3">
                     {groupedByPeriod[period].map((event, index) => {
                       const style = getRowStyle(event, homeTeam, awayTeam)
                       const score = getScoreFromEvent(event)
                       const typeLabel = getEventTypeLabel(event)
                       return (
                         <li key={`${event.eventId ?? "idx"}-${index}`}>
-                          <div className={`w-full rounded-2xl border px-4 py-3 ${style.tone}`}>
-                          <div className="flex items-start gap-3">
-                            <div className="w-20 shrink-0">
+                          <div className={`w-full rounded-2xl border px-3 py-3 sm:px-4 ${style.tone}`}>
+                          <div className="flex items-start gap-2.5 sm:gap-3">
+                            <div className="w-14 shrink-0 sm:w-20">
                               <p className="text-xs font-bold text-slate-700">{event.time || "--:--"}</p>
                               <p className="mt-1 text-[10px] uppercase tracking-[0.15em] text-slate-500">
                                 {typeof event.period === "number" && event.period > 0 ? `P${event.period}` : "Match"}
@@ -492,7 +495,7 @@ export function MatchFeedModal({
                             </div>
                             <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${style.dot}`} />
                             <div className="min-w-0 flex-1">
-                              <div className="flex items-start justify-between gap-3">
+                              <div className="flex flex-col items-start gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                                 <p className="text-sm font-semibold text-slate-900">{getEventDisplayText(event)}</p>
                                 {score && <p className="shrink-0 text-sm font-black text-slate-900">{score}</p>}
                               </div>

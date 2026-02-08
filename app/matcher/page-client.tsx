@@ -401,7 +401,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
       <article
         key={match.id}
         id={`match-card-${match.id}`}
-        className="relative flex cursor-pointer flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:border-emerald-400 hover:shadow-lg"
+        className="relative flex cursor-pointer flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-all duration-200 active:scale-[0.99] hover:border-emerald-400 hover:shadow-lg sm:gap-4 sm:p-6"
         onClick={(event) => {
           const target = event.target as HTMLElement
           if (target.closest("a,button")) {
@@ -415,7 +415,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
             <p className="text-sm font-semibold text-emerald-700">
               {teamTypeLabel}
             </p>
-            <h3 className="text-xl font-bold leading-tight text-gray-900">
+            <h3 className="text-base font-bold leading-tight text-gray-900 sm:text-xl">
               {matchupLabel}
             </h3>
             {scheduleLabel && <p className="text-sm text-gray-500">{scheduleLabel}</p>}
@@ -427,7 +427,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
 
         {scoreValue && (
           <div className="flex items-end justify-between">
-            <span className="text-3xl font-extrabold text-gray-900" data-score-value="true">
+            <span className="text-2xl font-extrabold text-gray-900 sm:text-3xl" data-score-value="true">
               {scoreValue}
             </span>
             <span className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-500">
@@ -461,10 +461,10 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   }, [teamOptions])
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-24">
+    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-16 sm:py-24">
       <div className="container mx-auto px-4 max-w-7xl">
         {/* Header */}
-        <div className="mb-12">
+        <div className="mb-8 sm:mb-12">
           <Link
             href="/"
             className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-medium mb-6 transition-colors"
@@ -474,25 +474,25 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
             </svg>
             Tillbaka
           </Link>
-          <h1 className="text-5xl font-black text-gray-900 mb-4">Matcher</h1>
-          <p className="text-xl text-gray-600 max-w-2xl">
+          <h1 className="mb-3 text-3xl font-black text-gray-900 sm:mb-4 sm:text-5xl">Matcher</h1>
+          <p className="max-w-2xl text-base text-gray-600 sm:text-xl">
             Följ alla våra lag live och se resultat från senaste matcherna. Välj lag nedan:
           </p>
         </div>
 
         {/* Minimal Stats Row */}
-        <div className="mb-6 flex flex-wrap items-center gap-4 text-sm font-semibold text-gray-600">
-          <div className="flex items-center gap-2 rounded-[10px] border border-gray-200 bg-white px-4 py-2 shadow-sm">
+        <div className="-mx-1 mb-6 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-1 text-sm font-semibold text-gray-600 sm:flex-wrap sm:overflow-visible">
+          <div className="min-w-[138px] shrink-0 snap-start flex items-center gap-2 rounded-[10px] border border-gray-200 bg-white px-4 py-2 shadow-sm">
             <span className="h-2 w-2 rounded-full bg-red-500"></span>
             <span className="uppercase tracking-[0.3em] text-[10px] text-gray-500">Live</span>
             <span className="text-lg font-bold text-gray-900">{matchStats.liveMatches}</span>
           </div>
-          <div className="flex items-center gap-2 rounded-[10px] border border-gray-200 bg-white px-4 py-2 shadow-sm">
+          <div className="min-w-[138px] shrink-0 snap-start flex items-center gap-2 rounded-[10px] border border-gray-200 bg-white px-4 py-2 shadow-sm">
             <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
             <span className="uppercase tracking-[0.3em] text-[10px] text-gray-500">Kommande</span>
             <span className="text-lg font-bold text-gray-900">{matchStats.upcomingMatches}</span>
           </div>
-          <div className="flex items-center gap-2 rounded-[10px] border border-gray-200 bg-white px-4 py-2 shadow-sm">
+          <div className="min-w-[138px] shrink-0 snap-start flex items-center gap-2 rounded-[10px] border border-gray-200 bg-white px-4 py-2 shadow-sm">
             <span className="h-2 w-2 rounded-full bg-slate-500"></span>
             <span className="uppercase tracking-[0.3em] text-[10px] text-gray-500">Avslutade</span>
             <span className="text-lg font-bold text-gray-900">{matchStats.finishedMatches}</span>
@@ -500,7 +500,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
         </div>
 
         {/* Filters */}
-        <div className="mb-8 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="mb-8 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex-1 min-w-0">
               <label
@@ -533,7 +533,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
               <p className="text-xs text-gray-500 mb-2">
                 Visa matcher baserat på status – live, kommande eller avslutade.
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                 {STATUS_OPTIONS.map((option) => {
                   const isActive = statusFilter === option.value
                   return (
@@ -542,7 +542,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                       type="button"
                       aria-pressed={isActive}
                       onClick={() => setStatusFilter(option.value)}
-                      className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition ${
+                      className={`rounded-2xl border px-3 py-2.5 text-sm font-semibold transition sm:px-4 sm:py-2 ${
                         isActive
                           ? "bg-emerald-600 border-emerald-600 text-white shadow-lg"
                           : "bg-white border-gray-200 text-gray-700 hover:border-emerald-400"
@@ -611,12 +611,12 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
               <section>
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse"></div>
-                  <h2 className="text-2xl font-black text-gray-900">Live nu</h2>
+                  <h2 className="text-xl font-black text-gray-900 sm:text-2xl">Live nu</h2>
                   <span className="px-3 py-1 bg-red-100 text-red-700 text-sm font-bold rounded-full">
                     {groupedMatches.live.length}
                   </span>
                 </div>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 sm:gap-6">
                   {groupedMatches.live.map(renderMatchCard)}
                 </div>
               </section>
@@ -629,12 +629,12 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                   <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 01-2 2z" />
                   </svg>
-                  <h2 className="text-2xl font-black text-gray-900">Kommande matcher</h2>
+                  <h2 className="text-xl font-black text-gray-900 sm:text-2xl">Kommande matcher</h2>
                   <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-sm font-bold rounded-full">
                     {groupedMatches.upcoming.length}
                   </span>
                 </div>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 sm:gap-6">
                   {groupedMatches.upcoming.map(renderMatchCard)}
                 </div>
               </section>
@@ -647,12 +647,12 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                   <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <h2 className="text-2xl font-black text-gray-900">Senaste resultaten</h2>
+                  <h2 className="text-xl font-black text-gray-900 sm:text-2xl">Senaste resultaten</h2>
                   <span className="px-3 py-1 bg-gray-100 text-gray-700 text-sm font-bold rounded-full">
                     {groupedMatches.finished.length}
                   </span>
                 </div>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 sm:gap-6">
                   {groupedMatches.finished.map(renderMatchCard)}
                 </div>
               </section>
