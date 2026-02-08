@@ -22,11 +22,17 @@ export type MatchFeedEvent = {
   scoringTeam?: string
   isHomeGoal?: boolean
   eventId?: string | number
-  matchId?: string
+  matchId?: string | number
+  payload?: {
+    description?: string
+    [key: string]: unknown
+  }
+  createdAt?: string
 }
 
 type ApiMatch = {
-  id: string
+  id?: string | number
+  matchId?: string | number
   home: string
   away: string
   date: string // ISO string
@@ -43,6 +49,9 @@ type ApiMatch = {
   teamType?: string
   opponent?: string
   isHome?: boolean
+  scoreTimeline?: unknown
+  timeline?: MatchFeedEvent[]
+  events?: MatchFeedEvent[]
 }
 
 export type NormalizedMatch = {
@@ -336,6 +345,7 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
   const teamType = match.teamType?.trim()
   const opponent = match.opponent?.trim()
   const parsedDate = toDate(match.date, match.time)
+  const apiId = match.id ?? match.matchId
 
   if (!teamType || !opponent || !parsedDate) {
     return null
@@ -452,7 +462,7 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     matchStatus: derivedStatus,
     matchFeed: match.matchFeed ?? undefined,
     isHalftime: derivedStatus === "halftime",
-    apiMatchId: match.id,
+    apiMatchId: apiId ? String(apiId) : undefined,
   }
 }
 
@@ -544,51 +554,95 @@ const applyEntryToCaches = (entry: SharedMatchCacheEntry, endpoints: string[] = 
 }
 
 const resolveCurrentMatchPayload = (payload: any): ApiMatch[] => {
+  const normalizeIncomingMatch = (match: any): ApiMatch => {
+    const fallbackTimeline = Array.isArray(match?.timeline)
+      ? match.timeline
+      : Array.isArray(match?.events)
+        ? match.events
+        : Array.isArray(match?.scoreTimeline)
+          ? match.scoreTimeline
+          : []
+
+    return {
+      ...match,
+      id: match?.id ?? match?.matchId,
+      matchId: match?.matchId ?? match?.id,
+      home: match?.home ?? match?.homeTeam ?? "",
+      away: match?.away ?? match?.awayTeam ?? "",
+      matchFeed: Array.isArray(match?.matchFeed) ? match.matchFeed : fallbackTimeline,
+    }
+  }
+
+  const normalizeList = (input: unknown): ApiMatch[] =>
+    Array.isArray(input) ? input.map((match) => normalizeIncomingMatch(match)) : []
+
   if (!payload) {
     return []
   }
 
   if (Array.isArray(payload.current)) {
-    return payload.current
+    return normalizeList(payload.current)
   }
   if (Array.isArray(payload.currentMatches)) {
-    return payload.currentMatches
+    return normalizeList(payload.currentMatches)
   }
   if (Array.isArray(payload.liveUpcoming)) {
-    return payload.liveUpcoming
+    return normalizeList(payload.liveUpcoming)
   }
   if (Array.isArray(payload.live)) {
-    return payload.live
+    return normalizeList(payload.live)
   }
   if (Array.isArray(payload.matches)) {
-    return payload.matches.filter((match) => {
+    return normalizeList(payload.matches).filter((match) => {
       const status = normalizeStatusValue(match.matchStatus)
       return status !== "finished"
     })
   }
   if (Array.isArray(payload)) {
-    return payload
+    return normalizeList(payload)
   }
 
   return []
 }
 
 const resolveOldMatchPayload = (payload: any): ApiMatch[] => {
+  const normalizeIncomingMatch = (match: any): ApiMatch => {
+    const fallbackTimeline = Array.isArray(match?.timeline)
+      ? match.timeline
+      : Array.isArray(match?.events)
+        ? match.events
+        : Array.isArray(match?.scoreTimeline)
+          ? match.scoreTimeline
+          : []
+
+    return {
+      ...match,
+      id: match?.id ?? match?.matchId,
+      matchId: match?.matchId ?? match?.id,
+      home: match?.home ?? match?.homeTeam ?? "",
+      away: match?.away ?? match?.awayTeam ?? "",
+      matchFeed: Array.isArray(match?.matchFeed) ? match.matchFeed : fallbackTimeline,
+    }
+  }
+
   if (!payload) {
     return []
   }
 
   if (Array.isArray(payload.old)) {
-    return payload.old
+    return payload.old.map((match) => normalizeIncomingMatch(match))
   }
   if (Array.isArray(payload.matches)) {
-    return payload.matches.filter((match) => normalizeStatusValue(match.matchStatus) === "finished")
+    return payload.matches
+      .map((match) => normalizeIncomingMatch(match))
+      .filter((match) => normalizeStatusValue(match.matchStatus) === "finished")
   }
 
   return []
 }
 
 const MATCH_WS_URL = "wss://api.harnosandshf.se/matcher/ws"
+const LAST_EVENT_ID_STORAGE_KEY = "matcher_last_event_id"
 const CHANNEL_ENDPOINT = getDataEndpoint()
 type MatchChannelPayload = {
   current: NormalizedMatch[]
@@ -604,7 +658,7 @@ type ConnectionState = {
 const createMatchDataChannel = () => {
   const isBrowser = typeof window !== "undefined"
   let socket: WebSocket | null = null
-  let reconnectDelay = 1000
+  let reconnectAttempt = 0
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null
   let latestEntry: SharedMatchCacheEntry | null = sharedMatchCache.get(CHANNEL_ENDPOINT) ?? null
   let lastEventId: string | number | null = null
@@ -626,10 +680,41 @@ const createMatchDataChannel = () => {
   let hasData = false
   let pendingFrame: number | null = null
 
+  const loadStoredLastEventId = () => {
+    if (!isBrowser) {
+      return null
+    }
+    const raw = window.localStorage.getItem(LAST_EVENT_ID_STORAGE_KEY)
+    if (!raw) {
+      return null
+    }
+    const parsed = Number.parseInt(raw, 10)
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return null
+    }
+    return parsed
+  }
+
+  const persistLastEventId = (value: string | number | null | undefined) => {
+    if (value === null || typeof value === "undefined") {
+      return
+    }
+    const numeric = Number(value)
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      return
+    }
+    lastEventId = numeric
+    if (isBrowser) {
+      window.localStorage.setItem(LAST_EVENT_ID_STORAGE_KEY, String(numeric))
+    }
+  }
+
+  lastEventId = loadStoredLastEventId()
+
   type DeltaMatchUpdate = {
     type: "insert" | "update" | "delete"
     match?: ApiMatch
-    matchId?: string
+    matchId?: string | number
     changes?: Partial<ApiMatch>
   }
 
@@ -663,14 +748,15 @@ const createMatchDataChannel = () => {
   const compareFeedEvents = (a: MatchFeedEvent, b: MatchFeedEvent) =>
     parseEventTimeToMinutes(b.time) - parseEventTimeToMinutes(a.time)
 
-  const getNormalizedIdFromMatchId = (matchId?: string) => {
+  const getNormalizedIdFromMatchId = (matchId?: string | number) => {
     if (!matchId) {
       return undefined
     }
-    if (matchMap.has(matchId)) {
-      return matchId
+    const normalizedMatchId = String(matchId)
+    if (matchMap.has(normalizedMatchId)) {
+      return normalizedMatchId
     }
-    return apiIdToNormalizedId.get(matchId)
+    return apiIdToNormalizedId.get(normalizedMatchId)
   }
 
   const cacheEventIdsForMatch = (match: NormalizedMatch) => {
@@ -693,7 +779,7 @@ const createMatchDataChannel = () => {
     rawMatchStore.set(match.id, raw)
     const apiId = raw.id ?? match.apiMatchId
     if (apiId) {
-      apiIdToNormalizedId.set(apiId, match.id)
+      apiIdToNormalizedId.set(String(apiId), match.id)
     }
     cacheEventIdsForMatch(match)
   }
@@ -850,15 +936,18 @@ const createMatchDataChannel = () => {
     if (!isBrowser || reconnectTimer) {
       return
     }
+    const backoffSteps = [1_000, 2_000, 5_000, 10_000, 30_000]
+    const delay = backoffSteps[Math.min(reconnectAttempt, backoffSteps.length - 1)]
     reconnectTimer = globalThis.setTimeout(() => {
       reconnectTimer = null
       connect()
-    }, reconnectDelay)
-    reconnectDelay = Math.min(30_000, reconnectDelay * 1.5)
+    }, delay)
+    reconnectAttempt += 1
   }
 
   const buildSocketUrl = () => {
-    if (lastEventId !== null && lastEventId !== undefined) {
+    const numeric = Number(lastEventId)
+    if (Number.isFinite(numeric) && numeric > 0) {
       const encoded = encodeURIComponent(String(lastEventId))
       return `${MATCH_WS_URL}?sinceEventId=${encoded}`
     }
@@ -926,8 +1015,31 @@ const createMatchDataChannel = () => {
       return false
     }
 
-    const updatedFeed = mergeMatchFeed(existingMatch.matchFeed, [event])
-    const updatedMatch = { ...existingMatch, matchFeed: updatedFeed }
+    const normalizedEvent: MatchFeedEvent = {
+      ...event,
+      matchId: event.matchId ?? existingMatch.apiMatchId,
+      description:
+        event.payload?.description?.toString().trim() ||
+        event.description?.toString().trim() ||
+        event.type?.toString().trim() ||
+        "Händelse",
+      type: event.type ?? "Händelse",
+      time: event.time ?? "",
+    }
+
+    const updatedFeed = mergeMatchFeed(existingMatch.matchFeed, [normalizedEvent])
+    const nextHomeScore = normalizedEvent.homeScore ?? undefined
+    const nextAwayScore = normalizedEvent.awayScore ?? undefined
+    const nextResult =
+      typeof nextHomeScore === "number" && typeof nextAwayScore === "number"
+        ? `${nextHomeScore}-${nextAwayScore}`
+        : existingMatch.result
+
+    const updatedMatch = {
+      ...existingMatch,
+      matchFeed: updatedFeed,
+      result: nextResult,
+    }
     registerMatch(updatedMatch, reconstructApiMatch(updatedMatch))
     updateMatchCollections(updatedMatch)
 
@@ -953,7 +1065,7 @@ const createMatchDataChannel = () => {
     oldMatches = sortMatchesDescending(normalizedOld)
 
     lastUpdated = typeof payload?.lastUpdated === "string" ? payload.lastUpdated : null
-    lastEventId = typeof payload?.lastEventId !== "undefined" ? payload.lastEventId : lastEventId
+    persistLastEventId(payload?.lastEventId)
 
     latestEntry = {
       current: currentMatches,
@@ -985,9 +1097,38 @@ const createMatchDataChannel = () => {
       }
     })
 
-    if (typeof payload?.lastEventId !== "undefined" && payload.lastEventId !== null) {
-      lastEventId = payload.lastEventId
+    persistLastEventId(payload?.lastEventId)
+
+    if (!changed) {
+      return
     }
+
+    lastUpdated = typeof payload?.serverTime === "string" ? payload.serverTime : lastUpdated
+
+    latestEntry = {
+      current: currentMatches,
+      old: oldMatches,
+      lastUpdated,
+      timestamp: Date.now(),
+    }
+
+    applyEntryToCaches(latestEntry, [CHANNEL_ENDPOINT])
+    updatePayload()
+    updateConnectionState({ hasData: currentMatches.length > 0 || oldMatches.length > 0 })
+    scheduleSubscriberNotification()
+  }
+
+  const handleMissedEvents = (payload: any) => {
+    const events = Array.isArray(payload?.events) ? payload.events : []
+    let changed = false
+
+    events.forEach((event: MatchFeedEvent) => {
+      if (applyMatchEvent(event)) {
+        changed = true
+      }
+    })
+
+    persistLastEventId(payload?.lastEventId)
 
     if (!changed) {
       return
@@ -1035,17 +1176,22 @@ const createMatchDataChannel = () => {
     updateConnectionState({ isConnected: false })
 
     socket.addEventListener("open", () => {
-      reconnectDelay = 1000
+      reconnectAttempt = 0
       updateConnectionState({ isConnected: true })
     })
 
     socket.addEventListener("message", (event) => {
       try {
         const raw = JSON.parse(event.data)
-        lastEventId = typeof raw?.lastEventId !== "undefined" ? raw.lastEventId : lastEventId
+        persistLastEventId(raw?.lastEventId)
 
         if (raw?.type === "snapshot") {
           handleSnapshot(raw)
+          return
+        }
+
+        if (raw?.type === "missed_events") {
+          handleMissedEvents(raw)
           return
         }
 
@@ -1337,6 +1483,7 @@ export const useMatchData = (options?: {
   enabled?: boolean
 }) => {
   const dataType = options?.dataType ?? "liveUpcoming"
+  const refreshIntervalMs = options?.refreshIntervalMs ?? 2_000
   const paramsSignature = useMemo(() => buildQueryMeta(options?.params).signature, [options?.params])
   const params = options?.params
   const enabled = options?.enabled ?? true
@@ -1425,15 +1572,11 @@ export const useMatchData = (options?: {
 
       setIsRefreshing(true)
       try {
-        await matchDataChannel.waitForConnection()
+        await getMatchData(dataType, bypassCache, params)
         const payload = matchDataChannel.getLatest()
-
         if (!payload) {
-          setLoading(true)
-          setError(null)
           return { matches: [] }
         }
-
         const selectedMatches = applyPayload(payload)
         setError(null)
         setLoading(false)
@@ -1450,8 +1593,22 @@ export const useMatchData = (options?: {
         setIsRefreshing(false)
       }
     },
-    [enabled, applyPayload],
+    [enabled, applyPayload, dataType, params],
   )
+
+  useEffect(() => {
+    if (!enabled || !refreshIntervalMs || refreshIntervalMs <= 0) {
+      return
+    }
+
+    const timer = globalThis.setInterval(() => {
+      refresh(true).catch(() => {
+        // keep existing state during transient polling failures
+      })
+    }, refreshIntervalMs)
+
+    return () => globalThis.clearInterval(timer)
+  }, [enabled, refreshIntervalMs, refresh, paramsSignature])
 
   return {
     matches,

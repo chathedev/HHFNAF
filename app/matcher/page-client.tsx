@@ -1,12 +1,13 @@
 "use client"
 
-import { useMemo, useState, useEffect } from "react"
+import { useMemo, useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 
 import { buildMatchScheduleLabel, getMatchupLabel, getSimplifiedMatchStatus } from "@/lib/match-card-utils"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchCardCTA } from "@/components/match-card-cta"
+import { MatchFeedModal, type MatchFeedEvent } from "@/components/match-feed-modal"
 import { normalizeMatchKey } from "@/lib/matches"
 import { extendTeamDisplayName, createTeamMatchKeySet } from "@/lib/team-display"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
@@ -103,10 +104,48 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: "finished", label: "Avslutade" },
 ]
 
+const API_BASE_URL =
+  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
+  "https://api.harnosandshf.se"
+
+const mapTimelineEvent = (event: any): MatchFeedEvent => ({
+  time: event?.time ?? "",
+  type: event?.type ?? "Händelse",
+  team: event?.team ?? event?.payload?.team,
+  player: event?.player ?? event?.payload?.player,
+  playerNumber: event?.playerNumber ?? event?.payload?.playerNumber,
+  description:
+    event?.payload?.description?.toString().trim() ||
+    event?.description?.toString().trim() ||
+    event?.type?.toString().trim() ||
+    "Händelse",
+  homeScore: typeof event?.homeScore === "number" ? event.homeScore : undefined,
+  awayScore: typeof event?.awayScore === "number" ? event.awayScore : undefined,
+  period: typeof event?.period === "number" ? event.period : undefined,
+  score: event?.score,
+  eventId: event?.eventId,
+  payload: event?.payload,
+})
+
+const dedupeTimelineEvents = (events: MatchFeedEvent[]) => {
+  const seen = new Set<string>()
+  return events.filter((event) => {
+    const key =
+      event.eventId !== undefined
+        ? `id:${event.eventId}`
+        : `${event.time}|${event.type}|${event.description}|${event.homeScore ?? ""}-${event.awayScore ?? ""}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
 export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatchData }) {
   const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   const [selectedTeam, setSelectedTeam] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("current")
+  const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
+  const [timelineByMatchId, setTimelineByMatchId] = useState<Record<string, MatchFeedEvent[]>>({})
 
   const {
     matches: liveUpcomingMatches,
@@ -116,7 +155,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     isRefreshing,
     hasPayload: hasLivePayload,
   } = useMatchData({
-    refreshIntervalMs: 1_000,
+    refreshIntervalMs: 2_000,
     dataType: "liveUpcoming",
     initialData,
     params: { limit: 80 },
@@ -128,7 +167,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     error: oldError,
     hasPayload: hasOldPayload,
   } = useMatchData({
-    refreshIntervalMs: 60_000,
+    refreshIntervalMs: 2_000,
     dataType: "old",
     params: { limit: 60 },
   })
@@ -158,6 +197,51 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   )
 
   const allMatches = useMemo(() => [...liveUpcomingMatches, ...oldMatches], [liveUpcomingMatches, oldMatches])
+  const selectedMatch = useMemo(
+    () => allMatches.find((match) => match.id === selectedMatchId) ?? null,
+    [allMatches, selectedMatchId],
+  )
+
+  const fetchMatchTimeline = useCallback(async (match: NormalizedMatch) => {
+    const apiMatchId = match.apiMatchId
+    if (!apiMatchId) {
+      return
+    }
+
+    const response = await fetch(`${API_BASE_URL}/matcher/match/${encodeURIComponent(apiMatchId)}?includeEvents=1`, {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    })
+    if (!response.ok) {
+      throw new Error(`Could not load timeline (${response.status})`)
+    }
+
+    const payload = await response.json()
+    const rawTimeline = Array.isArray(payload?.events)
+      ? payload.events
+      : Array.isArray(payload?.timeline)
+        ? payload.timeline
+        : Array.isArray(payload?.matchFeed)
+          ? payload.matchFeed
+          : []
+
+    const normalized = dedupeTimelineEvents(rawTimeline.map((event: any) => mapTimelineEvent(event)))
+    setTimelineByMatchId((prev) => ({ ...prev, [match.id]: normalized }))
+  }, [])
+
+  const openMatchModal = useCallback(
+    (match: NormalizedMatch) => {
+      setSelectedMatchId(match.id)
+      const localTimeline = timelineByMatchId[match.id]
+      if (localTimeline?.length || (match.matchFeed?.length ?? 0) > 0) {
+        return
+      }
+      fetchMatchTimeline(match).catch((error) => {
+        console.warn("Failed to hydrate match timeline", error)
+      })
+    },
+    [fetchMatchTimeline, timelineByMatchId],
+  )
 
   const teamOptions = TEAM_OPTIONS
 
@@ -255,7 +339,14 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
       <article
         key={match.id}
         id={`match-card-${match.id}`}
-        className="relative flex flex-col gap-4 rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm transition hover:shadow-lg"
+        className="relative flex cursor-pointer flex-col gap-4 rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm transition hover:shadow-lg"
+        onClick={(event) => {
+          const target = event.target as HTMLElement
+          if (target.closest("a,button")) {
+            return
+          }
+          openMatchModal(match)
+        }}
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
@@ -287,6 +378,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
           <p className="text-xs text-slate-400">{match.series}</p>
         )}
         <MatchCardCTA match={match} status={status} />
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-600">Tryck för timeline</p>
       </article>
     )
   }
@@ -492,6 +584,23 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
         )}
 
       </div>
+      {selectedMatch && (
+        <MatchFeedModal
+          isOpen={true}
+          onClose={() => setSelectedMatchId(null)}
+          matchFeed={timelineByMatchId[selectedMatch.id] ?? selectedMatch.matchFeed ?? []}
+          homeTeam={selectedMatch.homeTeam}
+          awayTeam={selectedMatch.awayTeam}
+          finalScore={selectedMatch.result}
+          matchStatus={selectedMatch.matchStatus}
+          matchId={selectedMatch.id}
+          matchData={selectedMatch}
+          onRefresh={async () => {
+            await refresh(true)
+            await fetchMatchTimeline(selectedMatch).catch(() => undefined)
+          }}
+        />
+      )}
     </main>
   )
 }
