@@ -31,7 +31,7 @@ import { deriveSiteVariant, type SiteVariant, getThemeVariant, getHeroImages, ty
 import { canShowTicketForMatch } from "@/lib/matches"
 import { extendTeamDisplayName } from "@/lib/team-display"
 import { buildMatchScheduleLabel, getMatchupLabel, getSimplifiedMatchStatus } from "@/lib/match-card-utils"
-import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
+import { useMatchData, shouldShowFinishedMatch, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchCardCTA } from "@/components/match-card-cta"
 import { InstagramFeed } from "@/components/instagram-feed"
 import { MatchFeedModal, type MatchFeedEvent } from "@/components/match-feed-modal"
@@ -160,6 +160,11 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     dataType: "live",
     params: liveParams,
   })
+  const recentFinishedParams = useMemo(() => ({ limit: 60 }), [])
+  const { matches: oldMatches } = useMatchData({
+    dataType: "old",
+    params: recentFinishedParams,
+  })
   const matchError = Boolean(matchErrorMessage)
 
   useEffect(() => {
@@ -206,11 +211,12 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const matchesTodayForward = useMemo(() => {
     const now = Date.now()
     const liveLookbackMs = 1000 * 60 * 60 * 6
+    const recentFinishedHours = 2
 
-    // Home page: Show only live (within window) and upcoming matches
-    const statusOrder: Record<string, number> = { live: 0, upcoming: 1 }
+    // Home page: Show live, newly finished and upcoming matches
+    const statusOrder: Record<string, number> = { live: 0, finished: 1, upcoming: 2 }
 
-    const matchesInWindow = upcomingMatches.filter((match) => {
+    const currentMatchesInWindow = upcomingMatches.filter((match) => {
       const status = match.matchStatus === "halftime" ? "live" : (match.matchStatus ?? "upcoming")
 
       if (status === "live") {
@@ -221,6 +227,17 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       return status === "upcoming"
     })
 
+    const recentFinishedMatches = oldMatches.filter((match) => shouldShowFinishedMatch(match, recentFinishedHours))
+
+    const seenIds = new Set<string>()
+    const matchesInWindow = [...currentMatchesInWindow, ...recentFinishedMatches].filter((match) => {
+      if (seenIds.has(match.id)) {
+        return false
+      }
+      seenIds.add(match.id)
+      return true
+    })
+
     matchesInWindow.sort((a, b) => {
       const statusA = getMatchStatus(a)
       const statusB = getMatchStatus(b)
@@ -228,11 +245,14 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       if (statusDiff !== 0) {
         return statusDiff
       }
+      if (statusA === "finished" && statusB === "finished") {
+        return b.date.getTime() - a.date.getTime()
+      }
       return a.date.getTime() - b.date.getTime()
     })
 
     return matchesInWindow
-  }, [upcomingMatches])
+  }, [oldMatches, upcomingMatches])
 
   const selectedMatch = useMemo(
     () => matchesTodayForward.find((match) => match.id === selectedMatchId) ?? null,
@@ -632,9 +652,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                   <div className="max-w-2xl">
                     <p className="text-xs font-semibold uppercase tracking-[0.4em] text-emerald-600">Matcher</p>
-                    <h3 className="text-3xl font-black text-gray-900 sm:text-4xl">Live & Kommande</h3>
+                    <h3 className="text-3xl font-black text-gray-900 sm:text-4xl">Live, Nyss Avslutade & Kommande</h3>
                     <p className="mt-1 text-sm text-gray-500">
-                      Här visas matcher som är live eller på väg att starta – listan uppdateras automatiskt.
+                      Här visas live-matcher, nyss avslutade (senaste 2 timmarna) och kommande matcher.
                     </p>
                   </div>
                   <div className="flex items-center gap-3 text-right">
