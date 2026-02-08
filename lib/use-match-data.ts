@@ -177,11 +177,35 @@ const normalizeStatusValue = (
   return undefined
 }
 
+const normalizeTimeForIso = (timeString?: string | null) => {
+  const raw = timeString?.trim()
+  if (!raw) {
+    return "00:00:00"
+  }
+
+  const cleaned = raw.replace(/[^\d:]/g, "")
+  if (!cleaned) {
+    return "00:00:00"
+  }
+
+  // Supports "16", "16:30", "16:30:00"
+  const parts = cleaned.split(":").filter((part) => part.length > 0)
+  const hour = Number.parseInt(parts[0] ?? "0", 10)
+  const minute = Number.parseInt(parts[1] ?? "0", 10)
+  const second = Number.parseInt(parts[2] ?? "0", 10)
+
+  const safeHour = Number.isFinite(hour) ? Math.min(23, Math.max(0, hour)) : 0
+  const safeMinute = Number.isFinite(minute) ? Math.min(59, Math.max(0, minute)) : 0
+  const safeSecond = Number.isFinite(second) ? Math.min(59, Math.max(0, second)) : 0
+
+  return `${String(safeHour).padStart(2, "0")}:${String(safeMinute).padStart(2, "0")}:${String(safeSecond).padStart(2, "0")}`
+}
+
 const toDate = (dateString?: string | null, timeString?: string | null) => {
   if (!dateString) {
     return null
   }
-  const timePart = timeString && timeString.trim().length > 0 ? timeString.trim() : "00:00"
+  const timePart = normalizeTimeForIso(timeString)
   const parsed = new Date(`${dateString}T${timePart}`)
   if (Number.isNaN(parsed.getTime())) {
     return null
