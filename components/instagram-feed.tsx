@@ -3,13 +3,6 @@
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
 
-type InstagramProfile = {
-  fullName?: string
-  followers?: number
-  following?: number
-  postsCount?: number
-}
-
 type InstagramImage = {
   imageUrl?: string
 }
@@ -35,7 +28,6 @@ type InstagramPayload = {
   source?: string
   username?: string
   fetchedAt?: string
-  profile?: InstagramProfile
   items?: InstagramPost[]
 }
 
@@ -74,7 +66,6 @@ const formatPostDate = (iso?: string) => {
 
 export function InstagramFeed() {
   const [items, setItems] = useState<InstagramPost[]>([])
-  const [profile, setProfile] = useState<InstagramProfile | null>(null)
   const [username, setUsername] = useState("harnosandshf")
   const [source, setSource] = useState<string | null>(null)
   const [fetchedAt, setFetchedAt] = useState<string | null>(null)
@@ -114,7 +105,6 @@ export function InstagramFeed() {
         if (!isMounted) return
 
         setItems(nextItems)
-        setProfile(payload.profile ?? null)
         setUsername(payload.username || "harnosandshf")
         setSource(payload.source ?? null)
         setFetchedAt(payload.fetchedAt ?? null)
@@ -144,8 +134,6 @@ export function InstagramFeed() {
 
   const posts = useMemo(() => items.slice(0, MAX_POSTS), [items])
   const fetchedAtLabel = fetchedAt ? formatPostDate(fetchedAt) : null
-  const totalLikes = useMemo(() => posts.reduce((sum, post) => sum + (post.likesCount || 0), 0), [posts])
-  const totalComments = useMemo(() => posts.reduce((sum, post) => sum + (post.commentsCount || 0), 0), [posts])
 
   const getPostKey = (post: InstagramPost) =>
     post.id ||
@@ -205,29 +193,6 @@ export function InstagramFeed() {
           >
             Öppna Instagram →
           </Link>
-        </div>
-
-        <div className="mb-6 grid gap-3 sm:grid-cols-5">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Följare</p>
-            <p className="mt-1 text-2xl font-black text-slate-900">{formatCompactNumber(profile?.followers)}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Följer</p>
-            <p className="mt-1 text-2xl font-black text-slate-900">{formatCompactNumber(profile?.following)}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Inlägg</p>
-            <p className="mt-1 text-2xl font-black text-slate-900">{formatCompactNumber(profile?.postsCount)}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Likes (urval)</p>
-            <p className="mt-1 text-2xl font-black text-slate-900">{formatCompactNumber(totalLikes)}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Kommentarer</p>
-            <p className="mt-1 text-2xl font-black text-slate-900">{formatCompactNumber(totalComments)}</p>
-          </div>
         </div>
 
         {loading && (
