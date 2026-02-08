@@ -400,7 +400,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
       <article
         key={match.id}
         id={`match-card-${match.id}`}
-        className="relative flex cursor-pointer flex-col gap-4 rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm transition hover:shadow-lg"
+        className="relative flex cursor-pointer flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:border-emerald-400 hover:shadow-lg"
         onClick={(event) => {
           const target = event.target as HTMLElement
           if (target.closest("a,button")) {
@@ -411,15 +411,15 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+            <p className="text-sm font-semibold text-emerald-700">
               {teamTypeLabel}
             </p>
-            <h3 className="text-lg font-semibold text-gray-900 leading-tight">
+            <h3 className="text-xl font-bold leading-tight text-gray-900">
               {matchupLabel}
             </h3>
             {scheduleLabel && <p className="text-sm text-gray-500">{scheduleLabel}</p>}
           </div>
-          <span className={`inline-flex items-center justify-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${statusBadge.tone}`}>
+          <span className={`inline-flex items-center justify-center rounded px-2.5 py-0.5 text-xs font-semibold ${statusBadge.tone}`}>
             {statusBadge.label}
           </span>
         </div>
