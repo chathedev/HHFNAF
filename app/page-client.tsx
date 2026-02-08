@@ -37,7 +37,7 @@ import {
   shouldShowFinishedZeroZeroIssue,
   shouldShowProfixioTechnicalIssue,
 } from "@/lib/match-card-utils"
-import { getMatchEndTime, useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
+import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchCardCTA } from "@/components/match-card-cta"
 import { InstagramFeed } from "@/components/instagram-feed"
 import { MatchFeedModal, type MatchFeedEvent } from "@/components/match-feed-modal"
@@ -125,16 +125,6 @@ const dedupeTimelineEvents = (events: MatchFeedEvent[]) => {
   })
 }
 
-const isRecentlyFinishedMatch = (match: NormalizedMatch, now: number, recentHours: number) => {
-  if (match.matchStatus !== "finished") {
-    return false
-  }
-
-  const windowMs = recentHours * 60 * 60 * 1000
-  const estimatedEndTimeMs = getMatchEndTime(match)?.getTime() ?? (match.date.getTime() + 90 * 60 * 1000)
-  return estimatedEndTimeMs <= now + 5 * 60 * 1000 && estimatedEndTimeMs >= now - windowMs
-}
-
 // Add type import for EnhancedMatchData if not already present or use any
 
 
@@ -157,7 +147,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const [topScorersByMatchId, setTopScorersByMatchId] = useState<Record<string, MatchTopScorer[]>>({})
   const [hasResolvedInitialMatchData, setHasResolvedInitialMatchData] = useState(false)
   const [hasAttemptedInitialMatchFetch, setHasAttemptedInitialMatchFetch] = useState(false)
-  const [showAllFinishedHomeMatches, setShowAllFinishedHomeMatches] = useState(false)
   const limitedParams = useMemo(() => ({ limit: 10 }), [])
   const {
     matches: upcomingMatches,
@@ -176,11 +165,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   } = useMatchData({
     dataType: "live",
     params: liveParams,
-  })
-  const recentFinishedParams = useMemo(() => ({ limit: 60 }), [])
-  const { matches: oldMatches } = useMatchData({
-    dataType: "old",
-    params: recentFinishedParams,
   })
   const matchError = Boolean(matchErrorMessage)
 
@@ -228,10 +212,8 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const matchesTodayForward = useMemo(() => {
     const now = Date.now()
     const liveLookbackMs = 1000 * 60 * 60 * 6
-    const recentFinishedHours = 3
-
-    // Home page: Show live, newly finished and upcoming matches
-    const statusOrder: Record<string, number> = { live: 0, finished: 1, upcoming: 2 }
+    // Home page: Show live + upcoming only
+    const statusOrder: Record<string, number> = { live: 0, upcoming: 1 }
 
     const currentMatchesInWindow = upcomingMatches.filter((match) => {
       const status = match.matchStatus === "halftime" ? "live" : (match.matchStatus ?? "upcoming")
@@ -244,15 +226,8 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       return status === "upcoming"
     })
 
-    const recentFinishedFromOld = oldMatches.filter((match) =>
-      isRecentlyFinishedMatch(match, now, recentFinishedHours),
-    )
-    const recentFinishedFromCurrent = upcomingMatches.filter((match) =>
-      isRecentlyFinishedMatch(match, now, recentFinishedHours),
-    )
-
     const seenIds = new Set<string>()
-    const matchesInWindow = [...currentMatchesInWindow, ...recentFinishedFromCurrent, ...recentFinishedFromOld].filter((match) => {
+    const matchesInWindow = [...currentMatchesInWindow].filter((match) => {
       if (seenIds.has(match.id)) {
         return false
       }
@@ -267,16 +242,11 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       if (statusDiff !== 0) {
         return statusDiff
       }
-      if (statusA === "finished" && statusB === "finished") {
-        const endA = getMatchEndTime(a)?.getTime() ?? (a.date.getTime() + 90 * 60 * 1000)
-        const endB = getMatchEndTime(b)?.getTime() ?? (b.date.getTime() + 90 * 60 * 1000)
-        return endB - endA
-      }
       return a.date.getTime() - b.date.getTime()
     })
 
     return matchesInWindow
-  }, [oldMatches, upcomingMatches])
+  }, [upcomingMatches])
 
   const selectedMatch = useMemo(
     () => matchesTodayForward.find((match) => match.id === selectedMatchId) ?? null,
@@ -421,13 +391,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     !hasResolvedInitialMatchData || (!hasAttemptedInitialMatchFetch && !hasMatchPayload) || (matchLoading && matchesToDisplay.length === 0)
   const groupedHomeMatches = useMemo(() => {
     const live = matchesToDisplay.filter((match) => getMatchStatus(match) === "live")
-    const finished = matchesToDisplay.filter((match) => getMatchStatus(match) === "finished")
     const upcoming = matchesToDisplay.filter((match) => getMatchStatus(match) === "upcoming")
-    return { live, finished, upcoming }
+    return { live, upcoming }
   }, [matchesToDisplay])
-  const visibleFinishedHomeMatches = showAllFinishedHomeMatches
-    ? groupedHomeMatches.finished
-    : groupedHomeMatches.finished.slice(0, 3)
   const shouldRenderMatchSection =
     showInitialMatchLoader || matchesToDisplay.length > 0 || Boolean(matchErrorMessage)
 
@@ -699,9 +665,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                   <div className="max-w-2xl">
                     <p className="text-xs font-semibold uppercase tracking-[0.4em] text-emerald-600">Matcher</p>
-                    <h3 className="text-3xl font-black text-gray-900 sm:text-4xl">Live, Nyss Avslutade & Kommande</h3>
+                    <h3 className="text-3xl font-black text-gray-900 sm:text-4xl">Live & Kommande</h3>
                     <p className="mt-1 text-sm text-gray-500">
-                      Här visas live-matcher, nyss avslutade (upp till 3 timmar efter slutsignal) och kommande matcher.
+                      Här visas live-matcher och kommande matcher.
                     </p>
                   </div>
                   <div className="flex items-center gap-3 text-right">
@@ -759,29 +725,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                             <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-rose-600">Live Nu</h4>
                           </div>
                           <ul className="space-y-3">{groupedHomeMatches.live.map(renderHomeMatchCard)}</ul>
-                        </div>
-                      )}
-
-                      {groupedHomeMatches.finished.length > 0 && (
-                        <div>
-                          <div className="mb-3 flex items-center gap-2">
-                            <span className="h-2.5 w-2.5 rounded-full bg-slate-500" />
-                            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-slate-700">Nyss Avslutade</h4>
-                          </div>
-                          <ul className="space-y-3">{visibleFinishedHomeMatches.map(renderHomeMatchCard)}</ul>
-                          {groupedHomeMatches.finished.length > 3 && (
-                            <div className="mt-3">
-                              <button
-                                type="button"
-                                onClick={() => setShowAllFinishedHomeMatches((prev) => !prev)}
-                                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:border-emerald-400 hover:text-emerald-700"
-                              >
-                                {showAllFinishedHomeMatches
-                                  ? "Visa färre avslutade"
-                                  : `Visa fler avslutade (${groupedHomeMatches.finished.length - 3} till)`}
-                              </button>
-                            </div>
-                          )}
                         </div>
                       )}
 
