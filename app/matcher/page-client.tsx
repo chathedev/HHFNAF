@@ -199,7 +199,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     hasPayload: hasOldPayload,
   } = useMatchData({
     dataType: "old",
-    params: { limit: 60 },
   })
 
   const hasCurrentPayload = statusFilter === "finished" ? hasOldPayload : hasLivePayload
