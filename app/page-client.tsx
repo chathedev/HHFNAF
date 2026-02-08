@@ -250,7 +250,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const matchesTodayForward = useMemo(() => {
     const now = Date.now()
     const liveLookbackMs = 1000 * 60 * 60 * 6
-    const recentFinishedHours = 2
+    const recentFinishedHours = 3
 
     // Home page: Show live, newly finished and upcoming matches
     const statusOrder: Record<string, number> = { live: 0, finished: 1, upcoming: 2 }
@@ -422,8 +422,16 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   }
 
   const matchesToDisplay = matchesTodayForward.slice(0, 10)
+  const showInitialMatchLoader =
+    !hasResolvedInitialMatchData || (!hasAttemptedInitialMatchFetch && !hasMatchPayload) || (matchLoading && matchesToDisplay.length === 0)
+  const groupedHomeMatches = useMemo(() => {
+    const live = matchesToDisplay.filter((match) => getMatchStatus(match) === "live")
+    const finished = matchesToDisplay.filter((match) => getMatchStatus(match) === "finished")
+    const upcoming = matchesToDisplay.filter((match) => getMatchStatus(match) === "upcoming")
+    return { live, finished, upcoming }
+  }, [matchesToDisplay])
   const shouldRenderMatchSection =
-    !hasMatchPayload || matchLoading || matchesToDisplay.length > 0 || Boolean(matchErrorMessage)
+    showInitialMatchLoader || matchesToDisplay.length > 0 || Boolean(matchErrorMessage)
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -695,7 +703,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                     <p className="text-xs font-semibold uppercase tracking-[0.4em] text-emerald-600">Matcher</p>
                     <h3 className="text-3xl font-black text-gray-900 sm:text-4xl">Live, Nyss Avslutade & Kommande</h3>
                     <p className="mt-1 text-sm text-gray-500">
-                      Här visas live-matcher, nyss avslutade (senaste 2 timmarna) och kommande matcher.
+                      Här visas live-matcher, nyss avslutade (upp till 3 timmar efter slutsignal) och kommande matcher.
                     </p>
                   </div>
                   <div className="flex items-center gap-3 text-right">
@@ -712,24 +720,31 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                 </div>
 
                 <div className="mt-8">
-                  {(!hasMatchPayload || matchLoading) && (
-                    <div className="space-y-3">
+                  {showInitialMatchLoader && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+                        <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+                        Laddar matcher...
+                      </div>
                       {[0, 1, 2].map((item) => (
-                        <div key={item} className="h-24 rounded-2xl border border-gray-100 bg-gray-50 animate-pulse" />
+                        <div key={item} className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                          <div className="animate-pulse space-y-2">
+                            <div className="h-3 w-28 rounded bg-gray-200" />
+                            <div className="h-4 w-3/4 rounded bg-gray-200" />
+                            <div className="h-3 w-1/2 rounded bg-gray-200" />
+                          </div>
+                        </div>
                       ))}
                     </div>
                   )}
 
-                  {!matchLoading && matchError && (
+                  {!showInitialMatchLoader && matchError && (
                     <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                       {matchErrorMessage}
                     </div>
                   )}
 
-                  {hasMatchPayload &&
-                    hasResolvedInitialMatchData &&
-                    hasAttemptedInitialMatchFetch &&
-                    !matchLoading &&
+                  {!showInitialMatchLoader &&
                     !matchError &&
                     matchesToDisplay.length === 0 && (
                     <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-500">
@@ -737,8 +752,38 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                     </div>
                   )}
 
-                  {!matchLoading && !matchError && matchesToDisplay.length > 0 && (
-                    <ul className="mt-3 space-y-3">{matchesToDisplay.map(renderHomeMatchCard)}</ul>
+                  {!showInitialMatchLoader && !matchError && matchesToDisplay.length > 0 && (
+                    <div className="space-y-7">
+                      {groupedHomeMatches.live.length > 0 && (
+                        <div>
+                          <div className="mb-3 flex items-center gap-2">
+                            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-rose-500" />
+                            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-rose-600">Live Nu</h4>
+                          </div>
+                          <ul className="space-y-3">{groupedHomeMatches.live.map(renderHomeMatchCard)}</ul>
+                        </div>
+                      )}
+
+                      {groupedHomeMatches.finished.length > 0 && (
+                        <div>
+                          <div className="mb-3 flex items-center gap-2">
+                            <span className="h-2.5 w-2.5 rounded-full bg-slate-500" />
+                            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-slate-700">Nyss Avslutade</h4>
+                          </div>
+                          <ul className="space-y-3">{groupedHomeMatches.finished.map(renderHomeMatchCard)}</ul>
+                        </div>
+                      )}
+
+                      {groupedHomeMatches.upcoming.length > 0 && (
+                        <div>
+                          <div className="mb-3 flex items-center gap-2">
+                            <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
+                            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-600">Kommande</h4>
+                          </div>
+                          <ul className="space-y-3">{groupedHomeMatches.upcoming.map(renderHomeMatchCard)}</ul>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
