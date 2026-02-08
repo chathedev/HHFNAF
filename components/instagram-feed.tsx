@@ -1,65 +1,287 @@
 "use client"
 
-import { useEffect } from "react"
+import Link from "next/link"
+import { useEffect, useMemo, useState } from "react"
+
+type InstagramProfile = {
+  fullName?: string
+  followers?: number
+  following?: number
+  postsCount?: number
+}
+
+type InstagramImage = {
+  imageUrl?: string
+}
+
+type InstagramPost = {
+  id?: string
+  shortcode?: string
+  permalink?: string
+  caption?: string
+  imageUrl?: string
+  images?: InstagramImage[]
+  isVideo?: boolean
+  likesCount?: number
+  commentsCount?: number
+  takenAt?: string
+}
+
+type InstagramPayload = {
+  ok?: boolean
+  fetchedAt?: string
+  profile?: InstagramProfile
+  items?: InstagramPost[]
+}
+
+const INSTAGRAM_API_BASE =
+  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
+  "https://api.harnosandshf.se"
+
+const PLACEHOLDER_IMAGE =
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='800'><rect width='100%25' height='100%25' fill='%23f1f5f9'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2364748b' font-family='Arial' font-size='28'>Instagram-bild</text></svg>"
+
+const POLL_INTERVAL_MS = 10 * 60 * 1000
+const MAX_POSTS = 9
+
+const formatCompactNumber = (value?: number) => {
+  if (!Number.isFinite(value)) return "0"
+  return new Intl.NumberFormat("sv-SE", { notation: "compact", maximumFractionDigits: 1 }).format(value || 0)
+}
+
+const truncateCaption = (caption?: string, maxLength = 160) => {
+  const text = (caption || "").replace(/\s+/g, " ").trim()
+  if (!text) return "Inlägg från @harnosandshf"
+  if (text.length <= maxLength) return text
+  return `${text.slice(0, maxLength).trim()}...`
+}
+
+const formatPostDate = (iso?: string) => {
+  if (!iso) return ""
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ""
+  return new Intl.DateTimeFormat("sv-SE", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(date)
+}
 
 export function InstagramFeed() {
+  const [items, setItems] = useState<InstagramPost[]>([])
+  const [profile, setProfile] = useState<InstagramProfile | null>(null)
+  const [fetchedAt, setFetchedAt] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [unavailable, setUnavailable] = useState(false)
+  const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({})
+
   useEffect(() => {
-    // Load EmbedSocial script
-    const scriptId = "EmbedSocialHashtagScript"
-    
-    // Check if script already exists
-    if (document.getElementById(scriptId)) {
-      return
+    let isMounted = true
+
+    const loadFeed = async ({ initial = false }: { initial?: boolean } = {}) => {
+      if (initial) {
+        setLoading(true)
+      }
+
+      try {
+        const response = await fetch(`${INSTAGRAM_API_BASE}/instagram/posts?limit=${MAX_POSTS}`, {
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        })
+
+        if (response.status === 503) {
+          if (isMounted) {
+            setUnavailable(true)
+          }
+          return
+        }
+
+        if (!response.ok) {
+          throw new Error(`Instagram feed failed (${response.status})`)
+        }
+
+        const payload = (await response.json()) as InstagramPayload
+        const nextItems = Array.isArray(payload.items) ? payload.items : []
+
+        if (!isMounted) return
+
+        setItems(nextItems)
+        setProfile(payload.profile ?? null)
+        setFetchedAt(payload.fetchedAt ?? null)
+        setUnavailable(false)
+      } catch {
+        if (isMounted && initial) {
+          setUnavailable(true)
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
+      }
     }
 
-    const script = document.createElement("script")
-    script.id = scriptId
-    script.src = "https://embedsocial.com/cdn/ht.js"
-    script.async = true
-    document.getElementsByTagName("head")[0].appendChild(script)
+    loadFeed({ initial: true })
+
+    const interval = globalThis.setInterval(() => {
+      loadFeed()
+    }, POLL_INTERVAL_MS)
 
     return () => {
-      // Cleanup script on unmount
-      const existingScript = document.getElementById(scriptId)
-      if (existingScript && document.head.contains(existingScript)) {
-        document.head.removeChild(existingScript)
-      }
+      isMounted = false
+      globalThis.clearInterval(interval)
     }
   }, [])
 
+  const posts = useMemo(() => items.slice(0, MAX_POSTS), [items])
+  const featuredPost = posts[0]
+  const regularPosts = posts.slice(1)
+  const fetchedAtLabel = fetchedAt ? formatPostDate(fetchedAt) : null
+
+  const resolveImage = (post: InstagramPost) => {
+    const fallback = post.images?.[0]?.imageUrl
+    const source = post.imageUrl || fallback || ""
+    const key = post.id || post.shortcode || source
+    if (!source) return PLACEHOLDER_IMAGE
+    return brokenImages[key] ? PLACEHOLDER_IMAGE : source
+  }
+
+  const markImageBroken = (post: InstagramPost) => {
+    const key = post.id || post.shortcode || post.imageUrl || post.permalink || `broken-${Math.random()}`
+    setBrokenImages((prev) => ({ ...prev, [key]: true }))
+  }
+
   return (
-    <section className="py-12 bg-gray-50">
+    <section className="bg-white py-14">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-            Följ oss på <span className="text-pink-600">Instagram</span>
-          </h2>
-          <p className="text-gray-600 max-w-xl mx-auto mb-4">
-            Håll dig uppdaterad med det senaste från Härnösands HF
-          </p>
+        <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-pink-600">Instagram</p>
+            <h2 className="text-3xl font-black text-slate-900 sm:text-4xl">Senaste från @harnosandshf</h2>
+            <p className="mt-1 text-sm text-slate-500">Uppdateras automatiskt från vårt eget backend-flöde.</p>
+          </div>
+          <Link
+            href="https://www.instagram.com/harnosandshf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] font-semibold uppercase tracking-[0.35em] text-pink-600 hover:text-pink-700"
+          >
+            Öppna Instagram →
+          </Link>
         </div>
 
-        {/* EmbedSocial Instagram Feed */}
-        <div className="max-w-5xl mx-auto">
-          <div
-            className="embedsocial-hashtag"
-            data-ref="82ce9aea0e3486c020abad8f40d096962fb8ec59"
-          >
-            <a
-              className="feed-powered-by-es feed-powered-by-es-feed-img es-widget-branding"
-              href="https://embedsocial.com/social-media-aggregator/"
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Instagram widget"
-            >
-              <img
-                src="https://embedsocial.com/cdn/icon/embedsocial-logo.webp"
-                alt="EmbedSocial"
-              />
-              <div className="es-widget-branding-text">Instagram widget</div>
-            </a>
+        <div className="mb-6 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Följare</p>
+            <p className="mt-1 text-2xl font-black text-slate-900">{formatCompactNumber(profile?.followers)}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Följer</p>
+            <p className="mt-1 text-2xl font-black text-slate-900">{formatCompactNumber(profile?.following)}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Inlägg</p>
+            <p className="mt-1 text-2xl font-black text-slate-900">{formatCompactNumber(profile?.postsCount)}</p>
           </div>
         </div>
+
+        {loading && (
+          <div className="grid gap-4 md:grid-cols-3">
+            {[0, 1, 2, 3, 4, 5].map((item) => (
+              <div key={item} className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                <div className="aspect-square animate-pulse bg-slate-200" />
+                <div className="space-y-2 p-3">
+                  <div className="h-3 w-3/4 animate-pulse rounded bg-slate-200" />
+                  <div className="h-3 w-1/2 animate-pulse rounded bg-slate-200" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!loading && unavailable && posts.length === 0 && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
+            Instagram-flödet är tillfälligt otillgängligt.
+          </div>
+        )}
+
+        {!loading && !unavailable && posts.length > 0 && (
+          <div className="grid gap-4 md:grid-cols-3">
+            {featuredPost && (
+              <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:col-span-2">
+                <Link href={featuredPost.permalink || "https://www.instagram.com/harnosandshf"} target="_blank" rel="noopener noreferrer">
+                  <img
+                    src={resolveImage(featuredPost)}
+                    alt={truncateCaption(featuredPost.caption, 90)}
+                    loading="lazy"
+                    className="aspect-[16/10] w-full object-cover"
+                    onError={() => markImageBroken(featuredPost)}
+                  />
+                </Link>
+                <div className="space-y-2 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600">
+                      {featuredPost.isVideo ? "Video" : "Bild"}
+                    </span>
+                    <span className="text-xs text-slate-500">{formatPostDate(featuredPost.takenAt)}</span>
+                  </div>
+                  <p className="text-sm text-slate-700">{truncateCaption(featuredPost.caption, 220)}</p>
+                </div>
+              </article>
+            )}
+
+            <div className="grid gap-4 sm:grid-cols-2 md:col-span-1 md:grid-cols-1">
+              {regularPosts.slice(0, 3).map((post) => (
+                <article key={post.id || post.shortcode || post.permalink} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  <Link href={post.permalink || "https://www.instagram.com/harnosandshf"} target="_blank" rel="noopener noreferrer">
+                    <img
+                      src={resolveImage(post)}
+                      alt={truncateCaption(post.caption, 90)}
+                      loading="lazy"
+                      className="aspect-square w-full object-cover"
+                      onError={() => markImageBroken(post)}
+                    />
+                  </Link>
+                  <div className="space-y-1 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                        {post.isVideo ? "Video" : "Bild"}
+                      </span>
+                      <span className="text-[11px] text-slate-500">{formatPostDate(post.takenAt)}</span>
+                    </div>
+                    <p className="text-xs text-slate-700">{truncateCaption(post.caption, 110)}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            {regularPosts.slice(3).map((post) => (
+              <article key={post.id || post.shortcode || post.permalink} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <Link href={post.permalink || "https://www.instagram.com/harnosandshf"} target="_blank" rel="noopener noreferrer">
+                  <img
+                    src={resolveImage(post)}
+                    alt={truncateCaption(post.caption, 90)}
+                    loading="lazy"
+                    className="aspect-square w-full object-cover"
+                    onError={() => markImageBroken(post)}
+                  />
+                </Link>
+                <div className="space-y-1 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                      {post.isVideo ? "Video" : "Bild"}
+                    </span>
+                    <span className="text-[11px] text-slate-500">{formatPostDate(post.takenAt)}</span>
+                  </div>
+                  <p className="text-xs text-slate-700">{truncateCaption(post.caption, 110)}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+
+        <p className="mt-4 text-right text-xs text-slate-500">
+          Senast synk: {fetchedAtLabel || "okänt"}
+        </p>
       </div>
     </section>
   )
