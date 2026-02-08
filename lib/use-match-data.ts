@@ -293,9 +293,9 @@ const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matc
     }
   }
 
-  // PRIORITY 3: Fallback - assume match just ended if no timeline data
-  // Return current time as best guess for match end
-  return new Date()
+  // PRIORITY 3: Fallback - estimate end by normal handball duration from kickoff
+  // Avoid using "now" which can incorrectly keep very old matches in recent windows.
+  return new Date(matchStart + 90 * 60 * 1000)
 }
 
 // ENHANCED: Helper to check if a finished match should still be displayed (for home/matcher pages - only > 0-0)

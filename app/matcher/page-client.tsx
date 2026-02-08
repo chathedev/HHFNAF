@@ -11,7 +11,7 @@ import {
   shouldShowFinishedZeroZeroIssue,
   shouldShowProfixioTechnicalIssue,
 } from "@/lib/match-card-utils"
-import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
+import { getMatchEndTime, useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchCardCTA } from "@/components/match-card-cta"
 import { MatchFeedModal, type MatchFeedEvent } from "@/components/match-feed-modal"
 import { normalizeMatchKey } from "@/lib/matches"
@@ -361,7 +361,11 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
 
     live.sort((a, b) => a.date.getTime() - b.date.getTime())
     upcoming.sort((a, b) => a.date.getTime() - b.date.getTime())
-    finished.sort((a, b) => b.date.getTime() - a.date.getTime())
+    finished.sort((a, b) => {
+      const endA = getMatchEndTime(a)?.getTime() ?? (a.date.getTime() + 90 * 60 * 1000)
+      const endB = getMatchEndTime(b)?.getTime() ?? (b.date.getTime() + 90 * 60 * 1000)
+      return endB - endA
+    })
 
     return { live, upcoming, finished }
   }, [filteredMatches])
