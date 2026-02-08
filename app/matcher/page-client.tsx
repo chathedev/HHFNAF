@@ -11,6 +11,12 @@ import { MatchFeedModal, type MatchFeedEvent } from "@/components/match-feed-mod
 import { normalizeMatchKey } from "@/lib/matches"
 import { extendTeamDisplayName, createTeamMatchKeySet } from "@/lib/team-display"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
+type MatchTopScorer = {
+  team: string
+  player: string
+  playerNumber?: string
+  goals: number
+}
 
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 
@@ -129,9 +135,24 @@ const mapTimelineEvent = (event: any): MatchFeedEvent => ({
   awayScore: typeof event?.awayScore === "number" ? event.awayScore : undefined,
   period: typeof event?.period === "number" ? event.period : undefined,
   score: event?.score,
-  eventId: event?.eventId,
+  eventId: event?.eventId ?? event?.eventIndex,
   payload: event?.payload,
 })
+
+const extractTopScorers = (payload: any): MatchTopScorer[] => {
+  const source = payload?.match?.playerStats?.topScorers ?? payload?.playerStats?.topScorers
+  if (!Array.isArray(source)) {
+    return []
+  }
+  return source
+    .filter((scorer) => scorer?.name && Number.isFinite(Number(scorer?.goals)))
+    .map((scorer) => ({
+      team: scorer?.teamName ?? scorer?.team ?? "Okänt lag",
+      player: String(scorer?.name),
+      playerNumber: scorer?.number ? String(scorer.number) : undefined,
+      goals: Number(scorer?.goals) || 0,
+    }))
+}
 
 const dedupeTimelineEvents = (events: MatchFeedEvent[]) => {
   const seen = new Set<string>()
@@ -152,6 +173,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("current")
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   const [timelineByMatchId, setTimelineByMatchId] = useState<Record<string, MatchFeedEvent[]>>({})
+  const [topScorersByMatchId, setTopScorersByMatchId] = useState<Record<string, MatchTopScorer[]>>({})
 
   const {
     matches: liveUpcomingMatches,
@@ -229,6 +251,10 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
 
     const normalized = dedupeTimelineEvents(rawTimeline.map((event: any) => mapTimelineEvent(event)))
     setTimelineByMatchId((prev) => ({ ...prev, [match.id]: normalized }))
+    const topScorers = extractTopScorers(payload)
+    if (topScorers.length > 0) {
+      setTopScorersByMatchId((prev) => ({ ...prev, [match.id]: topScorers }))
+    }
   }, [])
 
   const openMatchModal = useCallback(
@@ -602,6 +628,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
           matchStatus={selectedMatch.matchStatus}
           matchId={selectedMatch.id}
           matchData={selectedMatch}
+          topScorers={topScorersByMatchId[selectedMatch.id] ?? []}
           onRefresh={async () => {
             await fetchMatchTimeline(selectedMatch).catch(() => undefined)
           }}

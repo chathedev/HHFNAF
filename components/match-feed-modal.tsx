@@ -39,6 +39,12 @@ type MatchFeedModalProps = {
   matchId?: string
   onRefresh?: () => Promise<void>
   matchData?: NormalizedMatch
+  topScorers?: Array<{
+    team: string
+    player: string
+    playerNumber?: string
+    goals: number
+  }>
 }
 
 const harnosandPattern = /(härnösand|harnosand|\bhhf\b)/i
@@ -157,6 +163,7 @@ export function MatchFeedModal({
   finalScore,
   matchStatus,
   onRefresh,
+  topScorers = [],
 }: MatchFeedModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
   const [activeTab, setActiveTab] = useState<"timeline" | "scorers">("timeline")
@@ -187,7 +194,12 @@ export function MatchFeedModal({
   }, [isOpen, onClose])
 
   const sortedFeed = useMemo(() => {
-    return [...(matchFeed ?? [])].sort((a, b) => {
+    const filtered = (matchFeed ?? []).filter((event) => {
+      const typeText = `${event.type || ""} ${event.description || ""}`.toLowerCase()
+      return !typeText.includes("spelare aktiverad")
+    })
+
+    return [...filtered].sort((a, b) => {
       const periodA = a.period ?? 0
       const periodB = b.period ?? 0
       if (periodA !== periodB) return periodB - periodA
@@ -220,7 +232,7 @@ export function MatchFeedModal({
       .sort((a, b) => b - a)
   }, [groupedByPeriod])
 
-  const topScorersByTeam = useMemo(() => {
+  const calculatedTopScorersByTeam = useMemo(() => {
     const goalEvents = sortedFeed.filter((event) => (event.type || "").toLowerCase().includes("mål") && event.player)
     const grouped = goalEvents.reduce<Record<string, Record<string, { player: string; playerNumber?: string; goals: number }>>>(
       (acc, event) => {
@@ -250,6 +262,31 @@ export function MatchFeedModal({
       {},
     )
   }, [sortedFeed])
+
+  const topScorersByTeam = useMemo(() => {
+    if (!topScorers.length) {
+      return calculatedTopScorersByTeam
+    }
+
+    const grouped = topScorers.reduce<Record<string, Array<{ player: string; playerNumber?: string; goals: number }>>>(
+      (acc, scorer) => {
+        if (!acc[scorer.team]) {
+          acc[scorer.team] = []
+        }
+        acc[scorer.team].push({
+          player: scorer.player,
+          playerNumber: scorer.playerNumber,
+          goals: scorer.goals,
+        })
+        return acc
+      },
+      {},
+    )
+    Object.keys(grouped).forEach((team) => {
+      grouped[team] = grouped[team].sort((a, b) => b.goals - a.goals).slice(0, 3)
+    })
+    return grouped
+  }, [topScorers, calculatedTopScorersByTeam])
 
   const refreshNow = async () => {
     if (!onRefresh || refreshInFlightRef.current) return
