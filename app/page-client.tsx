@@ -66,6 +66,7 @@ const mapTimelineEvent = (event: any): MatchFeedEvent => ({
   time: event?.time ?? "",
   type:
     event?.type ??
+    event?.eventType ??
     event?.payload?.type ??
     event?.payload?.eventType ??
     event?.payload?.eventTypeName ??
@@ -84,6 +85,7 @@ const mapTimelineEvent = (event: any): MatchFeedEvent => ({
   period: typeof event?.period === "number" ? event.period : undefined,
   score: event?.score,
   eventId: event?.eventId ?? event?.eventIndex,
+  eventTypeId: typeof event?.eventTypeId === "number" ? event.eventTypeId : undefined,
   payload: event?.payload,
 })
 
@@ -275,11 +277,13 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   )
 
   const getMergedTimeline = useCallback(
-    (match: NormalizedMatch) =>
-      dedupeTimelineEvents([
-        ...(timelineByMatchId[match.id] ?? []),
-        ...((match.matchFeed ?? []).map((event) => mapTimelineEvent(event))),
-      ]),
+    (match: NormalizedMatch) => {
+      const hydrated = timelineByMatchId[match.id]
+      if (hydrated && hydrated.length > 0) {
+        return hydrated
+      }
+      return dedupeTimelineEvents((match.matchFeed ?? []).map((event) => mapTimelineEvent(event)))
+    },
     [timelineByMatchId],
   )
 

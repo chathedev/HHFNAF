@@ -75,6 +75,21 @@ const getEventDisplayText = (event: MatchFeedEvent) => {
   return score ? `${eventType} (${score})` : eventType
 }
 
+const buildSemanticKey = (event: MatchFeedEvent) =>
+  [
+    event.time ?? "",
+    event.period ?? "",
+    (event.team ?? "").toLowerCase(),
+    (event.player ?? "").toLowerCase(),
+    event.homeScore ?? "",
+    event.awayScore ?? "",
+  ].join("|")
+
+const isGenericEventLabel = (value?: string) => {
+  const text = (value ?? "").trim().toLowerCase()
+  return text === "" || text === "händelse"
+}
+
 const getEventTypeLabel = (event: MatchFeedEvent) => {
   const text = `${event.type || ""} ${event.description || ""} ${event.payload?.description || ""}`.toLowerCase()
   if (text.includes("mål") || text.includes("goal")) return "Mål"
@@ -194,9 +209,38 @@ export function MatchFeedModal({
   }, [isOpen, onClose])
 
   const sortedFeed = useMemo(() => {
-    const filtered = (matchFeed ?? []).filter((event) => {
-      const typeText = `${event.type || ""} ${event.description || ""}`.toLowerCase()
-      return !typeText.includes("spelare aktiverad")
+    const feed = matchFeed ?? []
+
+    const hasSpecificForKey = new Set<string>()
+    feed.forEach((event) => {
+      const typeText = `${event.type || ""}`.trim()
+      const descriptionText = `${event.description || ""}`.trim()
+      const specific =
+        !isGenericEventLabel(typeText) ||
+        !isGenericEventLabel(descriptionText) ||
+        Boolean(event.player) ||
+        Boolean(event.eventTypeId)
+      if (specific) {
+        hasSpecificForKey.add(buildSemanticKey(event))
+      }
+    })
+
+    const filtered = feed.filter((event) => {
+      const typeText = `${event.type || ""}`.trim().toLowerCase()
+      const descriptionText = `${event.description || ""}`.trim().toLowerCase()
+      const combined = `${typeText} ${descriptionText}`
+      if (combined.includes("spelare aktiverad")) {
+        return false
+      }
+      const isGeneric =
+        isGenericEventLabel(typeText) &&
+        isGenericEventLabel(descriptionText) &&
+        !event.player &&
+        !event.eventTypeId
+      if (isGeneric && hasSpecificForKey.has(buildSemanticKey(event))) {
+        return false
+      }
+      return !isGeneric
     })
 
     return [...filtered].sort((a, b) => {
@@ -317,17 +361,17 @@ export function MatchFeedModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 p-2 sm:items-center sm:p-6">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/65 p-2 sm:items-center sm:p-6">
       <div
         ref={modalRef}
-        className="flex h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-2xl"
+        className="flex h-[78vh] w-full max-w-2xl flex-col overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-2xl"
       >
-        <header className="border-b border-slate-200 bg-gradient-to-r from-emerald-700 to-emerald-600 px-5 py-4 text-white sm:px-6 sm:py-5">
+        <header className="border-b border-slate-200 bg-slate-900 px-4 py-3 text-white sm:px-5 sm:py-4">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-100">Matchtimeline</p>
-              <h2 className="mt-2 text-xl font-bold sm:text-3xl">
-                {homeTeam} <span className="text-emerald-100">vs</span> {awayTeam}
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-300">Matchtimeline</p>
+              <h2 className="mt-1 text-lg font-bold sm:text-2xl">
+                {homeTeam} <span className="text-slate-400">vs</span> {awayTeam}
               </h2>
               <div className="mt-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em]">
                 {(matchStatus === "live" || matchStatus === "halftime") && (
@@ -341,9 +385,9 @@ export function MatchFeedModal({
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="rounded-2xl bg-black/20 px-5 py-3 text-center">
-                <p className="text-[10px] uppercase tracking-[0.18em] text-emerald-100">Live score</p>
-                <p className="text-3xl font-black leading-none">{scoreboard}</p>
+              <div className="rounded-xl bg-white/10 px-4 py-2 text-center">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-slate-300">Score</p>
+                <p className="text-2xl font-black leading-none">{scoreboard}</p>
               </div>
               <button
                 type="button"
