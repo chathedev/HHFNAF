@@ -140,6 +140,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const [timelineByMatchId, setTimelineByMatchId] = useState<Record<string, MatchFeedEvent[]>>({})
   const [topScorersByMatchId, setTopScorersByMatchId] = useState<Record<string, MatchTopScorer[]>>({})
   const [hasResolvedInitialMatchData, setHasResolvedInitialMatchData] = useState(false)
+  const [hasAttemptedInitialMatchFetch, setHasAttemptedInitialMatchFetch] = useState(false)
   const limitedParams = useMemo(() => ({ limit: 10 }), [])
   const {
     matches: upcomingMatches,
@@ -162,10 +163,13 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const matchError = Boolean(matchErrorMessage)
 
   useEffect(() => {
+    if (!hasAttemptedInitialMatchFetch && !matchLoading) {
+      setHasAttemptedInitialMatchFetch(true)
+    }
     if (!hasResolvedInitialMatchData && hasMatchPayload && !matchLoading) {
       setHasResolvedInitialMatchData(true)
     }
-  }, [hasResolvedInitialMatchData, hasMatchPayload, matchLoading])
+  }, [hasAttemptedInitialMatchFetch, hasResolvedInitialMatchData, hasMatchPayload, matchLoading])
 
   // Track previous scores to highlight live updates
   const partnersForDisplay = Array.isArray(content.partners) ? content.partners.filter((p) => p.visibleInCarousel) : []
@@ -351,7 +355,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
           <p className="text-xs text-slate-400">{match.series}</p>
         )}
         <MatchCardCTA match={match} status={status} />
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-600">Tryck för timeline</p>
       </article>
       </li>
     )
@@ -636,7 +639,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                   </div>
                   <div className="flex items-center gap-3 text-right">
                     <span className="text-[11px] font-semibold uppercase tracking-[0.35em] text-gray-400">
-                      {!matchLoading && !matchError ? "Uppdateras varje sekund" : "Uppdateras snart..."}
+                      {!matchLoading && !matchError ? "Uppdateras automatiskt" : "Uppdateras snart..."}
                     </span>
                     <Link
                       href="/matcher"
@@ -662,7 +665,12 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                     </div>
                   )}
 
-                  {hasMatchPayload && hasResolvedInitialMatchData && !matchLoading && !matchError && matchesToDisplay.length === 0 && (
+                  {hasMatchPayload &&
+                    hasResolvedInitialMatchData &&
+                    hasAttemptedInitialMatchFetch &&
+                    !matchLoading &&
+                    !matchError &&
+                    matchesToDisplay.length === 0 && (
                     <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-500">
                       Inga matcher att visa just nu.
                     </div>
