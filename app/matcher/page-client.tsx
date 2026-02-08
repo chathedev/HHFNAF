@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 
-import { buildMatchScheduleLabel, getMatchupLabel, getSimplifiedMatchStatus } from "@/lib/match-card-utils"
+import { buildMatchScheduleLabel, getMatchupLabel, getSimplifiedMatchStatus, shouldShowProfixioTechnicalIssue } from "@/lib/match-card-utils"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchCardCTA } from "@/components/match-card-cta"
 import { MatchFeedModal, type MatchFeedEvent } from "@/components/match-feed-modal"
@@ -373,6 +373,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     const status = getSimplifiedMatchStatus(match)
     const scheduleLabel = buildMatchScheduleLabel(match)
     const matchupLabel = getMatchupLabel(match)
+    const showProfixioWarning = shouldShowProfixioTechnicalIssue(match)
     const teamTypeRaw = match.teamType?.trim() || ""
     const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
     const cleanedResult = match.result?.trim()
@@ -436,6 +437,11 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
 
         {match.series && (
           <p className="text-xs text-slate-400">{match.series}</p>
+        )}
+        {showProfixioWarning && (
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+            Profixio har tekniska problem med liveuppdateringen för den här matchen just nu.
+          </p>
         )}
         <MatchCardCTA match={match} status={status} />
       </article>

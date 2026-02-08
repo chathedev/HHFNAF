@@ -30,7 +30,7 @@ import type { FullContent, Partner } from "@/lib/content-types"
 import { deriveSiteVariant, type SiteVariant, getThemeVariant, getHeroImages, type ThemeVariant } from "@/lib/site-variant"
 import { canShowTicketForMatch } from "@/lib/matches"
 import { extendTeamDisplayName } from "@/lib/team-display"
-import { buildMatchScheduleLabel, getMatchupLabel, getSimplifiedMatchStatus } from "@/lib/match-card-utils"
+import { buildMatchScheduleLabel, getMatchupLabel, getSimplifiedMatchStatus, shouldShowProfixioTechnicalIssue } from "@/lib/match-card-utils"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchCardCTA } from "@/components/match-card-cta"
 import { InstagramFeed } from "@/components/instagram-feed"
@@ -356,6 +356,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     const status = getMatchStatus(match)
     const scheduleLabel = buildMatchScheduleLabel(match)
     const matchupLabel = getMatchupLabel(match)
+    const showProfixioWarning = shouldShowProfixioTechnicalIssue(match)
     const teamTypeRaw = match.teamType?.trim() || ""
     const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
     const scoreValue =
@@ -414,6 +415,11 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
         {match.series && (
           <p className="text-xs text-slate-400">{match.series}</p>
+        )}
+        {showProfixioWarning && (
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+            Profixio har tekniska problem med liveuppdateringen för den här matchen just nu.
+          </p>
         )}
         <MatchCardCTA match={match} status={status} />
       </article>

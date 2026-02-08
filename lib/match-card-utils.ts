@@ -60,3 +60,39 @@ export const canOpenMatchTimeline = (match: NormalizedMatch) => {
   const status = getSimplifiedMatchStatus(match)
   return status === "live" || status === "finished"
 }
+
+const parseScore = (result?: string) => {
+  const value = (result || "").trim()
+  const parsed = value.match(/(\d+)\s*[-–]\s*(\d+)/)
+  if (!parsed) return null
+  const home = Number.parseInt(parsed[1], 10)
+  const away = Number.parseInt(parsed[2], 10)
+  if (!Number.isFinite(home) || !Number.isFinite(away)) return null
+  return { home, away }
+}
+
+const hasTimelineSignal = (match: NormalizedMatch) => {
+  const feed = match.matchFeed ?? []
+  return feed.some((event) => {
+    const typeText = `${event?.type || ""}`.trim().toLowerCase()
+    const descriptionText = `${event?.description || ""}`.trim().toLowerCase()
+    const isGeneric =
+      (typeText === "" || typeText === "händelse") &&
+      (descriptionText === "" || descriptionText === "händelse")
+    return !isGeneric
+  })
+}
+
+export const shouldShowProfixioTechnicalIssue = (match: NormalizedMatch, nowMs = Date.now()) => {
+  const status = getSimplifiedMatchStatus(match)
+  if (status !== "live") return false
+
+  const elapsedMs = nowMs - match.date.getTime()
+  if (!Number.isFinite(elapsedMs) || elapsedMs < 2 * 60 * 1000) return false
+
+  const score = parseScore(match.result)
+  const isZeroZero = score ? score.home === 0 && score.away === 0 : true
+  if (!isZeroZero) return false
+
+  return !hasTimelineSignal(match)
+}
