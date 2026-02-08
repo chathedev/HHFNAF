@@ -102,7 +102,7 @@ const getEventTypeLabel = (event: MatchFeedEvent) => {
 const getPeriodLabel = (period?: number) => {
   if (period === 1) return "Första halvlek"
   if (period === 2) return "Andra halvlek"
-  return "Matchhändelser"
+  return "Övriga händelser"
 }
 
 const getScoreFromEvent = (event: MatchFeedEvent) => {
@@ -110,6 +110,37 @@ const getScoreFromEvent = (event: MatchFeedEvent) => {
     return `${event.homeScore}-${event.awayScore}`
   }
   return event.score?.toString().trim() || null
+}
+
+const isTechnicalPlaceholderEvent = (event: MatchFeedEvent) => {
+  const typeText = `${event.type || ""}`.trim().toLowerCase()
+  const descriptionText = `${event.description || ""}`.trim().toLowerCase()
+  const payloadText = `${event.payload?.description || ""}`.trim().toLowerCase()
+  const combined = `${typeText} ${descriptionText} ${payloadText}`
+
+  if (
+    combined.includes("timeline unavailable") ||
+    combined.includes("no timeline") ||
+    combined.includes("match update") ||
+    combined.includes("status update")
+  ) {
+    return true
+  }
+
+  const period = event.period ?? 0
+  const hasNoConcreteInfo =
+    !event.player &&
+    !event.team &&
+    typeof event.homeScore !== "number" &&
+    typeof event.awayScore !== "number" &&
+    isGenericEventLabel(typeText) &&
+    isGenericEventLabel(descriptionText)
+
+  if (period <= 0 && hasNoConcreteInfo) {
+    return true
+  }
+
+  return false
 }
 
 const getRowStyle = (event: MatchFeedEvent, homeTeam: string, awayTeam: string) => {
@@ -226,6 +257,9 @@ export function MatchFeedModal({
     })
 
     const filtered = feed.filter((event) => {
+      if (isTechnicalPlaceholderEvent(event)) {
+        return false
+      }
       const typeText = `${event.type || ""}`.trim().toLowerCase()
       const descriptionText = `${event.description || ""}`.trim().toLowerCase()
       const combined = `${typeText} ${descriptionText}`
@@ -269,6 +303,16 @@ export function MatchFeedModal({
       return acc
     }, {})
   }, [sortedFeed])
+
+  const emptyTimelineMessage = useMemo(() => {
+    if (matchStatus === "upcoming") {
+      return "Matchen har inte startat ännu."
+    }
+    if (matchStatus === "live" || matchStatus === "halftime") {
+      return "Väntar på att matchhändelser ska komma in."
+    }
+    return "Ingen tidslinje är tillgänglig för den här matchen."
+  }, [matchStatus])
 
   const periodKeys = useMemo(() => {
     return Object.keys(groupedByPeriod)
@@ -423,7 +467,11 @@ export function MatchFeedModal({
         <div className="flex-1 overflow-y-auto bg-slate-50 px-4 py-6 sm:px-8">
           {activeTab === "timeline" && (
             <div className="space-y-8">
-              {sortedFeed.length === 0 && <p className="text-center text-sm text-slate-500">Inga händelser än.</p>}
+              {sortedFeed.length === 0 && (
+                <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center">
+                  <p className="text-base font-semibold text-slate-700">{emptyTimelineMessage}</p>
+                </div>
+              )}
               {periodKeys.map((period) => (
                 <section key={period} className="space-y-3">
                   <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">{getPeriodLabel(period)}</h3>
@@ -438,7 +486,9 @@ export function MatchFeedModal({
                           <div className="flex items-start gap-3">
                             <div className="w-20 shrink-0">
                               <p className="text-xs font-bold text-slate-700">{event.time || "--:--"}</p>
-                              <p className="mt-1 text-[10px] uppercase tracking-[0.15em] text-slate-500">P{event.period ?? 0}</p>
+                              <p className="mt-1 text-[10px] uppercase tracking-[0.15em] text-slate-500">
+                                {typeof event.period === "number" && event.period > 0 ? `P${event.period}` : "Match"}
+                              </p>
                             </div>
                             <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${style.dot}`} />
                             <div className="min-w-0 flex-1">
