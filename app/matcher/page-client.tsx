@@ -33,29 +33,6 @@ const getMatchStatus = (match: NormalizedMatch): StatusFilter => {
   return match.matchStatus === "halftime" ? "live" : (match.matchStatus ?? "upcoming")
 }
 
-const hasPublishedResult = (match: NormalizedMatch) => {
-  const result = match.result?.trim()
-  if (!result) {
-    return false
-  }
-  if (result.toLowerCase() === "inte publicerat") {
-    return false
-  }
-
-  const scoreMatch = result.match(/(\d+)[-–](\d+)/)
-  if (!scoreMatch) {
-    return false
-  }
-
-  const homeScore = Number.parseInt(scoreMatch[1], 10)
-  const awayScore = Number.parseInt(scoreMatch[2], 10)
-  if (Number.isNaN(homeScore) || Number.isNaN(awayScore)) {
-    return false
-  }
-
-  return homeScore > 0 || awayScore > 0
-}
-
 const TEAM_OPTION_VALUES = [
   "Dam/utv",
   "A-lag Herrar",
@@ -320,7 +297,20 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   }, [selectedTeam])
 
   const matchesForFilter = useMemo(() => {
-    return statusFilter === "finished" ? oldMatches : liveUpcomingMatches
+    if (statusFilter !== "finished") {
+      return liveUpcomingMatches
+    }
+
+    // Keep finished matches stable by merging old feed + any newly finished from liveUpcoming feed.
+    const finishedFromCurrent = liveUpcomingMatches.filter((match) => getMatchStatus(match) === "finished")
+    const seenIds = new Set<string>()
+    return [...finishedFromCurrent, ...oldMatches].filter((match) => {
+      if (seenIds.has(match.id)) {
+        return false
+      }
+      seenIds.add(match.id)
+      return true
+    })
   }, [statusFilter, liveUpcomingMatches, oldMatches])
 
   const filteredMatches = useMemo(() => {
@@ -350,7 +340,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
       }
 
       if (statusFilter === "finished") {
-        return status === "finished" && hasPublishedResult(match)
+        return status === "finished"
       }
 
       return true

@@ -273,12 +273,15 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       return status === "upcoming"
     })
 
-    const recentFinishedMatches = oldMatches.filter((match) =>
+    const recentFinishedFromOld = oldMatches.filter((match) =>
+      isRecentlyFinishedMatch(match, now, recentFinishedHours),
+    )
+    const recentFinishedFromCurrent = upcomingMatches.filter((match) =>
       isRecentlyFinishedMatch(match, now, recentFinishedHours),
     )
 
     const seenIds = new Set<string>()
-    const matchesInWindow = [...currentMatchesInWindow, ...recentFinishedMatches].filter((match) => {
+    const matchesInWindow = [...currentMatchesInWindow, ...recentFinishedFromCurrent, ...recentFinishedFromOld].filter((match) => {
       if (seenIds.has(match.id)) {
         return false
       }
