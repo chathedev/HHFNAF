@@ -18,8 +18,11 @@ type InstagramPost = {
   id?: string
   shortcode?: string
   permalink?: string
+  type?: string
   caption?: string
   imageUrl?: string
+  thumbnailSrc?: string
+  displayResources?: Array<{ src?: string; width?: number; height?: number }>
   images?: InstagramImage[]
   isVideo?: boolean
   likesCount?: number
@@ -29,6 +32,8 @@ type InstagramPost = {
 
 type InstagramPayload = {
   ok?: boolean
+  source?: string
+  username?: string
   fetchedAt?: string
   profile?: InstagramProfile
   items?: InstagramPost[]
@@ -70,10 +75,13 @@ const formatPostDate = (iso?: string) => {
 export function InstagramFeed() {
   const [items, setItems] = useState<InstagramPost[]>([])
   const [profile, setProfile] = useState<InstagramProfile | null>(null)
+  const [username, setUsername] = useState("harnosandshf")
+  const [source, setSource] = useState<string | null>(null)
   const [fetchedAt, setFetchedAt] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [unavailable, setUnavailable] = useState(false)
   const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({})
+  const [imageRetryIndex, setImageRetryIndex] = useState<Record<string, number>>({})
 
   useEffect(() => {
     let isMounted = true
@@ -107,6 +115,8 @@ export function InstagramFeed() {
 
         setItems(nextItems)
         setProfile(payload.profile ?? null)
+        setUsername(payload.username || "harnosandshf")
+        setSource(payload.source ?? null)
         setFetchedAt(payload.fetchedAt ?? null)
         setUnavailable(false)
       } catch {
@@ -133,20 +143,48 @@ export function InstagramFeed() {
   }, [])
 
   const posts = useMemo(() => items.slice(0, MAX_POSTS), [items])
-  const featuredPost = posts[0]
-  const regularPosts = posts.slice(1)
   const fetchedAtLabel = fetchedAt ? formatPostDate(fetchedAt) : null
+  const totalLikes = useMemo(() => posts.reduce((sum, post) => sum + (post.likesCount || 0), 0), [posts])
+  const totalComments = useMemo(() => posts.reduce((sum, post) => sum + (post.commentsCount || 0), 0), [posts])
+
+  const getPostKey = (post: InstagramPost) =>
+    post.id ||
+    post.shortcode ||
+    post.permalink ||
+    post.imageUrl ||
+    `${post.takenAt || "unknown"}-${(post.caption || "").slice(0, 24)}`
+
+  const getImageCandidates = (post: InstagramPost) => {
+    const list = [
+      post.imageUrl,
+      post.thumbnailSrc,
+      ...(Array.isArray(post.displayResources) ? post.displayResources.map((item) => item?.src) : []),
+      ...(Array.isArray(post.images) ? post.images.map((item) => item?.imageUrl) : []),
+    ]
+      .map((item) => (item || "").trim())
+      .filter(Boolean)
+
+    return Array.from(new Set(list))
+  }
 
   const resolveImage = (post: InstagramPost) => {
-    const fallback = post.images?.[0]?.imageUrl
-    const source = post.imageUrl || fallback || ""
-    const key = post.id || post.shortcode || source
-    if (!source) return PLACEHOLDER_IMAGE
-    return brokenImages[key] ? PLACEHOLDER_IMAGE : source
+    const key = getPostKey(post)
+    const candidates = getImageCandidates(post)
+    const index = imageRetryIndex[key] ?? 0
+
+    if (candidates.length === 0) return PLACEHOLDER_IMAGE
+    if (brokenImages[key]) return PLACEHOLDER_IMAGE
+    return candidates[Math.min(index, candidates.length - 1)] || PLACEHOLDER_IMAGE
   }
 
   const markImageBroken = (post: InstagramPost) => {
-    const key = post.id || post.shortcode || post.imageUrl || post.permalink || `broken-${Math.random()}`
+    const key = getPostKey(post)
+    const candidates = getImageCandidates(post)
+    const currentIndex = imageRetryIndex[key] ?? 0
+    if (currentIndex < candidates.length - 1) {
+      setImageRetryIndex((prev) => ({ ...prev, [key]: currentIndex + 1 }))
+      return
+    }
     setBrokenImages((prev) => ({ ...prev, [key]: true }))
   }
 
@@ -157,7 +195,7 @@ export function InstagramFeed() {
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.35em] text-pink-600">Instagram</p>
             <h2 className="text-3xl font-black text-slate-900 sm:text-4xl">Senaste från @harnosandshf</h2>
-            <p className="mt-1 text-sm text-slate-500">Uppdateras automatiskt från vårt eget backend-flöde.</p>
+            <p className="mt-1 text-sm text-slate-500">Uppdateras automatiskt från vårt eget backend-flöde ({source || "instagram_api"}).</p>
           </div>
           <Link
             href="https://www.instagram.com/harnosandshf"
@@ -169,7 +207,7 @@ export function InstagramFeed() {
           </Link>
         </div>
 
-        <div className="mb-6 grid gap-3 sm:grid-cols-3">
+        <div className="mb-6 grid gap-3 sm:grid-cols-5">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Följare</p>
             <p className="mt-1 text-2xl font-black text-slate-900">{formatCompactNumber(profile?.followers)}</p>
@@ -181,6 +219,14 @@ export function InstagramFeed() {
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Inlägg</p>
             <p className="mt-1 text-2xl font-black text-slate-900">{formatCompactNumber(profile?.postsCount)}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Likes (urval)</p>
+            <p className="mt-1 text-2xl font-black text-slate-900">{formatCompactNumber(totalLikes)}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Kommentarer</p>
+            <p className="mt-1 text-2xl font-black text-slate-900">{formatCompactNumber(totalComments)}</p>
           </div>
         </div>
 
@@ -205,62 +251,16 @@ export function InstagramFeed() {
         )}
 
         {!loading && !unavailable && posts.length > 0 && (
-          <div className="grid gap-4 md:grid-cols-3">
-            {featuredPost && (
-              <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:col-span-2">
-                <Link href={featuredPost.permalink || "https://www.instagram.com/harnosandshf"} target="_blank" rel="noopener noreferrer">
-                  <img
-                    src={resolveImage(featuredPost)}
-                    alt={truncateCaption(featuredPost.caption, 90)}
-                    loading="lazy"
-                    className="aspect-[16/10] w-full object-cover"
-                    onError={() => markImageBroken(featuredPost)}
-                  />
-                </Link>
-                <div className="space-y-2 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600">
-                      {featuredPost.isVideo ? "Video" : "Bild"}
-                    </span>
-                    <span className="text-xs text-slate-500">{formatPostDate(featuredPost.takenAt)}</span>
-                  </div>
-                  <p className="text-sm text-slate-700">{truncateCaption(featuredPost.caption, 220)}</p>
-                </div>
-              </article>
-            )}
-
-            <div className="grid gap-4 sm:grid-cols-2 md:col-span-1 md:grid-cols-1">
-              {regularPosts.slice(0, 3).map((post) => (
-                <article key={post.id || post.shortcode || post.permalink} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                  <Link href={post.permalink || "https://www.instagram.com/harnosandshf"} target="_blank" rel="noopener noreferrer">
-                    <img
-                      src={resolveImage(post)}
-                      alt={truncateCaption(post.caption, 90)}
-                      loading="lazy"
-                      className="aspect-square w-full object-cover"
-                      onError={() => markImageBroken(post)}
-                    />
-                  </Link>
-                  <div className="space-y-1 p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                        {post.isVideo ? "Video" : "Bild"}
-                      </span>
-                      <span className="text-[11px] text-slate-500">{formatPostDate(post.takenAt)}</span>
-                    </div>
-                    <p className="text-xs text-slate-700">{truncateCaption(post.caption, 110)}</p>
-                  </div>
-                </article>
-              ))}
-            </div>
-
-            {regularPosts.slice(3).map((post) => (
-              <article key={post.id || post.shortcode || post.permalink} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <Link href={post.permalink || "https://www.instagram.com/harnosandshf"} target="_blank" rel="noopener noreferrer">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {posts.map((post) => (
+              <article key={getPostKey(post)} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <Link href={post.permalink || `https://www.instagram.com/${username}`} target="_blank" rel="noopener noreferrer">
                   <img
                     src={resolveImage(post)}
                     alt={truncateCaption(post.caption, 90)}
                     loading="lazy"
+                    decoding="async"
+                    referrerPolicy="no-referrer"
                     className="aspect-square w-full object-cover"
                     onError={() => markImageBroken(post)}
                   />
@@ -272,7 +272,11 @@ export function InstagramFeed() {
                     </span>
                     <span className="text-[11px] text-slate-500">{formatPostDate(post.takenAt)}</span>
                   </div>
-                  <p className="text-xs text-slate-700">{truncateCaption(post.caption, 110)}</p>
+                  <p className="text-xs text-slate-700">{truncateCaption(post.caption, 90)}</p>
+                  <div className="flex items-center gap-3 text-[11px] text-slate-500">
+                    <span>{formatCompactNumber(post.likesCount)} likes</span>
+                    <span>{formatCompactNumber(post.commentsCount)} komm.</span>
+                  </div>
                 </div>
               </article>
             ))}
@@ -280,7 +284,7 @@ export function InstagramFeed() {
         )}
 
         <p className="mt-4 text-right text-xs text-slate-500">
-          Senast synk: {fetchedAtLabel || "okänt"}
+          @{username} • Senast synk: {fetchedAtLabel || "okänt"}
         </p>
       </div>
     </section>
