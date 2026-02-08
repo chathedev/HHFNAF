@@ -163,7 +163,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   const [hasResolvedOldData, setHasResolvedOldData] = useState(false)
   const [hasAttemptedLiveFetch, setHasAttemptedLiveFetch] = useState(false)
   const [hasAttemptedOldFetch, setHasAttemptedOldFetch] = useState(false)
-  const [showAllFinishedMatches, setShowAllFinishedMatches] = useState(false)
 
   const {
     matches: liveUpcomingMatches,
@@ -454,9 +453,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
       </article>
     )
   }
-  const visibleFinishedMatches = showAllFinishedMatches
-    ? groupedMatches.finished
-    : groupedMatches.finished.slice(0, 6)
   useEffect(() => {
     // Remove ?team filtering from URL, only set selectedTeam from dropdown
     // This disables auto-select from URL and fixes jumping back to 'Alla lag'
@@ -657,21 +653,8 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                   </span>
                 </div>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {visibleFinishedMatches.map(renderMatchCard)}
+                  {groupedMatches.finished.map(renderMatchCard)}
                 </div>
-                {groupedMatches.finished.length > 6 && (
-                  <div className="mt-4 flex justify-center">
-                    <button
-                      type="button"
-                      onClick={() => setShowAllFinishedMatches((prev) => !prev)}
-                      className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-emerald-400 hover:text-emerald-700"
-                    >
-                      {showAllFinishedMatches
-                        ? "Visa färre avslutade matcher"
-                        : `Visa fler avslutade matcher (${groupedMatches.finished.length - 6} till)`}
-                    </button>
-                  </div>
-                )}
               </section>
             )}
           </div>
