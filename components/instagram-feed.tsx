@@ -40,6 +40,7 @@ const PLACEHOLDER_IMAGE =
 
 const POLL_INTERVAL_MS = 10 * 60 * 1000
 const MAX_POSTS = 9
+const getProxiedInstagramImageUrl = (url: string) => `/api/instagram-image?url=${encodeURIComponent(url)}`
 
 const formatCompactNumber = (value?: number) => {
   if (!Number.isFinite(value)) return "0"
@@ -162,7 +163,9 @@ export function InstagramFeed() {
 
     if (candidates.length === 0) return PLACEHOLDER_IMAGE
     if (brokenImages[key]) return PLACEHOLDER_IMAGE
-    return candidates[Math.min(index, candidates.length - 1)] || PLACEHOLDER_IMAGE
+    const picked = candidates[Math.min(index, candidates.length - 1)] || ""
+    if (!picked) return PLACEHOLDER_IMAGE
+    return getProxiedInstagramImageUrl(picked)
   }
 
   const markImageBroken = (post: InstagramPost) => {
