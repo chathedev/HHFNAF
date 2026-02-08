@@ -31,7 +31,7 @@ import { deriveSiteVariant, type SiteVariant, getThemeVariant, getHeroImages, ty
 import { canShowTicketForMatch } from "@/lib/matches"
 import { extendTeamDisplayName } from "@/lib/team-display"
 import { buildMatchScheduleLabel, getMatchupLabel, getSimplifiedMatchStatus } from "@/lib/match-card-utils"
-import { useMatchData, shouldShowFinishedMatch, type NormalizedMatch } from "@/lib/use-match-data"
+import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchCardCTA } from "@/components/match-card-cta"
 import { InstagramFeed } from "@/components/instagram-feed"
 import { MatchFeedModal, type MatchFeedEvent } from "@/components/match-feed-modal"
@@ -117,6 +117,45 @@ const dedupeTimelineEvents = (events: MatchFeedEvent[]) => {
     seen.add(key)
     return true
   })
+}
+
+const parseEventTimeToMinutes = (value?: string) => {
+  if (!value) return null
+  const normalized = value.replace(/[^\d:+]/g, "")
+  if (!normalized) return null
+  const [base = "0:0", extra = "0"] = normalized.split("+")
+  const [minutes = "0"] = base.split(":")
+  const baseMinutes = Number.parseInt(minutes, 10)
+  const overtimeMinutes = Number.parseInt(extra, 10)
+  if (!Number.isFinite(baseMinutes)) return null
+  return baseMinutes + (Number.isFinite(overtimeMinutes) ? overtimeMinutes : 0)
+}
+
+const isRecentlyFinishedMatch = (match: NormalizedMatch, now: number, recentHours: number) => {
+  if (match.matchStatus !== "finished") {
+    return false
+  }
+
+  const windowMs = recentHours * 60 * 60 * 1000
+  const feed = match.matchFeed ?? []
+  let estimatedEndTimeMs: number | null = null
+
+  for (const event of feed) {
+    const eventMinutes = parseEventTimeToMinutes(event.time)
+    if (eventMinutes === null) continue
+    const candidate = match.date.getTime() + eventMinutes * 60 * 1000
+    if (!Number.isFinite(candidate)) continue
+    if (estimatedEndTimeMs === null || candidate > estimatedEndTimeMs) {
+      estimatedEndTimeMs = candidate
+    }
+  }
+
+  // Fallback if timeline is sparse: handball match duration + break buffer
+  if (estimatedEndTimeMs === null) {
+    estimatedEndTimeMs = match.date.getTime() + 90 * 60 * 1000
+  }
+
+  return estimatedEndTimeMs <= now + 5 * 60 * 1000 && estimatedEndTimeMs >= now - windowMs
 }
 
 // Add type import for EnhancedMatchData if not already present or use any
@@ -227,7 +266,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       return status === "upcoming"
     })
 
-    const recentFinishedMatches = oldMatches.filter((match) => shouldShowFinishedMatch(match, recentFinishedHours))
+    const recentFinishedMatches = oldMatches.filter((match) =>
+      isRecentlyFinishedMatch(match, now, recentFinishedHours),
+    )
 
     const seenIds = new Set<string>()
     const matchesInWindow = [...currentMatchesInWindow, ...recentFinishedMatches].filter((match) => {
