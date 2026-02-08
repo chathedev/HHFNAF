@@ -157,11 +157,8 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     matches: liveUpcomingMatches,
     loading: liveLoading,
     error: liveError,
-    refresh,
-    isRefreshing,
     hasPayload: hasLivePayload,
   } = useMatchData({
-    refreshIntervalMs: 2_000,
     dataType: "liveUpcoming",
     initialData,
     params: { limit: 80 },
@@ -173,7 +170,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     error: oldError,
     hasPayload: hasOldPayload,
   } = useMatchData({
-    refreshIntervalMs: 2_000,
     dataType: "old",
     params: { limit: 60 },
   })
@@ -607,7 +603,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
           matchId={selectedMatch.id}
           matchData={selectedMatch}
           onRefresh={async () => {
-            await refresh(true)
             await fetchMatchTimeline(selectedMatch).catch(() => undefined)
           }}
         />

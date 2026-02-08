@@ -160,7 +160,7 @@ export function MatchFeedModal({
 }: MatchFeedModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
   const [activeTab, setActiveTab] = useState<"timeline" | "scorers">("timeline")
-  const [isAutoRefreshing, setIsAutoRefreshing] = useState(false)
+  const refreshInFlightRef = useRef(false)
 
   useEffect(() => {
     if (!isOpen) return
@@ -252,12 +252,12 @@ export function MatchFeedModal({
   }, [sortedFeed])
 
   const refreshNow = async () => {
-    if (!onRefresh || isAutoRefreshing) return
+    if (!onRefresh || refreshInFlightRef.current) return
     try {
-      setIsAutoRefreshing(true)
+      refreshInFlightRef.current = true
       await onRefresh()
     } finally {
-      setIsAutoRefreshing(false)
+      refreshInFlightRef.current = false
     }
   }
 
@@ -300,7 +300,6 @@ export function MatchFeedModal({
                 )}
                 {matchStatus === "finished" && <span className="rounded-full bg-slate-900/25 px-3 py-1">SLUT</span>}
                 {matchStatus === "upcoming" && <span className="rounded-full bg-slate-900/25 px-3 py-1">KOMMANDE</span>}
-                {isAutoRefreshing && <span className="rounded-full bg-white/20 px-3 py-1">Synkar...</span>}
               </div>
             </div>
 
@@ -352,17 +351,9 @@ export function MatchFeedModal({
                       const style = getRowStyle(event, homeTeam, awayTeam)
                       const score = getScoreFromEvent(event)
                       const typeLabel = getEventTypeLabel(event)
-                      const eventTeam = (event.team || "").toLowerCase()
-                      const alignRight = eventTeam && eventTeam.includes(awayTeam.toLowerCase())
-                      const alignLeft = eventTeam && eventTeam.includes(homeTeam.toLowerCase())
-                      const isNeutral = !alignLeft && !alignRight
-
                       return (
-                        <li
-                          key={`${event.eventId ?? "idx"}-${index}`}
-                          className={`flex ${isNeutral ? "justify-center" : alignRight ? "justify-end" : "justify-start"}`}
-                        >
-                          <div className={`w-full max-w-[92%] rounded-2xl border px-4 py-3 ${style.tone}`}>
+                        <li key={`${event.eventId ?? "idx"}-${index}`}>
+                          <div className={`w-full rounded-2xl border px-4 py-3 ${style.tone}`}>
                           <div className="flex items-start gap-3">
                             <div className="w-20 shrink-0">
                               <p className="text-xs font-bold text-slate-700">{event.time || "--:--"}</p>

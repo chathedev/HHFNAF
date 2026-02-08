@@ -641,7 +641,8 @@ const resolveOldMatchPayload = (payload: any): ApiMatch[] => {
   return []
 }
 
-const MATCH_WS_URL = "wss://api.harnosandshf.se/matcher/ws"
+const FULL_POLL_INTERVAL_MS = 20_000
+const EVENT_POLL_INTERVAL_MS = 3_000
 const LAST_EVENT_ID_STORAGE_KEY = "matcher_last_event_id"
 const CHANNEL_ENDPOINT = getDataEndpoint()
 type MatchChannelPayload = {
@@ -657,9 +658,11 @@ type ConnectionState = {
 
 const createMatchDataChannel = () => {
   const isBrowser = typeof window !== "undefined"
-  let socket: WebSocket | null = null
-  let reconnectAttempt = 0
-  let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  let fullPollTimer: ReturnType<typeof setInterval> | null = null
+  let eventPollTimer: ReturnType<typeof setInterval> | null = null
+  let isPolling = false
+  let fullPollInFlight = false
+  let eventPollInFlight = false
   let latestEntry: SharedMatchCacheEntry | null = sharedMatchCache.get(CHANNEL_ENDPOINT) ?? null
   let lastEventId: string | number | null = null
   let lastUpdated: string | null = latestEntry?.lastUpdated ?? null
@@ -932,28 +935,6 @@ const createMatchDataChannel = () => {
 
   hydrateFromEntry(latestEntry)
 
-  const scheduleReconnect = () => {
-    if (!isBrowser || reconnectTimer) {
-      return
-    }
-    const backoffSteps = [1_000, 2_000, 5_000, 10_000, 30_000]
-    const delay = backoffSteps[Math.min(reconnectAttempt, backoffSteps.length - 1)]
-    reconnectTimer = globalThis.setTimeout(() => {
-      reconnectTimer = null
-      connect()
-    }, delay)
-    reconnectAttempt += 1
-  }
-
-  const buildSocketUrl = () => {
-    const numeric = Number(lastEventId)
-    if (Number.isFinite(numeric) && numeric > 0) {
-      const encoded = encodeURIComponent(String(lastEventId))
-      return `${MATCH_WS_URL}?sinceEventId=${encoded}`
-    }
-    return MATCH_WS_URL
-  }
-
   const applyMatchUpdate = (update: DeltaMatchUpdate) => {
     if (update.type === "delete") {
       const normalizedId = getNormalizedIdFromMatchId(update.matchId)
@@ -1149,72 +1130,81 @@ const createMatchDataChannel = () => {
     scheduleSubscriberNotification()
   }
 
-  const connect = () => {
-    if (!isBrowser) {
+  const pollFull = async () => {
+    if (!isBrowser || fullPollInFlight) {
       return
     }
-    if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
-      return
-    }
-    if (socket) {
-      socket.close()
-      socket = null
-    }
-    if (reconnectTimer) {
-      globalThis.clearTimeout(reconnectTimer)
-      reconnectTimer = null
-    }
-
+    fullPollInFlight = true
     try {
-      socket = new WebSocket(buildSocketUrl())
+      const response = await fetch(CHANNEL_ENDPOINT, {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      })
+      if (!response.ok) {
+        throw new Error(`pollFull failed (${response.status})`)
+      }
+      const payload = await response.json()
+      handleSnapshot(payload)
+      updateConnectionState({ isConnected: true })
     } catch (error) {
-      console.warn("Unable to open match data socket", error)
-      scheduleReconnect()
+      updateConnectionState({ isConnected: false })
+      console.warn("pollFull matcher/data failed", error)
+    } finally {
+      fullPollInFlight = false
+    }
+  }
+
+  const pollEvents = async () => {
+    if (!isBrowser || eventPollInFlight) {
       return
     }
-
-    updateConnectionState({ isConnected: false })
-
-    socket.addEventListener("open", () => {
-      reconnectAttempt = 0
-      updateConnectionState({ isConnected: true })
-    })
-
-    socket.addEventListener("message", (event) => {
-      try {
-        const raw = JSON.parse(event.data)
-        persistLastEventId(raw?.lastEventId)
-
-        if (raw?.type === "snapshot") {
-          handleSnapshot(raw)
-          return
-        }
-
-        if (raw?.type === "missed_events") {
-          handleMissedEvents(raw)
-          return
-        }
-
-        if (raw?.type === "delta") {
-          handleDelta(raw)
-          return
-        }
-
-        handleSnapshot(raw)
-      } catch (error) {
-        console.warn("Failed to parse match websocket payload", error)
+    eventPollInFlight = true
+    try {
+      const since = Number(lastEventId) > 0 ? Number(lastEventId) : 0
+      const response = await fetch(`${API_BASE_URL}/matcher/events?since=${since}&limit=500`, {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      })
+      if (!response.ok) {
+        throw new Error(`pollEvents failed (${response.status})`)
       }
-    })
+      const payload = await response.json()
+      handleMissedEvents(payload)
+    } catch (error) {
+      console.warn("pollEvents matcher/events failed", error)
+    } finally {
+      eventPollInFlight = false
+    }
+  }
 
-    socket.addEventListener("close", () => {
-      socket = null
-      updateConnectionState({ isConnected: false })
-      scheduleReconnect()
-    })
+  const startPolling = () => {
+    if (!isBrowser || isPolling) {
+      return
+    }
+    isPolling = true
+    pollFull()
+    pollEvents()
+    fullPollTimer = globalThis.setInterval(() => {
+      pollFull()
+    }, FULL_POLL_INTERVAL_MS)
+    eventPollTimer = globalThis.setInterval(() => {
+      pollEvents()
+    }, EVENT_POLL_INTERVAL_MS)
+  }
 
-    socket.addEventListener("error", () => {
-      socket?.close()
-    })
+  const stopPolling = () => {
+    if (!isPolling) {
+      return
+    }
+    isPolling = false
+    if (fullPollTimer) {
+      globalThis.clearInterval(fullPollTimer)
+      fullPollTimer = null
+    }
+    if (eventPollTimer) {
+      globalThis.clearInterval(eventPollTimer)
+      eventPollTimer = null
+    }
   }
 
   const subscribe = (listener: (payload: MatchChannelPayload) => void) => {
@@ -1222,9 +1212,12 @@ const createMatchDataChannel = () => {
     if (latestPayload) {
       listener(latestPayload)
     }
-    connect()
+    startPolling()
     return () => {
       subscribers.delete(listener)
+      if (subscribers.size === 0) {
+        stopPolling()
+      }
     }
   }
 
@@ -1235,18 +1228,8 @@ const createMatchDataChannel = () => {
   }
 
   const waitForConnection = () => {
-    connect()
-    if (isConnected) {
-      return Promise.resolve()
-    }
-    return new Promise<void>((resolve) => {
-      const unsubscribe = subscribeConnection((state) => {
-        if (state.isConnected) {
-          unsubscribe()
-          resolve()
-        }
-      })
-    })
+    startPolling()
+    return pollFull()
   }
 
   const broadcastEntry = (entry: SharedMatchCacheEntry) => {
@@ -1483,7 +1466,7 @@ export const useMatchData = (options?: {
   enabled?: boolean
 }) => {
   const dataType = options?.dataType ?? "liveUpcoming"
-  const refreshIntervalMs = options?.refreshIntervalMs ?? 2_000
+  const refreshIntervalMs = options?.refreshIntervalMs ?? 0
   const paramsSignature = useMemo(() => buildQueryMeta(options?.params).signature, [options?.params])
   const params = options?.params
   const enabled = options?.enabled ?? true
