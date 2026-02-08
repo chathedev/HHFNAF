@@ -110,13 +110,19 @@ const API_BASE_URL =
 
 const mapTimelineEvent = (event: any): MatchFeedEvent => ({
   time: event?.time ?? "",
-  type: event?.type ?? "Händelse",
+  type:
+    event?.type ??
+    event?.payload?.type ??
+    event?.payload?.eventType ??
+    event?.payload?.eventTypeName ??
+    "Händelse",
   team: event?.team ?? event?.payload?.team,
   player: event?.player ?? event?.payload?.player,
   playerNumber: event?.playerNumber ?? event?.payload?.playerNumber,
   description:
     event?.payload?.description?.toString().trim() ||
     event?.description?.toString().trim() ||
+    event?.payload?.eventText?.toString().trim() ||
     event?.type?.toString().trim() ||
     "Händelse",
   homeScore: typeof event?.homeScore === "number" ? event.homeScore : undefined,
@@ -232,15 +238,20 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   const openMatchModal = useCallback(
     (match: NormalizedMatch) => {
       setSelectedMatchId(match.id)
-      const localTimeline = timelineByMatchId[match.id]
-      if (localTimeline?.length || (match.matchFeed?.length ?? 0) > 0) {
-        return
-      }
       fetchMatchTimeline(match).catch((error) => {
         console.warn("Failed to hydrate match timeline", error)
       })
     },
-    [fetchMatchTimeline, timelineByMatchId],
+    [fetchMatchTimeline],
+  )
+
+  const getMergedTimeline = useCallback(
+    (match: NormalizedMatch) =>
+      dedupeTimelineEvents([
+        ...(timelineByMatchId[match.id] ?? []),
+        ...((match.matchFeed ?? []).map((event) => mapTimelineEvent(event))),
+      ]),
+    [timelineByMatchId],
   )
 
   const teamOptions = TEAM_OPTIONS
@@ -588,7 +599,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
         <MatchFeedModal
           isOpen={true}
           onClose={() => setSelectedMatchId(null)}
-          matchFeed={timelineByMatchId[selectedMatch.id] ?? selectedMatch.matchFeed ?? []}
+          matchFeed={getMergedTimeline(selectedMatch)}
           homeTeam={selectedMatch.homeTeam}
           awayTeam={selectedMatch.awayTeam}
           finalScore={selectedMatch.result}

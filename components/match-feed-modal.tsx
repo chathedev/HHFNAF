@@ -69,6 +69,15 @@ const getEventDisplayText = (event: MatchFeedEvent) => {
   return score ? `${eventType} (${score})` : eventType
 }
 
+const getEventTypeLabel = (event: MatchFeedEvent) => {
+  const text = `${event.type || ""} ${event.description || ""} ${event.payload?.description || ""}`.toLowerCase()
+  if (text.includes("mål") || text.includes("goal")) return "Mål"
+  if (text.includes("utvisning")) return "Utvisning"
+  if (text.includes("varning")) return "Varning"
+  if (text.includes("straff")) return "Straff"
+  return event.type?.trim() || "Händelse"
+}
+
 const getPeriodLabel = (period?: number) => {
   if (period === 1) return "Första halvlek"
   if (period === 2) return "Andra halvlek"
@@ -151,7 +160,7 @@ export function MatchFeedModal({
 }: MatchFeedModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
   const [activeTab, setActiveTab] = useState<"timeline" | "scorers">("timeline")
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isAutoRefreshing, setIsAutoRefreshing] = useState(false)
 
   useEffect(() => {
     if (!isOpen) return
@@ -243,14 +252,30 @@ export function MatchFeedModal({
   }, [sortedFeed])
 
   const refreshNow = async () => {
-    if (!onRefresh || isRefreshing) return
+    if (!onRefresh || isAutoRefreshing) return
     try {
-      setIsRefreshing(true)
+      setIsAutoRefreshing(true)
       await onRefresh()
     } finally {
-      setIsRefreshing(false)
+      setIsAutoRefreshing(false)
     }
   }
+
+  useEffect(() => {
+    if (!isOpen || !onRefresh) {
+      return
+    }
+
+    refreshNow()
+
+    const interval = globalThis.setInterval(() => {
+      refreshNow()
+    }, 3_000)
+
+    return () => {
+      globalThis.clearInterval(interval)
+    }
+  }, [isOpen, onRefresh])
 
   if (!isOpen) return null
 
@@ -258,9 +283,9 @@ export function MatchFeedModal({
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 p-2 sm:items-center sm:p-6">
       <div
         ref={modalRef}
-        className="flex h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl"
+        className="flex h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-2xl"
       >
-        <header className="border-b border-slate-200 bg-gradient-to-r from-emerald-700 to-emerald-600 px-5 py-4 text-white sm:px-8 sm:py-6">
+        <header className="border-b border-slate-200 bg-gradient-to-r from-emerald-700 to-emerald-600 px-5 py-4 text-white sm:px-6 sm:py-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-100">Matchtimeline</p>
@@ -275,16 +300,7 @@ export function MatchFeedModal({
                 )}
                 {matchStatus === "finished" && <span className="rounded-full bg-slate-900/25 px-3 py-1">SLUT</span>}
                 {matchStatus === "upcoming" && <span className="rounded-full bg-slate-900/25 px-3 py-1">KOMMANDE</span>}
-                {onRefresh && (
-                  <button
-                    type="button"
-                    onClick={refreshNow}
-                    disabled={isRefreshing}
-                    className="rounded-full border border-white/70 px-3 py-1 text-white/95 transition hover:bg-white/10 disabled:opacity-60"
-                  >
-                    {isRefreshing ? "Uppdaterar..." : "Uppdatera"}
-                  </button>
-                )}
+                {isAutoRefreshing && <span className="rounded-full bg-white/20 px-3 py-1">Synkar...</span>}
               </div>
             </div>
 
@@ -335,9 +351,18 @@ export function MatchFeedModal({
                     {groupedByPeriod[period].map((event, index) => {
                       const style = getRowStyle(event, homeTeam, awayTeam)
                       const score = getScoreFromEvent(event)
+                      const typeLabel = getEventTypeLabel(event)
+                      const eventTeam = (event.team || "").toLowerCase()
+                      const alignRight = eventTeam && eventTeam.includes(awayTeam.toLowerCase())
+                      const alignLeft = eventTeam && eventTeam.includes(homeTeam.toLowerCase())
+                      const isNeutral = !alignLeft && !alignRight
 
                       return (
-                        <li key={`${event.eventId ?? "idx"}-${index}`} className={`rounded-2xl border px-4 py-3 ${style.tone}`}>
+                        <li
+                          key={`${event.eventId ?? "idx"}-${index}`}
+                          className={`flex ${isNeutral ? "justify-center" : alignRight ? "justify-end" : "justify-start"}`}
+                        >
+                          <div className={`w-full max-w-[92%] rounded-2xl border px-4 py-3 ${style.tone}`}>
                           <div className="flex items-start gap-3">
                             <div className="w-20 shrink-0">
                               <p className="text-xs font-bold text-slate-700">{event.time || "--:--"}</p>
@@ -353,7 +378,7 @@ export function MatchFeedModal({
                                 <span className={`font-bold uppercase tracking-[0.15em] ${style.teamClass}`}>
                                   {event.team || "Neutral"}
                                 </span>
-                                <span className="rounded-full bg-white/80 px-2 py-0.5 font-semibold text-slate-500">{style.kindLabel}</span>
+                                <span className="rounded-full bg-white/80 px-2 py-0.5 font-semibold text-slate-500">{typeLabel}</span>
                                 {event.player && (
                                   <span className="text-slate-700">
                                     {event.player}
@@ -362,6 +387,7 @@ export function MatchFeedModal({
                                 )}
                               </div>
                             </div>
+                          </div>
                           </div>
                         </li>
                       )
