@@ -4,7 +4,13 @@ import { useMemo, useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 
-import { buildMatchScheduleLabel, getMatchupLabel, getSimplifiedMatchStatus, shouldShowProfixioTechnicalIssue } from "@/lib/match-card-utils"
+import {
+  buildMatchScheduleLabel,
+  getMatchupLabel,
+  getSimplifiedMatchStatus,
+  shouldShowFinishedZeroZeroIssue,
+  shouldShowProfixioTechnicalIssue,
+} from "@/lib/match-card-utils"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchCardCTA } from "@/components/match-card-cta"
 import { MatchFeedModal, type MatchFeedEvent } from "@/components/match-feed-modal"
@@ -180,6 +186,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   const [hasResolvedOldData, setHasResolvedOldData] = useState(false)
   const [hasAttemptedLiveFetch, setHasAttemptedLiveFetch] = useState(false)
   const [hasAttemptedOldFetch, setHasAttemptedOldFetch] = useState(false)
+  const [showAllFinishedMatches, setShowAllFinishedMatches] = useState(false)
 
   const {
     matches: liveUpcomingMatches,
@@ -374,6 +381,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     const scheduleLabel = buildMatchScheduleLabel(match)
     const matchupLabel = getMatchupLabel(match)
     const showProfixioWarning = shouldShowProfixioTechnicalIssue(match)
+    const showFinishedZeroZeroIssue = shouldShowFinishedZeroZeroIssue(match)
     const teamTypeRaw = match.teamType?.trim() || ""
     const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
     const cleanedResult = match.result?.trim()
@@ -443,10 +451,18 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
             Profixio har tekniska problem med liveuppdateringen för den här matchen just nu.
           </p>
         )}
+        {showFinishedZeroZeroIssue && (
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+            Misstänkt resultatfel från Profixio: matchen är avslutad men står som 0–0. Kontrollera matchrapporten.
+          </p>
+        )}
         <MatchCardCTA match={match} status={status} />
       </article>
     )
   }
+  const visibleFinishedMatches = showAllFinishedMatches
+    ? groupedMatches.finished
+    : groupedMatches.finished.slice(0, 6)
   useEffect(() => {
     // Remove ?team filtering from URL, only set selectedTeam from dropdown
     // This disables auto-select from URL and fixes jumping back to 'Alla lag'
@@ -647,8 +663,21 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                   </span>
                 </div>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {groupedMatches.finished.map(renderMatchCard)}
+                  {visibleFinishedMatches.map(renderMatchCard)}
                 </div>
+                {groupedMatches.finished.length > 6 && (
+                  <div className="mt-4 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setShowAllFinishedMatches((prev) => !prev)}
+                      className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-emerald-400 hover:text-emerald-700"
+                    >
+                      {showAllFinishedMatches
+                        ? "Visa färre avslutade matcher"
+                        : `Visa fler avslutade matcher (${groupedMatches.finished.length - 6} till)`}
+                    </button>
+                  </div>
+                )}
               </section>
             )}
           </div>

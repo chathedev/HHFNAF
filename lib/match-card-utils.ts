@@ -96,3 +96,13 @@ export const shouldShowProfixioTechnicalIssue = (match: NormalizedMatch, nowMs =
 
   return !hasTimelineSignal(match)
 }
+
+export const shouldShowFinishedZeroZeroIssue = (match: NormalizedMatch) => {
+  const status = getSimplifiedMatchStatus(match)
+  if (status !== "finished") return false
+
+  const score = parseScore(match.result)
+  if (!score) return false
+
+  return score.home === 0 && score.away === 0
+}

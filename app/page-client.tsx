@@ -30,7 +30,13 @@ import type { FullContent, Partner } from "@/lib/content-types"
 import { deriveSiteVariant, type SiteVariant, getThemeVariant, getHeroImages, type ThemeVariant } from "@/lib/site-variant"
 import { canShowTicketForMatch } from "@/lib/matches"
 import { extendTeamDisplayName } from "@/lib/team-display"
-import { buildMatchScheduleLabel, getMatchupLabel, getSimplifiedMatchStatus, shouldShowProfixioTechnicalIssue } from "@/lib/match-card-utils"
+import {
+  buildMatchScheduleLabel,
+  getMatchupLabel,
+  getSimplifiedMatchStatus,
+  shouldShowFinishedZeroZeroIssue,
+  shouldShowProfixioTechnicalIssue,
+} from "@/lib/match-card-utils"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchCardCTA } from "@/components/match-card-cta"
 import { InstagramFeed } from "@/components/instagram-feed"
@@ -180,6 +186,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const [topScorersByMatchId, setTopScorersByMatchId] = useState<Record<string, MatchTopScorer[]>>({})
   const [hasResolvedInitialMatchData, setHasResolvedInitialMatchData] = useState(false)
   const [hasAttemptedInitialMatchFetch, setHasAttemptedInitialMatchFetch] = useState(false)
+  const [showAllFinishedHomeMatches, setShowAllFinishedHomeMatches] = useState(false)
   const limitedParams = useMemo(() => ({ limit: 10 }), [])
   const {
     matches: upcomingMatches,
@@ -357,6 +364,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     const scheduleLabel = buildMatchScheduleLabel(match)
     const matchupLabel = getMatchupLabel(match)
     const showProfixioWarning = shouldShowProfixioTechnicalIssue(match)
+    const showFinishedZeroZeroIssue = shouldShowFinishedZeroZeroIssue(match)
     const teamTypeRaw = match.teamType?.trim() || ""
     const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
     const scoreValue =
@@ -421,6 +429,11 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
             Profixio har tekniska problem med liveuppdateringen för den här matchen just nu.
           </p>
         )}
+        {showFinishedZeroZeroIssue && (
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+            Misstänkt resultatfel från Profixio: avslutad match visas som 0–0.
+          </p>
+        )}
         <MatchCardCTA match={match} status={status} />
       </article>
       </li>
@@ -436,6 +449,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     const upcoming = matchesToDisplay.filter((match) => getMatchStatus(match) === "upcoming")
     return { live, finished, upcoming }
   }, [matchesToDisplay])
+  const visibleFinishedHomeMatches = showAllFinishedHomeMatches
+    ? groupedHomeMatches.finished
+    : groupedHomeMatches.finished.slice(0, 3)
   const shouldRenderMatchSection =
     showInitialMatchLoader || matchesToDisplay.length > 0 || Boolean(matchErrorMessage)
 
@@ -776,7 +792,20 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                             <span className="h-2.5 w-2.5 rounded-full bg-slate-500" />
                             <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-slate-700">Nyss Avslutade</h4>
                           </div>
-                          <ul className="space-y-3">{groupedHomeMatches.finished.map(renderHomeMatchCard)}</ul>
+                          <ul className="space-y-3">{visibleFinishedHomeMatches.map(renderHomeMatchCard)}</ul>
+                          {groupedHomeMatches.finished.length > 3 && (
+                            <div className="mt-3">
+                              <button
+                                type="button"
+                                onClick={() => setShowAllFinishedHomeMatches((prev) => !prev)}
+                                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:border-emerald-400 hover:text-emerald-700"
+                              >
+                                {showAllFinishedHomeMatches
+                                  ? "Visa färre avslutade"
+                                  : `Visa fler avslutade (${groupedHomeMatches.finished.length - 3} till)`}
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
 
