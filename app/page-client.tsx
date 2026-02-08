@@ -137,6 +137,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   const [timelineByMatchId, setTimelineByMatchId] = useState<Record<string, MatchFeedEvent[]>>({})
   const [topScorersByMatchId, setTopScorersByMatchId] = useState<Record<string, MatchTopScorer[]>>({})
+  const [hasResolvedInitialMatchData, setHasResolvedInitialMatchData] = useState(false)
   const limitedParams = useMemo(() => ({ limit: 10 }), [])
   const {
     matches: upcomingMatches,
@@ -157,6 +158,12 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     params: liveParams,
   })
   const matchError = Boolean(matchErrorMessage)
+
+  useEffect(() => {
+    if (!hasResolvedInitialMatchData && hasMatchPayload && !matchLoading) {
+      setHasResolvedInitialMatchData(true)
+    }
+  }, [hasResolvedInitialMatchData, hasMatchPayload, matchLoading])
 
   // Track previous scores to highlight live updates
   const partnersForDisplay = Array.isArray(content.partners) ? content.partners.filter((p) => p.visibleInCarousel) : []
@@ -651,7 +658,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                     </div>
                   )}
 
-                  {hasMatchPayload && !matchLoading && !matchError && matchesToDisplay.length === 0 && (
+                  {hasMatchPayload && hasResolvedInitialMatchData && !matchLoading && !matchError && matchesToDisplay.length === 0 && (
                     <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-500">
                       Inga matcher att visa just nu.
                     </div>
