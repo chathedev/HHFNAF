@@ -228,12 +228,23 @@ export function MatchFeedModal({
       }
     }
 
+    const previousBodyOverflow = document.body.style.overflow
+    const previousHtmlOverflow = document.documentElement.style.overflow
+    const previousBodyTouchAction = document.body.style.touchAction
+    const previousHtmlOverscroll = document.documentElement.style.overscrollBehavior
+
     document.body.style.overflow = "hidden"
+    document.documentElement.style.overflow = "hidden"
+    document.body.style.touchAction = "none"
+    document.documentElement.style.overscrollBehavior = "none"
     document.addEventListener("keydown", handleEscape)
     document.addEventListener("mousedown", handleOutsideClick)
 
     return () => {
-      document.body.style.overflow = ""
+      document.body.style.overflow = previousBodyOverflow
+      document.documentElement.style.overflow = previousHtmlOverflow
+      document.body.style.touchAction = previousBodyTouchAction
+      document.documentElement.style.overscrollBehavior = previousHtmlOverscroll
       document.removeEventListener("keydown", handleEscape)
       document.removeEventListener("mousedown", handleOutsideClick)
     }
@@ -405,7 +416,11 @@ export function MatchFeedModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/65 p-0 sm:items-center sm:p-6">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/75 backdrop-blur-[2px] p-0 sm:items-center sm:p-6"
+      role="dialog"
+      aria-modal="true"
+    >
       <div
         ref={modalRef}
         className="flex h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white shadow-2xl sm:h-[78vh] sm:rounded-[18px]"

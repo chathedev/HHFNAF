@@ -137,12 +137,21 @@ export function InstagramFeed() {
       }
     }
 
-    const previousOverflow = document.body.style.overflow
+    const previousBodyOverflow = document.body.style.overflow
+    const previousHtmlOverflow = document.documentElement.style.overflow
+    const previousBodyTouchAction = document.body.style.touchAction
+    const previousHtmlOverscroll = document.documentElement.style.overscrollBehavior
     document.body.style.overflow = "hidden"
+    document.documentElement.style.overflow = "hidden"
+    document.body.style.touchAction = "none"
+    document.documentElement.style.overscrollBehavior = "none"
     window.addEventListener("keydown", onEscape)
 
     return () => {
-      document.body.style.overflow = previousOverflow
+      document.body.style.overflow = previousBodyOverflow
+      document.documentElement.style.overflow = previousHtmlOverflow
+      document.body.style.touchAction = previousBodyTouchAction
+      document.documentElement.style.overscrollBehavior = previousHtmlOverscroll
       window.removeEventListener("keydown", onEscape)
     }
   }, [selectedPost])
@@ -274,7 +283,9 @@ export function InstagramFeed() {
 
         {selectedPost && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 p-3 sm:p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-[2px] p-3 sm:p-4"
+            role="dialog"
+            aria-modal="true"
             onClick={() => setSelectedPost(null)}
           >
             <div
