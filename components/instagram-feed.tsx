@@ -70,6 +70,7 @@ export function InstagramFeed() {
   const [unavailable, setUnavailable] = useState(false)
   const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({})
   const [imageRetryIndex, setImageRetryIndex] = useState<Record<string, number>>({})
+  const [selectedPost, setSelectedPost] = useState<InstagramPost | null>(null)
 
   useEffect(() => {
     let isMounted = true
@@ -126,6 +127,25 @@ export function InstagramFeed() {
       globalThis.clearInterval(interval)
     }
   }, [])
+
+  useEffect(() => {
+    if (!selectedPost) return
+
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSelectedPost(null)
+      }
+    }
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    window.addEventListener("keydown", onEscape)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener("keydown", onEscape)
+    }
+  }, [selectedPost])
 
   const posts = useMemo(() => items.slice(0, MAX_POSTS), [items])
 
@@ -213,34 +233,88 @@ export function InstagramFeed() {
 
         {!loading && !unavailable && posts.length > 0 && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {posts.map((post) => (
-              <article key={getPostKey(post)} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <Link href={post.permalink || `https://www.instagram.com/${username}`} target="_blank" rel="noopener noreferrer">
-                  <img
-                    src={resolveImage(post)}
-                    alt={truncateCaption(post.caption, 90)}
-                    loading="lazy"
-                    decoding="async"
-                    referrerPolicy="no-referrer"
-                    className="aspect-square w-full object-cover"
-                    onError={() => markImageBroken(post)}
-                  />
-                </Link>
-                <div className="space-y-1 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                      {post.isVideo ? "Video" : "Bild"}
-                    </span>
-                    <span className="text-[11px] text-slate-500">{formatPostDate(post.takenAt)}</span>
-                  </div>
-                  <p className="text-xs text-slate-700">{truncateCaption(post.caption, 90)}</p>
-                  <div className="flex items-center gap-3 text-[11px] text-slate-500">
-                    <span>{formatCompactNumber(post.likesCount)} likes</span>
-                    <span>{formatCompactNumber(post.commentsCount)} komm.</span>
-                  </div>
+            {posts.map((post) => {
+              const postKey = getPostKey(post)
+
+              return (
+                <article key={postKey} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPost(post)}
+                    className="w-full text-left transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
+                    aria-label={`Öppna inlägg från ${formatPostDate(post.takenAt) || "@"+username}`}
+                  >
+                    <img
+                      src={resolveImage(post)}
+                      alt={truncateCaption(post.caption, 90)}
+                      loading="lazy"
+                      decoding="async"
+                      referrerPolicy="no-referrer"
+                      className="aspect-square w-full object-cover"
+                      onError={() => markImageBroken(post)}
+                    />
+                    <div className="space-y-1 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                          {post.isVideo ? "Video" : "Bild"}
+                        </span>
+                        <span className="text-[11px] text-slate-500">{formatPostDate(post.takenAt)}</span>
+                      </div>
+                      <p className="text-xs text-slate-700">{truncateCaption(post.caption, 90)}</p>
+                      <div className="flex items-center gap-3 text-[11px] text-slate-500">
+                        <span>{formatCompactNumber(post.likesCount)} likes</span>
+                        <span>{formatCompactNumber(post.commentsCount)} komm.</span>
+                      </div>
+                    </div>
+                  </button>
+                </article>
+              )
+            })}
+          </div>
+        )}
+
+        {selectedPost && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4 py-6"
+            onClick={() => setSelectedPost(null)}
+          >
+            <div
+              className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <img
+                src={resolveImage(selectedPost)}
+                alt={truncateCaption(selectedPost.caption, 120)}
+                className="aspect-square w-full object-cover"
+                onError={() => markImageBroken(selectedPost)}
+              />
+              <div className="space-y-3 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <p className="text-sm font-semibold text-slate-900">{formatPostDate(selectedPost.takenAt) || "Instagram"}</p>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPost(null)}
+                    className="rounded-md px-2 py-1 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                    aria-label="Stäng"
+                  >
+                    Stäng
+                  </button>
                 </div>
-              </article>
-            ))}
+                <p className="text-sm leading-relaxed text-slate-700">{truncateCaption(selectedPost.caption, 320)}</p>
+                <div className="flex items-center gap-4 text-xs text-slate-500">
+                  <span>{formatCompactNumber(selectedPost.likesCount)} likes</span>
+                  <span>{formatCompactNumber(selectedPost.commentsCount)} kommentarer</span>
+                </div>
+                <Link
+                  href={selectedPost.permalink || `https://www.instagram.com/${username}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center rounded-md bg-pink-600 px-4 py-2 text-sm font-semibold text-white hover:bg-pink-700"
+                >
+                  Visa på Instagram
+                </Link>
+              </div>
+            </div>
           </div>
         )}
 
