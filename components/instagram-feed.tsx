@@ -25,9 +25,7 @@ type InstagramPost = {
 
 type InstagramPayload = {
   ok?: boolean
-  source?: string
   username?: string
-  fetchedAt?: string
   items?: InstagramPost[]
 }
 
@@ -68,8 +66,6 @@ const formatPostDate = (iso?: string) => {
 export function InstagramFeed() {
   const [items, setItems] = useState<InstagramPost[]>([])
   const [username, setUsername] = useState("harnosandshf")
-  const [source, setSource] = useState<string | null>(null)
-  const [fetchedAt, setFetchedAt] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [unavailable, setUnavailable] = useState(false)
   const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({})
@@ -107,8 +103,6 @@ export function InstagramFeed() {
 
         setItems(nextItems)
         setUsername(payload.username || "harnosandshf")
-        setSource(payload.source ?? null)
-        setFetchedAt(payload.fetchedAt ?? null)
         setUnavailable(false)
       } catch {
         if (isMounted && initial) {
@@ -134,7 +128,6 @@ export function InstagramFeed() {
   }, [])
 
   const posts = useMemo(() => items.slice(0, MAX_POSTS), [items])
-  const fetchedAtLabel = fetchedAt ? formatPostDate(fetchedAt) : null
 
   const getPostKey = (post: InstagramPost) =>
     post.id ||
@@ -186,7 +179,7 @@ export function InstagramFeed() {
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.35em] text-pink-600">Instagram</p>
             <h2 className="text-3xl font-black text-slate-900 sm:text-4xl">Senaste från @harnosandshf</h2>
-            <p className="mt-1 text-sm text-slate-500">Uppdateras automatiskt från vårt eget backend-flöde ({source || "instagram_api"}).</p>
+            <p className="mt-1 text-sm text-slate-500">Nya inlägg från Instagram.</p>
           </div>
           <Link
             href="https://www.instagram.com/harnosandshf"
@@ -251,9 +244,7 @@ export function InstagramFeed() {
           </div>
         )}
 
-        <p className="mt-4 text-right text-xs text-slate-500">
-          @{username} • Senast synk: {fetchedAtLabel || "okänt"}
-        </p>
+        <p className="mt-4 text-right text-xs text-slate-500">@{username}</p>
       </div>
     </section>
   )
