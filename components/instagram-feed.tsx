@@ -263,7 +263,6 @@ export function InstagramFeed() {
                       <p className="text-xs text-slate-700">{truncateCaption(post.caption, 90)}</p>
                       <div className="flex items-center gap-3 text-[11px] text-slate-500">
                         <span>{formatCompactNumber(post.likesCount)} likes</span>
-                        <span>{formatCompactNumber(post.commentsCount)} komm.</span>
                       </div>
                     </div>
                   </button>
@@ -275,20 +274,20 @@ export function InstagramFeed() {
 
         {selectedPost && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4 py-6"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 p-3 sm:p-4"
             onClick={() => setSelectedPost(null)}
           >
             <div
-              className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+              className="flex w-full max-w-md max-h-[92vh] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:max-w-lg"
               onClick={(event) => event.stopPropagation()}
             >
               <img
                 src={resolveImage(selectedPost)}
                 alt={truncateCaption(selectedPost.caption, 120)}
-                className="aspect-square w-full object-cover"
+                className="h-auto max-h-[42vh] w-full object-cover sm:max-h-[48vh]"
                 onError={() => markImageBroken(selectedPost)}
               />
-              <div className="space-y-3 p-4">
+              <div className="space-y-3 overflow-y-auto p-3 sm:p-4">
                 <div className="flex items-start justify-between gap-4">
                   <p className="text-sm font-semibold text-slate-900">{formatPostDate(selectedPost.takenAt) || "Instagram"}</p>
                   <button
@@ -303,13 +302,12 @@ export function InstagramFeed() {
                 <p className="text-sm leading-relaxed text-slate-700">{truncateCaption(selectedPost.caption, 320)}</p>
                 <div className="flex items-center gap-4 text-xs text-slate-500">
                   <span>{formatCompactNumber(selectedPost.likesCount)} likes</span>
-                  <span>{formatCompactNumber(selectedPost.commentsCount)} kommentarer</span>
                 </div>
                 <Link
                   href={selectedPost.permalink || `https://www.instagram.com/${username}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center rounded-md bg-pink-600 px-4 py-2 text-sm font-semibold text-white hover:bg-pink-700"
+                  className="inline-flex w-full items-center justify-center rounded-md bg-pink-600 px-4 py-2 text-sm font-semibold text-white hover:bg-pink-700 sm:w-auto"
                 >
                   Visa på Instagram
                 </Link>
