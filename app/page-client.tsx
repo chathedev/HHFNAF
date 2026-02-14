@@ -145,6 +145,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   const [timelineByMatchId, setTimelineByMatchId] = useState<Record<string, MatchFeedEvent[]>>({})
   const [topScorersByMatchId, setTopScorersByMatchId] = useState<Record<string, MatchTopScorer[]>>({})
+  const timelineFetchInFlightRef = useRef<Record<string, Promise<void>>>({})
   const [isInitialHomeMatchFetchDone, setIsInitialHomeMatchFetchDone] = useState(Boolean(initialData?.matches?.length))
   const hasStartedInitialHomeMatchFetchRef = useRef(false)
   const limitedParams = useMemo(() => ({ limit: 10 }), [])
@@ -265,36 +266,53 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     [matchesTodayForward, selectedMatchId],
   )
 
-  const fetchMatchTimeline = useCallback(async (match: NormalizedMatch) => {
+  const fetchMatchTimeline = useCallback(async (match: NormalizedMatch, force = false) => {
+    if (!force && Object.prototype.hasOwnProperty.call(timelineByMatchId, match.id)) {
+      return
+    }
+    const inFlight = timelineFetchInFlightRef.current[match.id]
+    if (inFlight) {
+      return inFlight
+    }
+
     const apiMatchId = match.apiMatchId
     if (!apiMatchId) {
       return
     }
 
-    const response = await fetch(`${API_BASE_URL}/matcher/match/${encodeURIComponent(apiMatchId)}?includeEvents=1`, {
-      cache: "no-store",
-      headers: { Accept: "application/json" },
-    })
-    if (!response.ok) {
-      throw new Error(`Could not load timeline (${response.status})`)
-    }
+    const request = (async () => {
+      const response = await fetch(`${API_BASE_URL}/matcher/match/${encodeURIComponent(apiMatchId)}?includeEvents=1`, {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      })
+      if (!response.ok) {
+        throw new Error(`Could not load timeline (${response.status})`)
+      }
 
-    const payload = await response.json()
-    const rawTimeline = Array.isArray(payload?.events)
-      ? payload.events
-      : Array.isArray(payload?.timeline)
-        ? payload.timeline
-        : Array.isArray(payload?.matchFeed)
-          ? payload.matchFeed
-          : []
+      const payload = await response.json()
+      const rawTimeline = Array.isArray(payload?.events)
+        ? payload.events
+        : Array.isArray(payload?.timeline)
+          ? payload.timeline
+          : Array.isArray(payload?.matchFeed)
+            ? payload.matchFeed
+            : []
 
-    const normalized = dedupeTimelineEvents(rawTimeline.map((event: any) => mapTimelineEvent(event)))
-    setTimelineByMatchId((prev) => ({ ...prev, [match.id]: normalized }))
-    const topScorers = extractTopScorers(payload)
-    if (topScorers.length > 0) {
-      setTopScorersByMatchId((prev) => ({ ...prev, [match.id]: topScorers }))
+      const normalized = dedupeTimelineEvents(rawTimeline.map((event: any) => mapTimelineEvent(event)))
+      setTimelineByMatchId((prev) => ({ ...prev, [match.id]: normalized }))
+      const topScorers = extractTopScorers(payload)
+      if (topScorers.length > 0) {
+        setTopScorersByMatchId((prev) => ({ ...prev, [match.id]: topScorers }))
+      }
+    })()
+
+    timelineFetchInFlightRef.current[match.id] = request
+    try {
+      await request
+    } finally {
+      delete timelineFetchInFlightRef.current[match.id]
     }
-  }, [])
+  }, [timelineByMatchId])
 
   const openMatchModal = useCallback(
     (match: NormalizedMatch) => {
@@ -309,7 +327,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const getMergedTimeline = useCallback(
     (match: NormalizedMatch) => {
       const hydrated = timelineByMatchId[match.id]
-      if (hydrated && hydrated.length > 0) {
+      if (Object.prototype.hasOwnProperty.call(timelineByMatchId, match.id)) {
         return hydrated
       }
       return dedupeTimelineEvents((match.matchFeed ?? []).map((event) => mapTimelineEvent(event)))
@@ -345,6 +363,12 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
         <article
           id={`match-card-${match.id}`}
           className="group relative flex cursor-pointer flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-emerald-400 hover:shadow-lg"
+          onMouseEnter={() => {
+            fetchMatchTimeline(match).catch(() => undefined)
+          }}
+          onTouchStart={() => {
+            fetchMatchTimeline(match).catch(() => undefined)
+          }}
           onClick={(event) => {
             const target = event.target as HTMLElement
             if (target.closest("a,button")) {
@@ -1165,7 +1189,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
             matchData={selectedMatch}
             topScorers={topScorersByMatchId[selectedMatch.id] ?? []}
             onRefresh={async () => {
-              await fetchMatchTimeline(selectedMatch).catch(() => undefined)
+              await fetchMatchTimeline(selectedMatch, true).catch(() => undefined)
             }}
           />
         )}

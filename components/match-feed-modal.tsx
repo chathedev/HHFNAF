@@ -219,6 +219,7 @@ export function MatchFeedModal({
   const modalRef = useRef<HTMLDivElement>(null)
   const [activeTab, setActiveTab] = useState<"timeline" | "scorers">("timeline")
   const refreshInFlightRef = useRef(false)
+  const allowAutoRefresh = matchStatus === "live" || matchStatus === "halftime"
 
   useEffect(() => {
     if (!isOpen) return
@@ -413,20 +414,23 @@ export function MatchFeedModal({
   }
 
   useEffect(() => {
-    if (!isOpen || !onRefresh) {
+    if (!isOpen || !onRefresh || !allowAutoRefresh) {
       return
     }
 
-    refreshNow()
+    const kickOff = globalThis.setTimeout(() => {
+      refreshNow()
+    }, 450)
 
     const interval = globalThis.setInterval(() => {
       refreshNow()
-    }, 3_000)
+    }, 8_000)
 
     return () => {
+      globalThis.clearTimeout(kickOff)
       globalThis.clearInterval(interval)
     }
-  }, [isOpen, onRefresh])
+  }, [isOpen, onRefresh, allowAutoRefresh])
 
   if (!isOpen) return null
 
