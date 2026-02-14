@@ -5,6 +5,7 @@ import { Inter, Space_Grotesk } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ScrollToTop } from "@/components/scroll-to-top"
+import { VisitBeacon } from "@/components/visit-beacon"
 import { deriveSiteVariant, getThemeVariant } from "@/lib/site-variant"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -323,6 +324,7 @@ export default async function RootLayout({
         </div>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ScrollToTop />
+          <VisitBeacon />
           {children}
         </ThemeProvider>
       </body>
