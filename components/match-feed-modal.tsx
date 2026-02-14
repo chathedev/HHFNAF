@@ -69,6 +69,17 @@ const parseEventTimeToSeconds = (value?: string) => {
   return (safeMinutes + safeExtra) * 60 + safeSeconds
 }
 
+const isPeriodOrMatchEndEvent = (event: MatchFeedEvent) => {
+  const text = `${event.type || ""} ${event.description || ""} ${event.payload?.description || ""}`.toLowerCase()
+  return (
+    text.includes("halvlek är slut") ||
+    text.includes("halvlek slut") ||
+    text.includes("matchen är slut") ||
+    text.includes("matchen slut") ||
+    text.includes("match slut")
+  )
+}
+
 const getEventDisplayText = (event: MatchFeedEvent) => {
   const payloadDescription = event.payload?.description?.toString().trim()
   if (payloadDescription) return payloadDescription
@@ -294,7 +305,17 @@ export function MatchFeedModal({
       const periodA = a.period ?? 0
       const periodB = b.period ?? 0
       if (periodA !== periodB) return periodB - periodA
-      return parseEventTimeToSeconds(b.time) - parseEventTimeToSeconds(a.time)
+      const timeDiff = parseEventTimeToSeconds(b.time) - parseEventTimeToSeconds(a.time)
+      if (timeDiff !== 0) return timeDiff
+
+      // Same period + same time: keep goals before "period/match end" events.
+      const aIsGoal = (a.type || "").toLowerCase().includes("mål") || (a.type || "").toLowerCase().includes("goal")
+      const bIsGoal = (b.type || "").toLowerCase().includes("mål") || (b.type || "").toLowerCase().includes("goal")
+      const aIsEnd = isPeriodOrMatchEndEvent(a)
+      const bIsEnd = isPeriodOrMatchEndEvent(b)
+      if (aIsGoal && bIsEnd) return -1
+      if (bIsGoal && aIsEnd) return 1
+      return 0
     })
   }, [matchFeed])
 
