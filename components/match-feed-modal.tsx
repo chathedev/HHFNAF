@@ -50,6 +50,11 @@ type MatchFeedModalProps = {
 const harnosandPattern = /(härnösand|harnosand|\bhhf\b)/i
 
 const isHarnosandTeam = (name?: string) => harnosandPattern.test(name ?? "")
+const normalizeTeamText = (value?: string) => (value || "").trim().toLowerCase()
+const isZeroScore = (value?: string) => {
+  const normalized = (value || "").replace(/\s/g, "").replace("–", "-")
+  return normalized === "0-0"
+}
 
 const parseEventTimeToSeconds = (value?: string) => {
   if (!value) return 0
@@ -147,19 +152,28 @@ const getRowStyle = (event: MatchFeedEvent, homeTeam: string, awayTeam: string) 
   const type = (event.type || "").toLowerCase()
   const isGoal = type.includes("mål") || type.includes("goal")
   const isPenalty = type.includes("utvisning") || type.includes("varning")
-  const eventTeam = event.team || ""
-  const eventTeamLower = eventTeam.toLowerCase()
-  const homeLower = homeTeam.toLowerCase()
-  const awayLower = awayTeam.toLowerCase()
+  const eventTeam = normalizeTeamText(event.team)
+  const scoringTeam = normalizeTeamText(event.scoringTeam)
+  const homeLower = normalizeTeamText(homeTeam)
+  const awayLower = normalizeTeamText(awayTeam)
+  const isHomeGoalByFlag = typeof event.isHomeGoal === "boolean" ? event.isHomeGoal : null
+  const isTeamMatch = (value: string, target: string) =>
+    Boolean(value && target && (value === target || value.includes(target) || target.includes(value)))
 
   const teamTone = (() => {
-    if (eventTeamLower && (eventTeamLower === homeLower || eventTeamLower.includes(homeLower))) {
+    if (isGoal && isHomeGoalByFlag === true) {
       return isHarnosandTeam(homeTeam) ? "home" : "neutral"
     }
-    if (eventTeamLower && (eventTeamLower === awayLower || eventTeamLower.includes(awayLower))) {
+    if (isGoal && isHomeGoalByFlag === false) {
       return isHarnosandTeam(awayTeam) ? "home" : "away"
     }
-    if (isHarnosandTeam(eventTeam)) {
+    if (isTeamMatch(scoringTeam, homeLower) || isTeamMatch(eventTeam, homeLower)) {
+      return isHarnosandTeam(homeTeam) ? "home" : "neutral"
+    }
+    if (isTeamMatch(scoringTeam, awayLower) || isTeamMatch(eventTeam, awayLower)) {
+      return isHarnosandTeam(awayTeam) ? "home" : "away"
+    }
+    if (isHarnosandTeam(event.team)) {
       return "home"
     }
     return "neutral"
@@ -185,9 +199,9 @@ const getRowStyle = (event: MatchFeedEvent, homeTeam: string, awayTeam: string) 
 
   if (isGoal && teamTone === "away") {
     return {
-      tone: "border-sky-200 bg-sky-50",
-      dot: "bg-sky-500",
-      teamClass: "text-sky-700",
+      tone: "border-indigo-200 bg-indigo-50",
+      dot: "bg-indigo-500",
+      teamClass: "text-indigo-700",
       kindLabel: "MÅL",
     }
   }
@@ -273,10 +287,6 @@ export function MatchFeedModal({
       }
       const typeText = `${event.type || ""}`.trim().toLowerCase()
       const descriptionText = `${event.description || ""}`.trim().toLowerCase()
-      const combined = `${typeText} ${descriptionText}`
-      if (combined.includes("spelare aktiverad")) {
-        return false
-      }
       const isGeneric =
         isGenericEventLabel(typeText) &&
         isGenericEventLabel(descriptionText) &&
@@ -304,7 +314,21 @@ export function MatchFeedModal({
     return `${eventWithScore.homeScore}-${eventWithScore.awayScore}`
   }, [sortedFeed])
 
-  const scoreboard = latestScore || finalScore || "-"
+  const scoreboard = useMemo(() => {
+    if (matchStatus === "upcoming") {
+      return "-"
+    }
+    if (latestScore) {
+      return latestScore
+    }
+    if (finalScore && !isZeroScore(finalScore)) {
+      return finalScore
+    }
+    if (finalScore && (matchStatus === "live" || matchStatus === "halftime" || matchStatus === "finished")) {
+      return finalScore
+    }
+    return "-"
+  }, [finalScore, latestScore, matchStatus])
 
   const groupedByPeriod = useMemo(() => {
     return sortedFeed.reduce<Record<number, MatchFeedEvent[]>>((acc, event) => {
