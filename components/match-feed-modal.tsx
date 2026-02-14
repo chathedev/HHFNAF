@@ -69,8 +69,17 @@ const parseEventTimeToSeconds = (value?: string) => {
   return (safeMinutes + safeExtra) * 60 + safeSeconds
 }
 
+const getEventCombinedText = (event: MatchFeedEvent) =>
+  `${event.type || ""} ${event.description || ""} ${event.payload?.description || ""}`.toLowerCase()
+
+const isGoalEvent = (event: MatchFeedEvent) => {
+  const text = getEventCombinedText(event)
+  if (text.includes("mål") || text.includes("goal")) return true
+  return typeof event.homeScore === "number" && typeof event.awayScore === "number"
+}
+
 const isPeriodOrMatchEndEvent = (event: MatchFeedEvent) => {
-  const text = `${event.type || ""} ${event.description || ""} ${event.payload?.description || ""}`.toLowerCase()
+  const text = getEventCombinedText(event)
   return (
     text.includes("halvlek är slut") ||
     text.includes("halvlek slut") ||
@@ -269,9 +278,10 @@ export function MatchFeedModal({
 
   const sortedFeed = useMemo(() => {
     const feed = matchFeed ?? []
+    const indexedFeed = feed.map((event, index) => ({ event, index }))
 
     const hasSpecificForKey = new Set<string>()
-    feed.forEach((event) => {
+    indexedFeed.forEach(({ event }) => {
       const typeText = `${event.type || ""}`.trim()
       const descriptionText = `${event.description || ""}`.trim()
       const specific =
@@ -284,7 +294,7 @@ export function MatchFeedModal({
       }
     })
 
-    const filtered = feed.filter((event) => {
+    const filtered = indexedFeed.filter(({ event }) => {
       if (isTechnicalPlaceholderEvent(event)) {
         return false
       }
@@ -301,22 +311,23 @@ export function MatchFeedModal({
       return !isGeneric
     })
 
-    return [...filtered].sort((a, b) => {
-      const periodA = a.period ?? 0
-      const periodB = b.period ?? 0
+    return [...filtered]
+      .sort((a, b) => {
+      const eventA = a.event
+      const eventB = b.event
+      const periodA = eventA.period ?? 0
+      const periodB = eventB.period ?? 0
       if (periodA !== periodB) return periodB - periodA
-      const timeDiff = parseEventTimeToSeconds(b.time) - parseEventTimeToSeconds(a.time)
+      const timeDiff = parseEventTimeToSeconds(eventB.time) - parseEventTimeToSeconds(eventA.time)
       if (timeDiff !== 0) return timeDiff
 
-      // Same period + same time: keep goals before "period/match end" events.
-      const aIsGoal = (a.type || "").toLowerCase().includes("mål") || (a.type || "").toLowerCase().includes("goal")
-      const bIsGoal = (b.type || "").toLowerCase().includes("mål") || (b.type || "").toLowerCase().includes("goal")
-      const aIsEnd = isPeriodOrMatchEndEvent(a)
-      const bIsEnd = isPeriodOrMatchEndEvent(b)
-      if (aIsGoal && bIsEnd) return -1
-      if (bIsGoal && aIsEnd) return 1
-      return 0
+      // Same period + same time: goal first, end-events last, then keep backend order.
+      const priorityA = isGoalEvent(eventA) ? 0 : isPeriodOrMatchEndEvent(eventA) ? 2 : 1
+      const priorityB = isGoalEvent(eventB) ? 0 : isPeriodOrMatchEndEvent(eventB) ? 2 : 1
+      if (priorityA !== priorityB) return priorityA - priorityB
+      return a.index - b.index
     })
+      .map(({ event }) => event)
   }, [matchFeed])
 
   const latestScore = useMemo(() => {
