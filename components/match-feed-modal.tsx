@@ -114,6 +114,8 @@ const formatSecondsAsClock = (totalSeconds: number) => {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
 }
 
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
+
 const parseClockToSeconds = (value?: string) => {
   const clean = (value || "").trim()
   if (!clean) return 0
@@ -350,11 +352,22 @@ export function MatchFeedModal({
     effectiveClockState &&
       (typeof effectiveClockState.currentSeconds === "number" || Boolean(effectiveClockState.clock)),
   )
-  const clockBaseSeconds = effectiveClockState?.currentSeconds ?? parseClockToSeconds(effectiveClockState?.clock)
+  const sourcePeriodLength = effectiveClockState?.source?.periodLengthSeconds
+  const sourceMaxTotal = effectiveClockState?.source?.maxTotalSeconds
+  const computedMaxTotal =
+    typeof sourceMaxTotal === "number" && sourceMaxTotal > 0
+      ? sourceMaxTotal
+      : typeof sourcePeriodLength === "number" && sourcePeriodLength > 0
+        ? sourcePeriodLength * 2
+        : Number.POSITIVE_INFINITY
+  const rawBaseSeconds = effectiveClockState?.currentSeconds ?? parseClockToSeconds(effectiveClockState?.clock)
+  const clockBaseSeconds = Number.isFinite(computedMaxTotal) ? clamp(rawBaseSeconds, 0, computedMaxTotal) : Math.max(rawBaseSeconds, 0)
   const clockRunning = Boolean(effectiveClockState?.running)
   const clockReason = effectiveClockState?.reason ?? (clockRunning ? "running" : "stopped")
   const timeoutBaseSecondsLeft = Math.max(0, effectiveClockState?.timeout?.timeoutSecondsLeft ?? 0)
-  const clockDisplay = hasClockData ? formatSecondsAsClock(clockBaseSeconds + (clockRunning ? clockTick : 0)) : "--:--"
+  const liveSeconds = clockBaseSeconds + (clockRunning ? clockTick : 0)
+  const clampedLiveSeconds = Number.isFinite(computedMaxTotal) ? clamp(liveSeconds, 0, computedMaxTotal) : Math.max(liveSeconds, 0)
+  const clockDisplay = hasClockData ? formatSecondsAsClock(clampedLiveSeconds) : "--:--"
   const timeoutSecondsLeft = Math.max(0, timeoutBaseSecondsLeft - (clockReason === "timeout" ? clockTick : 0))
   const activePenalties = useMemo(() => {
     const currentPeriod = effectiveClockState?.period
@@ -627,7 +640,7 @@ export function MatchFeedModal({
 
     const interval = globalThis.setInterval(() => {
       refreshNow()
-    }, 8_000)
+    }, 4_000)
 
     return () => {
       globalThis.clearTimeout(kickOff)
