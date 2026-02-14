@@ -683,22 +683,22 @@ export function MatchFeedModal({
         </header>
 
         <div className="border-b border-slate-200 bg-white px-3 py-3 sm:px-5">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5">
-              <span className={`h-2 w-2 rounded-full ${clockRunning ? "animate-pulse bg-emerald-500" : "bg-slate-400"}`} />
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-800">Matchklocka</span>
-              <span className="font-mono text-base font-black tabular-nums text-emerald-900">{clockDisplay}</span>
+          <div className="flex flex-col items-center gap-2">
+            <div className="inline-flex min-w-[220px] items-center justify-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 shadow-sm transition-all duration-300">
+              <span className={`h-2 w-2 rounded-sm ${clockRunning ? "animate-pulse bg-emerald-500" : "bg-slate-400"}`} />
+              <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-800">Matchklocka</span>
+              <span className="font-mono text-lg font-black tabular-nums text-emerald-900">{clockDisplay}</span>
             </div>
             {clockReason === "timeout" && (
-              <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5">
+              <div className="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 shadow-sm transition-all duration-300">
                 <span className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-800">Timeout</span>
-                <span className="font-mono text-base font-black tabular-nums text-amber-900">
+                <span className="font-mono text-lg font-black tabular-nums text-amber-900">
                   {formatSecondsAsClock(timeoutSecondsLeft)}
                 </span>
               </div>
             )}
             {clockReason === "stopped" && (
-              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700">
+              <span className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700">
                 Klocka stoppad
               </span>
             )}
