@@ -558,7 +558,7 @@ export function MatchFeedModal({
   }, [groupedByPeriod])
   const hasTimelineUpdates = sortedFeed.length > 0
   const isNoLiveUpdatesIssue = !hasTimelineUpdates || clockReason === "no_events"
-  const showClockAndTimers = !isNoLiveUpdatesIssue
+  const showClockAndTimers = matchStatus !== "finished" && !isNoLiveUpdatesIssue
 
   const calculatedTopScorersByTeam = useMemo(() => {
     const goalEvents = sortedFeed.filter((event) => (event.type || "").toLowerCase().includes("mål") && event.player)
