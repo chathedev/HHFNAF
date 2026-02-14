@@ -395,7 +395,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     return { live, upcoming }
   }, [matchesToDisplay])
   const shouldRenderMatchSection =
-    showInitialMatchLoader || matchesToDisplay.length > 0 || Boolean(matchErrorMessage)
+    !matchError && (showInitialMatchLoader || matchesToDisplay.length > 0)
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -685,26 +685,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
                 <div className="mt-8">
                   {showInitialMatchLoader && (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
                         <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
                         Laddar matcher...
-                      </div>
-                      {[0, 1, 2].map((item) => (
-                        <div key={item} className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                          <div className="animate-pulse space-y-2">
-                            <div className="h-3 w-28 rounded bg-gray-200" />
-                            <div className="h-4 w-3/4 rounded bg-gray-200" />
-                            <div className="h-3 w-1/2 rounded bg-gray-200" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {!showInitialMatchLoader && matchError && (
-                    <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                      {matchErrorMessage}
                     </div>
                   )}
 
