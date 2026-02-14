@@ -544,11 +544,7 @@ export function MatchFeedModal({
       .sort((a, b) => b - a)
   }, [groupedByPeriod])
   const hasTimelineUpdates = sortedFeed.length > 0
-  const isLiveLike = matchStatus === "live" || matchStatus === "halftime"
-  const isNoLiveUpdatesIssue =
-    isLiveLike &&
-    !hasTimelineUpdates &&
-    (clockReason === "no_events" || !hasClockData)
+  const isNoLiveUpdatesIssue = !hasTimelineUpdates || clockReason === "no_events"
   const showClockAndTimers = !isNoLiveUpdatesIssue
 
   const calculatedTopScorersByTeam = useMemo(() => {
