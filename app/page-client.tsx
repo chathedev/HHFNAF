@@ -147,6 +147,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const [topScorersByMatchId, setTopScorersByMatchId] = useState<Record<string, MatchTopScorer[]>>({})
   const [clockStateByMatchId, setClockStateByMatchId] = useState<Record<string, MatchClockState>>({})
   const [penaltiesByMatchId, setPenaltiesByMatchId] = useState<Record<string, MatchPenalty[]>>({})
+  const [stableScoreByMatchId, setStableScoreByMatchId] = useState<Record<string, string>>({})
   const timelineFetchInFlightRef = useRef<Record<string, Promise<void>>>({})
   const [isInitialHomeMatchFetchDone, setIsInitialHomeMatchFetchDone] = useState(Boolean(initialData?.matches?.length))
   const hasStartedInitialHomeMatchFetchRef = useRef(false)
@@ -172,6 +173,22 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     params: liveParams,
   })
   const matchError = Boolean(matchErrorMessage)
+
+  useEffect(() => {
+    if (upcomingMatches.length === 0) return
+    setStableScoreByMatchId((prev) => {
+      let changed = false
+      const next = { ...prev }
+      for (const match of upcomingMatches) {
+        const cleaned = typeof match.result === "string" ? match.result.trim() : ""
+        if (cleaned && cleaned.toLowerCase() !== "inte publicerat" && next[match.id] !== cleaned) {
+          next[match.id] = cleaned
+          changed = true
+        }
+      }
+      return changed ? next : prev
+    })
+  }, [upcomingMatches])
 
   useEffect(() => {
     if (hasStartedInitialHomeMatchFetchRef.current) {
@@ -351,10 +368,10 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     const showFinishedZeroZeroIssue = shouldShowFinishedZeroZeroIssue(match)
     const teamTypeRaw = match.teamType?.trim() || ""
     const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
-    const scoreValue =
-      status !== "upcoming" && match.result && match.result.trim().length > 0
-        ? match.result.trim()
-        : null
+    const liveScore = typeof match.result === "string" ? match.result.trim() : ""
+    const stableScore = liveScore || stableScoreByMatchId[match.id] || ""
+    const hasStarted = match.date.getTime() <= Date.now() + 60_000
+    const scoreValue = stableScore && (status !== "upcoming" || hasStarted) ? stableScore : null
 
     const statusBadge = (() => {
       if (status === "live") {
