@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useEffect, useCallback } from "react"
+import { useMemo, useState, useEffect, useCallback, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
@@ -145,14 +145,16 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   const [timelineByMatchId, setTimelineByMatchId] = useState<Record<string, MatchFeedEvent[]>>({})
   const [topScorersByMatchId, setTopScorersByMatchId] = useState<Record<string, MatchTopScorer[]>>({})
-  const [hasResolvedInitialMatchData, setHasResolvedInitialMatchData] = useState(false)
-  const [hasAttemptedInitialMatchFetch, setHasAttemptedInitialMatchFetch] = useState(false)
+  const [isInitialHomeMatchFetchDone, setIsInitialHomeMatchFetchDone] = useState(Boolean(initialData?.matches?.length))
+  const hasStartedInitialHomeMatchFetchRef = useRef(false)
   const limitedParams = useMemo(() => ({ limit: 10 }), [])
   const {
     matches: upcomingMatches,
     loading: matchLoading,
     error: matchErrorMessage,
     hasPayload: hasMatchPayload,
+    refresh: refreshHomeMatches,
+    isRefreshing: matchRefreshing,
   } = useMatchData({
     dataType: "liveUpcoming",
     params: limitedParams,
@@ -169,13 +171,23 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const matchError = Boolean(matchErrorMessage)
 
   useEffect(() => {
-    if (!hasAttemptedInitialMatchFetch && !matchLoading) {
-      setHasAttemptedInitialMatchFetch(true)
+    if (hasStartedInitialHomeMatchFetchRef.current) {
+      return
     }
-    if (!hasResolvedInitialMatchData && hasMatchPayload && !matchLoading) {
-      setHasResolvedInitialMatchData(true)
+    if (hasMatchPayload) {
+      setIsInitialHomeMatchFetchDone(true)
+      return
     }
-  }, [hasAttemptedInitialMatchFetch, hasResolvedInitialMatchData, hasMatchPayload, matchLoading])
+
+    hasStartedInitialHomeMatchFetchRef.current = true
+    refreshHomeMatches(true)
+      .catch(() => {
+        // Error state from useMatchData decides visibility.
+      })
+      .finally(() => {
+        setIsInitialHomeMatchFetchDone(true)
+      })
+  }, [hasMatchPayload, refreshHomeMatches])
 
   // Track previous scores to highlight live updates
   const partnersForDisplay = Array.isArray(content.partners) ? content.partners.filter((p) => p.visibleInCarousel) : []
@@ -388,7 +400,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
   const matchesToDisplay = matchesTodayForward.slice(0, 10)
   const showInitialMatchLoader =
-    !hasResolvedInitialMatchData || (!hasAttemptedInitialMatchFetch && !hasMatchPayload) || (matchLoading && matchesToDisplay.length === 0)
+    !isInitialHomeMatchFetchDone && (matchLoading || matchRefreshing || !hasMatchPayload)
   const groupedHomeMatches = useMemo(() => {
     const live = matchesToDisplay.filter((match) => getMatchStatus(match) === "live")
     const upcoming = matchesToDisplay.filter((match) => getMatchStatus(match) === "upcoming")
