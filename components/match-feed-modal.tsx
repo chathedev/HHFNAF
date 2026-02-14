@@ -543,6 +543,13 @@ export function MatchFeedModal({
       .map(Number)
       .sort((a, b) => b - a)
   }, [groupedByPeriod])
+  const hasTimelineUpdates = sortedFeed.length > 0
+  const isLiveLike = matchStatus === "live" || matchStatus === "halftime"
+  const isNoLiveUpdatesIssue =
+    isLiveLike &&
+    !hasTimelineUpdates &&
+    (clockReason === "no_events" || !hasClockData)
+  const showClockAndTimers = !isNoLiveUpdatesIssue
 
   const calculatedTopScorersByTeam = useMemo(() => {
     const goalEvents = sortedFeed.filter((event) => (event.type || "").toLowerCase().includes("mål") && event.player)
@@ -682,50 +689,53 @@ export function MatchFeedModal({
           </div>
         </header>
 
-        <div className="border-b border-slate-200 bg-white px-3 py-3 sm:px-5">
-          <div className="flex flex-col items-center gap-2">
-            <div className="inline-flex min-w-[220px] items-center justify-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 shadow-sm transition-all duration-300">
-              <span className={`h-2 w-2 rounded-sm ${clockRunning ? "animate-pulse bg-emerald-500" : "bg-slate-400"}`} />
-              <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-800">Matchklocka</span>
-              <span className="font-mono text-lg font-black tabular-nums text-emerald-900">{clockDisplay}</span>
-            </div>
-            {clockReason === "timeout" && (
-              <div className="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 shadow-sm transition-all duration-300">
-                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-800">Timeout</span>
-                <span className="font-mono text-lg font-black tabular-nums text-amber-900">
-                  {formatSecondsAsClock(timeoutSecondsLeft)}
-                </span>
+        {showClockAndTimers && (
+          <div className="border-b border-slate-200 bg-white px-3 py-3 sm:px-5">
+            <div className="flex flex-col items-center gap-2">
+              <div className="inline-flex min-w-[220px] items-center justify-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 shadow-sm transition-all duration-300">
+                <span className={`h-2 w-2 rounded-sm ${clockRunning ? "animate-pulse bg-emerald-500" : "bg-slate-400"}`} />
+                <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-800">Matchklocka</span>
+                <span className="font-mono text-lg font-black tabular-nums text-emerald-900">{clockDisplay}</span>
               </div>
-            )}
-            {clockReason === "stopped" && (
-              <span className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700">
-                Klocka stoppad
-              </span>
+              {clockReason === "timeout" && (
+                <div className="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 shadow-sm transition-all duration-300">
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-800">Timeout</span>
+                  <span className="font-mono text-lg font-black tabular-nums text-amber-900">
+                    {formatSecondsAsClock(timeoutSecondsLeft)}
+                  </span>
+                </div>
+              )}
+              {clockReason === "stopped" && (
+                <span className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700">
+                  Klocka stoppad
+                </span>
+              )}
+            </div>
+
+            {activePenalties.length > 0 && (
+              <div className="mt-3 space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-700">Utvisningar pågår</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {activePenalties.map((item, index) => (
+                    <div key={`${item.team || "team"}-${item.player || "player"}-${index}`} className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="min-w-0 truncate text-xs font-semibold text-amber-900">
+                          {item.team || "Lag"} • {item.player || "Spelare"}{item.playerNumber ? ` #${item.playerNumber}` : ""}
+                        </p>
+                        <span className="font-mono text-sm font-black tabular-nums text-amber-900">
+                          {formatSecondsAsClock(item.remaining)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
+        )}
 
-          {activePenalties.length > 0 && (
-            <div className="mt-3 space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-700">Utvisningar pågår</p>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {activePenalties.map((item, index) => (
-                  <div key={`${item.team || "team"}-${item.player || "player"}-${index}`} className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="min-w-0 truncate text-xs font-semibold text-amber-900">
-                        {item.team || "Lag"} • {item.player || "Spelare"}{item.playerNumber ? ` #${item.playerNumber}` : ""}
-                      </p>
-                      <span className="font-mono text-sm font-black tabular-nums text-amber-900">
-                        {formatSecondsAsClock(item.remaining)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <nav className="z-10 grid grid-cols-2 border-b border-slate-200 bg-slate-50">
+        {!isNoLiveUpdatesIssue && (
+          <nav className="z-10 grid grid-cols-2 border-b border-slate-200 bg-slate-50">
           <button
             type="button"
             onClick={() => setActiveTab("timeline")}
@@ -742,7 +752,8 @@ export function MatchFeedModal({
           >
             Top 3 målskyttar
           </button>
-        </nav>
+          </nav>
+        )}
 
         <div className="flex-1 overflow-y-auto bg-slate-50 px-3 py-4 sm:px-8 sm:py-6">
           {activeTab === "timeline" && (
