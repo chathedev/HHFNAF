@@ -50,7 +50,6 @@ type MatchFeedModalProps = {
 const harnosandPattern = /(härnösand|harnosand|\bhhf\b)/i
 
 const isHarnosandTeam = (name?: string) => harnosandPattern.test(name ?? "")
-const normalizeTeamText = (value?: string) => (value || "").trim().toLowerCase()
 const isZeroScore = (value?: string) => {
   const normalized = (value || "").replace(/\s/g, "").replace("–", "-")
   return normalized === "0-0"
@@ -152,31 +151,23 @@ const getRowStyle = (event: MatchFeedEvent, homeTeam: string, awayTeam: string) 
   const type = (event.type || "").toLowerCase()
   const isGoal = type.includes("mål") || type.includes("goal")
   const isPenalty = type.includes("utvisning") || type.includes("varning")
-  const eventTeam = normalizeTeamText(event.team)
-  const scoringTeam = normalizeTeamText(event.scoringTeam)
-  const homeLower = normalizeTeamText(homeTeam)
-  const awayLower = normalizeTeamText(awayTeam)
   const isHomeGoalByFlag = typeof event.isHomeGoal === "boolean" ? event.isHomeGoal : null
-  const isTeamMatch = (value: string, target: string) =>
-    Boolean(value && target && (value === target || value.includes(target) || target.includes(value)))
 
   const teamTone = (() => {
-    if (isGoal && isHomeGoalByFlag === true) {
-      return isHarnosandTeam(homeTeam) ? "home" : "neutral"
-    }
-    if (isGoal && isHomeGoalByFlag === false) {
-      return isHarnosandTeam(awayTeam) ? "home" : "away"
-    }
-    if (isTeamMatch(scoringTeam, homeLower) || isTeamMatch(eventTeam, homeLower)) {
-      return isHarnosandTeam(homeTeam) ? "home" : "neutral"
-    }
-    if (isTeamMatch(scoringTeam, awayLower) || isTeamMatch(eventTeam, awayLower)) {
-      return isHarnosandTeam(awayTeam) ? "home" : "away"
-    }
-    if (isHarnosandTeam(event.team)) {
+    if (isHarnosandTeam(event.scoringTeam) || isHarnosandTeam(event.team)) {
       return "home"
     }
-    return "neutral"
+    if (event.scoringTeam || event.team) {
+      return "away"
+    }
+
+    // Fallback when backend only gives isHomeGoal without team strings.
+    if (isGoal && isHomeGoalByFlag !== null) {
+      if (isHarnosandTeam(homeTeam)) return isHomeGoalByFlag ? "home" : "away"
+      if (isHarnosandTeam(awayTeam)) return isHomeGoalByFlag ? "away" : "home"
+    }
+
+    return "away"
   })()
 
   if (isPenalty) {
