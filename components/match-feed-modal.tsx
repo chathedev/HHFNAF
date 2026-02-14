@@ -28,10 +28,44 @@ export type MatchFeedEvent = {
   }
 }
 
+export type MatchClockState = {
+  running?: boolean
+  reason?: "running" | "timeout" | "stopped" | "no_events" | string
+  period?: number
+  currentSeconds?: number
+  clock?: string
+  timeout?: {
+    timeoutStartsAt?: number
+    timeoutEndsAt?: number
+    timeoutSecondsLeft?: number
+  }
+  source?: {
+    startedAt?: string
+    latestEventAt?: string
+    latestEventTime?: number
+    usedEventTime?: boolean
+    driftSeconds?: number
+  }
+}
+
+export type MatchPenalty = {
+  team?: string
+  player?: string
+  playerNumber?: string
+  period?: number
+  startSeconds?: number
+  endSeconds?: number
+  durationSeconds?: number
+  remainingSeconds?: number
+  active?: boolean
+}
+
 type MatchFeedModalProps = {
   isOpen: boolean
   onClose: () => void
   matchFeed: MatchFeedEvent[]
+  clockState?: MatchClockState | null
+  penalties?: MatchPenalty[]
   homeTeam: string
   awayTeam: string
   finalScore?: string
@@ -46,6 +80,10 @@ type MatchFeedModalProps = {
     goals: number
   }>
 }
+
+const API_BASE_URL =
+  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
+  "https://api.harnosandshf.se"
 
 const harnosandPattern = /(härnösand|harnosand|\bhhf\b)/i
 
@@ -67,6 +105,64 @@ const parseEventTimeToSeconds = (value?: string) => {
   const safeSeconds = Number.isFinite(seconds) ? seconds : 0
   const safeExtra = Number.isFinite(extraMinutes) ? extraMinutes : 0
   return (safeMinutes + safeExtra) * 60 + safeSeconds
+}
+
+const formatSecondsAsClock = (totalSeconds: number) => {
+  const safe = Math.max(totalSeconds, 0)
+  const minutes = Math.floor(safe / 60)
+  const seconds = safe % 60
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
+}
+
+const parseClockToSeconds = (value?: string) => {
+  const clean = (value || "").trim()
+  if (!clean) return 0
+  const parts = clean.split(":")
+  if (parts.length !== 2) return 0
+  const mm = Number.parseInt(parts[0], 10)
+  const ss = Number.parseInt(parts[1], 10)
+  if (!Number.isFinite(mm) || !Number.isFinite(ss)) return 0
+  return Math.max(0, mm * 60 + ss)
+}
+
+const normalizeTimelineEvent = (event: any): MatchFeedEvent => ({
+  time: event?.time ?? "",
+  type:
+    event?.type ??
+    event?.eventType ??
+    event?.payload?.type ??
+    event?.payload?.eventType ??
+    event?.payload?.eventTypeName ??
+    "Händelse",
+  team: event?.team ?? event?.payload?.team,
+  player: event?.player ?? event?.payload?.player,
+  playerNumber: event?.playerNumber ?? event?.payload?.playerNumber,
+  description:
+    event?.payload?.description?.toString().trim() ||
+    event?.description?.toString().trim() ||
+    event?.payload?.eventText?.toString().trim() ||
+    event?.type?.toString().trim() ||
+    "Händelse",
+  homeScore: typeof event?.homeScore === "number" ? event.homeScore : undefined,
+  awayScore: typeof event?.awayScore === "number" ? event.awayScore : undefined,
+  period: typeof event?.period === "number" ? event.period : undefined,
+  score: event?.score,
+  eventId: event?.eventId ?? event?.eventIndex,
+  eventTypeId: typeof event?.eventTypeId === "number" ? event.eventTypeId : undefined,
+  payload: event?.payload,
+})
+
+const dedupeTimelineEvents = (events: MatchFeedEvent[]) => {
+  const seen = new Set<string>()
+  return events.filter((event) => {
+    const key =
+      event.eventId !== undefined
+        ? `id:${event.eventId}`
+        : `${event.time}|${event.type}|${event.description}|${event.homeScore ?? ""}-${event.awayScore ?? ""}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 const getEventCombinedText = (event: MatchFeedEvent) =>
@@ -229,17 +325,76 @@ export function MatchFeedModal({
   isOpen,
   onClose,
   matchFeed,
+  clockState,
+  penalties = [],
   homeTeam,
   awayTeam,
   finalScore,
   matchStatus,
+  matchData,
   onRefresh,
   topScorers = [],
 }: MatchFeedModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
   const [activeTab, setActiveTab] = useState<"timeline" | "scorers">("timeline")
   const refreshInFlightRef = useRef(false)
+  const [detailTimeline, setDetailTimeline] = useState<MatchFeedEvent[] | null>(null)
+  const [detailClockState, setDetailClockState] = useState<MatchClockState | null>(null)
+  const [detailPenalties, setDetailPenalties] = useState<MatchPenalty[]>([])
+  const [clockTick, setClockTick] = useState(0)
   const allowAutoRefresh = matchStatus === "live" || matchStatus === "halftime"
+  const effectiveClockState = detailClockState ?? clockState ?? null
+  const effectivePenalties = detailPenalties.length > 0 ? detailPenalties : penalties
+  const timelineSource = detailTimeline ?? matchFeed
+  const hasClockData = Boolean(
+    effectiveClockState &&
+      (typeof effectiveClockState.currentSeconds === "number" || Boolean(effectiveClockState.clock)),
+  )
+  const clockBaseSeconds = effectiveClockState?.currentSeconds ?? parseClockToSeconds(effectiveClockState?.clock)
+  const clockRunning = Boolean(effectiveClockState?.running)
+  const clockReason = effectiveClockState?.reason ?? (clockRunning ? "running" : "stopped")
+  const timeoutBaseSecondsLeft = Math.max(0, effectiveClockState?.timeout?.timeoutSecondsLeft ?? 0)
+  const clockDisplay = hasClockData ? formatSecondsAsClock(clockBaseSeconds + (clockRunning ? clockTick : 0)) : "--:--"
+  const timeoutSecondsLeft = Math.max(0, timeoutBaseSecondsLeft - (clockReason === "timeout" ? clockTick : 0))
+  const clockSourceLabel = effectiveClockState?.source
+    ? effectiveClockState.source.usedEventTime
+      ? "Källa: händelsetid"
+      : `Källa: extrapolerad (${effectiveClockState.source.driftSeconds ?? 0}s drift)`
+    : null
+  const activePenalties = useMemo(() => {
+    const currentPeriod = effectiveClockState?.period
+    return effectivePenalties
+      .filter((item) => item.active)
+      .filter((item) => (typeof currentPeriod === "number" ? item.period === currentPeriod : true))
+      .map((item) => ({
+        ...item,
+        remaining: Math.max(0, (item.remainingSeconds ?? 0) - (clockRunning ? clockTick : 0)),
+      }))
+      .filter((item) => item.remaining > 0)
+  }, [effectivePenalties, effectiveClockState?.period, clockRunning, clockTick])
+
+  const fetchDetailData = async () => {
+    const apiMatchId = matchData?.apiMatchId
+    if (!apiMatchId) return
+    const response = await fetch(`${API_BASE_URL}/matcher/match/${encodeURIComponent(apiMatchId)}?includeEvents=1`, {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    })
+    if (!response.ok) return
+    const payload = await response.json()
+    const rawTimeline = Array.isArray(payload?.events)
+      ? payload.events
+      : Array.isArray(payload?.timeline)
+        ? payload.timeline
+        : Array.isArray(payload?.matchFeed)
+          ? payload.matchFeed
+          : []
+    const normalized = dedupeTimelineEvents(rawTimeline.map((event: any) => normalizeTimelineEvent(event)))
+    setDetailTimeline(normalized)
+    setDetailClockState((payload?.clockState as MatchClockState) ?? null)
+    setDetailPenalties(Array.isArray(payload?.penalties) ? payload.penalties : [])
+    setClockTick(0)
+  }
 
   useEffect(() => {
     if (!isOpen) return
@@ -276,8 +431,23 @@ export function MatchFeedModal({
     }
   }, [isOpen, onClose])
 
+  useEffect(() => {
+    if (!isOpen) return
+    setClockTick(0)
+    fetchDetailData().catch(() => undefined)
+  }, [isOpen, matchData?.apiMatchId])
+
+  useEffect(() => {
+    if (!isOpen) return
+    if (!clockRunning && clockReason !== "timeout") return
+    const timer = globalThis.setInterval(() => {
+      setClockTick((prev) => prev + 1)
+    }, 1_000)
+    return () => globalThis.clearInterval(timer)
+  }, [isOpen, clockRunning, clockReason])
+
   const sortedFeed = useMemo(() => {
-    const feed = matchFeed ?? []
+    const feed = timelineSource ?? []
     const indexedFeed = feed.map((event, index) => ({ event, index }))
 
     const hasSpecificForKey = new Set<string>()
@@ -328,7 +498,7 @@ export function MatchFeedModal({
       return a.index - b.index
     })
       .map(({ event }) => event)
-  }, [matchFeed])
+  }, [timelineSource])
 
   const latestScore = useMemo(() => {
     const eventWithScore = sortedFeed.find(
@@ -436,17 +606,20 @@ export function MatchFeedModal({
   }, [topScorers, calculatedTopScorersByTeam])
 
   const refreshNow = async () => {
-    if (!onRefresh || refreshInFlightRef.current) return
+    if (refreshInFlightRef.current) return
     try {
       refreshInFlightRef.current = true
-      await onRefresh()
+      if (onRefresh) {
+        await onRefresh()
+      }
+      await fetchDetailData()
     } finally {
       refreshInFlightRef.current = false
     }
   }
 
   useEffect(() => {
-    if (!isOpen || !onRefresh || !allowAutoRefresh) {
+    if (!isOpen || !allowAutoRefresh) {
       return
     }
 
@@ -462,7 +635,7 @@ export function MatchFeedModal({
       globalThis.clearTimeout(kickOff)
       globalThis.clearInterval(interval)
     }
-  }, [isOpen, onRefresh, allowAutoRefresh])
+  }, [isOpen, onRefresh, allowAutoRefresh, matchData?.apiMatchId])
 
   if (!isOpen) return null
 
@@ -500,7 +673,7 @@ export function MatchFeedModal({
             <div className="flex items-start gap-2 sm:gap-3">
               <div className="rounded-xl bg-white/10 px-3 py-2 text-center sm:px-4">
                 <p className="text-[10px] uppercase tracking-[0.18em] text-slate-300">Score</p>
-                <p className="text-xl font-black leading-none sm:text-2xl">{scoreboard}</p>
+                <p className="whitespace-nowrap text-xl font-black leading-none tabular-nums sm:text-2xl">{scoreboard}</p>
               </div>
               <button
                 type="button"
@@ -514,7 +687,53 @@ export function MatchFeedModal({
           </div>
         </header>
 
-        <nav className="sticky top-[84px] z-10 grid grid-cols-2 border-b border-slate-200 bg-slate-50 sm:top-[102px]">
+        <div className="border-b border-slate-200 bg-white px-3 py-3 sm:px-5">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5">
+              <span className={`h-2 w-2 rounded-full ${clockRunning ? "animate-pulse bg-emerald-500" : "bg-slate-400"}`} />
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-800">Matchklocka</span>
+              <span className="font-mono text-base font-black tabular-nums text-emerald-900">{clockDisplay}</span>
+            </div>
+            {clockReason === "timeout" && (
+              <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5">
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-800">Timeout</span>
+                <span className="font-mono text-base font-black tabular-nums text-amber-900">
+                  {formatSecondsAsClock(timeoutSecondsLeft)}
+                </span>
+              </div>
+            )}
+            {clockReason === "stopped" && (
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700">
+                Klocka stoppad
+              </span>
+            )}
+          </div>
+          {clockSourceLabel && (
+            <p className="mt-2 text-[11px] font-medium text-slate-500">{clockSourceLabel}</p>
+          )}
+
+          {activePenalties.length > 0 && (
+            <div className="mt-3 space-y-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-700">Utvisningar pågår</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {activePenalties.map((item, index) => (
+                  <div key={`${item.team || "team"}-${item.player || "player"}-${index}`} className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="min-w-0 truncate text-xs font-semibold text-amber-900">
+                        {item.team || "Lag"} • {item.player || "Spelare"}{item.playerNumber ? ` #${item.playerNumber}` : ""}
+                      </p>
+                      <span className="font-mono text-sm font-black tabular-nums text-amber-900">
+                        {formatSecondsAsClock(item.remaining)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <nav className="z-10 grid grid-cols-2 border-b border-slate-200 bg-slate-50">
           <button
             type="button"
             onClick={() => setActiveTab("timeline")}

@@ -13,7 +13,7 @@ import {
 } from "@/lib/match-card-utils"
 import { getMatchEndTime, useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchCardCTA } from "@/components/match-card-cta"
-import { MatchFeedModal, type MatchFeedEvent } from "@/components/match-feed-modal"
+import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
 import { normalizeMatchKey } from "@/lib/matches"
 import { extendTeamDisplayName, createTeamMatchKeySet } from "@/lib/team-display"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
@@ -159,6 +159,8 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   const [timelineByMatchId, setTimelineByMatchId] = useState<Record<string, MatchFeedEvent[]>>({})
   const [topScorersByMatchId, setTopScorersByMatchId] = useState<Record<string, MatchTopScorer[]>>({})
+  const [clockStateByMatchId, setClockStateByMatchId] = useState<Record<string, MatchClockState>>({})
+  const [penaltiesByMatchId, setPenaltiesByMatchId] = useState<Record<string, MatchPenalty[]>>({})
   const timelineFetchInFlightRef = useRef<Record<string, Promise<void>>>({})
   const [hasResolvedLiveData, setHasResolvedLiveData] = useState(false)
   const [hasResolvedOldData, setHasResolvedOldData] = useState(false)
@@ -269,6 +271,12 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
 
       const normalized = dedupeTimelineEvents(rawTimeline.map((event: any) => mapTimelineEvent(event)))
       setTimelineByMatchId((prev) => ({ ...prev, [match.id]: normalized }))
+      if (payload?.clockState) {
+        setClockStateByMatchId((prev) => ({ ...prev, [match.id]: payload.clockState as MatchClockState }))
+      }
+      if (Array.isArray(payload?.penalties)) {
+        setPenaltiesByMatchId((prev) => ({ ...prev, [match.id]: payload.penalties as MatchPenalty[] }))
+      }
       const topScorers = extractTopScorers(payload)
       if (topScorers.length > 0) {
         setTopScorersByMatchId((prev) => ({ ...prev, [match.id]: topScorers }))
@@ -696,6 +704,8 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
           matchStatus={selectedMatch.matchStatus}
           matchId={selectedMatch.id}
           matchData={selectedMatch}
+          clockState={clockStateByMatchId[selectedMatch.id] ?? null}
+          penalties={penaltiesByMatchId[selectedMatch.id] ?? []}
           topScorers={topScorersByMatchId[selectedMatch.id] ?? []}
           onRefresh={async () => {
             await fetchMatchTimeline(selectedMatch, true).catch(() => undefined)
