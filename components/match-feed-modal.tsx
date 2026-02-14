@@ -356,11 +356,6 @@ export function MatchFeedModal({
   const timeoutBaseSecondsLeft = Math.max(0, effectiveClockState?.timeout?.timeoutSecondsLeft ?? 0)
   const clockDisplay = hasClockData ? formatSecondsAsClock(clockBaseSeconds + (clockRunning ? clockTick : 0)) : "--:--"
   const timeoutSecondsLeft = Math.max(0, timeoutBaseSecondsLeft - (clockReason === "timeout" ? clockTick : 0))
-  const clockSourceLabel = effectiveClockState?.source
-    ? effectiveClockState.source.usedEventTime
-      ? "Källa: händelsetid"
-      : `Källa: extrapolerad (${effectiveClockState.source.driftSeconds ?? 0}s drift)`
-    : null
   const activePenalties = useMemo(() => {
     const currentPeriod = effectiveClockState?.period
     return effectivePenalties
@@ -708,9 +703,6 @@ export function MatchFeedModal({
               </span>
             )}
           </div>
-          {clockSourceLabel && (
-            <p className="mt-2 text-[11px] font-medium text-slate-500">{clockSourceLabel}</p>
-          )}
 
           {activePenalties.length > 0 && (
             <div className="mt-3 space-y-2">
