@@ -114,19 +114,6 @@ const formatSecondsAsClock = (totalSeconds: number) => {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
 }
 
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
-
-const parseClockToSeconds = (value?: string) => {
-  const clean = (value || "").trim()
-  if (!clean) return 0
-  const parts = clean.split(":")
-  if (parts.length !== 2) return 0
-  const mm = Number.parseInt(parts[0], 10)
-  const ss = Number.parseInt(parts[1], 10)
-  if (!Number.isFinite(mm) || !Number.isFinite(ss)) return 0
-  return Math.max(0, mm * 60 + ss)
-}
-
 const normalizeTimelineEvent = (event: any): MatchFeedEvent => ({
   time: event?.time ?? "",
   type:
@@ -352,22 +339,9 @@ export function MatchFeedModal({
     effectiveClockState &&
       (typeof effectiveClockState.currentSeconds === "number" || Boolean(effectiveClockState.clock)),
   )
-  const sourcePeriodLength = effectiveClockState?.source?.periodLengthSeconds
-  const sourceMaxTotal = effectiveClockState?.source?.maxTotalSeconds
-  const computedMaxTotal =
-    typeof sourceMaxTotal === "number" && sourceMaxTotal > 0
-      ? sourceMaxTotal
-      : typeof sourcePeriodLength === "number" && sourcePeriodLength > 0
-        ? sourcePeriodLength * 2
-        : Number.POSITIVE_INFINITY
-  const rawBaseSeconds = effectiveClockState?.currentSeconds ?? parseClockToSeconds(effectiveClockState?.clock)
-  const clockBaseSeconds = Number.isFinite(computedMaxTotal) ? clamp(rawBaseSeconds, 0, computedMaxTotal) : Math.max(rawBaseSeconds, 0)
   const clockRunning = Boolean(effectiveClockState?.running)
   const clockReason = effectiveClockState?.reason ?? (clockRunning ? "running" : "stopped")
   const timeoutBaseSecondsLeft = Math.max(0, effectiveClockState?.timeout?.timeoutSecondsLeft ?? 0)
-  const liveSeconds = clockBaseSeconds + (clockRunning ? clockTick : 0)
-  const clampedLiveSeconds = Number.isFinite(computedMaxTotal) ? clamp(liveSeconds, 0, computedMaxTotal) : Math.max(liveSeconds, 0)
-  const clockDisplay = hasClockData ? formatSecondsAsClock(clampedLiveSeconds) : "--:--"
   const timeoutSecondsLeft = Math.max(0, timeoutBaseSecondsLeft - (clockReason === "timeout" ? clockTick : 0))
   const activePenalties = useMemo(() => {
     const currentPeriod = effectiveClockState?.period
@@ -558,7 +532,9 @@ export function MatchFeedModal({
   }, [groupedByPeriod])
   const hasTimelineUpdates = sortedFeed.length > 0
   const isNoLiveUpdatesIssue = !hasTimelineUpdates || clockReason === "no_events"
-  const showClockAndTimers = matchStatus !== "finished" && !isNoLiveUpdatesIssue
+  const showTimeoutTimer = clockReason === "timeout" && timeoutSecondsLeft > 0
+  const showPenaltyTimers = activePenalties.length > 0
+  const showClockAndTimers = matchStatus !== "finished" && !isNoLiveUpdatesIssue && (showTimeoutTimer || showPenaltyTimers)
 
   const calculatedTopScorersByTeam = useMemo(() => {
     const goalEvents = sortedFeed.filter((event) => (event.type || "").toLowerCase().includes("mål") && event.player)
@@ -701,12 +677,7 @@ export function MatchFeedModal({
         {showClockAndTimers && (
           <div className="border-b border-slate-200 bg-white px-3 py-3 sm:px-5">
             <div className="flex flex-col items-center gap-2">
-              <div className="inline-flex min-w-[220px] items-center justify-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 shadow-sm transition-all duration-300">
-                <span className={`h-2 w-2 rounded-sm ${clockRunning ? "animate-pulse bg-emerald-500" : "bg-slate-400"}`} />
-                <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-800">Matchklocka</span>
-                <span className="font-mono text-lg font-black tabular-nums text-emerald-900">{clockDisplay}</span>
-              </div>
-              {clockReason === "timeout" && (
+              {showTimeoutTimer && (
                 <div className="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 shadow-sm transition-all duration-300">
                   <span className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-800">Timeout</span>
                   <span className="font-mono text-lg font-black tabular-nums text-amber-900">
@@ -714,14 +685,9 @@ export function MatchFeedModal({
                   </span>
                 </div>
               )}
-              {clockReason === "stopped" && (
-                <span className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700">
-                  Klocka stoppad
-                </span>
-              )}
             </div>
 
-            {activePenalties.length > 0 && (
+            {showPenaltyTimers && (
               <div className="mt-3 space-y-2">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-700">Utvisningar pågår</p>
                 <div className="grid gap-2 sm:grid-cols-2">
