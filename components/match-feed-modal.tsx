@@ -197,7 +197,7 @@ const getRowStyle = (event: MatchFeedEvent, homeTeam: string, awayTeam: string) 
     }
   }
 
-  if (isGoal && teamTone === "away") {
+  if (isGoal && teamTone !== "home") {
     return {
       tone: "border-indigo-200 bg-indigo-50",
       dot: "bg-indigo-500",
