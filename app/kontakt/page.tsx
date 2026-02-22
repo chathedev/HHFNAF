@@ -12,9 +12,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { useState, useEffect } from "react"
+import kontaktSeedContent from "@/content/kontakt.json"
 
 export default function KontaktPage() {
-  const [content, setContent] = useState<any>(null)
+  const [content, setContent] = useState<any>(kontaktSeedContent)
   const [isEditorMode, setIsEditorMode] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
@@ -28,12 +29,16 @@ export default function KontaktPage() {
     const editorMode = urlParams.get("editor") === "true"
     setIsEditorMode(editorMode)
 
+    if (!editorMode) {
+      return
+    }
+
     fetch("/content/kontakt.json")
       .then((res) => res.json())
       .then((data) => setContent(data))
       .catch((err) => {
         console.error("Failed to load content:", err)
-        setContent({
+        setContent((prev: any) => prev || {
           pageTitle: "Kontakta Oss",
           pageDescription: "Har du frågor eller funderingar? Tveka inte att höra av dig till oss!",
           departments: [

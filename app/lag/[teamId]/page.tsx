@@ -199,6 +199,25 @@ export default function TeamPage({ params }: TeamPageProps) {
           <div className="pointer-events-none absolute -right-44 bottom-[-140px] h-80 w-80 rounded-full bg-emerald-900/30 blur-3xl" />
           <div className="pointer-events-none absolute -left-36 top-8 h-72 w-72 rounded-full bg-white/15 blur-3xl" />
           <div className="relative mx-auto flex max-w-4xl flex-col items-center px-4 py-20 text-center text-white md:px-6 md:py-24">
+            <nav aria-label="Brödsmulor" className="mb-4 text-xs font-medium text-white/80">
+              <ol className="flex flex-wrap items-center justify-center gap-2">
+                <li>
+                  <Link href="/" className="hover:text-white">
+                    Hem
+                  </Link>
+                </li>
+                <li aria-hidden>›</li>
+                <li>
+                  <Link href="/lag" className="hover:text-white">
+                    Lag
+                  </Link>
+                </li>
+                <li aria-hidden>›</li>
+                <li aria-current="page" className="text-white">
+                  {teamDisplayName}
+                </li>
+              </ol>
+            </nav>
             <Link
               href="/lag"
               className="mb-6 inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.35em] text-emerald-600 shadow transition hover:bg-emerald-50"
@@ -415,7 +434,13 @@ export default function TeamPage({ params }: TeamPageProps) {
                             className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
                             title={status === "finished" ? "Se repris" : "Se matchen live"}
                           >
-                            <img src="/handbollplay_mini.png" alt="" className="h-4 w-4 brightness-0 invert" />
+                            <Image
+                              src="/handbollplay_mini.png"
+                              alt=""
+                              width={16}
+                              height={16}
+                              className="h-4 w-4 brightness-0 invert"
+                            />
                             {playLabel}
                           </a>
                         )}

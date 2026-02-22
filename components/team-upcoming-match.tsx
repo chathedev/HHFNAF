@@ -2,6 +2,7 @@
 
 import { useMemo, useEffect, useRef, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { extendTeamDisplayName } from "@/lib/team-display"
 
 import { Card } from "@/components/ui/card"
@@ -393,9 +394,11 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
               className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
               title={status === "finished" ? "Se repris" : "Se matchen live"}
             >
-              <img
+              <Image
                 src="/handbollplay_mini.png"
                 alt=""
+                width={16}
+                height={16}
                 className="h-4 w-4 brightness-0 invert"
               />
               {status === "finished" ? "Se repris" : "Se live"}

@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { Mail, MapPin, Phone } from "lucide-react"
 
 export default function Footer() {
@@ -10,9 +11,11 @@ export default function Footer() {
           {/* Club Info */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <img 
-                src="/logo.png" 
-                alt="Härnösands HF Logo" 
+              <Image
+                src="/logo.png"
+                alt="Härnösands HF logotyp"
+                width={48}
+                height={48}
                 className="w-12 h-12 object-contain"
               />
               <h3 className="text-xl font-bold">Härnösands HF</h3>

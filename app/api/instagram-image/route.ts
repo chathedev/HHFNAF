@@ -32,22 +32,25 @@ export async function GET(request: NextRequest) {
     upstream = await fetch(parsed.toString(), {
       headers: {
         Accept: "image/avif,image/webp,image/*,*/*;q=0.8",
+        "Accept-Language": "sv-SE,sv;q=0.9,en-US;q=0.8,en;q=0.7",
+        Referer: "https://www.instagram.com/",
+        Origin: "https://www.instagram.com",
         "User-Agent":
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
       },
       cache: "no-store",
     })
   } catch {
-    return NextResponse.json({ ok: false, error: "Upstream fetch failed" }, { status: 502 })
+    return NextResponse.redirect(parsed.toString(), 307)
   }
 
   if (!upstream.ok) {
-    return NextResponse.json({ ok: false, error: `Upstream returned ${upstream.status}` }, { status: 502 })
+    return NextResponse.redirect(parsed.toString(), 307)
   }
 
   const contentType = upstream.headers.get("content-type") || ""
   if (!contentType.toLowerCase().startsWith("image/")) {
-    return NextResponse.json({ ok: false, error: "Upstream did not return image content" }, { status: 502 })
+    return NextResponse.redirect(parsed.toString(), 307)
   }
 
   const arrayBuffer = await upstream.arrayBuffer()
@@ -59,4 +62,3 @@ export async function GET(request: NextRequest) {
     },
   })
 }
-

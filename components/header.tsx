@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Menu, X, Instagram, Facebook } from "lucide-react"
+import { Menu, X, Instagram, Facebook, Search } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 
@@ -27,7 +27,7 @@ function Header() {
     }
   }, [])
 
-  const visiblePaths = ["/", "/lag", "/matcher", "/kontakt", "/kop-biljett"]
+  const visiblePaths = ["/", "/lag", "/matcher", "/kontakt", "/kop-biljett", "/sok"]
 
   if (!visiblePaths.includes(pathname)) {
     return null
@@ -72,18 +72,41 @@ function Header() {
             </div>
           </Link>
 
-          <Button
-            className="md:hidden p-2"
-            size="icon"
-            variant="ghost"
-            aria-label="Toggle navigation menu"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
-          </Button>
+          <div className="flex items-center gap-2 md:hidden">
+            <Button asChild className="p-2" size="icon" variant="ghost">
+              <Link href="/sok" aria-label="Sök på webbplatsen">
+                <Search size={22} />
+              </Link>
+            </Button>
+            <Button
+              className="p-2"
+              size="icon"
+              variant="ghost"
+              aria-label="Toggle navigation menu"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
+            </Button>
+          </div>
 
           {/* Desktop navigation */}
           <nav className="hidden md:flex items-center gap-6 ml-auto">
+            <form action="/sok" method="get" className="mr-1">
+              <label htmlFor="header-site-search" className="sr-only">
+                Sök på webbplatsen
+              </label>
+              <div className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 backdrop-blur">
+                <Search className="h-4 w-4 text-gray-300" aria-hidden />
+                <input
+                  id="header-site-search"
+                  name="q"
+                  type="search"
+                  placeholder="Sök..."
+                  className="w-40 bg-transparent text-sm text-white placeholder:text-gray-300 outline-none"
+                  autoComplete="off"
+                />
+              </div>
+            </form>
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -99,7 +122,16 @@ function Header() {
                   `}
                 />
               </Link>
-            ))}
+              ))}
+              <Link
+                href="/sok"
+                className={`relative text-base font-medium py-2 group transition-colors duration-300 ${
+                  pathname === "/sok" ? "text-orange-500" : "text-white hover:text-gray-300"
+                }`}
+                aria-label="Sök på webbplatsen"
+              >
+                <Search className="h-5 w-5" />
+              </Link>
             {/* Social links moved inside this flex container for right alignment */}
             <div className="flex items-center space-x-4">
               <Link href="https://www.instagram.com/harnosandshf/" target="_blank" rel="noopener noreferrer">
@@ -137,6 +169,14 @@ function Header() {
                   {link.name}
                 </Link>
               ))}
+              <Link
+                href="/sok"
+                className="relative text-lg font-medium py-3 px-4 rounded-lg transition-all duration-200 text-white hover:text-gray-300 hover:bg-white/5 flex items-center gap-3"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <Search className="h-5 w-5" />
+                Sök
+              </Link>
             </nav>
 
             <div className="flex items-center justify-center gap-6 mt-6 pt-6 border-t border-gray-800">

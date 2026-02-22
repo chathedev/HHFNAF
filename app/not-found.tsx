@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Home, Mail } from "lucide-react"
+import { Home, Mail, Search, Calendar, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export default function NotFound() {
@@ -33,6 +33,36 @@ export default function NotFound() {
               Kontakta oss
             </Link>
           </Button>
+        </div>
+
+        <div className="mt-6 grid grid-cols-2 gap-3 text-left">
+          <Link
+            href="/lag"
+            className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 hover:border-emerald-500 hover:text-emerald-700"
+          >
+            <Users className="mb-1 h-4 w-4" />
+            Våra lag
+          </Link>
+          <Link
+            href="/matcher"
+            className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 hover:border-emerald-500 hover:text-emerald-700"
+          >
+            <Calendar className="mb-1 h-4 w-4" />
+            Matcher
+          </Link>
+          <Link
+            href="/sok"
+            className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 hover:border-emerald-500 hover:text-emerald-700"
+          >
+            <Search className="mb-1 h-4 w-4" />
+            Sök
+          </Link>
+          <Link
+            href="/kop-biljett"
+            className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 hover:border-emerald-500 hover:text-emerald-700"
+          >
+            Köp biljett
+          </Link>
         </div>
 
         <div className="mt-8 text-sm text-gray-500">

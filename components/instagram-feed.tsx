@@ -69,7 +69,7 @@ export function InstagramFeed() {
   const [loading, setLoading] = useState(true)
   const [unavailable, setUnavailable] = useState(false)
   const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({})
-  const [imageRetryIndex, setImageRetryIndex] = useState<Record<string, number>>({})
+  const [imageAttemptIndex, setImageAttemptIndex] = useState<Record<string, number>>({})
   const [selectedPost, setSelectedPost] = useState<InstagramPost | null>(null)
 
   useEffect(() => {
@@ -180,22 +180,24 @@ export function InstagramFeed() {
 
   const resolveImage = (post: InstagramPost) => {
     const key = getPostKey(post)
-    const candidates = getImageCandidates(post)
-    const index = imageRetryIndex[key] ?? 0
+    const rawCandidates = getImageCandidates(post)
+    const candidates = rawCandidates.flatMap((candidate) => [candidate, getProxiedInstagramImageUrl(candidate)])
+    const index = imageAttemptIndex[key] ?? 0
 
     if (candidates.length === 0) return PLACEHOLDER_IMAGE
     if (brokenImages[key]) return PLACEHOLDER_IMAGE
     const picked = candidates[Math.min(index, candidates.length - 1)] || ""
     if (!picked) return PLACEHOLDER_IMAGE
-    return getProxiedInstagramImageUrl(picked)
+    return picked
   }
 
   const markImageBroken = (post: InstagramPost) => {
     const key = getPostKey(post)
-    const candidates = getImageCandidates(post)
-    const currentIndex = imageRetryIndex[key] ?? 0
+    const rawCandidates = getImageCandidates(post)
+    const candidates = rawCandidates.flatMap((candidate) => [candidate, getProxiedInstagramImageUrl(candidate)])
+    const currentIndex = imageAttemptIndex[key] ?? 0
     if (currentIndex < candidates.length - 1) {
-      setImageRetryIndex((prev) => ({ ...prev, [key]: currentIndex + 1 }))
+      setImageAttemptIndex((prev) => ({ ...prev, [key]: currentIndex + 1 }))
       return
     }
     setBrokenImages((prev) => ({ ...prev, [key]: true }))

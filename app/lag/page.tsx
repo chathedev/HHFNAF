@@ -1,4 +1,6 @@
 import Link from "next/link"
+import type { Metadata } from "next"
+import Image from "next/image"
 
 import lagContent from "@/public/content/lag.json"
 import Footer from "@/components/footer"
@@ -12,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { CLUB_TEAM_METADATA, extendTeamDisplayName } from "@/lib/team-display"
 import { Card } from "@/components/ui/card"
+import { buildPageMetadata } from "@/lib/seo"
 
 type RawTeam = (typeof lagContent)["teamCategories"][number]["teams"][number]
 
@@ -84,6 +87,14 @@ const categoryStats = lagContent.teamCategories.map((category) => ({
 
 const totalTeams = categoryStats.reduce((sum, category) => sum + category.count, 0)
 
+export const metadata: Metadata = buildPageMetadata({
+  title: "Lag",
+  description:
+    lagContent.pageDescription || "Se alla lag i Härnösands HF från ungdomslag till seniorverksamhet.",
+  path: "/lag",
+  keywords: ["Härnösands HF lag", "handbollslag Härnösand", "ungdomslag handboll"],
+})
+
 export default function LagPage() {
   return (
     <>
@@ -148,15 +159,12 @@ export default function LagPage() {
                         className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-emerald-300 hover:shadow-lg"
                       >
                         <div className="relative h-32 w-full overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
-                          <div
-                            className="h-full w-full transition group-hover:scale-[1.02]"
-                            style={{
-                              backgroundImage: `url(${team.heroImage})`,
-                              backgroundSize: "contain",
-                              backgroundPosition: "center",
-                              backgroundRepeat: "no-repeat",
-                            }}
-                            aria-hidden
+                          <Image
+                            src={team.heroImage}
+                            alt={team.heroImageAlt}
+                            fill
+                            className="object-contain p-2 transition group-hover:scale-[1.02]"
+                            sizes="(max-width: 768px) 50vw, 20vw"
                           />
                           <Link
                             href={`/lag/${team.id}`}
@@ -206,15 +214,12 @@ export default function LagPage() {
                   className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-emerald-300 hover:shadow-lg"
                 >
                   <div className="relative h-32 w-full overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
-                    <div
-                      className="h-full w-full transition group-hover:scale-[1.02]"
-                      style={{
-                        backgroundImage: `url(${team.heroImage})`,
-                        backgroundSize: "contain",
-                        backgroundPosition: "center",
-                        backgroundRepeat: "no-repeat",
-                      }}
-                      aria-hidden
+                    <Image
+                      src={team.heroImage}
+                      alt={team.heroImageAlt}
+                      fill
+                      className="object-contain p-2 transition group-hover:scale-[1.02]"
+                      sizes="(max-width: 768px) 50vw, 20vw"
                     />
                     <Link
                       href={`/lag/${team.id}`}

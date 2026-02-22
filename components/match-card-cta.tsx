@@ -1,5 +1,7 @@
 "use client"
 
+import Image from "next/image"
+
 import type { NormalizedMatch } from "@/lib/use-match-data"
 
 const TICKET_LINK = "https://clubs.clubmate.se/harnosandshf/overview/"
@@ -28,11 +30,7 @@ export function MatchCardCTA({ match, status }: { match: NormalizedMatch; status
           rel="noreferrer"
           className="inline-flex w-full items-center justify-center gap-2 rounded-[6px] border border-transparent bg-gradient-to-r from-slate-900 to-slate-700 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-slate-900/40 transition hover:opacity-90 focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-slate-900 sm:w-auto sm:py-2"
         >
-          <img
-            src="/handbollplay_mini.png"
-            alt="HandbollPlay"
-            className="h-4 w-4"
-          />
+          <Image src="/handbollplay_mini.png" alt="HandbollPlay" width={16} height={16} className="h-4 w-4" />
           <span>{status === "finished" ? "Se repris" : "Se live"}</span>
         </a>
       )}

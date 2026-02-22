@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState, useEffect, useCallback, useRef } from "react"
+import dynamic from "next/dynamic"
 import Image from "next/image"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
@@ -39,7 +40,6 @@ import {
 } from "@/lib/match-card-utils"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchCardCTA } from "@/components/match-card-cta"
-import { InstagramFeed } from "@/components/instagram-feed"
 import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
 type MatchTopScorer = {
@@ -48,6 +48,14 @@ type MatchTopScorer = {
   playerNumber?: string
   goals: number
 }
+
+const InstagramFeed = dynamic(
+  () => import("@/components/instagram-feed").then((module) => ({ default: module.InstagramFeed })),
+  {
+    ssr: false,
+    loading: () => <div className="h-24" aria-hidden />,
+  },
+)
 
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 const API_BASE_URL =
@@ -651,11 +659,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                 </Link>
               </div>
             </div>
-          </section>
-
-          {/* SEO H1 Section */}
-          <section className="sr-only" aria-hidden="true">
-            <h1>Härnösands HF – Handboll i Härnösand</h1>
           </section>
 
           {/* Stats Section */}
