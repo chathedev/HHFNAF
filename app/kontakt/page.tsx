@@ -14,8 +14,84 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import kontaktSeedContent from "@/content/kontakt.json"
 
+const normalizeKontaktContent = (raw: any) => {
+  const fallback = {
+    pageTitle: "Kontakta Oss",
+    pageDescription: "Har du frågor eller funderingar? Tveka inte att höra av dig till oss!",
+    departments: [],
+    generalContact: {
+      title: "Allmänna frågor",
+      description: "För allmänna frågor och information",
+      email: "kontakt@harnosandshf.se",
+    },
+    contactForm: {
+      title: "Skicka meddelande",
+      nameLabel: "Namn *",
+      namePlaceholder: "Ditt namn",
+      emailLabel: "E-post *",
+      emailPlaceholder: "din@email.se",
+      subjectLabel: "Ämne",
+      subjectPlaceholder: "Vad gäller ditt meddelande?",
+      messageLabel: "Meddelande *",
+      messagePlaceholder: "Skriv ditt meddelande här...",
+      submitButton: "Skicka meddelande",
+    },
+    faq: {
+      title: "Vanliga frågor om att börja träna",
+      items: [],
+      ctaButton: "Kontakta oss för mer information",
+    },
+  }
+
+  const source = raw && typeof raw === "object" ? raw : {}
+  const departments = Array.isArray(source.departments)
+    ? source.departments.map((dept: any) => ({
+        title: dept?.title || dept?.name || "",
+        description: dept?.description || "",
+        email: dept?.email || "",
+      }))
+    : []
+
+  const contactForm = source.contactForm ?? {}
+  const faqSource = source.faq
+  const faqItems = Array.isArray(faqSource)
+    ? faqSource
+    : Array.isArray(faqSource?.items)
+      ? faqSource.items
+      : []
+
+  return {
+    pageTitle: source.pageTitle || fallback.pageTitle,
+    pageDescription: source.pageDescription || fallback.pageDescription,
+    departments,
+    generalContact: {
+      title: source.generalContact?.title || fallback.generalContact.title,
+      description: source.generalContact?.description || fallback.generalContact.description,
+      email: source.generalContact?.email || fallback.generalContact.email,
+    },
+    contactForm: {
+      title: contactForm.title || fallback.contactForm.title,
+      nameLabel: contactForm.nameLabel || contactForm.fields?.name || fallback.contactForm.nameLabel,
+      namePlaceholder: contactForm.namePlaceholder || fallback.contactForm.namePlaceholder,
+      emailLabel: contactForm.emailLabel || contactForm.fields?.email || fallback.contactForm.emailLabel,
+      emailPlaceholder: contactForm.emailPlaceholder || fallback.contactForm.emailPlaceholder,
+      subjectLabel: contactForm.subjectLabel || contactForm.fields?.subject || fallback.contactForm.subjectLabel,
+      subjectPlaceholder: contactForm.subjectPlaceholder || fallback.contactForm.subjectPlaceholder,
+      messageLabel: contactForm.messageLabel || contactForm.fields?.message || fallback.contactForm.messageLabel,
+      messagePlaceholder: contactForm.messagePlaceholder || fallback.contactForm.messagePlaceholder,
+      submitButton: contactForm.submitButton || contactForm.submitText || fallback.contactForm.submitButton,
+    },
+    faq: {
+      title: (Array.isArray(faqSource) ? fallback.faq.title : faqSource?.title) || fallback.faq.title,
+      items: faqItems,
+      ctaButton:
+        (Array.isArray(faqSource) ? fallback.faq.ctaButton : faqSource?.ctaButton) || fallback.faq.ctaButton,
+    },
+  }
+}
+
 export default function KontaktPage() {
-  const [content, setContent] = useState<any>(kontaktSeedContent)
+  const [content, setContent] = useState<any>(() => normalizeKontaktContent(kontaktSeedContent))
   const [isEditorMode, setIsEditorMode] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
@@ -35,7 +111,7 @@ export default function KontaktPage() {
 
     fetch("/content/kontakt.json")
       .then((res) => res.json())
-      .then((data) => setContent(data))
+      .then((data) => setContent(normalizeKontaktContent(data)))
       .catch((err) => {
         console.error("Failed to load content:", err)
         setContent((prev: any) => prev || {
