@@ -252,29 +252,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     })
   }, [currentMatches, finishedMatches])
 
-  const matchesTodayForward = useMemo(() => {
-    const statusOrder: Record<string, number> = { live: 0, upcoming: 1, finished: 2 }
-    const matchesInWindow = [...allHomeMatches]
-
-    matchesInWindow.sort((a, b) => {
-      const statusA = getMatchStatus(a)
-      const statusB = getMatchStatus(b)
-      const statusDiff = (statusOrder[statusA] ?? 3) - (statusOrder[statusB] ?? 3)
-      if (statusDiff !== 0) {
-        return statusDiff
-      }
-      if (statusA === "finished" && statusB === "finished") {
-        return b.date.getTime() - a.date.getTime()
-      }
-      return a.date.getTime() - b.date.getTime()
-    })
-
-    return matchesInWindow
-  }, [allHomeMatches])
-
   const selectedMatch = useMemo(
-    () => matchesTodayForward.find((match) => match.id === selectedMatchId) ?? null,
-    [matchesTodayForward, selectedMatchId],
+    () => allHomeMatches.find((match) => match.id === selectedMatchId) ?? null,
+    [allHomeMatches, selectedMatchId],
   )
 
   const fetchMatchTimeline = useCallback(async (match: NormalizedMatch, force = false) => {
@@ -439,17 +419,28 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     )
   }
 
-  const matchesToDisplay = matchesTodayForward.slice(0, 10)
   const showInitialMatchLoader =
     !isInitialHomeMatchFetchDone && (matchLoading || matchRefreshing || !hasMatchPayload)
   const groupedHomeMatches = useMemo(() => {
-    const live = matchesToDisplay.filter((match) => getMatchStatus(match) === "live")
-    const upcoming = matchesToDisplay.filter((match) => getMatchStatus(match) === "upcoming")
-    const finished = matchesToDisplay.filter((match) => getMatchStatus(match) === "finished")
+    const live = allHomeMatches
+      .filter((match) => getMatchStatus(match) === "live")
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .slice(0, 4)
+    const upcoming = allHomeMatches
+      .filter((match) => getMatchStatus(match) === "upcoming")
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .slice(0, 6)
+    const finished = allHomeMatches
+      .filter((match) => getMatchStatus(match) === "finished")
+      .sort((a, b) => b.date.getTime() - a.date.getTime())
+      .slice(0, 4)
+
     return { live, upcoming, finished }
-  }, [matchesToDisplay])
+  }, [allHomeMatches])
+  const totalDisplayedMatches =
+    groupedHomeMatches.live.length + groupedHomeMatches.upcoming.length + groupedHomeMatches.finished.length
   const shouldRenderMatchSection =
-    !matchError && (showInitialMatchLoader || matchesToDisplay.length > 0)
+    !matchError && (showInitialMatchLoader || totalDisplayedMatches > 0)
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -747,13 +738,13 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
                   {!showInitialMatchLoader &&
                     !matchError &&
-                    matchesToDisplay.length === 0 && (
+                    totalDisplayedMatches === 0 && (
                     <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-500">
                       Inga matcher att visa just nu.
                     </div>
                   )}
 
-                  {!showInitialMatchLoader && !matchError && matchesToDisplay.length > 0 && (
+                  {!showInitialMatchLoader && !matchError && totalDisplayedMatches > 0 && (
                     <div className="space-y-7">
                       {groupedHomeMatches.live.length > 0 && (
                         <div>
