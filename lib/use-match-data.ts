@@ -1071,27 +1071,11 @@ const createMatchDataChannel = () => {
     apiIdToNormalizedId.clear()
     matchEventIds.clear()
 
-    // Debug: Log the raw payload structure
-    console.log("[v0] handleSnapshot payload keys:", Object.keys(payload || {}))
-    console.log("[v0] payload.matches count:", payload?.matches?.length ?? 0)
-    console.log("[v0] payload.grouped:", payload?.grouped ? {
-      live: payload.grouped.live?.length ?? 0,
-      finished: payload.grouped.finished?.length ?? 0,
-      upcoming: payload.grouped.upcoming?.length ?? 0,
-    } : "undefined")
-    console.log("[v0] payload.recentFinished count:", payload?.recentFinished?.length ?? 0)
-
     const normalizedCurrent = normalizeAndRegisterMatches(resolveCurrentMatchPayload(payload))
     const normalizedOld = normalizeAndRegisterMatches(resolveOldMatchPayload(payload))
 
     currentMatches = sortMatchesAscending(normalizedCurrent)
     oldMatches = sortMatchesDescending(normalizedOld)
-
-    console.log("[v0] After normalization - currentMatches:", currentMatches.length, "oldMatches:", oldMatches.length)
-    
-    // Count finished matches in currentMatches
-    const finishedInCurrent = currentMatches.filter(m => m.matchStatus === "finished")
-    console.log("[v0] Finished matches in currentMatches:", finishedInCurrent.length)
 
     // Extract pre-grouped data from API response if available
     if (payload?.grouped) {
@@ -1104,14 +1088,8 @@ const createMatchDataChannel = () => {
         finished: normalizeGroupList(payload.grouped.finished),
         upcoming: normalizeGroupList(payload.grouped.upcoming),
       }
-      console.log("[v0] groupedMatches set:", {
-        live: groupedMatches.live.length,
-        finished: groupedMatches.finished.length,
-        upcoming: groupedMatches.upcoming.length,
-      })
     } else {
       groupedMatches = undefined
-      console.log("[v0] No grouped data in payload")
     }
 
     // Extract recentFinished from API response if available
@@ -1119,10 +1097,8 @@ const createMatchDataChannel = () => {
       recentFinishedMatches = payload.recentFinished
         .map((m: any) => normalizeMatch(m))
         .filter((m: NormalizedMatch | null): m is NormalizedMatch => m !== null)
-      console.log("[v0] recentFinishedMatches set:", recentFinishedMatches.length)
     } else {
       recentFinishedMatches = undefined
-      console.log("[v0] No recentFinished data in payload")
     }
 
     lastUpdated = typeof payload?.lastUpdated === "string" ? payload.lastUpdated : null

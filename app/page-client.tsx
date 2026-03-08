@@ -154,8 +154,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const limitedParams = useMemo(() => ({ limit: 10 }), [])
   const {
     matches: upcomingMatches,
-    grouped: apiGroupedMatches,
-    recentFinished: apiRecentFinished,
     loading: matchLoading,
     error: matchErrorMessage,
     hasPayload: hasMatchPayload,
@@ -442,35 +440,14 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const showInitialMatchLoader =
     !isInitialHomeMatchFetchDone && (matchLoading || matchRefreshing || !hasMatchPayload)
   
-  // Debug: Log what we receive from the hook
-  console.log("[v0] page-client apiGroupedMatches:", apiGroupedMatches ? {
-    live: apiGroupedMatches.live?.length ?? 0,
-    finished: apiGroupedMatches.finished?.length ?? 0,
-    upcoming: apiGroupedMatches.upcoming?.length ?? 0,
-  } : "undefined")
-  console.log("[v0] page-client apiRecentFinished:", apiRecentFinished?.length ?? "undefined")
-  console.log("[v0] page-client matchesToDisplay:", matchesToDisplay.length)
-  console.log("[v0] page-client finished in matchesToDisplay:", matchesToDisplay.filter(m => getMatchStatus(m) === "finished").length)
-  
-  // Use API-provided grouped data if available, otherwise derive from matches
+  // Derive grouped matches from the matches list - the backend returns all matches including finished
   const groupedHomeMatches = useMemo(() => {
-    // If the API provides pre-grouped data, use it directly
-    if (apiGroupedMatches) {
-      const result = {
-        live: apiGroupedMatches.live ?? [],
-        finished: apiRecentFinished ?? apiGroupedMatches.finished ?? [],
-        upcoming: apiGroupedMatches.upcoming ?? [],
-      }
-      console.log("[v0] Using apiGroupedMatches - finished count:", result.finished.length)
-      return result
-    }
-    // Fallback: derive from matches list
+    // Always derive from matchesToDisplay which includes finished matches from the API
     const live = matchesToDisplay.filter((match) => getMatchStatus(match) === "live")
     const finished = matchesToDisplay.filter((match) => getMatchStatus(match) === "finished")
     const upcoming = matchesToDisplay.filter((match) => getMatchStatus(match) === "upcoming")
-    console.log("[v0] Fallback derivation - finished count:", finished.length)
     return { live, finished, upcoming }
-  }, [matchesToDisplay, apiGroupedMatches, apiRecentFinished])
+  }, [matchesToDisplay])
   const hasAnyMatches = matchesToDisplay.length > 0 || 
     (groupedHomeMatches.live.length > 0 || groupedHomeMatches.finished.length > 0 || groupedHomeMatches.upcoming.length > 0)
   const shouldRenderMatchSection =
