@@ -241,110 +241,13 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     return getSimplifiedMatchStatus(match)
   }
 
-  // Helper to calculate when a finished match ended based on timeline
-  const getMatchEndTime = useCallback((match: NormalizedMatch): Date | null => {
-    if (match.matchStatus !== "finished") return null
-
-    const matchStart = match.date.getTime()
-    const timeline = match.matchFeed ?? []
-
-    // Look for match end events with time played
-    const endEvent = timeline.find((event) => {
-      const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
-      return (
-        text.includes("2:a halvlek är slut") ||
-        text.includes("2:a halvlek slut") ||
-        text.includes("andra halvlek är slut") ||
-        text.includes("andra halvlek slut") ||
-        text.includes("matchen är slut") ||
-        text.includes("matchen slut") ||
-        text.includes("match över") ||
-        text.includes("slutresultat")
-      )
-    })
-
-    if (endEvent?.time) {
-      try {
-        const timeStr = endEvent.time.replace(/[^\d:+]/g, '')
-        if (timeStr) {
-          const parts = timeStr.split('+')
-          const baseMinutes = parseInt(parts[0].split(':')[0]) || 0
-          const overtimeMinutes = parts[1] ? parseInt(parts[1]) : 0
-          const totalMinutes = baseMinutes + overtimeMinutes
-          if (totalMinutes > 0) {
-            return new Date(matchStart + totalMinutes * 60 * 1000)
-          }
-        }
-      } catch {
-        // Continue to next method
-      }
-    }
-
-    // Use the last timeline event time
-    if (timeline.length > 0) {
-      const sortedEvents = timeline
-        .filter(event => event.time && event.time.match(/\d+:\d+/))
-        .sort((a, b) => {
-          const aTime = a.time?.replace(/[^\d:+]/g, '') || '0:0'
-          const bTime = b.time?.replace(/[^\d:+]/g, '') || '0:0'
-          const aMinutes = parseInt(aTime.split(':')[0]) || 0
-          const bMinutes = parseInt(bTime.split(':')[0]) || 0
-          return bMinutes - aMinutes
-        })
-
-      const lastEvent = sortedEvents[0]
-      if (lastEvent?.time) {
-        try {
-          const timeStr = lastEvent.time.replace(/[^\d:+]/g, '')
-          if (timeStr) {
-            const parts = timeStr.split('+')
-            const baseMinutes = parseInt(parts[0].split(':')[0]) || 0
-            const overtimeMinutes = parts[1] ? parseInt(parts[1]) : 0
-            const totalMinutes = baseMinutes + overtimeMinutes
-            if (totalMinutes > 0) {
-              return new Date(matchStart + totalMinutes * 60 * 1000)
-            }
-          }
-        } catch {
-          // Fallback
-        }
-      }
-    }
-
-    // Fallback: estimate end by normal handball duration (90 minutes)
-    return new Date(matchStart + 90 * 60 * 1000)
-  }, [])
-
+  // Simply display all matches from the backend - let the backend handle filtering
   const matchesTodayForward = useMemo(() => {
-    const now = Date.now()
-    const liveLookbackMs = 1000 * 60 * 60 * 6
-    const finishedRetentionMs = 1000 * 60 * 60 // 1 hour after match end time
-    // Home page: Show live + recently finished + upcoming
     const statusOrder: Record<string, number> = { live: 0, finished: 1, upcoming: 2 }
 
-    const currentMatchesInWindow = upcomingMatches.filter((match) => {
-      const status = match.matchStatus === "halftime" ? "live" : (match.matchStatus ?? "upcoming")
-
-      if (status === "live") {
-        const kickoff = match.date.getTime()
-        return kickoff >= now - liveLookbackMs
-      }
-
-      // Show finished matches that ended within the last hour
-      if (status === "finished") {
-        const endTime = getMatchEndTime(match)
-        if (endTime) {
-          const retentionWindowEnd = endTime.getTime() + finishedRetentionMs
-          return now <= retentionWindowEnd
-        }
-        return false
-      }
-
-      return status === "upcoming"
-    })
-
+    // Deduplicate by ID
     const seenIds = new Set<string>()
-    const matchesInWindow = [...currentMatchesInWindow].filter((match) => {
+    const uniqueMatches = upcomingMatches.filter((match) => {
       if (seenIds.has(match.id)) {
         return false
       }
@@ -352,7 +255,8 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       return true
     })
 
-    matchesInWindow.sort((a, b) => {
+    // Sort by status (live first, then finished, then upcoming) and then by date
+    uniqueMatches.sort((a, b) => {
       const statusA = getMatchStatus(a)
       const statusB = getMatchStatus(b)
       const statusDiff = (statusOrder[statusA] ?? 3) - (statusOrder[statusB] ?? 3)
@@ -362,8 +266,8 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       return a.date.getTime() - b.date.getTime()
     })
 
-    return matchesInWindow
-  }, [upcomingMatches, getMatchEndTime])
+    return uniqueMatches
+  }, [upcomingMatches])
 
   const selectedMatch = useMemo(
     () => matchesTodayForward.find((match) => match.id === selectedMatchId) ?? null,
