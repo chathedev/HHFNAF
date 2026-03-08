@@ -174,6 +174,19 @@ const isPeriodOrMatchEndEvent = (event: MatchFeedEvent) => {
   )
 }
 
+const is7mPenaltyAwarded = (event: MatchFeedEvent) => {
+  const text = getEventCombinedText(event)
+  return text.includes("tilldömd 7-m") || text.includes("tilldömd 7m") || text.includes("awarded 7m")
+}
+
+const is7mPenaltyResult = (event: MatchFeedEvent) => {
+  const text = getEventCombinedText(event)
+  return (
+    (text.includes("7-m") || text.includes("7m")) &&
+    (text.includes("mål") || text.includes("miss") || text.includes("goal") || text.includes("räddning") || text.includes("saved"))
+  )
+}
+
 const getEventDisplayText = (event: MatchFeedEvent) => {
   const payloadDescription = event.payload?.description?.toString().trim()
   if (payloadDescription) return payloadDescription
@@ -473,9 +486,21 @@ export function MatchFeedModal({
       const timeDiff = parseEventTimeToSeconds(eventB.time) - parseEventTimeToSeconds(eventA.time)
       if (timeDiff !== 0) return timeDiff
 
-      // Same period + same time: goal first, end-events last, then keep backend order.
-      const priorityA = isGoalEvent(eventA) ? 0 : isPeriodOrMatchEndEvent(eventA) ? 2 : 1
-      const priorityB = isGoalEvent(eventB) ? 0 : isPeriodOrMatchEndEvent(eventB) ? 2 : 1
+      // Same period + same time priority (lower = shown first in descending timeline):
+      // 0 = goal (always first)
+      // 1 = 7m penalty result (miss/goal) - shown AFTER the awarded event in timeline
+      // 2 = normal events
+      // 3 = 7m penalty awarded - shown BEFORE the result in timeline
+      // 4 = period/match end events (always last)
+      const getPriority = (event: MatchFeedEvent) => {
+        if (isGoalEvent(event) && !is7mPenaltyResult(event)) return 0
+        if (is7mPenaltyResult(event)) return 1
+        if (isPeriodOrMatchEndEvent(event)) return 4
+        if (is7mPenaltyAwarded(event)) return 3
+        return 2
+      }
+      const priorityA = getPriority(eventA)
+      const priorityB = getPriority(eventB)
       if (priorityA !== priorityB) return priorityA - priorityB
       return a.index - b.index
     })

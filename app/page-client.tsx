@@ -241,11 +241,86 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     return getSimplifiedMatchStatus(match)
   }
 
+  // Helper to calculate when a finished match ended based on timeline
+  const getMatchEndTime = useCallback((match: NormalizedMatch): Date | null => {
+    if (match.matchStatus !== "finished") return null
+
+    const matchStart = match.date.getTime()
+    const timeline = match.matchFeed ?? []
+
+    // Look for match end events with time played
+    const endEvent = timeline.find((event) => {
+      const text = `${event.type || ''} ${event.description || ''}`.toLowerCase()
+      return (
+        text.includes("2:a halvlek är slut") ||
+        text.includes("2:a halvlek slut") ||
+        text.includes("andra halvlek är slut") ||
+        text.includes("andra halvlek slut") ||
+        text.includes("matchen är slut") ||
+        text.includes("matchen slut") ||
+        text.includes("match över") ||
+        text.includes("slutresultat")
+      )
+    })
+
+    if (endEvent?.time) {
+      try {
+        const timeStr = endEvent.time.replace(/[^\d:+]/g, '')
+        if (timeStr) {
+          const parts = timeStr.split('+')
+          const baseMinutes = parseInt(parts[0].split(':')[0]) || 0
+          const overtimeMinutes = parts[1] ? parseInt(parts[1]) : 0
+          const totalMinutes = baseMinutes + overtimeMinutes
+          if (totalMinutes > 0) {
+            return new Date(matchStart + totalMinutes * 60 * 1000)
+          }
+        }
+      } catch {
+        // Continue to next method
+      }
+    }
+
+    // Use the last timeline event time
+    if (timeline.length > 0) {
+      const sortedEvents = timeline
+        .filter(event => event.time && event.time.match(/\d+:\d+/))
+        .sort((a, b) => {
+          const aTime = a.time?.replace(/[^\d:+]/g, '') || '0:0'
+          const bTime = b.time?.replace(/[^\d:+]/g, '') || '0:0'
+          const aMinutes = parseInt(aTime.split(':')[0]) || 0
+          const bMinutes = parseInt(bTime.split(':')[0]) || 0
+          return bMinutes - aMinutes
+        })
+
+      const lastEvent = sortedEvents[0]
+      if (lastEvent?.time) {
+        try {
+          const timeStr = lastEvent.time.replace(/[^\d:+]/g, '')
+          if (timeStr) {
+            const parts = timeStr.split('+')
+            const baseMinutes = parseInt(parts[0].split(':')[0]) || 0
+            const overtimeMinutes = parts[1] ? parseInt(parts[1]) : 0
+            const totalMinutes = baseMinutes + overtimeMinutes
+            if (totalMinutes > 0) {
+              return new Date(matchStart + totalMinutes * 60 * 1000)
+            }
+          }
+        } catch {
+          // Fallback
+        }
+      }
+    }
+
+    // Fallback: estimate end by normal handball duration (90 minutes)
+    return new Date(matchStart + 90 * 60 * 1000)
+  }, [])
+
   const matchesTodayForward = useMemo(() => {
     const now = Date.now()
     const liveLookbackMs = 1000 * 60 * 60 * 6
-    // Home page: Show live + upcoming only
-    const statusOrder: Record<string, number> = { live: 0, upcoming: 1 }
+    const finishedRetentionMs = 1000 * 60 * 60 // 1 hour after match end time
+    // Home page: Show live + recently finished + upcoming
+    const statusOrder: Record<string, number> = { live: 0, finished: 1, upcoming: 2 }
 
     const currentMatchesInWindow = upcomingMatches.filter((match) => {
       const status = match.matchStatus === "halftime" ? "live" : (match.matchStatus ?? "upcoming")
@@ -253,6 +328,16 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       if (status === "live") {
         const kickoff = match.date.getTime()
         return kickoff >= now - liveLookbackMs
+      }
+
+      // Show finished matches that ended within the last hour
+      if (status === "finished") {
+        const endTime = getMatchEndTime(match)
+        if (endTime) {
+          const retentionWindowEnd = endTime.getTime() + finishedRetentionMs
+          return now <= retentionWindowEnd
+        }
+        return false
       }
 
       return status === "upcoming"
@@ -278,7 +363,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     })
 
     return matchesInWindow
-  }, [upcomingMatches])
+  }, [upcomingMatches, getMatchEndTime])
 
   const selectedMatch = useMemo(
     () => matchesTodayForward.find((match) => match.id === selectedMatchId) ?? null,
@@ -452,8 +537,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     !isInitialHomeMatchFetchDone && (matchLoading || matchRefreshing || !hasMatchPayload)
   const groupedHomeMatches = useMemo(() => {
     const live = matchesToDisplay.filter((match) => getMatchStatus(match) === "live")
+    const finished = matchesToDisplay.filter((match) => getMatchStatus(match) === "finished")
     const upcoming = matchesToDisplay.filter((match) => getMatchStatus(match) === "upcoming")
-    return { live, upcoming }
+    return { live, finished, upcoming }
   }, [matchesToDisplay])
   const shouldRenderMatchSection =
     !matchError && (showInitialMatchLoader || matchesToDisplay.length > 0)
@@ -769,6 +855,16 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                             <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-rose-600">Live Nu</h4>
                           </div>
                           <ul className="space-y-3">{groupedHomeMatches.live.map(renderHomeMatchCard)}</ul>
+                        </div>
+                      )}
+
+                      {groupedHomeMatches.finished.length > 0 && (
+                        <div>
+                          <div className="mb-3 flex items-center gap-2">
+                            <span className="h-2.5 w-2.5 rounded-full bg-gray-400" />
+                            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-gray-600">Nyligen Avslutade</h4>
+                          </div>
+                          <ul className="space-y-3">{groupedHomeMatches.finished.map(renderHomeMatchCard)}</ul>
                         </div>
                       )}
 
