@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { matchStateManager } from "./match-state-manager"
 import { mapVenueIdToName } from "./venue-mapper"
+import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "./match-sort"
 
 export type MatchFeedEvent = {
   time: string
@@ -495,8 +496,8 @@ const normalizeMatches = (matches: ApiMatch[]) =>
     .map(normalizeMatch)
     .filter((match): match is NormalizedMatch => Boolean(match))
 
-const compareMatchesByDateAsc = (a: NormalizedMatch, b: NormalizedMatch) => a.date.getTime() - b.date.getTime()
-const compareMatchesByDateDesc = (a: NormalizedMatch, b: NormalizedMatch) => b.date.getTime() - a.date.getTime()
+const compareMatchesByDateAsc = compareMatchesByDateAscStable
+const compareMatchesByDateDesc = compareMatchesByDateDescStable
 
 const sortMatchesAscending = (matches: NormalizedMatch[]) => [...matches].sort(compareMatchesByDateAsc)
 const sortMatchesDescending = (matches: NormalizedMatch[]) => [...matches].sort(compareMatchesByDateDesc)

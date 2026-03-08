@@ -30,6 +30,7 @@ import type { FullContent, Partner } from "@/lib/content-types"
 import { deriveSiteVariant, type SiteVariant, getThemeVariant, getHeroImages, type ThemeVariant } from "@/lib/site-variant"
 import { canShowTicketForMatch } from "@/lib/matches"
 import { extendTeamDisplayName } from "@/lib/team-display"
+import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
 import {
   buildMatchScheduleLabel,
   getMatchupLabel,
@@ -424,15 +425,15 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const groupedHomeMatches = useMemo(() => {
     const live = allHomeMatches
       .filter((match) => getMatchStatus(match) === "live")
-      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .sort(compareMatchesByDateAscStable)
       .slice(0, 4)
     const upcoming = allHomeMatches
       .filter((match) => getMatchStatus(match) === "upcoming")
-      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .sort(compareMatchesByDateAscStable)
       .slice(0, 6)
     const finished = allHomeMatches
       .filter((match) => getMatchStatus(match) === "finished")
-      .sort((a, b) => b.date.getTime() - a.date.getTime())
+      .sort(compareMatchesByDateDescStable)
       .slice(0, 4)
 
     return { live, upcoming, finished }

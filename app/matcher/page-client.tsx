@@ -16,6 +16,7 @@ import { MatchCardCTA } from "@/components/match-card-cta"
 import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
 import { normalizeMatchKey } from "@/lib/matches"
 import { extendTeamDisplayName, createTeamMatchKeySet } from "@/lib/team-display"
+import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
 type MatchTopScorer = {
   team: string
@@ -396,12 +397,15 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
       else finished.push(match)
     })
 
-    live.sort((a, b) => a.date.getTime() - b.date.getTime())
-    upcoming.sort((a, b) => a.date.getTime() - b.date.getTime())
+    live.sort(compareMatchesByDateAscStable)
+    upcoming.sort(compareMatchesByDateAscStable)
     finished.sort((a, b) => {
       const endA = getMatchEndTime(a)?.getTime() ?? (a.date.getTime() + 90 * 60 * 1000)
       const endB = getMatchEndTime(b)?.getTime() ?? (b.date.getTime() + 90 * 60 * 1000)
-      return endB - endA
+      if (endA !== endB) {
+        return endB - endA
+      }
+      return compareMatchesByDateDescStable(a, b)
     })
 
     return { live, upcoming, finished }

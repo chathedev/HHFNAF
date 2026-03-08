@@ -17,6 +17,7 @@ import {
   extendTeamDisplayName,
   extendTeamDisplayNameFromCandidates,
 } from "@/lib/team-display"
+import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
 
 const PLACEHOLDER_HERO = "/placeholder.jpg"
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
@@ -174,9 +175,9 @@ export default function TeamPage({ params }: TeamPageProps) {
           return statusDiff
         }
         if (statusA === "finished" && statusB === "finished") {
-          return b.date.getTime() - a.date.getTime()
+          return compareMatchesByDateDescStable(a, b)
         }
-        return a.date.getTime() - b.date.getTime()
+        return compareMatchesByDateAscStable(a, b)
       })
       .slice(0, 2)
   }, [allMatches, teamMatchKeys])

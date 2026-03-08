@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card"
 import { canShowTicketForMatch } from "@/lib/matches"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
+import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
 
 const normalizeTeamKey = (value: string) =>
   value
@@ -140,10 +141,10 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
           }
 
           if ((a.matchStatus ?? "upcoming") === "finished" && (b.matchStatus ?? "upcoming") === "finished") {
-            return b.date.getTime() - a.date.getTime()
+            return compareMatchesByDateDescStable(a, b)
           }
 
-          return a.date.getTime() - b.date.getTime()
+          return compareMatchesByDateAscStable(a, b)
         })[0] ?? null
     )
   }, [matches, teamKeys])
