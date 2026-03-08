@@ -154,6 +154,8 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const limitedParams = useMemo(() => ({ limit: 10 }), [])
   const {
     matches: upcomingMatches,
+    grouped: apiGroupedMatches,
+    recentFinished: apiRecentFinished,
     loading: matchLoading,
     error: matchErrorMessage,
     hasPayload: hasMatchPayload,
@@ -439,14 +441,26 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const matchesToDisplay = matchesTodayForward.slice(0, 10)
   const showInitialMatchLoader =
     !isInitialHomeMatchFetchDone && (matchLoading || matchRefreshing || !hasMatchPayload)
+  // Use API-provided grouped data if available, otherwise derive from matches
   const groupedHomeMatches = useMemo(() => {
+    // If the API provides pre-grouped data, use it directly
+    if (apiGroupedMatches) {
+      return {
+        live: apiGroupedMatches.live ?? [],
+        finished: apiRecentFinished ?? apiGroupedMatches.finished ?? [],
+        upcoming: apiGroupedMatches.upcoming ?? [],
+      }
+    }
+    // Fallback: derive from matches list
     const live = matchesToDisplay.filter((match) => getMatchStatus(match) === "live")
     const finished = matchesToDisplay.filter((match) => getMatchStatus(match) === "finished")
     const upcoming = matchesToDisplay.filter((match) => getMatchStatus(match) === "upcoming")
     return { live, finished, upcoming }
-  }, [matchesToDisplay])
+  }, [matchesToDisplay, apiGroupedMatches, apiRecentFinished])
+  const hasAnyMatches = matchesToDisplay.length > 0 || 
+    (groupedHomeMatches.live.length > 0 || groupedHomeMatches.finished.length > 0 || groupedHomeMatches.upcoming.length > 0)
   const shouldRenderMatchSection =
-    !matchError && (showInitialMatchLoader || matchesToDisplay.length > 0)
+    !matchError && (showInitialMatchLoader || hasAnyMatches)
 
   useEffect(() => {
     if (typeof window === "undefined") {

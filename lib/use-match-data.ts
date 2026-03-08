@@ -96,9 +96,17 @@ export type EnhancedMatchData = {
   }
 }
 
+export type GroupedMatches = {
+  live: NormalizedMatch[]
+  finished: NormalizedMatch[]
+  upcoming: NormalizedMatch[]
+}
+
 type SharedMatchCacheEntry = {
   current: NormalizedMatch[]
   old: NormalizedMatch[]
+  grouped?: GroupedMatches
+  recentFinished?: NormalizedMatch[]
   lastUpdated: string | null
   timestamp: number
 }
@@ -665,13 +673,15 @@ const resolveOldMatchPayload = (payload: any): ApiMatch[] => {
   return []
 }
 
-const FULL_POLL_INTERVAL_MS = 20_000
-const EVENT_POLL_INTERVAL_MS = 3_000
+const FULL_POLL_INTERVAL_MS = 2_500
+const EVENT_POLL_INTERVAL_MS = 2_500
 const LAST_EVENT_ID_STORAGE_KEY = "matcher_last_event_id"
 const CHANNEL_ENDPOINT = getDataEndpoint()
 type MatchChannelPayload = {
   current: NormalizedMatch[]
   old: NormalizedMatch[]
+  grouped?: GroupedMatches
+  recentFinished?: NormalizedMatch[]
   lastUpdated: string | null
 }
 
@@ -693,6 +703,8 @@ const createMatchDataChannel = () => {
 
   let currentMatches: NormalizedMatch[] = []
   let oldMatches: NormalizedMatch[] = []
+  let groupedMatches: GroupedMatches | undefined = latestEntry?.grouped
+  let recentFinishedMatches: NormalizedMatch[] | undefined = latestEntry?.recentFinished
 
   const matchMap = new Map<string, NormalizedMatch>()
   const rawMatchStore = new Map<string, ApiMatch>()
@@ -911,6 +923,8 @@ const createMatchDataChannel = () => {
     latestPayload = {
       current: currentMatches,
       old: oldMatches,
+      grouped: groupedMatches,
+      recentFinished: recentFinishedMatches,
       lastUpdated,
     }
   }
@@ -1069,12 +1083,38 @@ const createMatchDataChannel = () => {
     currentMatches = sortMatchesAscending(normalizedCurrent)
     oldMatches = sortMatchesDescending(normalizedOld)
 
+    // Extract pre-grouped data from API response if available
+    if (payload?.grouped) {
+      const normalizeGroupList = (list: unknown): NormalizedMatch[] => {
+        if (!Array.isArray(list)) return []
+        return list.map((m: any) => normalizeMatch(m)).filter((m): m is NormalizedMatch => m !== null)
+      }
+      groupedMatches = {
+        live: normalizeGroupList(payload.grouped.live),
+        finished: normalizeGroupList(payload.grouped.finished),
+        upcoming: normalizeGroupList(payload.grouped.upcoming),
+      }
+    } else {
+      groupedMatches = undefined
+    }
+
+    // Extract recentFinished from API response if available
+    if (Array.isArray(payload?.recentFinished)) {
+      recentFinishedMatches = payload.recentFinished
+        .map((m: any) => normalizeMatch(m))
+        .filter((m: NormalizedMatch | null): m is NormalizedMatch => m !== null)
+    } else {
+      recentFinishedMatches = undefined
+    }
+
     lastUpdated = typeof payload?.lastUpdated === "string" ? payload.lastUpdated : null
     persistLastEventId(payload?.lastEventId)
 
     latestEntry = {
       current: currentMatches,
       old: oldMatches,
+      grouped: groupedMatches,
+      recentFinished: recentFinishedMatches,
       lastUpdated,
       timestamp: Date.now(),
     }
@@ -1500,6 +1540,8 @@ export const useMatchData = (options?: {
   const initialConnectionState = matchDataChannel.getConnectionState()
   const initialHasData = initialConnectionState.hasData || Boolean(options?.initialData?.matches?.length)
   const [matches, setMatches] = useState<NormalizedMatch[]>(options?.initialData?.matches ?? [])
+  const [grouped, setGrouped] = useState<GroupedMatches | undefined>(undefined)
+  const [recentFinished, setRecentFinished] = useState<NormalizedMatch[] | undefined>(undefined)
   const [loading, setLoading] = useState(!initialHasData && enabled)
   const [error, setError] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -1528,6 +1570,9 @@ export const useMatchData = (options?: {
     (payload: MatchChannelPayload) => {
       const selectedMatches = selectMatchesFromPayload(payload)
       setMatches(selectedMatches)
+      // Update grouped and recentFinished from the API payload
+      setGrouped(payload.grouped)
+      setRecentFinished(payload.recentFinished)
       selectedMatches.forEach((match) => {
         matchStateManager.queueUpdate(match.id, {
           ...match,
@@ -1619,6 +1664,8 @@ export const useMatchData = (options?: {
 
   return {
     matches,
+    grouped,
+    recentFinished,
     loading,
     error,
     refresh,
