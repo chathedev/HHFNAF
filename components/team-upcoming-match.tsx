@@ -90,9 +90,13 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   const [selectedMatch, setSelectedMatch] = useState<NormalizedMatch | null>(null)
   
   // ALL HOOKS MUST BE AT THE TOP - before any conditional returns
-  const { matches, loading, error, refresh } = useMatchData({ 
+  const { matches: currentMatches, loading: currentLoading, error: currentError, refresh } = useMatchData({
     refreshIntervalMs: 1_000,
     dataType: "liveUpcoming"
+  })
+  const { matches: finishedMatches, loading: finishedLoading, error: finishedError } = useMatchData({
+    refreshIntervalMs: 1_000,
+    dataType: "old",
   })
 
   const teamKeys = useMemo(() => {
@@ -100,20 +104,52 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
     return labels.map((label) => normalizeTeamKey(label)).filter(Boolean)
   }, [teamLabels])
 
-  const upcomingMatches = useMemo(() => {
-    return matches.filter((match) => match.matchStatus === "upcoming" || match.matchStatus === "live")
-  }, [matches])
+  const matches = useMemo(() => {
+    const seenIds = new Set<string>()
+
+    return [...currentMatches, ...finishedMatches].filter((match) => {
+      if (seenIds.has(match.id)) {
+        return false
+      }
+      seenIds.add(match.id)
+      return true
+    })
+  }, [currentMatches, finishedMatches])
 
   const nextMatch = useMemo(() => {
     if (teamKeys.length === 0) {
       return null
     }
+
+    const statusOrder: Record<string, number> = {
+      live: 0,
+      halftime: 0,
+      upcoming: 1,
+      finished: 2,
+    }
+
     return (
-      upcomingMatches
+      matches
         .filter((match) => teamKeys.includes(match.normalizedTeam))
-        .sort((a, b) => a.date.getTime() - b.date.getTime())[0] ?? null
+        .sort((a, b) => {
+          const statusA = statusOrder[a.matchStatus ?? "upcoming"] ?? 3
+          const statusB = statusOrder[b.matchStatus ?? "upcoming"] ?? 3
+
+          if (statusA !== statusB) {
+            return statusA - statusB
+          }
+
+          if ((a.matchStatus ?? "upcoming") === "finished" && (b.matchStatus ?? "upcoming") === "finished") {
+            return b.date.getTime() - a.date.getTime()
+          }
+
+          return a.date.getTime() - b.date.getTime()
+        })[0] ?? null
     )
-  }, [upcomingMatches, teamKeys])
+  }, [matches, teamKeys])
+
+  const loading = currentLoading || finishedLoading
+  const error = currentError ?? finishedError
 
   // Track previous score to detect when Härnösands HF scores - MUST be before any returns
   const prevScoreRef = useRef<{ home: number; away: number; matchId: string } | null>(null)

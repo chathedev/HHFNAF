@@ -9,7 +9,7 @@ import lagContent from "@/public/content/lag.json"
 import Footer from "@/components/footer"
 import { Card } from "@/components/ui/card"
 import { canShowTicketForMatch, normalizeMatchKey } from "@/lib/matches"
-import { useMatchData, shouldShowFinishedMatchForTeam, type NormalizedMatch } from "@/lib/use-match-data"
+import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 import {
   CLUB_TEAM_METADATA,
@@ -124,9 +124,13 @@ export default function TeamPage({ params }: TeamPageProps) {
   const teamDisplayName = getTeamDisplayName(team);
 
   const [selectedMatch, setSelectedMatch] = useState<NormalizedMatch | null>(null);
-  const { matches: allMatches, loading, error, refresh, isRefreshing } = useMatchData({
+  const { matches: currentMatches, loading: currentLoading, error: currentError, refresh } = useMatchData({
     dataType: "liveUpcoming",
     refreshIntervalMs: 1_000, // 1 second for smooth real-time updates
+  });
+  const { matches: finishedMatches, loading: finishedLoading, error: finishedError } = useMatchData({
+    dataType: "old",
+    refreshIntervalMs: 1_000,
   });
 
   const teamMatchKeys = useMemo(
@@ -134,10 +138,19 @@ export default function TeamPage({ params }: TeamPageProps) {
     [team.name, team.displayName, team.id, teamDisplayName],
   );
 
-  const teamMatches = useMemo(() => {
-    const now = Date.now()
-    const oneHourAgo = now - 1000 * 60 * 60 * 1 // 1 hour for team pages
+  const allMatches = useMemo(() => {
+    const seenIds = new Set<string>()
 
+    return [...currentMatches, ...finishedMatches].filter((match) => {
+      if (seenIds.has(match.id)) {
+        return false
+      }
+      seenIds.add(match.id)
+      return true
+    })
+  }, [currentMatches, finishedMatches])
+
+  const teamMatches = useMemo(() => {
     const filtered = allMatches.filter((match) => {
       if (teamMatchKeys.has(match.normalizedTeam)) {
         return true
@@ -151,25 +164,7 @@ export default function TeamPage({ params }: TeamPageProps) {
       return false
     })
 
-    const relevant = filtered.filter((match) => {
-      const status = getDerivedStatus(match)
-
-      // Show all live and upcoming matches
-      if (status !== "finished") {
-        return true
-      }
-
-      // For finished matches: show for 2 hours AFTER actual match end
-      if (status === "finished") {
-        // Use enhanced helper function for team page (4 hours retention = 2 extra hours after 2-hour match)
-        // Team pages show ALL finished matches (including 0-0 results)
-        return shouldShowFinishedMatchForTeam(match, 4)
-      }
-
-      return false
-    })
-
-    return relevant
+    return filtered
       .slice()
       .sort((a, b) => {
         const statusA = getDerivedStatus(a)
@@ -187,6 +182,8 @@ export default function TeamPage({ params }: TeamPageProps) {
   }, [allMatches, teamMatchKeys])
   const descriptionFallback =
     "Härnösands HF samlar spelare, ledare och supportrar i ett starkt lagbygge. Följ laget via våra kanaler och uppdateringar nedan."
+  const loading = currentLoading || finishedLoading
+  const error = currentError ?? finishedError
   const showLoadingState = loading && teamMatches.length === 0
   const showErrorState = !loading && Boolean(error) && teamMatches.length === 0
   const showEmptyState = !loading && !error && teamMatches.length === 0

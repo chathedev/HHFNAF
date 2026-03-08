@@ -87,7 +87,7 @@ const TEAM_OPTIONS = TEAM_OPTION_VALUES.map((value) => ({
 }))
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
-  { value: "current", label: "Live + Kommande" },
+  { value: "current", label: "Översikt" },
   { value: "live", label: "Live nu" },
   { value: "upcoming", label: "Kommande" },
   { value: "finished", label: "Avslutade" },
@@ -187,10 +187,26 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     dataType: "old",
   })
 
-  const hasCurrentPayload = statusFilter === "finished" ? hasOldPayload : hasLivePayload
-  const isLoading = statusFilter === "finished" ? oldLoading || !hasOldPayload : liveLoading || !hasLivePayload
-  const activeError = statusFilter === "finished" ? oldError : liveError
-  const hasResolvedActiveData = statusFilter === "finished" ? hasResolvedOldData : hasResolvedLiveData
+  const hasCurrentPayload =
+    statusFilter === "finished" ? hasOldPayload : hasLivePayload && (statusFilter !== "current" || hasOldPayload)
+  const isLoading =
+    statusFilter === "finished"
+      ? oldLoading || !hasOldPayload
+      : statusFilter === "current"
+        ? liveLoading || oldLoading || !hasLivePayload || !hasOldPayload
+        : liveLoading || !hasLivePayload
+  const activeError =
+    statusFilter === "finished"
+      ? oldError
+      : statusFilter === "current"
+        ? liveError ?? oldError
+        : liveError
+  const hasResolvedActiveData =
+    statusFilter === "finished"
+      ? hasResolvedOldData
+      : statusFilter === "current"
+        ? hasResolvedLiveData && hasResolvedOldData
+        : hasResolvedLiveData
   const hasLoadedAnyMatches = liveUpcomingMatches.length > 0 || oldMatches.length > 0
 
   useEffect(() => {
@@ -322,20 +338,20 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   }, [selectedTeam])
 
   const matchesForFilter = useMemo(() => {
-    if (statusFilter !== "finished") {
-      return liveUpcomingMatches
-    }
-
-    // Keep finished matches stable by merging old feed + any newly finished from liveUpcoming feed.
-    const finishedFromCurrent = liveUpcomingMatches.filter((match) => getMatchStatus(match) === "finished")
     const seenIds = new Set<string>()
-    return [...finishedFromCurrent, ...oldMatches].filter((match) => {
+    const mergedMatches = [...liveUpcomingMatches, ...oldMatches].filter((match) => {
       if (seenIds.has(match.id)) {
         return false
       }
       seenIds.add(match.id)
       return true
     })
+
+    if (statusFilter === "finished") {
+      return mergedMatches.filter((match) => getMatchStatus(match) === "finished")
+    }
+
+    return mergedMatches
   }, [statusFilter, liveUpcomingMatches, oldMatches])
 
   const filteredMatches = useMemo(() => {
@@ -357,10 +373,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
       }
 
       if (statusFilter === "upcoming" && status !== "upcoming") {
-        return false
-      }
-
-      if (statusFilter === "current" && status !== "live" && status !== "upcoming") {
         return false
       }
 

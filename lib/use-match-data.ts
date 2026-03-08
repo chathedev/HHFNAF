@@ -534,6 +534,25 @@ const buildEnhancedMatchData = (entry: SharedMatchCacheEntry, dataType: DataType
   }
 }
 
+const dedupeApiMatches = (matches: ApiMatch[]) => {
+  const seenIds = new Set<string>()
+
+  return matches.filter((match) => {
+    const key = match.id ?? match.matchId
+    if (key === undefined || key === null) {
+      return true
+    }
+
+    const normalizedKey = String(key)
+    if (seenIds.has(normalizedKey)) {
+      return false
+    }
+
+    seenIds.add(normalizedKey)
+    return true
+  })
+}
+
 const recordLatestMatchState = (match: NormalizedMatch) => {
   const currentState = latestMatchStates.get(match.id)
   const newFeedLength = match.matchFeed?.length || 0
@@ -610,6 +629,9 @@ const resolveCurrentMatchPayload = (payload: any): ApiMatch[] => {
   if (Array.isArray(payload.currentMatches)) {
     return normalizeList(payload.currentMatches)
   }
+  if (payload.grouped && (Array.isArray(payload.grouped.live) || Array.isArray(payload.grouped.upcoming))) {
+    return dedupeApiMatches([...normalizeList(payload.grouped.live), ...normalizeList(payload.grouped.upcoming)])
+  }
   if (Array.isArray(payload.liveUpcoming)) {
     return normalizeList(payload.liveUpcoming)
   }
@@ -649,16 +671,30 @@ const resolveOldMatchPayload = (payload: any): ApiMatch[] => {
     }
   }
 
+  const normalizeList = (input: unknown): ApiMatch[] =>
+    Array.isArray(input) ? input.map((match) => normalizeIncomingMatch(match)) : []
+
   if (!payload) {
     return []
   }
 
   if (Array.isArray(payload.old)) {
-    return payload.old.map((match) => normalizeIncomingMatch(match))
+    return dedupeApiMatches([
+      ...normalizeList(payload.old),
+      ...normalizeList(payload.recentFinished),
+      ...normalizeList(payload.finished),
+      ...normalizeList(payload?.grouped?.finished),
+    ])
+  }
+  if (Array.isArray(payload.recentFinished) || Array.isArray(payload?.grouped?.finished) || Array.isArray(payload.finished)) {
+    return dedupeApiMatches([
+      ...normalizeList(payload.recentFinished),
+      ...normalizeList(payload.finished),
+      ...normalizeList(payload?.grouped?.finished),
+    ])
   }
   if (Array.isArray(payload.matches)) {
-    return payload.matches
-      .map((match) => normalizeIncomingMatch(match))
+    return normalizeList(payload.matches)
       .filter((match) => normalizeStatusValue(match.matchStatus) === "finished")
   }
 

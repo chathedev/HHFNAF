@@ -107,6 +107,22 @@ type DataType = "liveUpcoming" | "live" | "old"
 
 const getDataEndpoint = () => `${API_BASE_URL}/matcher/data`
 
+const dedupeApiMatches = (matches: ApiMatch[]) => {
+  const seenIds = new Set<string>()
+
+  return matches.filter((match) => {
+    const key = match.id
+    if (!key) {
+      return true
+    }
+    if (seenIds.has(key)) {
+      return false
+    }
+    seenIds.add(key)
+    return true
+  })
+}
+
 const resolveCurrentMatchPayload = (payload: any): ApiMatch[] => {
   if (!payload) {
     return []
@@ -114,6 +130,9 @@ const resolveCurrentMatchPayload = (payload: any): ApiMatch[] => {
 
   if (Array.isArray(payload.current)) {
     return payload.current
+  }
+  if (payload.grouped && (Array.isArray(payload.grouped.live) || Array.isArray(payload.grouped.upcoming))) {
+    return dedupeApiMatches([...(payload.grouped.live ?? []), ...(payload.grouped.upcoming ?? [])])
   }
   if (Array.isArray(payload.liveUpcoming)) {
     return payload.liveUpcoming
@@ -134,7 +153,19 @@ const resolveOldMatchPayload = (payload: any): ApiMatch[] => {
   }
 
   if (Array.isArray(payload.old)) {
-    return payload.old
+    return dedupeApiMatches([
+      ...payload.old,
+      ...(Array.isArray(payload.recentFinished) ? payload.recentFinished : []),
+      ...(Array.isArray(payload.finished) ? payload.finished : []),
+      ...(Array.isArray(payload?.grouped?.finished) ? payload.grouped.finished : []),
+    ])
+  }
+  if (Array.isArray(payload.recentFinished) || Array.isArray(payload.finished) || Array.isArray(payload?.grouped?.finished)) {
+    return dedupeApiMatches([
+      ...(Array.isArray(payload.recentFinished) ? payload.recentFinished : []),
+      ...(Array.isArray(payload.finished) ? payload.finished : []),
+      ...(Array.isArray(payload?.grouped?.finished) ? payload.grouped.finished : []),
+    ])
   }
   if (Array.isArray(payload.matches)) {
     return payload.matches.filter((match) => normalizeStatusValue(match.matchStatus) === "finished")

@@ -153,7 +153,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const hasStartedInitialHomeMatchFetchRef = useRef(false)
   const limitedParams = useMemo(() => ({ limit: 10 }), [])
   const {
-    matches: upcomingMatches,
+    matches: currentMatches,
     loading: matchLoading,
     error: matchErrorMessage,
     hasPayload: hasMatchPayload,
@@ -164,22 +164,22 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     params: limitedParams,
     initialData,
   })
-  const liveParams = useMemo(() => ({ limit: 3 }), [])
   const {
-    matches: liveMatches,
-    loading: liveLoading,
+    matches: finishedMatches,
   } = useMatchData({
-    dataType: "live",
-    params: liveParams,
+    dataType: "old",
+    params: limitedParams,
   })
   const matchError = Boolean(matchErrorMessage)
 
   useEffect(() => {
-    if (upcomingMatches.length === 0) return
+    const matches = [...currentMatches, ...finishedMatches]
+    if (matches.length === 0) return
+
     setStableScoreByMatchId((prev) => {
       let changed = false
       const next = { ...prev }
-      for (const match of upcomingMatches) {
+      for (const match of matches) {
         const cleaned = typeof match.result === "string" ? match.result.trim() : ""
         if (cleaned && cleaned.toLowerCase() !== "inte publicerat" && next[match.id] !== cleaned) {
           next[match.id] = cleaned
@@ -188,7 +188,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       }
       return changed ? next : prev
     })
-  }, [upcomingMatches])
+  }, [currentMatches, finishedMatches])
 
   useEffect(() => {
     if (hasStartedInitialHomeMatchFetchRef.current) {
@@ -241,31 +241,20 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     return getSimplifiedMatchStatus(match)
   }
 
-  const matchesTodayForward = useMemo(() => {
-    const now = Date.now()
-    const liveLookbackMs = 1000 * 60 * 60 * 6
-    // Home page: Show live + upcoming only
-    const statusOrder: Record<string, number> = { live: 0, upcoming: 1 }
-
-    const currentMatchesInWindow = upcomingMatches.filter((match) => {
-      const status = match.matchStatus === "halftime" ? "live" : (match.matchStatus ?? "upcoming")
-
-      if (status === "live") {
-        const kickoff = match.date.getTime()
-        return kickoff >= now - liveLookbackMs
-      }
-
-      return status === "upcoming"
-    })
-
+  const allHomeMatches = useMemo(() => {
     const seenIds = new Set<string>()
-    const matchesInWindow = [...currentMatchesInWindow].filter((match) => {
+    return [...currentMatches, ...finishedMatches].filter((match) => {
       if (seenIds.has(match.id)) {
         return false
       }
       seenIds.add(match.id)
       return true
     })
+  }, [currentMatches, finishedMatches])
+
+  const matchesTodayForward = useMemo(() => {
+    const statusOrder: Record<string, number> = { live: 0, upcoming: 1, finished: 2 }
+    const matchesInWindow = [...allHomeMatches]
 
     matchesInWindow.sort((a, b) => {
       const statusA = getMatchStatus(a)
@@ -274,11 +263,14 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       if (statusDiff !== 0) {
         return statusDiff
       }
+      if (statusA === "finished" && statusB === "finished") {
+        return b.date.getTime() - a.date.getTime()
+      }
       return a.date.getTime() - b.date.getTime()
     })
 
     return matchesInWindow
-  }, [upcomingMatches])
+  }, [allHomeMatches])
 
   const selectedMatch = useMemo(
     () => matchesTodayForward.find((match) => match.id === selectedMatchId) ?? null,
@@ -453,7 +445,8 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const groupedHomeMatches = useMemo(() => {
     const live = matchesToDisplay.filter((match) => getMatchStatus(match) === "live")
     const upcoming = matchesToDisplay.filter((match) => getMatchStatus(match) === "upcoming")
-    return { live, upcoming }
+    const finished = matchesToDisplay.filter((match) => getMatchStatus(match) === "finished")
+    return { live, upcoming, finished }
   }, [matchesToDisplay])
   const shouldRenderMatchSection =
     !matchError && (showInitialMatchLoader || matchesToDisplay.length > 0)
@@ -726,9 +719,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                   <div className="max-w-2xl">
                     <p className="text-xs font-semibold uppercase tracking-[0.4em] text-emerald-600">Matcher</p>
-                    <h3 className="text-3xl font-black text-gray-900 sm:text-4xl">Live & Kommande</h3>
+                    <h3 className="text-3xl font-black text-gray-900 sm:text-4xl">Live, Kommande & Resultat</h3>
                     <p className="mt-1 text-sm text-gray-500">
-                      Här visas live-matcher och kommande matcher.
+                      Här visas matcherna direkt från backend, inklusive avslutade matcher med resultat.
                     </p>
                   </div>
                   <div className="flex items-center gap-3 text-right">
@@ -779,6 +772,16 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                             <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-600">Kommande</h4>
                           </div>
                           <ul className="space-y-3">{groupedHomeMatches.upcoming.map(renderHomeMatchCard)}</ul>
+                        </div>
+                      )}
+
+                      {groupedHomeMatches.finished.length > 0 && (
+                        <div>
+                          <div className="mb-3 flex items-center gap-2">
+                            <span className="h-2.5 w-2.5 rounded-full bg-slate-500" />
+                            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-slate-600">Senaste Resultat</h4>
+                          </div>
+                          <ul className="space-y-3">{groupedHomeMatches.finished.map(renderHomeMatchCard)}</ul>
                         </div>
                       )}
                     </div>
