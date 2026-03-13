@@ -68,9 +68,9 @@ export const getMatchProviderBadge = (match: NormalizedMatch) => {
     }
   }
 
-  if (match.provider === "profixio" && match.providerType === "league") {
+  if (match.provider === "profixio") {
     return {
-      label: "Serie",
+      label: "Profixio",
       tone: "bg-emerald-50 text-emerald-700",
     }
   }
