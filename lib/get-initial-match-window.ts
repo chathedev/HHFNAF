@@ -1,5 +1,6 @@
 import { getMatchData, type EnhancedMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
+import type { MatchProvider } from "@/lib/use-match-data"
 
 const STOCKHOLM_DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Europe/Stockholm",
@@ -50,11 +51,13 @@ const mergeMatchWindows = (windows: EnhancedMatchData[]): EnhancedMatchData | un
 type InitialMatchWindowOptions = {
   minMatches?: number
   maxDays?: number
+  requireUpcomingProviders?: MatchProvider[]
 }
 
 export async function getInitialMatchWindow(options?: InitialMatchWindowOptions): Promise<EnhancedMatchData | undefined> {
   const minMatches = options?.minMatches ?? 8
   const maxDays = options?.maxDays ?? 3
+  const requireUpcomingProviders = options?.requireUpcomingProviders ?? []
 
   try {
     const windows: EnhancedMatchData[] = []
@@ -73,8 +76,10 @@ export async function getInitialMatchWindow(options?: InitialMatchWindowOptions)
       const merged = mergeMatchWindows(windows)
       const matchCount = merged?.matches.length ?? 0
       const recentCount = merged?.recentResults?.length ?? 0
+      const upcomingProviders = new Set((merged?.groupedFeed?.upcoming ?? []).map((match) => match.provider).filter(Boolean))
+      const hasRequiredProviders = requireUpcomingProviders.every((provider) => upcomingProviders.has(provider))
 
-      if (matchCount >= minMatches || recentCount >= 4) {
+      if ((matchCount >= minMatches || recentCount >= 4) && hasRequiredProviders) {
         return merged
       }
 
