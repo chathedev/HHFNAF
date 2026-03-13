@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect, useCallback, useRef } from "react"
 import Link from "next/link"
+import { ChevronDown } from "lucide-react"
 
 import {
   buildMatchScheduleLabel,
@@ -163,6 +164,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   const [topScorersByMatchId, setTopScorersByMatchId] = useState<Record<string, MatchTopScorer[]>>({})
   const [clockStateByMatchId, setClockStateByMatchId] = useState<Record<string, MatchClockState>>({})
   const [penaltiesByMatchId, setPenaltiesByMatchId] = useState<Record<string, MatchPenalty[]>>({})
+  const [openProviderSections, setOpenProviderSections] = useState<Record<string, boolean>>({})
   const timelineFetchInFlightRef = useRef<Record<string, Promise<void>>>({})
   const [hasResolvedLiveData, setHasResolvedLiveData] = useState(false)
   const [hasResolvedOldData, setHasResolvedOldData] = useState(false)
@@ -540,6 +542,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     matches: NormalizedMatch[],
     emptyTitle: string,
     emptyDescription: string,
+    sectionKey: string,
     options?: {
       defaultOpenDates?: number
       previewTimeBucketsPerDate?: number
@@ -547,20 +550,10 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     },
   ) => {
     const { cup, standard } = splitProviderMatches(matches)
+    const isCupOpen = openProviderSections[sectionKey] ?? false
 
     return (
       <div className="space-y-6">
-        {cup.length > 0 && (
-          <CompactCupSchedule
-            matches={cup}
-            title="ProCup"
-            description={emptyDescription}
-            defaultOpenDates={options?.defaultOpenDates ?? 0}
-            previewTimeBucketsPerDate={options?.previewTimeBucketsPerDate}
-            previewMatchesPerTimeBucket={options?.previewMatchesPerTimeBucket}
-          />
-        )}
-
         {standard.length > 0 && (
           <div>
             <div className="mb-4 flex items-center justify-between gap-3">
@@ -576,6 +569,45 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
               {standard.map(renderMatchCard)}
             </div>
           </div>
+        )}
+
+        {cup.length > 0 && (
+          <section className="rounded-xl border border-sky-200 bg-sky-50/60">
+            <button
+              type="button"
+              onClick={() => setOpenProviderSections((previous) => ({ ...previous, [sectionKey]: !isCupOpen }))}
+              className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-white/50 sm:px-5"
+            >
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-sky-800">ProCup</h3>
+                  <span className="inline-flex items-center rounded-full border border-sky-200 bg-white px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700">
+                    {cup.length} matcher
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-sky-900/75">
+                  {isCupOpen
+                    ? "Cupschemat är öppet. Stäng det igen om du vill fokusera på Profixio och seriespel."
+                    : "Cupschemat hålls stängt från start för snabbare rendering och tydligare fokus på Profixio först."}
+                </p>
+              </div>
+              <ChevronDown className={`h-4 w-4 shrink-0 text-sky-700 transition-transform ${isCupOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {isCupOpen ? (
+              <div className="border-t border-sky-200">
+                <CompactCupSchedule
+                  matches={cup}
+                  title="ProCup"
+                  description={emptyDescription}
+                  defaultOpenDates={options?.defaultOpenDates ?? 0}
+                  previewTimeBucketsPerDate={options?.previewTimeBucketsPerDate}
+                  previewMatchesPerTimeBucket={options?.previewMatchesPerTimeBucket}
+                  className="rounded-none border-0 bg-transparent"
+                />
+              </div>
+            ) : null}
+          </section>
         )}
       </div>
     )
@@ -747,6 +779,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                   groupedMatches.live,
                   "Live i seriespel",
                   "Livecupmatcher i ProCup visas kompakt per dag och starttid. Seriespel ligger kvar som separata kort.",
+                  "live",
                   {
                     defaultOpenDates: 1,
                     previewTimeBucketsPerDate: 5,
@@ -772,6 +805,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                   groupedMatches.upcoming,
                   "Kommande seriespel",
                   "Cupdagar i ProCup grupperas kompakt så du ser fler matcher direkt utan att drunkna i stora kort.",
+                  "upcoming",
                   {
                     defaultOpenDates: 0,
                     previewTimeBucketsPerDate: 6,
@@ -797,6 +831,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                   groupedMatches.finished,
                   "Resultat från seriespel",
                   "Avslutade ProCup-matcher visas också kompakt när en hel cupdag producerar många resultat samtidigt.",
+                  "finished",
                   {
                     defaultOpenDates: 0,
                     previewTimeBucketsPerDate: 5,

@@ -807,6 +807,16 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                         </div>
                       )}
 
+                      {groupedHomeMatches.upcomingLeague.length > 0 && (
+                        <div>
+                          <div className="mb-3 flex items-center gap-2">
+                            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-700">Seriespel & övrigt</h4>
+                          </div>
+                          <ul className="space-y-3">{groupedHomeMatches.upcomingLeague.map(renderHomeMatchCard)}</ul>
+                        </div>
+                      )}
+
                       {groupedHomeMatches.upcomingCup.length > 0 && (
                         <div>
                           <div className="mb-3 flex items-center gap-2">
@@ -816,23 +826,13 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                           <CompactCupSchedule
                             matches={groupedHomeMatches.upcomingCup}
                             title="Kommande cupmatcher"
-                            description="Cupdagen sammanfattas först i ett snabbt utdrag. Öppna hela dagen bara när du behöver hela spelschemat."
-                            defaultOpenDates={1}
-                            previewTimeBucketsPerDate={4}
-                            previewMatchesPerTimeBucket={3}
+                            description="Cupdagen ligger som en separat, lättare översikt. Seriespel visas först så viktiga enstaka matcher inte försvinner bakom cupschemat."
+                            defaultOpenDates={0}
+                            previewTimeBucketsPerDate={3}
+                            previewMatchesPerTimeBucket={2}
                             fullScheduleHref="/matcher"
                             fullScheduleLabel="Öppna hela matchschemat"
                           />
-                        </div>
-                      )}
-
-                      {groupedHomeMatches.upcomingLeague.length > 0 && (
-                        <div>
-                          <div className="mb-3 flex items-center gap-2">
-                            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-700">Seriespel & övrigt</h4>
-                          </div>
-                          <ul className="space-y-3">{groupedHomeMatches.upcomingLeague.map(renderHomeMatchCard)}</ul>
                         </div>
                       )}
 
