@@ -29,7 +29,6 @@ import { ErrorBoundary } from "@/components/error-boundary"
 import { defaultContent } from "@/lib/default-content"
 import type { FullContent, Partner } from "@/lib/content-types"
 import { deriveSiteVariant, type SiteVariant, getThemeVariant, getHeroImages, type ThemeVariant } from "@/lib/site-variant"
-import { canShowTicketForMatch } from "@/lib/matches"
 import { extendTeamDisplayName } from "@/lib/team-display"
 import { resolvePreferredTimeline } from "@/lib/match-timeline"
 import {
@@ -512,6 +511,53 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     )
   }
 
+  const renderUpcomingSkeletonPanel = (provider: "profixio" | "procup") => {
+    const isProcup = provider === "procup"
+
+    return (
+      <section
+        className={`rounded-2xl border bg-white p-4 sm:p-5 ${
+          isProcup ? "border-sky-200" : "border-emerald-200"
+        }`}
+      >
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <div
+              className={`h-3 w-20 rounded ${
+                isProcup ? "bg-sky-100" : "bg-emerald-100"
+              }`}
+            />
+            <div className="mt-3 h-6 w-52 rounded bg-slate-200" />
+            <div className="mt-2 h-4 w-64 max-w-full rounded bg-slate-100" />
+          </div>
+          <div className="h-7 w-10 rounded-full bg-slate-100" />
+        </div>
+        <div className="min-h-[22rem] space-y-2">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div
+              key={`${provider}-skeleton-${index}`}
+              className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <div className="h-3 w-24 rounded bg-slate-200" />
+                  <div className="mt-2 h-4 w-5/6 rounded bg-slate-200" />
+                  <div className="mt-2 h-3 w-2/3 rounded bg-slate-100" />
+                  <div className="mt-2 h-3 w-1/2 rounded bg-slate-100" />
+                </div>
+                <div className="h-8 w-20 rounded-md bg-slate-200" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+          <div className="h-3 w-40 rounded bg-slate-100" />
+          <div className="h-8 w-24 rounded-md bg-slate-200" />
+        </div>
+      </section>
+    )
+  }
+
   const showInitialMatchLoader =
     !isInitialHomeMatchFetchDone && (matchLoading || matchRefreshing || !hasMatchPayload)
   const groupedHomeMatches = useMemo(() => {
@@ -542,8 +588,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     }),
     [groupedFeed, homeUpcomingVisible],
   )
-  const shouldRenderMatchSection =
-    !matchError && (showInitialMatchLoader || totalDisplayedMatches > 0)
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -556,15 +600,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     setThemeVariant(resolvedTheme)
   }, [])
 
-  function shouldShowTicketButton(match: NormalizedMatch): boolean {
-    if (getMatchStatus(match) === "finished") {
-      return false;
-    }
-    return canShowTicketForMatch(match);
-  }
-
-  // Helper for result card display logic
-  const showResultCard = (status: string, hasResult: boolean) => status === "live" || status === "finished" || hasResult;
   const isPinkTheme = themeVariant === "pink"
   const heroImages = typeof window !== "undefined" ? getHeroImages(window.location.host) : getHeroImages()
   const heroOverlayClass = isPinkTheme
@@ -745,356 +780,308 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
             <h1>Härnösands HF – Handboll i Härnösand</h1>
           </section>
 
-          {/* Stats Section */}
-          <section className={`text-white py-12 ${isPinkTheme ? "bg-gradient-to-r from-pink-500/90 to-rose-600/90" : "bg-green-600/90"}`}>
+          <section className="relative z-30 -mt-16 pb-16 sm:-mt-20">
             <div className="container mx-auto px-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-                <div className="flex flex-col items-center">
-                  <Users className="w-12 h-12 mb-2" />
-                  <div
-                    className="text-4xl font-bold"
-                    {...(isEditorMode && {
-                      "data-editable": "true",
-                      "data-field-path": "home.stats.totalTeams",
-                    })}
-                  >
-                    {content.stats.totalTeams}
-                  </div>
-                  <div className="text-sm">Totalt Lag</div>
-                </div>
-
-                <div className="flex flex-col items-center">
-                  <Trophy className="w-12 h-12 mb-2" />
-                  <div
-                    className="text-4xl font-bold"
-                    {...(isEditorMode && {
-                      "data-editable": "true",
-                      "data-field-path": "home.stats.aTeams",
-                    })}
-                  >
-                    {content.stats.aTeams}
-                  </div>
-                  <div className="text-sm">A-lag</div>
-                </div>
-
-                <div className="flex flex-col items-center">
-                  <Award className="w-12 h-12 mb-2" />
-                  <div
-                    className="text-4xl font-bold"
-                    {...(isEditorMode && {
-                      "data-editable": "true",
-                      "data-field-path": "home.stats.youthTeams",
-                    })}
-                  >
-                    {content.stats.youthTeams}
-                  </div>
-                  <div className="text-sm">Ungdomslag</div>
-                </div>
-
-                <div className="flex flex-col items-center">
-                  <History className="w-12 h-12 mb-2" />
-                  <div
-                    className="text-4xl font-bold"
-                    {...(isEditorMode && {
-                      "data-editable": "true",
-                      "data-field-path": "home.stats.yearsHistory",
-                    })}
-                  >
-                    {content.stats.yearsHistory}
-                  </div>
-                  <div className="text-sm">År av Historia</div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {shopVisible && (
-            <section className="border-b border-slate-200 bg-white">
-              <div className="container mx-auto px-4">
-                <div className="flex flex-col gap-5 py-6 md:flex-row md:items-center md:justify-between">
+              <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/95 shadow-[0_24px_80px_rgba(15,23,42,0.12)] backdrop-blur">
+                <div className="flex flex-col gap-4 border-b border-slate-200 px-5 py-5 sm:px-8 sm:py-6 lg:flex-row lg:items-end lg:justify-between">
                   <div className="max-w-3xl">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-emerald-600">Supporterbutik</p>
-                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-slate-950 sm:text-2xl">
-                      Stötta HHF med plagg, presenter och supporterprodukter.
-                    </h3>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-emerald-600">Hemmaplan</p>
+                    <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-4xl">
+                      Det viktigaste direkt.
+                    </h2>
                     <p className="mt-2 text-sm text-slate-600 sm:text-base">
-                      Beställ i webbutiken och hämta lokalt. Varje köp bidrar till föreningens verksamhet.
+                      En ny startsida med fokus på matchläget först: live, nästa matcher, resultat och snabba vägar vidare utan onödigt brus.
                     </p>
                   </div>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-                      Hämtas lokalt
-                    </div>
-                    <Link
-                      href={SHOP_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-slate-950 px-5 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-white transition hover:border-emerald-600 hover:bg-emerald-600"
-                    >
-                      <ShoppingBag className="h-4 w-4" />
-                      Öppna Butiken
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {shouldRenderMatchSection && (
-            <section className="py-10 bg-white" aria-label="Matcher på startsidan">
-              <div className="container mx-auto px-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                  <div className="max-w-2xl">
-                    <p className="text-xs font-semibold uppercase tracking-[0.4em] text-emerald-600">Matcher</p>
-                    <h3 className="text-3xl font-black text-gray-900 sm:text-4xl">Live, Kommande & Resultat</h3>
-                    <p className="mt-1 text-sm text-gray-500">
-                      Här visas matcherna direkt från backend. Tunga cupdagar grupperas kompakt dag för dag så fler matcher ryms direkt.
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3 text-right">
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.35em] text-gray-400">
-                      {!matchLoading && !matchError ? "Uppdateras automatiskt" : "Uppdateras snart..."}
-                    </span>
+                  <div className="flex flex-wrap gap-2">
                     <Link
                       href="/matcher"
-                      aria-label="Öppna alla matcher"
-                      className="text-[11px] font-semibold uppercase tracking-[0.35em] text-emerald-600 hover:text-emerald-800"
+                      className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
                     >
-                      Se alla matcher →
+                      Alla matcher
+                      <ArrowRight className="h-4 w-4" />
                     </Link>
-                  </div>
-                </div>
-
-                <div className="mt-8">
-                  {showInitialMatchLoader && (
-                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-                        <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
-                        Laddar matcher...
-                    </div>
-                  )}
-
-                  {!showInitialMatchLoader &&
-                    !matchError &&
-                    totalDisplayedMatches === 0 && (
-                    <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-500">
-                      Inga matcher att visa just nu.
-                    </div>
-                  )}
-
-                  {!showInitialMatchLoader && !matchError && totalDisplayedMatches > 0 && (
-                    <div className="space-y-7">
-                      {groupedHomeMatches.live.length > 0 && (
-                        <div>
-                          <div className="mb-3 flex items-center gap-2">
-                            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-rose-500" />
-                            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-rose-600">Live Nu</h4>
-                          </div>
-                          <ul className="space-y-3">{groupedHomeMatches.live.map(renderHomeMatchCard)}</ul>
-                        </div>
-                      )}
-
-                      {(groupedHomeMatches.upcomingLeague.length > 0 || groupedHomeMatches.upcomingCup.length > 0) && (
-                        <div className="space-y-4">
-                          <div className="mb-1 flex items-center gap-2">
-                            <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
-                            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-slate-900">Kommande</h4>
-                          </div>
-
-                          <div className="flex flex-wrap gap-2">
-                            {upcomingProviderSummary.profixio > 0 && (
-                              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
-                                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                                Profixio {upcomingProviderSummary.profixio}
-                              </span>
-                            )}
-                            {upcomingProviderSummary.procup > 0 && (
-                              <span className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-800">
-                                <span className="h-2 w-2 rounded-full bg-sky-500" />
-                                ProCup {upcomingProviderSummary.procup}
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-                            {upcomingProviderSummary.profixio > 0 && (
-                              <section className="rounded-xl border border-emerald-200 bg-white p-4 sm:p-5">
-                                <div className="mb-4 flex items-start justify-between gap-4">
-                                  <div>
-                                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">Profixio</p>
-                                    <h5 className="mt-1 text-lg font-semibold text-slate-950">Seriespel & större matcher</h5>
-                                    <p className="mt-1 text-sm text-slate-500">Fem tydliga rader direkt. Visa fler utan att startsidan blir lång eller stökig.</p>
-                                  </div>
-                                  <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                                    {upcomingProviderSummary.profixio}
-                                  </span>
-                                </div>
-                                <div className="min-h-[22rem]">
-                                  <ul className="space-y-2">
-                                    {homeUpcomingPreviewMatches.profixio.map(renderUpcomingPreviewRow)}
-                                  </ul>
-                                </div>
-                                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
-                                  <p className="text-xs text-slate-500">
-                                    {upcomingProviderSummary.profixio > homeUpcomingPreviewMatches.profixio.length
-                                      ? `${upcomingProviderSummary.profixio - homeUpcomingPreviewMatches.profixio.length} fler Profixio-matcher finns redo.`
-                                      : "Alla Profixio-matcher i förhandsvyn visas."}
-                                  </p>
-                                  <div className="flex items-center gap-2">
-                                    {homeUpcomingVisible.profixio < Math.min(upcomingProviderSummary.profixio, 10) && (
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          setHomeUpcomingVisible((previous) => ({
-                                            ...previous,
-                                            profixio: Math.min(previous.profixio + 5, 10),
-                                          }))
-                                        }
-                                        className="inline-flex items-center gap-2 rounded-md border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:border-emerald-500 hover:text-emerald-900"
-                                      >
-                                        Visa fler
-                                      </button>
-                                    )}
-                                    <Link
-                                      href="/matcher"
-                                      className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
-                                    >
-                                      Hela listan
-                                    </Link>
-                                  </div>
-                                </div>
-                              </section>
-                            )}
-
-                            {upcomingProviderSummary.procup > 0 && (
-                              <section className="rounded-xl border border-sky-200 bg-white p-4 sm:p-5">
-                                <div className="mb-4 flex items-start justify-between gap-4">
-                                  <div>
-                                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700">ProCup</p>
-                                    <h5 className="mt-1 text-lg font-semibold text-slate-950">Cupdag i snabböversikt</h5>
-                                    <p className="mt-1 text-sm text-slate-500">Visar fler cupmatcher direkt, men håller listan kompakt och kontrollerad.</p>
-                                  </div>
-                                  <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">
-                                    {upcomingProviderSummary.procup}
-                                  </span>
-                                </div>
-                                <div className="min-h-[22rem]">
-                                  <ul className="space-y-2">
-                                    {homeUpcomingPreviewMatches.procup.map(renderUpcomingPreviewRow)}
-                                  </ul>
-                                </div>
-                                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
-                                  <p className="text-xs text-slate-500">
-                                    {upcomingProviderSummary.procup > homeUpcomingPreviewMatches.procup.length
-                                      ? `${upcomingProviderSummary.procup - homeUpcomingPreviewMatches.procup.length} fler cupmatcher finns i fullvyn.`
-                                      : "Alla ProCup-matcher i förhandsvyn visas."}
-                                  </p>
-                                  <div className="flex items-center gap-2">
-                                    {homeUpcomingVisible.procup < Math.min(upcomingProviderSummary.procup, 10) && (
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          setHomeUpcomingVisible((previous) => ({
-                                            ...previous,
-                                            procup: Math.min(previous.procup + 5, 10),
-                                          }))
-                                        }
-                                        className="inline-flex items-center gap-2 rounded-md border border-sky-200 px-3 py-2 text-xs font-semibold text-sky-700 transition hover:border-sky-500 hover:text-sky-900"
-                                      >
-                                        Visa fler
-                                      </button>
-                                    )}
-                                    <Link
-                                      href="/matcher"
-                                      className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
-                                    >
-                                      Hela listan
-                                    </Link>
-                                  </div>
-                                </div>
-                              </section>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {groupedHomeMatches.finished.length > 0 && (
-                        <div>
-                          <div className="mb-3 flex items-center gap-2">
-                            <span className="h-2.5 w-2.5 rounded-full bg-slate-500" />
-                            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-slate-600">Senaste Resultat</h4>
-                          </div>
-                          <ul className="space-y-3">{groupedHomeMatches.finished.map(renderHomeMatchCard)}</ul>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* Cards Section */}
-          <section className="py-12 bg-white">
-            <div className="container mx-auto px-4">
-              <div className="text-center mb-8">
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                  Upplev <span className={isPinkTheme ? "text-pink-400" : "text-orange-500"}>Handboll</span> Live
-                </h2>
-                <p className="text-gray-600 max-w-xl mx-auto">
-                  Följ våra matcher och stötta laget. Varje match är en upplevelse värd att dela.
-                </p>
-              </div>
-
-              <div className="mx-auto grid max-w-3xl gap-6 md:grid-cols-2">
-                {/* Se Matcher Card */}
-                <div className={`group bg-white rounded-lg border border-gray-200 ${isPinkTheme ? "hover:border-pink-300" : "hover:border-green-300"} transition-all duration-200 overflow-hidden`}>
-                  <div className="p-6">
-                    <div className="flex items-center mb-4">
-                      <div className={`w-10 h-10 ${isPinkTheme ? "bg-pink-100" : "bg-green-100"} rounded-lg flex items-center justify-center mr-3`}>
-                        <Trophy className={`w-5 h-5 ${isPinkTheme ? "text-pink-600" : "text-green-600"}`} />
-                      </div>
-                      <h3 className="text-xl font-semibold text-gray-900">Se Matcher</h3>
-                    </div>
-
-                    <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-                      Följ våra kommande matcher och upplev spänningen live. Stötta laget och var en del av vår
-                      handbollsfamilj.
-                    </p>
-
                     <Link
-                      href="/matcher"
-                      className={`inline-flex items-center ${isPinkTheme ? "text-pink-600 hover:text-pink-700" : "text-green-600 hover:text-green-700"} font-medium text-sm group-hover:translate-x-1 transition-transform`}
-                    >
-                      Se Alla Matcher
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </div>
-                </div>
-
-                {/* Köp Biljetter Card */}
-                <div className="group bg-white rounded-lg border border-gray-200 hover:border-orange-300 transition-all duration-200 overflow-hidden">
-                  <div className="p-6">
-                    <div className="flex items-center mb-4">
-                      <div className={`w-10 h-10 ${isPinkTheme ? "bg-emerald-100" : "bg-orange-100"} rounded-lg flex items-center justify-center mr-3`}>
-                        <Star className={`w-5 h-5 ${isPinkTheme ? "text-emerald-600" : "text-orange-600"}`} />
-                      </div>
-                      <h3 className="text-xl font-semibold text-gray-900">Köp Biljetter</h3>
-                    </div>
-
-                    <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-                      Säkra din plats på läktaren och upplev handboll på nära håll. Varje biljett stödjer vårt lag och
-                      vår utveckling.
-                    </p>
-
-                    <Link
-                      href="https://clubs.clubmate.se/harnosandshf/overview/"
+                      href={TICKET_URL}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`inline-flex items-center ${isPinkTheme ? "text-emerald-600 hover:text-emerald-700" : "text-orange-600 hover:text-orange-700"} font-medium text-sm group-hover:translate-x-1 transition-transform`}
+                      className="inline-flex items-center gap-2 rounded-md border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:border-slate-900 hover:text-slate-950"
                     >
-                      Köp Biljetter Nu
-                      <ArrowRight className="ml-2 h-4 w-4" />
+                      Biljetter
                     </Link>
+                    {shopVisible && (
+                      <Link
+                        href={SHOP_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-800 transition hover:border-emerald-400 hover:bg-emerald-100"
+                      >
+                        <ShoppingBag className="h-4 w-4" />
+                        Butik
+                      </Link>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid gap-px bg-slate-200 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="bg-slate-950 px-5 py-4 text-white sm:px-6">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/60">Totalt Lag</p>
+                    <div className="mt-2 flex items-end gap-3">
+                      <Users className="h-5 w-5 text-emerald-300" />
+                      <span className="text-3xl font-black">{content.stats.totalTeams}</span>
+                    </div>
+                  </div>
+                  <div className="bg-slate-950 px-5 py-4 text-white sm:px-6">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/60">A-lag</p>
+                    <div className="mt-2 flex items-end gap-3">
+                      <Trophy className="h-5 w-5 text-orange-300" />
+                      <span className="text-3xl font-black">{content.stats.aTeams}</span>
+                    </div>
+                  </div>
+                  <div className="bg-slate-950 px-5 py-4 text-white sm:px-6">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/60">Ungdomslag</p>
+                    <div className="mt-2 flex items-end gap-3">
+                      <Award className="h-5 w-5 text-sky-300" />
+                      <span className="text-3xl font-black">{content.stats.youthTeams}</span>
+                    </div>
+                  </div>
+                  <div className="bg-slate-950 px-5 py-4 text-white sm:px-6">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/60">Historia</p>
+                    <div className="mt-2 flex items-end gap-3">
+                      <History className="h-5 w-5 text-pink-300" />
+                      <span className="text-3xl font-black">{content.stats.yearsHistory}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-6 p-5 sm:p-8 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+                  <div className="space-y-6">
+                    <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Nu & Nyss</p>
+                          <h3 className="mt-1 text-xl font-semibold text-slate-950">Matchläge</h3>
+                        </div>
+                        <div className="flex gap-2">
+                          <span className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+                            <span className="h-2 w-2 animate-pulse rounded-full bg-rose-500" />
+                            Live {groupedHomeMatches.live.length}
+                          </span>
+                          <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                            Resultat {groupedHomeMatches.finished.length}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 space-y-4">
+                        {groupedHomeMatches.live.length > 0 && (
+                          <div>
+                            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-rose-600">Live nu</p>
+                            <ul className="space-y-3">{groupedHomeMatches.live.slice(0, 2).map(renderHomeMatchCard)}</ul>
+                          </div>
+                        )}
+
+                        {groupedHomeMatches.finished.length > 0 && (
+                          <div>
+                            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Senaste resultat</p>
+                            <ul className="space-y-3">{groupedHomeMatches.finished.slice(0, 2).map(renderHomeMatchCard)}</ul>
+                          </div>
+                        )}
+
+                        {groupedHomeMatches.live.length === 0 && groupedHomeMatches.finished.length === 0 && (
+                          <div className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-500">
+                            Inga live- eller resultatkort att visa just nu.
+                          </div>
+                        )}
+                      </div>
+                    </section>
+
+                    <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Snabbvägar</p>
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        <Link
+                          href="/matcher"
+                          className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 transition hover:border-emerald-400 hover:bg-emerald-50"
+                        >
+                          <p className="text-sm font-semibold text-slate-950">Matcher</p>
+                          <p className="mt-1 text-sm text-slate-500">Se full översikt, filter och alla lag.</p>
+                        </Link>
+                        <Link
+                          href={TICKET_URL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 transition hover:border-orange-400 hover:bg-orange-50"
+                        >
+                          <p className="text-sm font-semibold text-slate-950">Biljetter</p>
+                          <p className="mt-1 text-sm text-slate-500">Säkra plats på läktaren till nästa hemmamatch.</p>
+                        </Link>
+                      </div>
+                    </section>
+
+                    {shopVisible && (
+                      <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 sm:p-5">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="max-w-xl">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">Supporterbutik</p>
+                            <h3 className="mt-1 text-lg font-semibold text-slate-950">Plagg, presenter och supporterprodukter.</h3>
+                            <p className="mt-1 text-sm text-slate-600">Beställ i webbutiken och hämta lokalt. Varje köp hjälper föreningen framåt.</p>
+                          </div>
+                          <Link
+                            href={SHOP_URL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center gap-2 rounded-md bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                          >
+                            <ShoppingBag className="h-4 w-4" />
+                            Öppna Butiken
+                          </Link>
+                        </div>
+                      </section>
+                    )}
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Kommande</p>
+                        <h3 className="mt-1 text-2xl font-semibold text-slate-950">Nästa matcher</h3>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {upcomingProviderSummary.profixio > 0 && (
+                          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+                            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                            Profixio {upcomingProviderSummary.profixio}
+                          </span>
+                        )}
+                        {upcomingProviderSummary.procup > 0 && (
+                          <span className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-800">
+                            <span className="h-2 w-2 rounded-full bg-sky-500" />
+                            ProCup {upcomingProviderSummary.procup}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {showInitialMatchLoader && (
+                      <div className="grid gap-4 xl:grid-cols-[minmax(0,0.96fr)_minmax(0,1.04fr)]">
+                        {renderUpcomingSkeletonPanel("profixio")}
+                        {renderUpcomingSkeletonPanel("procup")}
+                      </div>
+                    )}
+
+                    {!showInitialMatchLoader && matchError && (
+                      <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-6 text-center text-sm text-amber-800">
+                        Matcherna kunde inte läsas in just nu.
+                      </div>
+                    )}
+
+                    {!showInitialMatchLoader && !matchError && totalDisplayedMatches === 0 && (
+                      <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+                        Inga kommande matcher att visa just nu.
+                      </div>
+                    )}
+
+                    {!showInitialMatchLoader && !matchError && (groupedHomeMatches.upcomingLeague.length > 0 || groupedHomeMatches.upcomingCup.length > 0) && (
+                      <div className="grid gap-4 xl:grid-cols-[minmax(0,0.96fr)_minmax(0,1.04fr)]">
+                        {upcomingProviderSummary.profixio > 0 && (
+                          <section className="rounded-2xl border border-emerald-200 bg-white p-4 sm:p-5">
+                            <div className="mb-4 flex items-start justify-between gap-4">
+                              <div>
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">Profixio</p>
+                                <h5 className="mt-1 text-lg font-semibold text-slate-950">Seriespel & större matcher</h5>
+                                <p className="mt-1 text-sm text-slate-500">Fem tydliga rader direkt. Visa fler utan att startsidan blir lång eller stökig.</p>
+                              </div>
+                              <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                                {upcomingProviderSummary.profixio}
+                              </span>
+                            </div>
+                            <div className="min-h-[22rem]">
+                              <ul className="space-y-2">
+                                {homeUpcomingPreviewMatches.profixio.map(renderUpcomingPreviewRow)}
+                              </ul>
+                            </div>
+                            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                              <p className="text-xs text-slate-500">
+                                {upcomingProviderSummary.profixio > homeUpcomingPreviewMatches.profixio.length
+                                  ? `${upcomingProviderSummary.profixio - homeUpcomingPreviewMatches.profixio.length} fler Profixio-matcher finns redo.`
+                                  : "Alla Profixio-matcher i förhandsvyn visas."}
+                              </p>
+                              <div className="flex items-center gap-2">
+                                {homeUpcomingVisible.profixio < Math.min(upcomingProviderSummary.profixio, 10) && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setHomeUpcomingVisible((previous) => ({
+                                        ...previous,
+                                        profixio: Math.min(previous.profixio + 5, 10),
+                                      }))
+                                    }
+                                    className="inline-flex items-center gap-2 rounded-md border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:border-emerald-500 hover:text-emerald-900"
+                                  >
+                                    Visa fler
+                                  </button>
+                                )}
+                                <Link
+                                  href="/matcher"
+                                  className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+                                >
+                                  Hela listan
+                                </Link>
+                              </div>
+                            </div>
+                          </section>
+                        )}
+
+                        {upcomingProviderSummary.procup > 0 && (
+                          <section className="rounded-2xl border border-sky-200 bg-white p-4 sm:p-5">
+                            <div className="mb-4 flex items-start justify-between gap-4">
+                              <div>
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700">ProCup</p>
+                                <h5 className="mt-1 text-lg font-semibold text-slate-950">Cupdag i snabböversikt</h5>
+                                <p className="mt-1 text-sm text-slate-500">Visar fler cupmatcher direkt, men håller listan kompakt och kontrollerad.</p>
+                              </div>
+                              <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">
+                                {upcomingProviderSummary.procup}
+                              </span>
+                            </div>
+                            <div className="min-h-[22rem]">
+                              <ul className="space-y-2">
+                                {homeUpcomingPreviewMatches.procup.map(renderUpcomingPreviewRow)}
+                              </ul>
+                            </div>
+                            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                              <p className="text-xs text-slate-500">
+                                {upcomingProviderSummary.procup > homeUpcomingPreviewMatches.procup.length
+                                  ? `${upcomingProviderSummary.procup - homeUpcomingPreviewMatches.procup.length} fler cupmatcher finns i fullvyn.`
+                                  : "Alla ProCup-matcher i förhandsvyn visas."}
+                              </p>
+                              <div className="flex items-center gap-2">
+                                {homeUpcomingVisible.procup < Math.min(upcomingProviderSummary.procup, 10) && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setHomeUpcomingVisible((previous) => ({
+                                        ...previous,
+                                        procup: Math.min(previous.procup + 5, 10),
+                                      }))
+                                    }
+                                    className="inline-flex items-center gap-2 rounded-md border border-sky-200 px-3 py-2 text-xs font-semibold text-sky-700 transition hover:border-sky-500 hover:text-sky-900"
+                                  >
+                                    Visa fler
+                                  </button>
+                                )}
+                                <Link
+                                  href="/matcher"
+                                  className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+                                >
+                                  Hela listan
+                                </Link>
+                              </div>
+                            </div>
+                          </section>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
