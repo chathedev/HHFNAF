@@ -11,10 +11,10 @@ export default function Footer() {
     <footer className="bg-gradient-to-b from-gray-900 to-black text-white">
       <div className="container mx-auto px-4 py-12 md:py-16">
         {shopVisible && (
-          <div className="mb-10 rounded-[28px] border border-emerald-400/20 bg-gradient-to-r from-emerald-500 via-green-500 to-lime-400 p-6 text-black shadow-[0_20px_60px_rgba(74,222,128,0.18)]">
+          <div className="mb-10 rounded-xl border border-emerald-400/20 bg-gradient-to-r from-emerald-500 via-green-500 to-lime-400 p-6 text-black shadow-[0_20px_60px_rgba(74,222,128,0.12)]">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
               <div className="max-w-2xl">
-                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-black/65">Supportershop</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-black/65">Supporterbutik</p>
                 <h3 className="mt-2 text-2xl font-black tracking-tight">Sälj läktarstöd också utanför matchdag.</h3>
                 <p className="mt-3 text-sm text-black/75">
                   Shoppen är öppen på <span className="font-semibold">shop.harnosandshf.se</span>. Ingen leverans,
@@ -25,10 +25,10 @@ export default function Footer() {
                 href={SHOP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-6 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-white hover:text-black"
+                className="inline-flex items-center justify-center gap-2 rounded-md bg-black px-6 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-white hover:text-black"
               >
                 <ShoppingBag className="h-4 w-4" />
-                Öppna Shoppen
+                Öppna Butiken
               </Link>
             </div>
           </div>
@@ -76,7 +76,7 @@ export default function Footer() {
                     className="text-gray-300 hover:text-emerald-400 transition-colors text-sm flex items-center gap-2 group"
                   >
                     <span className="w-1 h-1 bg-emerald-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                    Shop
+                    Butik
                   </a>
                 </li>
               )}

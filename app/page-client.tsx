@@ -785,11 +785,11 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
           <section className="py-12 bg-white">
             <div className="container mx-auto px-4">
               {shopVisible && (
-                <div className="mx-auto mb-8 max-w-5xl overflow-hidden rounded-[30px] border border-emerald-200 bg-gradient-to-r from-slate-950 via-emerald-950 to-emerald-700 text-white shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
+                <div className="mx-auto mb-8 max-w-5xl overflow-hidden rounded-xl border border-emerald-200 bg-gradient-to-r from-slate-950 via-emerald-950 to-emerald-700 text-white shadow-[0_24px_70px_rgba(15,23,42,0.12)]">
                   <div className="flex flex-col gap-6 px-6 py-7 md:flex-row md:items-center md:justify-between md:px-8">
                     <div className="max-w-2xl">
-                      <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-300">Supportershop</p>
-                      <h3 className="mt-2 text-2xl font-black tracking-tight">Gör matchintresset till merchförsäljning.</h3>
+                      <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-300">Supporterbutik</p>
+                      <h3 className="mt-2 text-2xl font-black tracking-tight">Gör matchintresset till butiksköp.</h3>
                       <p className="mt-2 text-sm text-emerald-50/85">
                         Shoppa HHF-plagg och supporterprylar på <span className="font-semibold">shop.harnosandshf.se</span>.
                         Ingen leverans, endast upphämtning.
@@ -799,10 +799,10 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                       href={SHOP_URL}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-950 transition hover:bg-emerald-100"
+                      className="inline-flex items-center justify-center gap-2 rounded-md bg-white px-6 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-950 transition hover:bg-emerald-100"
                     >
                       <ShoppingBag className="h-4 w-4" />
-                      Öppna Shoppen
+                      Öppna Butiken
                     </Link>
                   </div>
                 </div>
@@ -871,15 +871,15 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                 </div>
 
                 {shopVisible && (
-                  <div className="group overflow-hidden rounded-lg border border-gray-200 bg-white transition-all duration-200 hover:border-emerald-300">
+                  <div className="group overflow-hidden rounded-md border border-gray-200 bg-white transition-all duration-200 hover:border-emerald-300">
                     <div className="p-6">
                       <div className="mb-4 flex items-center">
                         <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
                           <ShoppingBag className="h-5 w-5 text-emerald-600" />
                         </div>
                         <div>
-                          <h3 className="text-xl font-semibold text-gray-900">Shop</h3>
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600">Pickup only</p>
+                          <h3 className="text-xl font-semibold text-gray-900">Butik</h3>
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600">Endast upphämtning</p>
                         </div>
                       </div>
 
@@ -893,7 +893,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                         rel="noopener noreferrer"
                         className="inline-flex items-center font-medium text-sm text-emerald-600 transition-transform group-hover:translate-x-1 hover:text-emerald-700"
                       >
-                        Handla HHF-merch
+                        Handla HHF-produkter
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Link>
                     </div>

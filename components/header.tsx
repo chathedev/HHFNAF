@@ -107,12 +107,12 @@ function Header() {
                 href={SHOP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-3 rounded-full border border-emerald-300/25 bg-emerald-400 px-4 py-2 text-sm font-semibold text-black shadow-[0_10px_30px_rgba(74,222,128,0.25)] transition hover:scale-[1.02] hover:bg-emerald-300"
+                className="inline-flex items-center gap-3 rounded-md border border-emerald-300/25 bg-emerald-400 px-4 py-2 text-sm font-semibold text-black shadow-[0_10px_30px_rgba(74,222,128,0.18)] transition hover:bg-emerald-300"
               >
                 <ShoppingBag className="h-4 w-4" />
-                <span>Shop</span>
-                <span className="rounded-full bg-black/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-black/70">
-                  Pickup only
+                <span>Butik</span>
+                <span className="rounded-sm bg-black/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-black/70">
+                  Endast upphämtning
                 </span>
               </Link>
             )}
@@ -160,14 +160,14 @@ function Header() {
                 href={SHOP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-4 flex items-center justify-between rounded-2xl border border-emerald-400/20 bg-emerald-400 px-4 py-4 text-black shadow-[0_14px_40px_rgba(74,222,128,0.2)] transition hover:bg-emerald-300"
+                className="mt-4 flex items-center justify-between rounded-lg border border-emerald-400/20 bg-emerald-400 px-4 py-4 text-black shadow-[0_14px_40px_rgba(74,222,128,0.14)] transition hover:bg-emerald-300"
                 onClick={() => setIsMenuOpen(false)}
               >
                 <div className="flex items-start gap-3">
                   <ShoppingBag className="mt-0.5 h-5 w-5 flex-shrink-0" />
                   <div>
-                    <div className="text-sm font-semibold uppercase tracking-[0.2em] text-black/70">Supportershop</div>
-                    <div className="text-base font-bold">Shoppa HHF-merch</div>
+                    <div className="text-sm font-semibold uppercase tracking-[0.2em] text-black/70">Supporterbutik</div>
+                    <div className="text-base font-bold">Handla HHF-produkter</div>
                     <div className="text-sm text-black/70">Endast upphämtning i shop.harnosandshf.se</div>
                   </div>
                 </div>
