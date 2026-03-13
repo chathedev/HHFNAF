@@ -577,6 +577,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     }),
     [groupedFeed],
   )
+  const hasUpcomingProfixio = upcomingProviderSummary.profixio > 0
+  const hasUpcomingProcup = upcomingProviderSummary.procup > 0
+  const showSplitUpcomingPreview = hasUpcomingProfixio && hasUpcomingProcup
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -945,16 +948,20 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                       <div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Kommande</p>
                         <h3 className="mt-1 text-2xl font-semibold text-slate-950">Nästa matcher</h3>
-                        <p className="mt-1 text-sm text-slate-500">En kort startsidepreview. För hela flödet, cupdagar och fler tider går du vidare till matchsidan.</p>
+                        <p className="mt-1 text-sm text-slate-500">
+                          {showSplitUpcomingPreview
+                            ? "En kort startsidepreview av både Profixio och ProCup. För hela flödet går du vidare till matchsidan."
+                            : "En kort startsidepreview av nästa matcher. För hela flödet går du vidare till matchsidan."}
+                        </p>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {upcomingProviderSummary.profixio > 0 && (
+                        {hasUpcomingProfixio && (
                           <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-800">
                             <span className="h-2 w-2 rounded-full bg-emerald-500" />
                             Profixio {upcomingProviderSummary.profixio}
                           </span>
                         )}
-                        {upcomingProviderSummary.procup > 0 && (
+                        {hasUpcomingProcup && (
                           <span className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white px-3 py-1 text-xs font-semibold text-sky-800">
                             <span className="h-2 w-2 rounded-full bg-sky-500" />
                             ProCup {upcomingProviderSummary.procup}
@@ -964,9 +971,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                     </div>
 
                     {showInitialMatchLoader && (
-                      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                      <div className={`mt-4 grid gap-4 ${showSplitUpcomingPreview ? "lg:grid-cols-2" : ""}`}>
                         {renderUpcomingSkeletonPanel("profixio")}
-                        {renderUpcomingSkeletonPanel("procup")}
+                        {showSplitUpcomingPreview && renderUpcomingSkeletonPanel("procup")}
                       </div>
                     )}
 
@@ -985,9 +992,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                         </div>
                       )}
 
-                    {!showInitialMatchLoader && !matchError && (upcomingProviderSummary.profixio > 0 || upcomingProviderSummary.procup > 0) && (
-                      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                        {upcomingProviderSummary.profixio > 0 && (
+                    {!showInitialMatchLoader && !matchError && (hasUpcomingProfixio || hasUpcomingProcup) && (
+                      <div className={`mt-4 grid gap-4 ${showSplitUpcomingPreview ? "lg:grid-cols-2" : ""}`}>
+                        {hasUpcomingProfixio && (
                           <section className="rounded-2xl border border-emerald-200 bg-white p-4 sm:p-5">
                             <div className="mb-4 flex items-start justify-between gap-4">
                               <div>
@@ -1017,7 +1024,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                           </section>
                         )}
 
-                        {upcomingProviderSummary.procup > 0 && (
+                        {hasUpcomingProcup && (
                           <section className="rounded-2xl border border-sky-200 bg-white p-4 sm:p-5">
                             <div className="mb-4 flex items-start justify-between gap-4">
                               <div>
