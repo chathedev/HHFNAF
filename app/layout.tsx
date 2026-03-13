@@ -6,6 +6,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ScrollToTop } from "@/components/scroll-to-top"
 import { VisitBeacon } from "@/components/visit-beacon"
+import { ShopStatusProvider } from "@/components/shop-status-provider"
 import { deriveSiteVariant, getThemeVariant } from "@/lib/site-variant"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -323,9 +324,11 @@ export default async function RootLayout({
           </span>
         </div>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <ScrollToTop />
-          <VisitBeacon />
-          {children}
+          <ShopStatusProvider>
+            <ScrollToTop />
+            <VisitBeacon />
+            {children}
+          </ShopStatusProvider>
         </ThemeProvider>
       </body>
     </html>

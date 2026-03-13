@@ -21,6 +21,7 @@ import {
   History,
   Facebook,
   Instagram,
+  ShoppingBag,
 } from "lucide-react"
 import { Header } from "@/components/header"
 import Footer from "@/components/footer"
@@ -43,6 +44,7 @@ import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchCardCTA } from "@/components/match-card-cta"
 import { InstagramFeed } from "@/components/instagram-feed"
 import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
+import { SHOP_URL, useShopStatus } from "@/components/shop-status-provider"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
 type MatchTopScorer = {
   team: string
@@ -154,6 +156,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const [isInitialHomeMatchFetchDone, setIsInitialHomeMatchFetchDone] = useState(Boolean(initialData?.matches?.length))
   const hasStartedInitialHomeMatchFetchRef = useRef(false)
   const limitedParams = useMemo(() => ({ limit: 10 }), [])
+  const { shopVisible } = useShopStatus()
   const {
     matches: currentMatches,
     loading: matchLoading,
@@ -781,6 +784,30 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
           {/* Cards Section */}
           <section className="py-12 bg-white">
             <div className="container mx-auto px-4">
+              {shopVisible && (
+                <div className="mx-auto mb-8 max-w-5xl overflow-hidden rounded-[30px] border border-emerald-200 bg-gradient-to-r from-slate-950 via-emerald-950 to-emerald-700 text-white shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
+                  <div className="flex flex-col gap-6 px-6 py-7 md:flex-row md:items-center md:justify-between md:px-8">
+                    <div className="max-w-2xl">
+                      <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-300">Supportershop</p>
+                      <h3 className="mt-2 text-2xl font-black tracking-tight">Gör matchintresset till merchförsäljning.</h3>
+                      <p className="mt-2 text-sm text-emerald-50/85">
+                        Shoppa HHF-plagg och supporterprylar på <span className="font-semibold">shop.harnosandshf.se</span>.
+                        Ingen leverans, endast upphämtning.
+                      </p>
+                    </div>
+                    <Link
+                      href={SHOP_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-950 transition hover:bg-emerald-100"
+                    >
+                      <ShoppingBag className="h-4 w-4" />
+                      Öppna Shoppen
+                    </Link>
+                  </div>
+                </div>
+              )}
+
               <div className="text-center mb-8">
                 <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
                   Upplev <span className={isPinkTheme ? "text-pink-400" : "text-orange-500"}>Handboll</span> Live
@@ -790,7 +817,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                 </p>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+              <div className={`grid gap-6 mx-auto ${shopVisible ? "max-w-5xl md:grid-cols-2 xl:grid-cols-3" : "max-w-3xl md:grid-cols-2"}`}>
                 {/* Se Matcher Card */}
                 <div className={`group bg-white rounded-lg border border-gray-200 ${isPinkTheme ? "hover:border-pink-300" : "hover:border-green-300"} transition-all duration-200 overflow-hidden`}>
                   <div className="p-6">
@@ -842,6 +869,36 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                     </Link>
                   </div>
                 </div>
+
+                {shopVisible && (
+                  <div className="group overflow-hidden rounded-lg border border-gray-200 bg-white transition-all duration-200 hover:border-emerald-300">
+                    <div className="p-6">
+                      <div className="mb-4 flex items-center">
+                        <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
+                          <ShoppingBag className="h-5 w-5 text-emerald-600" />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-semibold text-gray-900">Shop</h3>
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600">Pickup only</p>
+                        </div>
+                      </div>
+
+                      <p className="mb-6 text-sm leading-relaxed text-gray-600">
+                        Sälj supporterplagg där engagemanget redan finns. Shoppen finns på <span className="font-semibold text-gray-900">shop.harnosandshf.se</span> och alla köp hämtas upp lokalt.
+                      </p>
+
+                      <Link
+                        href={SHOP_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center font-medium text-sm text-emerald-600 transition-transform group-hover:translate-x-1 hover:text-emerald-700"
+                      >
+                        Handla HHF-merch
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </section>

@@ -1,10 +1,39 @@
+"use client"
+
 import Link from "next/link"
-import { Mail, MapPin, Phone } from "lucide-react"
+import { Mail, MapPin, ShoppingBag } from "lucide-react"
+import { SHOP_URL, useShopStatus } from "@/components/shop-status-provider"
 
 export default function Footer() {
+  const { shopVisible } = useShopStatus()
+
   return (
     <footer className="bg-gradient-to-b from-gray-900 to-black text-white">
       <div className="container mx-auto px-4 py-12 md:py-16">
+        {shopVisible && (
+          <div className="mb-10 rounded-[28px] border border-emerald-400/20 bg-gradient-to-r from-emerald-500 via-green-500 to-lime-400 p-6 text-black shadow-[0_20px_60px_rgba(74,222,128,0.18)]">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="max-w-2xl">
+                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-black/65">Supportershop</p>
+                <h3 className="mt-2 text-2xl font-black tracking-tight">Sälj läktarstöd också utanför matchdag.</h3>
+                <p className="mt-3 text-sm text-black/75">
+                  Shoppen är öppen på <span className="font-semibold">shop.harnosandshf.se</span>. Ingen leverans,
+                  endast upphämtning. Perfekt för matchtröjor, supporterplagg och presenter.
+                </p>
+              </div>
+              <Link
+                href={SHOP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-6 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-white hover:text-black"
+              >
+                <ShoppingBag className="h-4 w-4" />
+                Öppna Shoppen
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Main Footer Content */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 mb-12">
           {/* Club Info */}
@@ -38,6 +67,19 @@ export default function Footer() {
                   Köp biljett
                 </a>
               </li>
+              {shopVisible && (
+                <li>
+                  <a
+                    href={SHOP_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-300 hover:text-emerald-400 transition-colors text-sm flex items-center gap-2 group"
+                  >
+                    <span className="w-1 h-1 bg-emerald-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                    Shop
+                  </a>
+                </li>
+              )}
               <li>
                 <Link href="/lag" className="text-gray-300 hover:text-emerald-400 transition-colors text-sm flex items-center gap-2 group">
                   <span className="w-1 h-1 bg-emerald-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>

@@ -3,14 +3,16 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Menu, X, Instagram, Facebook } from "lucide-react"
+import { Menu, X, Instagram, Facebook, ShoppingBag } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { SHOP_URL, useShopStatus } from "@/components/shop-status-provider"
 
 function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const pathname = usePathname()
+  const { shopVisible } = useShopStatus()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -27,7 +29,7 @@ function Header() {
     }
   }, [])
 
-  const visiblePaths = ["/", "/lag", "/matcher", "/kontakt", "/kop-biljett"]
+  const visiblePaths = ["/", "/lag", "/matcher", "/kontakt", "/kop-biljett", "/shop"]
 
   if (!visiblePaths.includes(pathname)) {
     return null
@@ -100,6 +102,20 @@ function Header() {
                 />
               </Link>
             ))}
+            {shopVisible && (
+              <Link
+                href={SHOP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-3 rounded-full border border-emerald-300/25 bg-emerald-400 px-4 py-2 text-sm font-semibold text-black shadow-[0_10px_30px_rgba(74,222,128,0.25)] transition hover:scale-[1.02] hover:bg-emerald-300"
+              >
+                <ShoppingBag className="h-4 w-4" />
+                <span>Shop</span>
+                <span className="rounded-full bg-black/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-black/70">
+                  Pickup only
+                </span>
+              </Link>
+            )}
             {/* Social links moved inside this flex container for right alignment */}
             <div className="flex items-center space-x-4">
               <Link href="https://www.instagram.com/harnosandshf/" target="_blank" rel="noopener noreferrer">
@@ -138,6 +154,26 @@ function Header() {
                 </Link>
               ))}
             </nav>
+
+            {shopVisible && (
+              <Link
+                href={SHOP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 flex items-center justify-between rounded-2xl border border-emerald-400/20 bg-emerald-400 px-4 py-4 text-black shadow-[0_14px_40px_rgba(74,222,128,0.2)] transition hover:bg-emerald-300"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <div className="flex items-start gap-3">
+                  <ShoppingBag className="mt-0.5 h-5 w-5 flex-shrink-0" />
+                  <div>
+                    <div className="text-sm font-semibold uppercase tracking-[0.2em] text-black/70">Supportershop</div>
+                    <div className="text-base font-bold">Shoppa HHF-merch</div>
+                    <div className="text-sm text-black/70">Endast upphämtning i shop.harnosandshf.se</div>
+                  </div>
+                </div>
+                <span className="text-sm font-semibold">Öppen</span>
+              </Link>
+            )}
 
             <div className="flex items-center justify-center gap-6 mt-6 pt-6 border-t border-gray-800">
               <Link href="https://www.instagram.com/harnosandshf/" target="_blank" rel="noopener noreferrer">
