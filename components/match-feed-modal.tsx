@@ -344,10 +344,12 @@ export function MatchFeedModal({
   const [detailClockState, setDetailClockState] = useState<MatchClockState | null>(null)
   const [detailPenalties, setDetailPenalties] = useState<MatchPenalty[]>([])
   const [clockTick, setClockTick] = useState(0)
+  const [isLoadingTimeline, setIsLoadingTimeline] = useState(true)
   const allowAutoRefresh = matchStatus === "live" || matchStatus === "halftime"
   const effectiveClockState = detailClockState ?? clockState ?? null
   const effectivePenalties = detailPenalties.length > 0 ? detailPenalties : penalties
-  const timelineSource = detailTimeline ?? matchFeed
+  // Use detail timeline once loaded, otherwise use matchFeed but only after initial load attempt
+  const timelineSource = detailTimeline ?? (isLoadingTimeline ? [] : matchFeed)
   const hasClockData = Boolean(
     effectiveClockState &&
       (typeof effectiveClockState.currentSeconds === "number" || Boolean(effectiveClockState.clock)),
@@ -370,25 +372,35 @@ export function MatchFeedModal({
 
   const fetchDetailData = async () => {
     const apiMatchId = matchData?.apiMatchId
-    if (!apiMatchId) return
-    const response = await fetch(`${API_BASE_URL}/matcher/match/${encodeURIComponent(apiMatchId)}?includeEvents=1`, {
-      cache: "no-store",
-      headers: { Accept: "application/json" },
-    })
-    if (!response.ok) return
-    const payload = await response.json()
-    const rawTimeline = Array.isArray(payload?.events)
-      ? payload.events
-      : Array.isArray(payload?.timeline)
-        ? payload.timeline
-        : Array.isArray(payload?.matchFeed)
-          ? payload.matchFeed
-          : []
-    const normalized = dedupeTimelineEvents(rawTimeline.map((event: any) => normalizeTimelineEvent(event)))
-    setDetailTimeline(normalized)
-    setDetailClockState((payload?.clockState as MatchClockState) ?? null)
-    setDetailPenalties(Array.isArray(payload?.penalties) ? payload.penalties : [])
-    setClockTick(0)
+    if (!apiMatchId) {
+      setIsLoadingTimeline(false)
+      return
+    }
+    try {
+      const response = await fetch(`${API_BASE_URL}/matcher/match/${encodeURIComponent(apiMatchId)}?includeEvents=1`, {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      })
+      if (!response.ok) {
+        setIsLoadingTimeline(false)
+        return
+      }
+      const payload = await response.json()
+      const rawTimeline = Array.isArray(payload?.events)
+        ? payload.events
+        : Array.isArray(payload?.timeline)
+          ? payload.timeline
+          : Array.isArray(payload?.matchFeed)
+            ? payload.matchFeed
+            : []
+      const normalized = dedupeTimelineEvents(rawTimeline.map((event: any) => normalizeTimelineEvent(event)))
+      setDetailTimeline(normalized)
+      setDetailClockState((payload?.clockState as MatchClockState) ?? null)
+      setDetailPenalties(Array.isArray(payload?.penalties) ? payload.penalties : [])
+      setClockTick(0)
+    } finally {
+      setIsLoadingTimeline(false)
+    }
   }
 
   useEffect(() => {
@@ -428,8 +440,11 @@ export function MatchFeedModal({
 
   useEffect(() => {
     if (!isOpen) return
+    // Reset state when opening modal for a new match
     setClockTick(0)
-    fetchDetailData().catch(() => undefined)
+    setIsLoadingTimeline(true)
+    setDetailTimeline(null)
+    fetchDetailData().catch(() => setIsLoadingTimeline(false))
   }, [isOpen, matchData?.apiMatchId])
 
   useEffect(() => {
@@ -758,12 +773,20 @@ export function MatchFeedModal({
         <div className="flex-1 overflow-y-auto bg-slate-50 px-3 py-4 sm:px-8 sm:py-6">
           {activeTab === "timeline" && (
             <div className="space-y-6 sm:space-y-8">
-              {sortedFeed.length === 0 && (
+              {isLoadingTimeline && (
+                <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-600" />
+                    <p className="text-base font-semibold text-slate-700">Laddar tidslinje...</p>
+                  </div>
+                </div>
+              )}
+              {!isLoadingTimeline && sortedFeed.length === 0 && (
                 <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center">
                   <p className="text-base font-semibold text-slate-700">{emptyTimelineMessage}</p>
                 </div>
               )}
-              {periodKeys.map((period) => (
+              {!isLoadingTimeline && periodKeys.map((period) => (
                 <section key={period} className="space-y-3">
                   <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">{getPeriodLabel(period)}</h3>
                   <ul className="space-y-2.5 sm:space-y-3">
