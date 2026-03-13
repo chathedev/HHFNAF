@@ -705,27 +705,27 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
           </section>
 
           {shopVisible && (
-            <section className="bg-white pb-8">
+            <section className="border-b border-slate-200 bg-white">
               <div className="container mx-auto px-4">
-                <div className="-mt-6 overflow-hidden rounded-xl border border-emerald-200 bg-gradient-to-r from-slate-950 via-emerald-950 to-emerald-700 text-white shadow-[0_24px_70px_rgba(15,23,42,0.12)] sm:-mt-8">
-                  <div className="flex flex-col gap-6 px-6 py-7 md:flex-row md:items-center md:justify-between md:px-8">
-                    <div className="max-w-3xl">
-                      <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-300">Supporterbutik</p>
-                      <h3 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Stötta HHF även mellan matcherna.</h3>
-                      <p className="mt-2 text-sm text-emerald-50/85 sm:text-base">
-                        Beställ matchtröjor, supporterplagg och presenter i webbutiken. Alla köp hämtas lokalt och hjälper föreningen framåt.
-                      </p>
-                      <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-100">
-                        <span className="rounded-sm bg-white/10 px-3 py-2">Matchtröjor</span>
-                        <span className="rounded-sm bg-white/10 px-3 py-2">Supporterplagg</span>
-                        <span className="rounded-sm bg-white/10 px-3 py-2">Presenter</span>
-                      </div>
+                <div className="flex flex-col gap-5 py-6 md:flex-row md:items-center md:justify-between">
+                  <div className="max-w-3xl">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-emerald-600">Butik</p>
+                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-slate-950 sm:text-2xl">
+                      Handla HHF-produkter mellan matcherna.
+                    </h3>
+                    <p className="mt-2 text-sm text-slate-600 sm:text-base">
+                      Matchtröjor, supporterplagg och presenter. Beställ online och hämta lokalt.
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                      Ingen leverans
                     </div>
                     <Link
                       href={SHOP_URL}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2 rounded-md bg-white px-6 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-950 transition hover:bg-emerald-100"
+                      className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-slate-950 px-5 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-white transition hover:border-emerald-600 hover:bg-emerald-600"
                     >
                       <ShoppingBag className="h-4 w-4" />
                       Till Butiken
