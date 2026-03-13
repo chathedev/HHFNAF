@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useEffect, useCallback, useRef } from "react"
 import Link from "next/link"
-import { ChevronDown } from "lucide-react"
 
 import {
   buildMatchScheduleLabel,
@@ -164,7 +163,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   const [topScorersByMatchId, setTopScorersByMatchId] = useState<Record<string, MatchTopScorer[]>>({})
   const [clockStateByMatchId, setClockStateByMatchId] = useState<Record<string, MatchClockState>>({})
   const [penaltiesByMatchId, setPenaltiesByMatchId] = useState<Record<string, MatchPenalty[]>>({})
-  const [openProviderSections, setOpenProviderSections] = useState<Record<string, boolean>>({})
   const timelineFetchInFlightRef = useRef<Record<string, Promise<void>>>({})
   const [hasResolvedLiveData, setHasResolvedLiveData] = useState(false)
   const [hasResolvedOldData, setHasResolvedOldData] = useState(false)
@@ -462,7 +460,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
       <article
         key={match.id}
         id={`match-card-${match.id}`}
-        className={`relative flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-all duration-200 active:scale-[0.99] sm:gap-4 sm:p-6 ${
+        className={`relative flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-200 active:scale-[0.99] sm:gap-4 sm:p-5 ${
           canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:shadow-lg" : ""
         }`}
         onMouseEnter={() => {
@@ -486,7 +484,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
           openMatchModal(match)
         }}
       >
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-sm font-semibold text-emerald-700">{teamTypeLabel}</p>
@@ -499,15 +497,15 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
             <h3 className="text-base font-bold leading-tight text-gray-900 sm:text-xl">
               {matchupLabel}
             </h3>
-            {scheduleLabel && <p className="text-sm text-gray-500">{scheduleLabel}</p>}
+            {scheduleLabel && <p className="text-sm leading-6 text-gray-500 break-words">{scheduleLabel}</p>}
           </div>
-          <span className={`inline-flex items-center justify-center rounded px-2.5 py-0.5 text-xs font-semibold ${statusBadge.tone}`}>
+          <span className={`inline-flex w-fit items-center justify-center rounded px-2.5 py-0.5 text-xs font-semibold ${statusBadge.tone}`}>
             {statusBadge.label}
           </span>
         </div>
 
         {scoreValue && (
-          <div className="flex items-end justify-between">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <span className="text-2xl font-extrabold text-gray-900 sm:text-3xl" data-score-value="true">
               {scoreValue}
             </span>
@@ -540,74 +538,48 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
 
   const renderProviderBlocks = (
     matches: NormalizedMatch[],
-    emptyTitle: string,
-    emptyDescription: string,
-    sectionKey: string,
-    options?: {
+    options: {
+      standardTitle: string
+      standardDescription: string
+      cupTitle: string
+      cupDescription: string
       defaultOpenDates?: number
       previewTimeBucketsPerDate?: number
       previewMatchesPerTimeBucket?: number
     },
   ) => {
     const { cup, standard } = splitProviderMatches(matches)
-    const isCupOpen = openProviderSections[sectionKey] ?? false
 
     return (
-      <div className="space-y-6">
+      <div className={`grid gap-4 ${standard.length > 0 && cup.length > 0 ? "xl:grid-cols-2" : ""}`}>
         {standard.length > 0 && (
-          <div>
-            <div className="mb-4 flex items-center justify-between gap-3">
+          <section className="rounded-2xl border border-emerald-200 bg-white p-4 sm:p-5">
+            <div className="mb-4 flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-700">{emptyTitle}</h3>
-                <p className="mt-1 text-sm text-slate-500">Seriespel och övriga matcher renderas som vanliga matchkort.</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">Profixio</p>
+                <h3 className="mt-1 text-lg font-semibold text-slate-950">{options.standardTitle}</h3>
+                <p className="mt-1 text-sm text-slate-500">{options.standardDescription}</p>
               </div>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                {standard.length} matcher
+              <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                {standard.length}
               </span>
             </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 sm:gap-6">
+            <div className="grid gap-3 lg:grid-cols-2">
               {standard.map(renderMatchCard)}
             </div>
-          </div>
+          </section>
         )}
 
         {cup.length > 0 && (
-          <section className="rounded-xl border border-sky-200 bg-sky-50/60">
-            <button
-              type="button"
-              onClick={() => setOpenProviderSections((previous) => ({ ...previous, [sectionKey]: !isCupOpen }))}
-              className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-white/50 sm:px-5"
-            >
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-sky-800">ProCup</h3>
-                  <span className="inline-flex items-center rounded-full border border-sky-200 bg-white px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700">
-                    {cup.length} matcher
-                  </span>
-                </div>
-                <p className="mt-1 text-sm text-sky-900/75">
-                  {isCupOpen
-                    ? "Cupschemat är öppet. Stäng det igen om du vill fokusera på Profixio och seriespel."
-                    : "Cupschemat hålls stängt från start för snabbare rendering och tydligare fokus på Profixio först."}
-                </p>
-              </div>
-              <ChevronDown className={`h-4 w-4 shrink-0 text-sky-700 transition-transform ${isCupOpen ? "rotate-180" : ""}`} />
-            </button>
-
-            {isCupOpen ? (
-              <div className="border-t border-sky-200">
-                <CompactCupSchedule
-                  matches={cup}
-                  title="ProCup"
-                  description={emptyDescription}
-                  defaultOpenDates={options?.defaultOpenDates ?? 0}
-                  previewTimeBucketsPerDate={options?.previewTimeBucketsPerDate}
-                  previewMatchesPerTimeBucket={options?.previewMatchesPerTimeBucket}
-                  className="rounded-none border-0 bg-transparent"
-                />
-              </div>
-            ) : null}
-          </section>
+          <CompactCupSchedule
+            matches={cup}
+            title={options.cupTitle}
+            description={options.cupDescription}
+            defaultOpenDates={options.defaultOpenDates ?? 1}
+            previewTimeBucketsPerDate={options.previewTimeBucketsPerDate}
+            previewMatchesPerTimeBucket={options.previewMatchesPerTimeBucket}
+            className="rounded-2xl border-sky-200 bg-white"
+          />
         )}
       </div>
     )
@@ -620,101 +592,118 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   }, [teamOptions])
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-16 sm:py-24">
-      <div className="container mx-auto px-4 max-w-7xl">
-        {/* Header */}
-        <div className="mb-8 sm:mb-12">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-medium mb-6 transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Tillbaka
-          </Link>
-          <h1 className="mb-3 text-3xl font-black text-gray-900 sm:mb-4 sm:text-5xl">Matcher</h1>
-          <p className="max-w-2xl text-base text-gray-600 sm:text-xl">
-            Följ alla våra lag live och se resultat från senaste matcherna. Välj lag nedan:
-          </p>
-        </div>
-
-        {/* Minimal Stats Row */}
-        <div className="-mx-1 mb-6 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-1 text-sm font-semibold text-gray-600 sm:flex-wrap sm:overflow-visible">
-          <div className="min-w-[138px] shrink-0 snap-start flex items-center gap-2 rounded-[10px] border border-gray-200 bg-white px-4 py-2 shadow-sm">
-            <span className="h-2 w-2 rounded-full bg-red-500"></span>
-            <span className="uppercase tracking-[0.3em] text-[10px] text-gray-500">Live</span>
-            <span className="text-lg font-bold text-gray-900">{matchStats.liveMatches}</span>
-          </div>
-          <div className="min-w-[138px] shrink-0 snap-start flex items-center gap-2 rounded-[10px] border border-gray-200 bg-white px-4 py-2 shadow-sm">
-            <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
-            <span className="uppercase tracking-[0.3em] text-[10px] text-gray-500">Kommande</span>
-            <span className="text-lg font-bold text-gray-900">{matchStats.upcomingMatches}</span>
-          </div>
-          <div className="min-w-[138px] shrink-0 snap-start flex items-center gap-2 rounded-[10px] border border-gray-200 bg-white px-4 py-2 shadow-sm">
-            <span className="h-2 w-2 rounded-full bg-slate-500"></span>
-            <span className="uppercase tracking-[0.3em] text-[10px] text-gray-500">Avslutade</span>
-            <span className="text-lg font-bold text-gray-900">{matchStats.finishedMatches}</span>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="mb-8 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex-1 min-w-0">
-              <label
-                htmlFor="team-filter"
-                className="block text-sm font-semibold text-gray-700 uppercase tracking-wide"
+    <main className="min-h-screen bg-slate-50 py-10 sm:py-14">
+      <div className="container mx-auto max-w-7xl px-4">
+        <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
+          <div className="grid gap-5 border-b border-slate-200 px-5 py-5 sm:px-8 sm:py-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] xl:items-end">
+            <div>
+              <Link
+                href="/"
+                className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700 transition hover:text-emerald-900"
               >
-                Filtrera lag
-              </label>
-              <p className="text-xs text-gray-500 mb-2">
-                Välj ett lag för att zooma in på deras matcher.
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Till startsidan
+              </Link>
+              <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.35em] text-emerald-600">Matcher</p>
+              <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">Allt matchläge i ett flöde.</h1>
+              <p className="mt-3 max-w-3xl text-sm text-slate-600 sm:text-base">
+                En gemensam matcher-yta för Profixio och ProCup. Följ live, skanna cupdagar snabbare och öppna detaljer först när du behöver dem.
               </p>
-              <select
-                id="team-filter"
-                className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 focus:border-emerald-400 focus:outline-none transition-colors"
-                value={selectedTeam}
-                onChange={(e) => setSelectedTeam(e.target.value)}
-              >
-                <option value="all">🏐 Alla lag</option>
-                {teamOptions.map((team) => (
-                  <option key={team.value} value={team.value}>
-                    {team.label}
-                  </option>
-                ))}
-              </select>
             </div>
-            <div className="lg:w-[320px]">
-              <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wide">
-                Matchstatus
-              </label>
-              <p className="text-xs text-gray-500 mb-2">
-                Visa matcher baserat på status – live, kommande eller avslutade.
-              </p>
-              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                {STATUS_OPTIONS.map((option) => {
-                  const isActive = statusFilter === option.value
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      aria-pressed={isActive}
-                      onClick={() => setStatusFilter(option.value)}
-                      className={`rounded-2xl border px-3 py-2.5 text-sm font-semibold transition sm:px-4 sm:py-2 ${
-                        isActive
-                          ? "bg-emerald-600 border-emerald-600 text-white shadow-lg"
-                          : "bg-white border-gray-200 text-gray-700 hover:border-emerald-400"
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  )
-                })}
+
+            <div className="grid gap-2 sm:grid-cols-3 xl:justify-self-end">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Live</p>
+                <p className="mt-1 text-2xl font-black text-slate-950">{matchStats.liveMatches}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Kommande</p>
+                <p className="mt-1 text-2xl font-black text-slate-950">{matchStats.upcomingMatches}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Resultat</p>
+                <p className="mt-1 text-2xl font-black text-slate-950">{matchStats.finishedMatches}</p>
               </div>
             </div>
           </div>
-        </div>
+
+          <div className="grid gap-px bg-slate-200 xl:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)]">
+            <section className="bg-white p-4 sm:p-6">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Filter</p>
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label
+                    htmlFor="team-filter"
+                    className="block text-sm font-semibold text-slate-900"
+                  >
+                    Lag
+                  </label>
+                  <p className="mb-2 text-xs text-slate-500">Välj ett lag för att fokusera matchlistan.</p>
+                  <select
+                    id="team-filter"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 transition focus:border-emerald-400 focus:outline-none"
+                    value={selectedTeam}
+                    onChange={(e) => setSelectedTeam(e.target.value)}
+                  >
+                    <option value="all">Alla lag</option>
+                    {teamOptions.map((team) => (
+                      <option key={team.value} value={team.value}>
+                        {team.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <p className="block text-sm font-semibold text-slate-900">Status</p>
+                  <p className="mb-2 text-xs text-slate-500">Byt snabbt mellan översikt, live, kommande och avslutade.</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {STATUS_OPTIONS.map((option) => {
+                      const isActive = statusFilter === option.value
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          aria-pressed={isActive}
+                          onClick={() => setStatusFilter(option.value)}
+                          className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
+                            isActive
+                              ? "border-slate-950 bg-slate-950 text-white"
+                              : "border-slate-200 bg-slate-50 text-slate-700 hover:border-emerald-400 hover:bg-white"
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="bg-slate-950 px-4 py-4 text-white sm:px-6">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/55">Överblick</p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl bg-white/5 px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">Nu</p>
+                  <p className="mt-1 text-sm font-medium text-white/90">Livescore och timeline där backend säger att det finns.</p>
+                </div>
+                <div className="rounded-xl bg-white/5 px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">Profixio</p>
+                  <p className="mt-1 text-sm font-medium text-white/90">Seriespel och vanliga matchkort med detaljvisning.</p>
+                </div>
+                <div className="rounded-xl bg-white/5 px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">ProCup</p>
+                  <p className="mt-1 text-sm font-medium text-white/90">Kompakta cupdagar utan att trycka ned resten av sidan.</p>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <div className="mt-8">
 
         {/* Error state */}
         {activeError && (
@@ -764,26 +753,28 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
 
         {/* Match sections */}
         {!isLoading && filteredMatches.length > 0 && (
-          <div className="space-y-12">
+          <div className="space-y-8">
             {/* Live matches */}
             {groupedMatches.live.length > 0 && (
-              <section>
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse"></div>
-                  <h2 className="text-xl font-black text-gray-900 sm:text-2xl">Live nu</h2>
-                  <span className="px-3 py-1 bg-red-100 text-red-700 text-sm font-bold rounded-full">
+              <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                <div className="mb-5 flex flex-wrap items-center gap-3">
+                  <div className="h-3 w-3 animate-pulse rounded-full bg-red-600"></div>
+                  <h2 className="text-xl font-black text-slate-950 sm:text-2xl">Live nu</h2>
+                  <span className="rounded-full bg-red-100 px-3 py-1 text-sm font-bold text-red-700">
                     {groupedMatches.live.length}
                   </span>
+                  <p className="text-sm text-slate-500">Det som pågår just nu, uppdelat i Profixio och ProCup direkt i samma vy.</p>
                 </div>
                 {renderProviderBlocks(
                   groupedMatches.live,
-                  "Live i seriespel",
-                  "Livecupmatcher i ProCup visas kompakt per dag och starttid. Seriespel ligger kvar som separata kort.",
-                  "live",
                   {
+                    standardTitle: "Live i Profixio",
+                    standardDescription: "Seriespel och matcher med timeline/detaljkort där backend stödjer det.",
+                    cupTitle: "Live i ProCup",
+                    cupDescription: "Livescore först. Cupmatcher grupperas kompakt per dag och starttid.",
                     defaultOpenDates: 1,
-                    previewTimeBucketsPerDate: 5,
-                    previewMatchesPerTimeBucket: 6,
+                    previewTimeBucketsPerDate: 4,
+                    previewMatchesPerTimeBucket: 5,
                   },
                 )}
               </section>
@@ -791,24 +782,26 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
 
             {/* Upcoming matches */}
             {groupedMatches.upcoming.length > 0 && (
-              <section>
-                <div className="flex items-center gap-3 mb-6">
-                  <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                <div className="mb-5 flex flex-wrap items-center gap-3">
+                  <svg className="h-6 w-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 01-2 2z" />
                   </svg>
-                  <h2 className="text-xl font-black text-gray-900 sm:text-2xl">Kommande matcher</h2>
-                  <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-sm font-bold rounded-full">
+                  <h2 className="text-xl font-black text-slate-950 sm:text-2xl">Kommande matcher</h2>
+                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-bold text-emerald-700">
                     {groupedMatches.upcoming.length}
                   </span>
+                  <p className="text-sm text-slate-500">Snabb struktur för både seriespel och cupdagar utan att cupdelen skjuts längst ner.</p>
                 </div>
                 {renderProviderBlocks(
                   groupedMatches.upcoming,
-                  "Kommande seriespel",
-                  "Cupdagar i ProCup grupperas kompakt så du ser fler matcher direkt utan att drunkna i stora kort.",
-                  "upcoming",
                   {
-                    defaultOpenDates: 0,
-                    previewTimeBucketsPerDate: 6,
+                    standardTitle: "Profixio nästa",
+                    standardDescription: "Vanliga kommande matcher som egna kort, lätta att skanna och öppna.",
+                    cupTitle: "ProCup nästa",
+                    cupDescription: "Cupdagar i kompakta tidsblock så fler matcher får plats direkt.",
+                    defaultOpenDates: 1,
+                    previewTimeBucketsPerDate: 5,
                     previewMatchesPerTimeBucket: 4,
                   },
                 )}
@@ -817,23 +810,25 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
 
             {/* Finished matches */}
             {groupedMatches.finished.length > 0 && (
-              <section>
-                <div className="flex items-center gap-3 mb-6">
-                  <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                <div className="mb-5 flex flex-wrap items-center gap-3">
+                  <svg className="h-6 w-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <h2 className="text-xl font-black text-gray-900 sm:text-2xl">Senaste resultaten</h2>
-                  <span className="px-3 py-1 bg-gray-100 text-gray-700 text-sm font-bold rounded-full">
+                  <h2 className="text-xl font-black text-slate-950 sm:text-2xl">Senaste resultat</h2>
+                  <span className="rounded-full bg-slate-200 px-3 py-1 text-sm font-bold text-slate-700">
                     {groupedMatches.finished.length}
                   </span>
+                  <p className="text-sm text-slate-500">Resultatspåret håller ihop både seriespel och cuputfall i samma struktur.</p>
                 </div>
                 {renderProviderBlocks(
                   groupedMatches.finished,
-                  "Resultat från seriespel",
-                  "Avslutade ProCup-matcher visas också kompakt när en hel cupdag producerar många resultat samtidigt.",
-                  "finished",
                   {
-                    defaultOpenDates: 0,
+                    standardTitle: "Profixio resultat",
+                    standardDescription: "Vanliga resultatkort för avslutade matcher och återblick.",
+                    cupTitle: "ProCup resultat",
+                    cupDescription: "Cupresultat grupperade per dag när många matcher avslutas samtidigt.",
+                    defaultOpenDates: 1,
                     previewTimeBucketsPerDate: 5,
                     previewMatchesPerTimeBucket: 5,
                   },

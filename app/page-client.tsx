@@ -150,8 +150,8 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const [openTier, setOpenTier] = useState<string | null>("Diamantpartner")
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   const [homeUpcomingVisible, setHomeUpcomingVisible] = useState<{ profixio: number; procup: number }>({
-    profixio: 5,
-    procup: 5,
+    profixio: 3,
+    procup: 3,
   })
   const [timelineByMatchId, setTimelineByMatchId] = useState<Record<string, MatchFeedEvent[]>>({})
   const [topScorersByMatchId, setTopScorersByMatchId] = useState<Record<string, MatchTopScorer[]>>({})
@@ -584,8 +584,8 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   }, [groupedFeed])
   const homeUpcomingPreviewMatches = useMemo(
     () => ({
-      profixio: (groupedFeed?.upcoming ?? []).filter((match) => match.provider === "profixio").slice(0, Math.max(homeUpcomingVisible.profixio, 5)),
-      procup: (groupedFeed?.upcoming ?? []).filter((match) => match.provider === "procup").slice(0, Math.max(homeUpcomingVisible.procup, 5)),
+      profixio: (groupedFeed?.upcoming ?? []).filter((match) => match.provider === "profixio").slice(0, Math.max(homeUpcomingVisible.profixio, 3)),
+      procup: (groupedFeed?.upcoming ?? []).filter((match) => match.provider === "procup").slice(0, Math.max(homeUpcomingVisible.procup, 3)),
     }),
     [groupedFeed, homeUpcomingVisible],
   )
@@ -885,14 +885,14 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                         {groupedHomeMatches.live.length > 0 && (
                           <div>
                             <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-rose-600">Live nu</p>
-                            <ul className="space-y-3">{groupedHomeMatches.live.slice(0, 2).map(renderHomeMatchCard)}</ul>
+                            <ul className="space-y-3">{groupedHomeMatches.live.slice(0, 1).map(renderHomeMatchCard)}</ul>
                           </div>
                         )}
 
                         {groupedHomeMatches.finished.length > 0 && (
                           <div>
                             <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Senaste resultat</p>
-                            <ul className="space-y-3">{groupedHomeMatches.finished.slice(0, 2).map(renderHomeMatchCard)}</ul>
+                            <ul className="space-y-3">{groupedHomeMatches.finished.slice(0, 1).map(renderHomeMatchCard)}</ul>
                           </div>
                         )}
 
@@ -999,13 +999,13 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                                 <div>
                                   <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">Profixio</p>
                                   <h5 className="mt-1 text-lg font-semibold text-slate-950">Seriespel & större matcher</h5>
-                                  <p className="mt-1 text-sm text-slate-500">Snabb radöversikt för nästa matcher utan att sidan blir lång.</p>
+                                  <p className="mt-1 text-sm text-slate-500">Kort preview här. Gå vidare till matchsidan för full överblick, filter och alla detaljer.</p>
                                 </div>
                                 <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
                                   {upcomingProviderSummary.profixio}
                                 </span>
                               </div>
-                              <div className="sm:min-h-[20rem]">
+                              <div>
                                 <ul className="space-y-2">
                                   {homeUpcomingPreviewMatches.profixio.map(renderUpcomingPreviewRow)}
                                 </ul>
@@ -1017,13 +1017,13 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                                     : "Alla Profixio-matcher i förhandsvyn visas."}
                                 </p>
                                 <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-                                  {homeUpcomingVisible.profixio < Math.min(upcomingProviderSummary.profixio, 10) && (
+                                  {homeUpcomingVisible.profixio < Math.min(upcomingProviderSummary.profixio, 6) && (
                                     <button
                                       type="button"
                                       onClick={() =>
                                         setHomeUpcomingVisible((previous) => ({
                                           ...previous,
-                                          profixio: Math.min(previous.profixio + 5, 10),
+                                          profixio: Math.min(previous.profixio + 3, 6),
                                         }))
                                       }
                                       className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:border-emerald-500 hover:text-emerald-900 sm:w-auto"
@@ -1035,7 +1035,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                                     href="/matcher"
                                     className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 sm:w-auto"
                                   >
-                                    Hela listan
+                                    Till matcher
                                   </Link>
                                 </div>
                               </div>
@@ -1048,13 +1048,13 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                                 <div>
                                   <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700">ProCup</p>
                                   <h5 className="mt-1 text-lg font-semibold text-slate-950">Cupdag i snabböversikt</h5>
-                                  <p className="mt-1 text-sm text-slate-500">Flera matcher direkt, men komprimerat nog för snabb scanning.</p>
+                                  <p className="mt-1 text-sm text-slate-500">Snabb cupöversikt här. Öppna matchsidan för hela dagens schema och fler tider.</p>
                                 </div>
                                 <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">
                                   {upcomingProviderSummary.procup}
                                 </span>
                               </div>
-                              <div className="sm:min-h-[20rem]">
+                              <div>
                                 <ul className="space-y-2">
                                   {homeUpcomingPreviewMatches.procup.map(renderUpcomingPreviewRow)}
                                 </ul>
@@ -1066,13 +1066,13 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                                     : "Alla ProCup-matcher i förhandsvyn visas."}
                                 </p>
                                 <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-                                  {homeUpcomingVisible.procup < Math.min(upcomingProviderSummary.procup, 10) && (
+                                  {homeUpcomingVisible.procup < Math.min(upcomingProviderSummary.procup, 6) && (
                                     <button
                                       type="button"
                                       onClick={() =>
                                         setHomeUpcomingVisible((previous) => ({
                                           ...previous,
-                                          procup: Math.min(previous.procup + 5, 10),
+                                          procup: Math.min(previous.procup + 3, 6),
                                         }))
                                       }
                                       className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-sky-200 px-3 py-2 text-xs font-semibold text-sky-700 transition hover:border-sky-500 hover:text-sky-900 sm:w-auto"
@@ -1084,7 +1084,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                                     href="/matcher"
                                     className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 sm:w-auto"
                                   >
-                                    Hela listan
+                                    Till matcher
                                   </Link>
                                 </div>
                               </div>
