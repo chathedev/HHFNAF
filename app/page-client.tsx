@@ -816,8 +816,12 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                           <CompactCupSchedule
                             matches={groupedHomeMatches.upcomingCup}
                             title="Kommande cupmatcher"
-                            description="Täta spelscheman visas per dag och starttid, så du ser hela cupdagen utan att korten tar över sidan."
+                            description="Cupdagen sammanfattas först i ett snabbt utdrag. Öppna hela dagen bara när du behöver hela spelschemat."
                             defaultOpenDates={1}
+                            previewTimeBucketsPerDate={4}
+                            previewMatchesPerTimeBucket={3}
+                            fullScheduleHref="/matcher"
+                            fullScheduleLabel="Öppna hela matchschemat"
                           />
                         </div>
                       )}

@@ -540,7 +540,11 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     matches: NormalizedMatch[],
     emptyTitle: string,
     emptyDescription: string,
-    defaultOpenDates = 1,
+    options?: {
+      defaultOpenDates?: number
+      previewTimeBucketsPerDate?: number
+      previewMatchesPerTimeBucket?: number
+    },
   ) => {
     const { cup, standard } = splitProviderMatches(matches)
 
@@ -551,7 +555,9 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
             matches={cup}
             title="ProCup"
             description={emptyDescription}
-            defaultOpenDates={defaultOpenDates}
+            defaultOpenDates={options?.defaultOpenDates ?? 0}
+            previewTimeBucketsPerDate={options?.previewTimeBucketsPerDate}
+            previewMatchesPerTimeBucket={options?.previewMatchesPerTimeBucket}
           />
         )}
 
@@ -741,7 +747,11 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                   groupedMatches.live,
                   "Live i seriespel",
                   "Livecupmatcher i ProCup visas kompakt per dag och starttid. Seriespel ligger kvar som separata kort.",
-                  1,
+                  {
+                    defaultOpenDates: 1,
+                    previewTimeBucketsPerDate: 5,
+                    previewMatchesPerTimeBucket: 6,
+                  },
                 )}
               </section>
             )}
@@ -762,7 +772,11 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                   groupedMatches.upcoming,
                   "Kommande seriespel",
                   "Cupdagar i ProCup grupperas kompakt så du ser fler matcher direkt utan att drunkna i stora kort.",
-                  2,
+                  {
+                    defaultOpenDates: 0,
+                    previewTimeBucketsPerDate: 6,
+                    previewMatchesPerTimeBucket: 4,
+                  },
                 )}
               </section>
             )}
@@ -783,7 +797,11 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                   groupedMatches.finished,
                   "Resultat från seriespel",
                   "Avslutade ProCup-matcher visas också kompakt när en hel cupdag producerar många resultat samtidigt.",
-                  1,
+                  {
+                    defaultOpenDates: 0,
+                    previewTimeBucketsPerDate: 5,
+                    previewMatchesPerTimeBucket: 5,
+                  },
                 )}
               </section>
             )}

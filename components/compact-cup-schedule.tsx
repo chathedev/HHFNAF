@@ -21,6 +21,10 @@ type CompactCupScheduleProps = {
   description?: string
   defaultOpenDates?: number
   className?: string
+  previewTimeBucketsPerDate?: number
+  previewMatchesPerTimeBucket?: number
+  fullScheduleHref?: string
+  fullScheduleLabel?: string
 }
 
 type TimeBucket = {
@@ -166,9 +170,14 @@ export function CompactCupSchedule({
   description,
   defaultOpenDates = 1,
   className,
+  previewTimeBucketsPerDate,
+  previewMatchesPerTimeBucket,
+  fullScheduleHref,
+  fullScheduleLabel = "Visa hela matchsidan",
 }: CompactCupScheduleProps) {
   const dateBuckets = useMemo(() => buildDateBuckets(matches), [matches])
   const [openDates, setOpenDates] = useState<Record<string, boolean>>({})
+  const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     setOpenDates((previous) => {
@@ -185,6 +194,22 @@ export function CompactCupSchedule({
       return sameKeys ? previous : next
     })
   }, [dateBuckets, defaultOpenDates])
+
+  useEffect(() => {
+    setExpandedDates((previous) => {
+      const next: Record<string, boolean> = {}
+
+      dateBuckets.forEach((bucket) => {
+        next[bucket.key] = previous[bucket.key] ?? false
+      })
+
+      const sameKeys =
+        Object.keys(previous).length === Object.keys(next).length &&
+        Object.keys(next).every((key) => previous[key] === next[key])
+
+      return sameKeys ? previous : next
+    })
+  }, [dateBuckets])
 
   if (matches.length === 0) {
     return null
@@ -203,13 +228,37 @@ export function CompactCupSchedule({
             </div>
             {description ? <p className="mt-1 text-sm text-slate-600">{description}</p> : null}
           </div>
-          <div className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">{matches.length} matcher</div>
+          <div className="flex items-center gap-3">
+            <div className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">{matches.length} matcher</div>
+            {fullScheduleHref ? (
+              <Link
+                href={fullScheduleHref}
+                className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700 transition hover:text-emerald-900"
+              >
+                {fullScheduleLabel}
+              </Link>
+            ) : null}
+          </div>
         </div>
       </div>
 
       <div className="divide-y divide-slate-200">
         {dateBuckets.map((dateBucket) => {
           const isOpen = openDates[dateBucket.key] ?? false
+          const isExpanded = expandedDates[dateBucket.key] ?? false
+          const visibleTimeBuckets =
+            previewTimeBucketsPerDate && !isExpanded
+              ? dateBucket.timeBuckets.slice(0, previewTimeBucketsPerDate)
+              : dateBucket.timeBuckets
+          const hiddenTimeBuckets = dateBucket.timeBuckets.length - visibleTimeBuckets.length
+          const hasHiddenMatchesInVisibleBuckets =
+            Boolean(previewMatchesPerTimeBucket) &&
+            visibleTimeBuckets.some((timeBucket) => timeBucket.matches.length > (previewMatchesPerTimeBucket ?? 0))
+          const firstTimeLabel = dateBucket.timeBuckets[0]?.label
+          const lastTimeLabel = dateBucket.timeBuckets[dateBucket.timeBuckets.length - 1]?.label
+          const uniqueTeamTypes = new Set(
+            dateBucket.matches.map((match) => (match.presentation?.tertiaryGroupLabel ?? match.teamType ?? "").trim()).filter(Boolean),
+          ).size
 
           return (
             <Collapsible
@@ -229,9 +278,17 @@ export function CompactCupSchedule({
                         {dateBucket.matches.length} matcher
                       </span>
                     </div>
-                    {dateBucket.competitionLabel ? (
-                      <p className="mt-1 text-sm text-slate-500">{dateBucket.competitionLabel}</p>
-                    ) : null}
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500">
+                      {dateBucket.competitionLabel ? <span>{dateBucket.competitionLabel}</span> : null}
+                      {firstTimeLabel ? (
+                        <span>
+                          {firstTimeLabel}
+                          {lastTimeLabel && lastTimeLabel !== firstTimeLabel ? `–${lastTimeLabel}` : ""}
+                        </span>
+                      ) : null}
+                      <span>{dateBucket.timeBuckets.length} starttider</span>
+                      {uniqueTeamTypes > 0 ? <span>{uniqueTeamTypes} lagklasser</span> : null}
+                    </div>
                   </div>
                   <ChevronDown
                     className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
@@ -241,7 +298,14 @@ export function CompactCupSchedule({
 
               <CollapsibleContent>
                 <div className="border-t border-slate-200 bg-white">
-                  {dateBucket.timeBuckets.map((timeBucket) => (
+                  {visibleTimeBuckets.map((timeBucket) => {
+                    const visibleMatches =
+                      previewMatchesPerTimeBucket && !isExpanded
+                        ? timeBucket.matches.slice(0, previewMatchesPerTimeBucket)
+                        : timeBucket.matches
+                    const hiddenMatches = timeBucket.matches.length - visibleMatches.length
+
+                    return (
                     <div key={timeBucket.key} className="border-b border-slate-100 last:border-b-0">
                       <div className="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-5">
                         <span className="text-sm font-semibold text-slate-900">{timeBucket.label}</span>
@@ -250,7 +314,7 @@ export function CompactCupSchedule({
                         </span>
                       </div>
                       <ul className="divide-y divide-slate-100">
-                        {timeBucket.matches.map((match) => {
+                        {visibleMatches.map((match) => {
                           const statusChip = getStatusChip(match)
                           const playUrl = (match.playUrl ?? "").trim()
                           const showStream = isStreamAvailable(match)
@@ -296,8 +360,33 @@ export function CompactCupSchedule({
                           )
                         })}
                       </ul>
+                      {hiddenMatches > 0 && !isExpanded ? (
+                        <div className="px-4 pb-3 sm:px-5">
+                          <div className="rounded-md bg-slate-50 px-3 py-2 text-xs font-medium text-slate-500">
+                            {hiddenMatches} fler matcher vid {timeBucket.label} visas när du öppnar hela dagen.
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
-                  ))}
+                    )
+                  })}
+
+                  {(hiddenTimeBuckets > 0 || hasHiddenMatchesInVisibleBuckets) && !isExpanded ? (
+                    <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                      <div className="text-sm text-slate-500">
+                        {hiddenTimeBuckets > 0
+                          ? `${hiddenTimeBuckets} fler starttider döljs för att hålla cupdagen snabb och läsbar.`
+                          : "Fler matcher i vissa starttider döljs tills du öppnar hela dagen."}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setExpandedDates((previous) => ({ ...previous, [dateBucket.key]: true }))}
+                        className="inline-flex items-center justify-center rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-slate-900 hover:text-slate-950"
+                      >
+                        Visa hela cupdagen
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </CollapsibleContent>
             </Collapsible>
