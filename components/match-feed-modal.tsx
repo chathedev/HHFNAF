@@ -155,6 +155,166 @@ const dedupeTimelineEvents = (events: MatchFeedEvent[]) => {
   })
 }
 
+const buildTimelineIdentityKey = (event: MatchFeedEvent) =>
+  [
+    event.time ?? "",
+    event.period ?? "",
+    event.team ?? "",
+    event.type ?? "",
+    event.description ?? "",
+    event.player ?? "",
+    event.playerNumber ?? "",
+    event.homeScore ?? "",
+    event.awayScore ?? "",
+  ].join("|")
+
+const parseClockMinutes = (value?: string) => {
+  if (!value) return 0
+  const normalized = value.replace(/[^\d:+]/g, "")
+  const [base = "0:0", extra = "0"] = normalized.split("+")
+  const [min = "0"] = base.split(":")
+  const minutes = Number.parseInt(min, 10)
+  const extraMinutes = Number.parseInt(extra, 10)
+  return (Number.isFinite(minutes) ? minutes : 0) + (Number.isFinite(extraMinutes) ? extraMinutes : 0)
+}
+
+const inferPeriodFromTime = (time?: string, fallbackPeriod?: number) => {
+  if (typeof fallbackPeriod === "number" && fallbackPeriod > 0) {
+    return fallbackPeriod
+  }
+
+  const minutes = parseClockMinutes(time)
+  if (minutes <= 0) {
+    return 1
+  }
+
+  return minutes > 25 ? 2 : 1
+}
+
+const getGoalLookupKey = (team?: string, time?: string, variant?: "goal" | "seven") =>
+  `${team ?? ""}|${time ?? ""}|${variant ?? "goal"}`
+
+const buildGoalLookup = (players: any[] = []) => {
+  const lookup = new Map<string, { player: string; playerNumber?: string }>()
+
+  players.forEach((player) => {
+    const team = player?.teamName ? String(player.teamName) : ""
+    const playerName = player?.name ? String(player.name) : ""
+    const playerNumber = player?.number ? String(player.number) : undefined
+    if (!team || !playerName) {
+      return
+    }
+
+    const goalTimes = Array.isArray(player?.goalTimes) ? player.goalTimes : []
+    goalTimes.forEach((time) => {
+      const key = getGoalLookupKey(team, String(time), "goal")
+      if (!lookup.has(key)) {
+        lookup.set(key, { player: playerName, playerNumber })
+      }
+    })
+
+    const sevenMeterTimes = Array.isArray(player?.sevenMeterTimes) ? player.sevenMeterTimes : []
+    sevenMeterTimes.forEach((time) => {
+      const key = getGoalLookupKey(team, String(time), "seven")
+      if (!lookup.has(key)) {
+        lookup.set(key, { player: playerName, playerNumber })
+      }
+    })
+  })
+
+  return lookup
+}
+
+const enrichTimelineWithMatchDetails = (payload: any, fallbackTimeline: MatchFeedEvent[]) => {
+  const baseSource = payload?.match ?? payload
+  const rawTimeline = resolvePreferredTimeline(baseSource, fallbackTimeline)
+  const normalizedBase = dedupeTimelineEvents(rawTimeline.map((event: any) => normalizeTimelineEvent(event)))
+  const goalLookup = buildGoalLookup(payload?.match?.playerStats?.players)
+
+  const enhancedBase = normalizedBase.map((event) => {
+    const typeText = `${event.type || ""}`.toLowerCase()
+    const variant = typeText.includes("7-m") ? "seven" : "goal"
+    const goalLookupEntry =
+      !event.player && event.team && event.time && (typeText.includes("mål") || typeText.includes("goal"))
+        ? goalLookup.get(getGoalLookupKey(event.team, event.time, variant))
+        : undefined
+
+    return {
+      ...event,
+      player: event.player ?? goalLookupEntry?.player,
+      playerNumber: event.playerNumber ?? goalLookupEntry?.playerNumber,
+    }
+  })
+
+  const existingKeys = new Set(enhancedBase.map(buildTimelineIdentityKey))
+  const supplemental: MatchFeedEvent[] = []
+  const pushSupplemental = (event: MatchFeedEvent) => {
+    const key = buildTimelineIdentityKey(event)
+    if (existingKeys.has(key)) {
+      return
+    }
+    existingKeys.add(key)
+    supplemental.push(event)
+  }
+
+  const penaltyEvents = Array.isArray(payload?.match?.eventSummary?.penaltyEvents) ? payload.match.eventSummary.penaltyEvents : []
+  penaltyEvents.forEach((event: any) => {
+    pushSupplemental({
+      time: event?.time ?? "",
+      type: event?.description ?? "Utvisning",
+      description: event?.description ?? "Utvisning",
+      team: event?.team ?? undefined,
+      player: event?.player ?? undefined,
+      playerNumber: event?.number ? String(event.number) : undefined,
+      period: inferPeriodFromTime(event?.time),
+      eventTypeId: typeof event?.eventTypeId === "number" ? event.eventTypeId : undefined,
+    })
+  })
+
+  const timeoutEvents = Array.isArray(payload?.match?.eventSummary?.timeoutEvents) ? payload.match.eventSummary.timeoutEvents : []
+  timeoutEvents.forEach((event: any) => {
+    pushSupplemental({
+      time: event?.time ?? "",
+      type: "Timeout",
+      description: event?.team ? `Timeout ${event.team}` : "Timeout",
+      team: event?.team ?? undefined,
+      period: inferPeriodFromTime(event?.time, typeof event?.period === "number" ? event.period : undefined),
+    })
+  })
+
+  const sevenMeterDetails = Array.isArray(payload?.match?.eventSummary?.sevenMeterDetails)
+    ? payload.match.eventSummary.sevenMeterDetails
+    : []
+  sevenMeterDetails
+    .filter((event: any) => event?.outcome === "awarded")
+    .forEach((event: any) => {
+      pushSupplemental({
+        time: event?.time ?? "",
+        type: "Straff",
+        description: event?.description ?? "Tilldömd 7-m",
+        team: event?.team ?? undefined,
+        player: event?.player ?? undefined,
+        period: inferPeriodFromTime(event?.time),
+      })
+    })
+
+  return dedupeTimelineEvents([...enhancedBase, ...supplemental])
+}
+
+const isLowFidelityTimeline = (timeline: MatchFeedEvent[]) => {
+  if (timeline.length === 0) {
+    return true
+  }
+
+  const hasNamedPlayer = timeline.some((event) => Boolean(event.player))
+  const hasPenaltyOrTimeout = timeline.some((event) => {
+    const text = `${event.type || ""} ${event.description || ""}`.toLowerCase()
+    return text.includes("utvisning") || text.includes("timeout") || text.includes("7-m")
+  })
+
+  return !hasNamedPlayer && !hasPenaltyOrTimeout
+}
+
 const getEventCombinedText = (event: MatchFeedEvent) =>
   `${event.type || ""} ${event.description || ""} ${event.payload?.description || ""}`.toLowerCase()
 
@@ -205,7 +365,10 @@ const getEventTypeLabel = (event: MatchFeedEvent) => {
   if (text.includes("mål") || text.includes("goal")) return "Mål"
   if (text.includes("utvisning")) return "Utvisning"
   if (text.includes("varning")) return "Varning"
+  if (text.includes("timeout")) return "Timeout"
   if (text.includes("straff")) return "Straff"
+  if (text.includes("7-m")) return "Straff"
+  if (text.includes("start")) return "Start"
   return event.type?.trim() || "Händelse"
 }
 
@@ -336,7 +499,13 @@ export function MatchFeedModal({
   const allowAutoRefresh = matchStatus === "live" || matchStatus === "halftime"
   const effectiveClockState = detailClockState ?? clockState ?? null
   const effectivePenalties = detailPenalties.length > 0 ? detailPenalties : penalties
-  const timelineSource = detailTimeline ? preferRicherTimeline(detailTimeline, matchFeed) : matchFeed
+  const shouldWaitForDetailedTimeline =
+    isTimelineLoading && !detailTimeline && Boolean(matchData?.apiMatchId) && isLowFidelityTimeline(matchFeed)
+  const timelineSource = shouldWaitForDetailedTimeline
+    ? []
+    : detailTimeline
+      ? preferRicherTimeline(detailTimeline, matchFeed)
+      : matchFeed
   const hasClockData = Boolean(
     effectiveClockState &&
       (typeof effectiveClockState.currentSeconds === "number" || Boolean(effectiveClockState.clock)),
@@ -368,8 +537,7 @@ export function MatchFeedModal({
       })
       if (!response.ok) return
       const payload = await response.json()
-      const rawTimeline = resolvePreferredTimeline(payload, matchFeed)
-      const normalized = dedupeTimelineEvents(rawTimeline.map((event: any) => normalizeTimelineEvent(event)))
+      const normalized = enrichTimelineWithMatchDetails(payload, matchFeed)
       setDetailTimeline(normalized)
       setDetailClockState((payload?.clockState as MatchClockState) ?? null)
       setDetailPenalties(Array.isArray(payload?.penalties) ? payload.penalties : [])
