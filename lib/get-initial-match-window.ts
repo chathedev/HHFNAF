@@ -1,4 +1,5 @@
-import { getMatchData, type EnhancedMatchData } from "@/lib/use-match-data"
+import { getMatchData, type EnhancedMatchData, type NormalizedMatch } from "@/lib/use-match-data"
+import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
 
 const STOCKHOLM_DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Europe/Stockholm",
@@ -9,12 +10,78 @@ const STOCKHOLM_DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", {
 
 const getStockholmToday = () => STOCKHOLM_DATE_FORMATTER.format(new Date())
 
-export async function getInitialMatchWindow(): Promise<EnhancedMatchData | undefined> {
+const dedupeMatches = (matches: NormalizedMatch[]) => {
+  const seen = new Set<string>()
+  return matches.filter((match) => {
+    if (seen.has(match.id)) {
+      return false
+    }
+    seen.add(match.id)
+    return true
+  })
+}
+
+const buildGroupedFeed = (matches: NormalizedMatch[]) => ({
+  live: dedupeMatches(matches.filter((match) => match.matchStatus === "live" || match.matchStatus === "halftime")).sort(compareMatchesByDateAscStable),
+  upcoming: dedupeMatches(matches.filter((match) => match.matchStatus === "upcoming")).sort(compareMatchesByDateAscStable),
+  finished: dedupeMatches(matches.filter((match) => match.matchStatus === "finished")).sort(compareMatchesByDateDescStable),
+})
+
+const mergeMatchWindows = (windows: EnhancedMatchData[]): EnhancedMatchData | undefined => {
+  if (windows.length === 0) {
+    return undefined
+  }
+
+  const matches = dedupeMatches(windows.flatMap((window) => window.matches ?? [])).sort(compareMatchesByDateAscStable)
+  const recentResults = dedupeMatches(windows.flatMap((window) => window.recentResults ?? [])).sort(compareMatchesByDateDescStable)
+  const groupedFeed = buildGroupedFeed(matches)
+  const sources = windows.at(-1)?.sources
+  const window = windows.at(-1)?.window
+
+  return {
+    matches,
+    recentResults,
+    groupedFeed,
+    sources,
+    window,
+  }
+}
+
+type InitialMatchWindowOptions = {
+  minMatches?: number
+  maxDays?: number
+}
+
+export async function getInitialMatchWindow(options?: InitialMatchWindowOptions): Promise<EnhancedMatchData | undefined> {
+  const minMatches = options?.minMatches ?? 8
+  const maxDays = options?.maxDays ?? 3
+
   try {
-    return await getMatchData("liveUpcoming", true, {
-      cursorDate: getStockholmToday(),
-      chunkDays: 1,
-    })
+    const windows: EnhancedMatchData[] = []
+    let nextCursorDate: string | null = getStockholmToday()
+    let daysLoaded = 0
+
+    while (nextCursorDate && daysLoaded < maxDays) {
+      const payload = await getMatchData("liveUpcoming", true, {
+        cursorDate: nextCursorDate,
+        chunkDays: 1,
+      })
+
+      windows.push(payload)
+      daysLoaded += 1
+
+      const merged = mergeMatchWindows(windows)
+      const matchCount = merged?.matches.length ?? 0
+      const recentCount = merged?.recentResults?.length ?? 0
+
+      if (matchCount >= minMatches || recentCount >= 4) {
+        return merged
+      }
+
+      nextCursorDate = payload.window?.nextCursorDate ?? null
+    }
+
+    return mergeMatchWindows(windows)
   } catch (error) {
     console.warn("Failed to load initial matcher window", error)
     return undefined

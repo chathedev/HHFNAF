@@ -18,7 +18,7 @@ import {
   extendTeamDisplayNameFromCandidates,
 } from "@/lib/team-display"
 import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
-import { canOpenMatchTimeline } from "@/lib/match-card-utils"
+import { canOpenMatchTimeline, getMatchProviderBadge, getProviderHelperText } from "@/lib/match-card-utils"
 
 const PLACEHOLDER_HERO = "/placeholder.jpg"
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
@@ -309,6 +309,8 @@ export default function TeamPage({ params }: TeamPageProps) {
 
                 const playLabel = status === "finished" ? "Se repris" : "Se live"
                 const canOpenTimeline = canOpenMatchTimeline(match)
+                const providerBadge = getMatchProviderBadge(match)
+                const providerHelperText = getProviderHelperText(match)
                 const showTicket = shouldShowTicketButton(match, status) && !matchShouldBeFinished
                 const matchTeamLabel = extendTeamDisplayName(match.teamType)
 
@@ -353,6 +355,11 @@ export default function TeamPage({ params }: TeamPageProps) {
                           {matchTeamLabel && (
                             <span className="text-sm font-semibold text-emerald-700">{matchTeamLabel}</span>
                           )}
+                          {providerBadge && (
+                            <span className={`inline-flex items-center rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] ${providerBadge.tone}`}>
+                              {providerBadge.label}
+                            </span>
+                          )}
                           {shouldShowLive && (
                             <span className="inline-flex items-center gap-1.5 rounded bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700">
                               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-600" />
@@ -373,6 +380,7 @@ export default function TeamPage({ params }: TeamPageProps) {
                         </h3>
                         {scheduleLine && <p className="mt-1 text-sm text-gray-600">{scheduleLine}</p>}
                         {match.series && <p className="mt-1 text-xs text-gray-500">{match.series}</p>}
+                        {providerHelperText && <p className="mt-1 text-xs font-medium text-sky-700">{providerHelperText}</p>}
                       </div>
                       {match.infoUrl && (
                         <Link

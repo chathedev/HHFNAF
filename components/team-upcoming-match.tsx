@@ -9,7 +9,7 @@ import { canShowTicketForMatch } from "@/lib/matches"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
-import { canOpenMatchTimeline } from "@/lib/match-card-utils"
+import { canOpenMatchTimeline, getMatchProviderBadge, getProviderHelperText } from "@/lib/match-card-utils"
 
 const normalizeTeamKey = (value: string) =>
   value
@@ -283,6 +283,8 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   // Don't show LIVE badge if match has been 0-0 for more than 60 minutes (likely stale data)
   const shouldShowLive = status === "live" && nextMatch.matchStatus !== "halftime" && !(isZeroZero && minutesSinceKickoff > 60)
   const teamTypeLabel = extendTeamDisplayName(nextMatch.teamType)
+  const providerBadge = getMatchProviderBadge(nextMatch)
+  const providerHelperText = getProviderHelperText(nextMatch)
   
   const isFutureOrLive = nextMatch.date.getTime() >= Date.now() || status === "live"
   const showTicket = isTicketEligibleBase && !outcomeInfo && isFutureOrLive
@@ -328,6 +330,11 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
                 {teamTypeLabel}
               </span>
             )}
+            {providerBadge && (
+              <span className={`inline-flex items-center rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] ${providerBadge.tone}`}>
+                {providerBadge.label}
+              </span>
+            )}
             {shouldShowLive && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded">
                 <span className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse"></span>
@@ -353,6 +360,9 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
           )}
           {nextMatch.series && (
             <p className="text-xs text-gray-500 mt-1">{nextMatch.series}</p>
+          )}
+          {providerHelperText && (
+            <p className="mt-1 text-xs font-medium text-sky-700">{providerHelperText}</p>
           )}
         </div>
         

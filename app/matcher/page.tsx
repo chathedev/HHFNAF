@@ -6,7 +6,10 @@ import { getInitialMatchWindow } from "@/lib/get-initial-match-window"
 export const revalidate = 60
 
 export default async function MatcherPage() {
-  const initialData = await getInitialMatchWindow()
+  const initialData = await getInitialMatchWindow({
+    minMatches: 16,
+    maxDays: 5,
+  })
 
   return (
     <Suspense fallback={<div className="min-h-screen bg-white" />}>

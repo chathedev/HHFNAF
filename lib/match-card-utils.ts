@@ -60,6 +60,40 @@ export const canOpenMatchTimeline = (match: NormalizedMatch) => {
   return match.timelineAvailable === true
 }
 
+export const getMatchProviderBadge = (match: NormalizedMatch) => {
+  if (match.provider === "procup") {
+    return {
+      label: "ProCup",
+      tone: "bg-sky-50 text-sky-700",
+    }
+  }
+
+  if (match.provider === "profixio" && match.providerType === "league") {
+    return {
+      label: "Serie",
+      tone: "bg-emerald-50 text-emerald-700",
+    }
+  }
+
+  return null
+}
+
+export const getProviderHelperText = (match: NormalizedMatch) => {
+  if (match.provider !== "procup") {
+    return null
+  }
+
+  if (match.matchStatus === "live" || match.matchStatus === "halftime") {
+    return "Livescore via ProCup"
+  }
+
+  if (match.matchStatus === "finished") {
+    return "Resultat via ProCup"
+  }
+
+  return "Spelas i ProCup"
+}
+
 const parseScore = (result?: string) => {
   const value = (result || "").trim()
   const parsed = value.match(/(\d+)\s*[-–]\s*(\d+)/)
