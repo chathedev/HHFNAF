@@ -76,6 +76,31 @@ type MatchDataAvailability = {
   resultState?: MatchResultState
 }
 
+type MatchWindow = {
+  enabled?: boolean
+  from?: string
+  to?: string
+  days?: number
+  chunkDays?: number
+  cursorDate?: string
+  mode?: string
+  isSingleDay?: boolean
+  containsToday?: boolean
+  priority?: "live" | "today" | "schedule" | "archive" | string
+  refreshIntervalMs?: number
+  previousCursorDate?: string | null
+  nextCursorDate?: string | null
+  dateKeys?: string[]
+  label?: string
+  counts?: {
+    current?: number
+    old?: number
+    live?: number
+    upcoming?: number
+    finished?: number
+  }
+}
+
 type MatchSources = {
   profixio?: {
     current?: number
@@ -186,6 +211,7 @@ export type EnhancedMatchData = {
     finished: NormalizedMatch[]
   }
   sources?: MatchSources
+  window?: MatchWindow
   metadata?: {
     totalMatches: number
     liveMatches: number
@@ -214,6 +240,7 @@ type SharedMatchCacheEntry = {
   }
   recentResults: NormalizedMatch[]
   sources?: MatchSources
+  window?: MatchWindow
   lastUpdated: string | null
   timestamp: number
 }
@@ -699,6 +726,7 @@ const buildEnhancedMatchData = (entry: SharedMatchCacheEntry, dataType: DataType
     recentResults: entry.recentResults,
     groupedFeed: entry.groupedFeed,
     sources: entry.sources,
+    window: entry.window,
   }
 }
 
@@ -878,7 +906,7 @@ const resolveRecentResultsPayload = (payload: any): ApiMatch[] => {
 }
 
 const FULL_POLL_INTERVAL_MS = 10_000
-const EVENT_POLL_INTERVAL_MS = 3_000
+const EVENT_POLL_INTERVAL_MS = 5_000
 const LAST_EVENT_ID_STORAGE_KEY = "matcher_last_event_id"
 const CHANNEL_ENDPOINT = getDataEndpoint()
 type MatchChannelPayload = {
@@ -891,6 +919,7 @@ type MatchChannelPayload = {
   }
   recentResults: NormalizedMatch[]
   sources?: MatchSources
+  window?: MatchWindow
   lastUpdated: string | null
 }
 
@@ -1152,6 +1181,7 @@ const createMatchDataChannel = () => {
       groupedFeed: latestEntry?.groupedFeed ?? buildGroupedFeed(currentMatches),
       recentResults: latestEntry?.recentResults ?? [],
       sources: latestEntry?.sources,
+      window: latestEntry?.window,
       lastUpdated,
     }
   }
@@ -1322,6 +1352,7 @@ const createMatchDataChannel = () => {
       groupedFeed: buildGroupedFeed(currentMatches),
       recentResults: normalizedRecentResults,
       sources: payload?.sources,
+      window: payload?.window,
       lastUpdated,
       timestamp: Date.now(),
     }
@@ -1363,6 +1394,7 @@ const createMatchDataChannel = () => {
       groupedFeed: buildGroupedFeed(currentMatches),
       recentResults: latestEntry?.recentResults ?? [],
       sources: latestEntry?.sources,
+      window: latestEntry?.window,
       lastUpdated,
       timestamp: Date.now(),
     }
@@ -1397,6 +1429,7 @@ const createMatchDataChannel = () => {
       groupedFeed: buildGroupedFeed(currentMatches),
       recentResults: latestEntry?.recentResults ?? [],
       sources: latestEntry?.sources,
+      window: latestEntry?.window,
       lastUpdated,
       timestamp: Date.now(),
     }
@@ -1643,6 +1676,7 @@ export const getMatchData = async (
           groupedFeed: buildGroupedFeed(normalizedCurrent),
           recentResults: normalizedRecentResults,
           sources: payload?.sources,
+          window: payload?.window,
           lastUpdated: typeof payload.lastUpdated === "string" ? payload.lastUpdated : null,
           timestamp: Date.now(),
         }
@@ -1772,6 +1806,7 @@ export const useMatchData = (options?: {
     },
   )
   const [sources, setSources] = useState<MatchSources | undefined>(options?.initialData?.sources)
+  const [window, setWindow] = useState<MatchWindow | undefined>(options?.initialData?.window)
   const [loading, setLoading] = useState(!initialHasData && enabled)
   const [error, setError] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -1803,6 +1838,7 @@ export const useMatchData = (options?: {
       setRecentResults(payload.recentResults)
       setGroupedFeed(payload.groupedFeed)
       setSources(payload.sources)
+      setWindow(payload.window)
       selectedMatches.forEach((match) => {
         matchStateManager.queueUpdate(match.id, {
           ...match,
@@ -1866,6 +1902,7 @@ export const useMatchData = (options?: {
           matches: selectedMatches,
           recentResults: payload.recentResults,
           groupedFeed: payload.groupedFeed,
+          window: payload.window,
         }
       } catch (caught) {
         const message =
@@ -1899,6 +1936,7 @@ export const useMatchData = (options?: {
     recentResults,
     groupedFeed,
     sources,
+    window,
     loading,
     error,
     refresh,

@@ -862,7 +862,7 @@ export function MatchFeedModal({
 
     const interval = globalThis.setInterval(() => {
       refreshNow()
-    }, 4_000)
+    }, 5_000)
 
     return () => {
       globalThis.clearTimeout(kickOff)
