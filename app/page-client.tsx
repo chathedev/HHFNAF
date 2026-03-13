@@ -841,7 +841,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
           )}
 
           {shouldRenderMatchSection && (
-            <section className="py-10 bg-white">
+            <section className="py-10 bg-white" aria-label="Matcher på startsidan">
               <div className="container mx-auto px-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                   <div className="max-w-2xl">
@@ -857,6 +857,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                     </span>
                     <Link
                       href="/matcher"
+                      aria-label="Öppna alla matcher"
                       className="text-[11px] font-semibold uppercase tracking-[0.35em] text-emerald-600 hover:text-emerald-800"
                     >
                       Se alla matcher →
