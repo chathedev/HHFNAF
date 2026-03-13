@@ -8,6 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import {
   formatMatchDateLabel,
   formatMatchTimeLabel,
+  getMatchWatchLabel,
   getMatchupLabel,
   getSimplifiedMatchStatus,
 } from "@/lib/match-card-utils"
@@ -77,16 +78,6 @@ const getStatusChip = (match: NormalizedMatch) => {
     label: match.statusLabel ?? "KOMMANDE",
     tone: "bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200",
   }
-}
-
-const getStreamLabel = (match: NormalizedMatch) => {
-  if (match.streamProvider === "handbollplay") {
-    return "HandbollPlay"
-  }
-  if (match.streamProvider === "solidsport") {
-    return "Se live"
-  }
-  return "Se match"
 }
 
 const isStreamAvailable = (match: NormalizedMatch) => {
@@ -318,6 +309,7 @@ export function CompactCupSchedule({
                           const statusChip = getStatusChip(match)
                           const playUrl = (match.playUrl ?? "").trim()
                           const showStream = isStreamAvailable(match)
+                          const status = getSimplifiedMatchStatus(match)
                           const teamTypeRaw = match.teamType?.trim() || ""
                           const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
                           const venueLabel = match.venue?.trim() || match.arena?.trim() || "Arena saknas"
@@ -351,7 +343,7 @@ export function CompactCupSchedule({
                                       className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-900 hover:text-slate-950"
                                     >
                                       <Play className="h-3.5 w-3.5" />
-                                      {getStreamLabel(match)}
+                                      {getMatchWatchLabel(status)}
                                     </Link>
                                   ) : null}
                                 </div>

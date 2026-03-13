@@ -18,7 +18,7 @@ import {
   extendTeamDisplayNameFromCandidates,
 } from "@/lib/team-display"
 import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
-import { canOpenMatchTimeline, getMatchProviderBadge, getProviderHelperText } from "@/lib/match-card-utils"
+import { canOpenMatchTimeline, getMatchProviderBadge, getProviderHelperText, getMatchWatchLabel } from "@/lib/match-card-utils"
 
 const PLACEHOLDER_HERO = "/placeholder.jpg"
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
@@ -307,7 +307,7 @@ export default function TeamPage({ params }: TeamPageProps) {
                   trimmedResult !== "0-0" &&
                   trimmedResult !== "0–0"
 
-                const playLabel = status === "finished" ? "Se repris" : "Se live"
+                const playLabel = getMatchWatchLabel(status)
                 const canOpenTimeline = canOpenMatchTimeline(match)
                 const providerBadge = getMatchProviderBadge(match)
                 const providerHelperText = getProviderHelperText(match)
@@ -418,7 +418,7 @@ export default function TeamPage({ params }: TeamPageProps) {
                             rel="noopener noreferrer"
                             onClick={(event) => event.stopPropagation()}
                             className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-                            title={status === "finished" ? "Se repris" : "Se matchen live"}
+                            title={playLabel}
                           >
                             <img src="/handbollplay_mini.png" alt="" className="h-4 w-4 brightness-0 invert" />
                             {playLabel}

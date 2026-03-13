@@ -25,6 +25,13 @@ const removeHomeAwaySuffix = (value?: string) => {
   return value.replace(/\s*\((hemma|borta)\)\s*$/i, "").trim()
 }
 
+const normalizeTimeLabel = (value?: string) => {
+  if (!value) return ""
+  const trimmed = value.trim()
+  const withSeconds = trimmed.match(/^(\d{1,2}:\d{2})(?::\d{2})$/)
+  return withSeconds ? withSeconds[1] : trimmed
+}
+
 const InfoCard = ({ icon, title, description }: { icon: ReactNode; title: string; description: string }) => (
   <div className="rounded-3xl border border-gray-200 bg-white/80 p-6 shadow-sm backdrop-blur">
     <div className="flex items-start gap-4">
@@ -180,7 +187,7 @@ export default function MatchCards() {
                 upcomingMatches.map((match, index) => {
                   const opponent = removeHomeAwaySuffix(match.opponent) || "Motståndare meddelas"
                   const teamLabel = extendTeamDisplayName(match.teamType)
-                  const scheduleBits = [formatDate(match.date), match.time, match.venue].filter(Boolean)
+                  const scheduleBits = [formatDate(match.date), normalizeTimeLabel(match.time), match.venue].filter(Boolean)
 
                   return (
                     <div
@@ -225,7 +232,7 @@ export default function MatchCards() {
                               rel="noopener noreferrer"
                               className="inline-flex items-center gap-2 rounded-full bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-orange-600"
                             >
-                              Se live
+                              Se match
                             </a>
                           )}
                           {match.infoUrl && match.infoUrl !== "null" && (

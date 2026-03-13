@@ -9,7 +9,7 @@ import { canShowTicketForMatch } from "@/lib/matches"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
-import { canOpenMatchTimeline, getMatchProviderBadge, getProviderHelperText } from "@/lib/match-card-utils"
+import { canOpenMatchTimeline, getMatchProviderBadge, getProviderHelperText, getMatchWatchLabel } from "@/lib/match-card-utils"
 
 const normalizeTeamKey = (value: string) =>
   value
@@ -437,14 +437,14 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
-              title={status === "finished" ? "Se repris" : "Se matchen live"}
+              title={getMatchWatchLabel(status)}
             >
               <img
                 src="/handbollplay_mini.png"
                 alt=""
                 className="h-4 w-4 brightness-0 invert"
               />
-              {status === "finished" ? "Se repris" : "Se live"}
+              {getMatchWatchLabel(status)}
             </a>
           )}
         </div>

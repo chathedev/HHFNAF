@@ -13,6 +13,20 @@ const TIME_FORMATTER = new Intl.DateTimeFormat("sv-SE", {
   hourCycle: "h23",
 })
 
+const normalizeDisplayedTime = (value?: string | null) => {
+  if (!value) {
+    return ""
+  }
+
+  const trimmed = value.trim()
+  const withSeconds = trimmed.match(/^(\d{1,2}:\d{2})(?::\d{2})$/)
+  if (withSeconds) {
+    return withSeconds[1]
+  }
+
+  return trimmed
+}
+
 const stripHomeAway = (value?: string) => {
   if (!value) {
     return ""
@@ -23,7 +37,9 @@ const stripHomeAway = (value?: string) => {
 export const formatMatchDateLabel = (match: NormalizedMatch) =>
   (match.display?.dateCard || DATE_FORMATTER.format(match.date)).toLowerCase()
 
-export const formatMatchTimeLabel = (match: NormalizedMatch) => match.display?.time || TIME_FORMATTER.format(match.date)
+export const formatMatchTimeLabel = (match: NormalizedMatch) => {
+  return normalizeDisplayedTime(match.display?.time) || TIME_FORMATTER.format(match.date)
+}
 
 export const buildMatchScheduleLabel = (match: NormalizedMatch) => {
   const parts = [
@@ -92,6 +108,10 @@ export const getProviderHelperText = (match: NormalizedMatch) => {
   }
 
   return "Spelas i ProCup"
+}
+
+export const getMatchWatchLabel = (status: string) => {
+  return status === "finished" ? "Se repris" : "Se match"
 }
 
 const parseScore = (result?: string) => {
