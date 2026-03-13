@@ -457,6 +457,13 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     groupedHomeMatches.upcomingCup.length +
     groupedHomeMatches.upcomingLeague.length +
     groupedHomeMatches.finished.length
+  const upcomingProviderSummary = useMemo(() => {
+    const allUpcoming = groupedFeed?.upcoming ?? []
+    return {
+      procup: allUpcoming.filter((match) => match.provider === "procup").length,
+      profixio: allUpcoming.filter((match) => match.provider === "profixio").length,
+    }
+  }, [groupedFeed])
   const shouldRenderMatchSection =
     !matchError && (showInitialMatchLoader || totalDisplayedMatches > 0)
 
@@ -807,32 +814,61 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                         </div>
                       )}
 
-                      {groupedHomeMatches.upcomingLeague.length > 0 && (
-                        <div>
-                          <div className="mb-3 flex items-center gap-2">
-                            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-700">Seriespel & övrigt</h4>
-                          </div>
-                          <ul className="space-y-3">{groupedHomeMatches.upcomingLeague.map(renderHomeMatchCard)}</ul>
-                        </div>
-                      )}
-
-                      {groupedHomeMatches.upcomingCup.length > 0 && (
-                        <div>
-                          <div className="mb-3 flex items-center gap-2">
+                      {(groupedHomeMatches.upcomingLeague.length > 0 || groupedHomeMatches.upcomingCup.length > 0) && (
+                        <div className="space-y-4">
+                          <div className="mb-1 flex items-center gap-2">
                             <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
-                            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-600">Cupdag i ProCup</h4>
+                            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-slate-900">Kommande</h4>
                           </div>
-                          <CompactCupSchedule
-                            matches={groupedHomeMatches.upcomingCup}
-                            title="Kommande cupmatcher"
-                            description="Cupdagen ligger som en separat, lättare översikt. Seriespel visas först så viktiga enstaka matcher inte försvinner bakom cupschemat."
-                            defaultOpenDates={0}
-                            previewTimeBucketsPerDate={3}
-                            previewMatchesPerTimeBucket={2}
-                            fullScheduleHref="/matcher"
-                            fullScheduleLabel="Öppna hela matchschemat"
-                          />
+
+                          <div className="flex flex-wrap gap-2">
+                            {upcomingProviderSummary.profixio > 0 && (
+                              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+                                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                                Profixio {upcomingProviderSummary.profixio}
+                              </span>
+                            )}
+                            {upcomingProviderSummary.procup > 0 && (
+                              <span className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-800">
+                                <span className="h-2 w-2 rounded-full bg-sky-500" />
+                                ProCup {upcomingProviderSummary.procup}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+                            {upcomingProviderSummary.profixio > 0 && (
+                              <section className="rounded-xl border border-emerald-200 bg-white p-4 sm:p-5">
+                                <div className="mb-4 flex items-start justify-between gap-4">
+                                  <div>
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">Profixio</p>
+                                    <h5 className="mt-1 text-lg font-semibold text-slate-950">Seriespel & större matcher</h5>
+                                    <p className="mt-1 text-sm text-slate-500">Här ligger de vanliga matchkorten först, utan att drunkna i cupschemat.</p>
+                                  </div>
+                                  <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                                    {upcomingProviderSummary.profixio}
+                                  </span>
+                                </div>
+                                <ul className="space-y-3">{groupedHomeMatches.upcomingLeague.map(renderHomeMatchCard)}</ul>
+                              </section>
+                            )}
+
+                            {upcomingProviderSummary.procup > 0 && (
+                              <section className="rounded-xl border border-sky-200 bg-white p-4 sm:p-5">
+                                <CompactCupSchedule
+                                  matches={groupedHomeMatches.upcomingCup}
+                                  title="ProCup"
+                                  description="Cupmatcher visas som en kort, tät översikt per dag och starttid."
+                                  defaultOpenDates={0}
+                                  previewTimeBucketsPerDate={3}
+                                  previewMatchesPerTimeBucket={2}
+                                  fullScheduleHref="/matcher"
+                                  fullScheduleLabel="Öppna hela matchschemat"
+                                  className="rounded-none border-0 bg-transparent"
+                                />
+                              </section>
+                            )}
+                          </div>
                         </div>
                       )}
 
