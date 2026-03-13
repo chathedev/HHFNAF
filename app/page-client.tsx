@@ -709,17 +709,17 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
               <div className="container mx-auto px-4">
                 <div className="flex flex-col gap-5 py-6 md:flex-row md:items-center md:justify-between">
                   <div className="max-w-3xl">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-emerald-600">Butik</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-emerald-600">Supporterbutik</p>
                     <h3 className="mt-2 text-xl font-semibold tracking-tight text-slate-950 sm:text-2xl">
-                      Handla HHF-produkter mellan matcherna.
+                      Stötta HHF med plagg, presenter och supporterprodukter.
                     </h3>
                     <p className="mt-2 text-sm text-slate-600 sm:text-base">
-                      Matchtröjor, supporterplagg och presenter. Beställ online och hämta lokalt.
+                      Beställ i webbutiken och hämta lokalt. Varje köp bidrar till föreningens verksamhet.
                     </p>
                   </div>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                     <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-                      Ingen leverans
+                      Hämtas lokalt
                     </div>
                     <Link
                       href={SHOP_URL}
@@ -728,7 +728,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                       className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-slate-950 px-5 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-white transition hover:border-emerald-600 hover:bg-emerald-600"
                     >
                       <ShoppingBag className="h-4 w-4" />
-                      Till Butiken
+                      Öppna Butiken
                     </Link>
                   </div>
                 </div>
