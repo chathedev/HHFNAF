@@ -155,6 +155,24 @@ const dedupeTimelineEvents = (events: MatchFeedEvent[]) => {
   })
 }
 
+const getEventCombinedText = (event: MatchFeedEvent) =>
+  `${event.type || ""} ${event.description || ""} ${event.payload?.description || ""}`.toLowerCase()
+
+const isLifecycleEvent = (event: MatchFeedEvent) => {
+  const text = getEventCombinedText(event)
+  return (
+    text.includes("start första halvlek") ||
+    text.includes("start andra halvlek") ||
+    text.includes("2:a halvlek startades") ||
+    text.includes("första halvlek slut") ||
+    text.includes("halvlek är slut") ||
+    text.includes("matchen är slut") ||
+    text.includes("slutresultat") ||
+    text.includes("fulltid") ||
+    text.includes("spelare aktiverad")
+  )
+}
+
 const buildTimelineIdentityKey = (event: MatchFeedEvent) =>
   [
     event.time ?? "",
@@ -257,6 +275,9 @@ const enrichTimelineWithMatchDetails = (payload: any, fallbackTimeline: MatchFee
     supplemental.push(event)
   }
 
+  const rootTimeline = resolvePreferredTimeline(payload, []).map((event: any) => normalizeTimelineEvent(event))
+  rootTimeline.forEach(pushSupplemental)
+
   const penaltyEvents = Array.isArray(payload?.match?.eventSummary?.penaltyEvents) ? payload.match.eventSummary.penaltyEvents : []
   penaltyEvents.forEach((event: any) => {
     pushSupplemental({
@@ -298,6 +319,25 @@ const enrichTimelineWithMatchDetails = (payload: any, fallbackTimeline: MatchFee
       })
     })
 
+  const mergedTimeline = [...enhancedBase, ...supplemental]
+  const hasSecondHalfStart = mergedTimeline.some((event) => {
+    const text = getEventCombinedText(event)
+    return text.includes("2:a halvlek startades") || text.includes("start andra halvlek")
+  })
+  const hasFirstHalfEnd = mergedTimeline.some((event) => {
+    const text = getEventCombinedText(event)
+    return text.includes("första halvlek slut") || text.includes("1:a halvlek är slut") || text.includes("halvlek är slut")
+  })
+
+  if (hasSecondHalfStart && !hasFirstHalfEnd) {
+    pushSupplemental({
+      time: "25:00",
+      type: "Halvtid",
+      description: "Första halvlek slut",
+      period: 1,
+    })
+  }
+
   return dedupeTimelineEvents([...enhancedBase, ...supplemental])
 }
 
@@ -314,9 +354,6 @@ const isLowFidelityTimeline = (timeline: MatchFeedEvent[]) => {
 
   return !hasNamedPlayer && !hasPenaltyOrTimeout
 }
-
-const getEventCombinedText = (event: MatchFeedEvent) =>
-  `${event.type || ""} ${event.description || ""} ${event.payload?.description || ""}`.toLowerCase()
 
 const isGoalEvent = (event: MatchFeedEvent) => {
   const text = getEventCombinedText(event)
@@ -362,10 +399,13 @@ const isGenericEventLabel = (value?: string) => {
 
 const getEventTypeLabel = (event: MatchFeedEvent) => {
   const text = `${event.type || ""} ${event.description || ""} ${event.payload?.description || ""}`.toLowerCase()
+  if (text.includes("spelare aktiverad")) return "Aktiverad"
   if (text.includes("mål") || text.includes("goal")) return "Mål"
   if (text.includes("utvisning")) return "Utvisning"
   if (text.includes("varning")) return "Varning"
   if (text.includes("timeout")) return "Timeout"
+  if (text.includes("fulltid") || text.includes("matchen är slut") || text.includes("slutresultat")) return "Slut"
+  if (text.includes("halvtid")) return "Halvtid"
   if (text.includes("straff")) return "Straff"
   if (text.includes("7-m")) return "Straff"
   if (text.includes("start")) return "Start"
@@ -376,6 +416,18 @@ const getPeriodLabel = (period?: number) => {
   if (period === 1) return "Första halvlek"
   if (period === 2) return "Andra halvlek"
   return "Övriga händelser"
+}
+
+const getEventTeamLabel = (event: MatchFeedEvent) => {
+  if (event.team) {
+    return event.team
+  }
+
+  if (isLifecycleEvent(event)) {
+    return "Match"
+  }
+
+  return "Neutral"
 }
 
 const getScoreFromEvent = (event: MatchFeedEvent) => {
@@ -631,6 +683,9 @@ export function MatchFeedModal({
         !event.eventTypeId
       if (isGeneric && hasSpecificForKey.has(buildSemanticKey(event))) {
         return false
+      }
+      if (isGeneric && isLifecycleEvent(event)) {
+        return true
       }
       return !isGeneric
     })
@@ -941,7 +996,7 @@ export function MatchFeedModal({
                               </div>
                               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
                                 <span className={`font-bold uppercase tracking-[0.15em] ${style.teamClass}`}>
-                                  {event.team || "Neutral"}
+                                  {getEventTeamLabel(event)}
                                 </span>
                                 <span className="rounded-full bg-white/80 px-2 py-0.5 font-semibold text-slate-500">{typeLabel}</span>
                                 {event.player && (
