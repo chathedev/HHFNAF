@@ -17,8 +17,8 @@ export default function Footer() {
                 <p className="text-xs font-semibold uppercase tracking-[0.35em] text-black/65">Supporterbutik</p>
                 <h3 className="mt-2 text-2xl font-black tracking-tight">Sälj läktarstöd också utanför matchdag.</h3>
                 <p className="mt-3 text-sm text-black/75">
-                  Shoppen är öppen på <span className="font-semibold">shop.harnosandshf.se</span>. Ingen leverans,
-                  endast upphämtning. Perfekt för matchtröjor, supporterplagg och presenter.
+                  Beställ via webbutiken och hämta lokalt. Ingen leverans. Perfekt för matchtröjor,
+                  supporterplagg och presenter.
                 </p>
               </div>
               <Link

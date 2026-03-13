@@ -791,8 +791,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                       <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-300">Supporterbutik</p>
                       <h3 className="mt-2 text-2xl font-black tracking-tight">Gör matchintresset till butiksköp.</h3>
                       <p className="mt-2 text-sm text-emerald-50/85">
-                        Shoppa HHF-plagg och supporterprylar på <span className="font-semibold">shop.harnosandshf.se</span>.
-                        Ingen leverans, endast upphämtning.
+                        Shoppa HHF-plagg och supporterprylar i webbutiken. Beställ online och hämta lokalt.
                       </p>
                     </div>
                     <Link
@@ -879,12 +878,12 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                         </div>
                         <div>
                           <h3 className="text-xl font-semibold text-gray-900">Butik</h3>
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600">Endast upphämtning</p>
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600">Beställ online</p>
                         </div>
                       </div>
 
                       <p className="mb-6 text-sm leading-relaxed text-gray-600">
-                        Sälj supporterplagg där engagemanget redan finns. Shoppen finns på <span className="font-semibold text-gray-900">shop.harnosandshf.se</span> och alla köp hämtas upp lokalt.
+                        Sälj supporterplagg där engagemanget redan finns. Beställning sker i webbutiken och alla köp hämtas upp lokalt.
                       </p>
 
                       <Link

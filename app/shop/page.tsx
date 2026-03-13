@@ -36,8 +36,8 @@ export default function ShopPage() {
                 <p className="text-sm font-semibold uppercase tracking-[0.4em] text-emerald-600">Butik</p>
                 <h1 className="text-4xl font-black tracking-tight text-gray-900 sm:text-5xl">Härnösands HF Supporterbutik</h1>
                 <p className="text-lg text-gray-600">
-                  Köp HHF-produkter på <span className="font-semibold text-gray-900">shop.harnosandshf.se</span>. Shoppen
-                  är byggd för snabba köp och lokal upphämtning, så det är enkelt att stötta föreningen utan leveranssteg.
+                  Köp HHF-produkter i webbutiken <span className="font-semibold text-gray-900">shop.harnosandshf.se</span>.
+                  Beställ online och hämta lokalt. Det gör det enkelt att stötta föreningen utan leveranssteg.
                 </p>
 
                 <div className="flex flex-wrap gap-3 text-sm font-medium text-gray-700">
@@ -119,7 +119,7 @@ export default function ShopPage() {
             <div className="mt-12 rounded-lg border border-dashed border-emerald-200 bg-emerald-50 p-8 text-center">
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-700">Endast upphämtning</p>
               <p className="mt-3 text-base text-gray-700">
-                Beställ i webbutiken och hämta lokalt. Det håller köpresan enkel och gör det tydligt att shop.harnosandshf.se
+                Beställ i webbutiken och hämta lokalt. Det håller köpresan enkel och gör det tydligt att butiken
                 inte erbjuder hemleverans.
               </p>
             </div>
