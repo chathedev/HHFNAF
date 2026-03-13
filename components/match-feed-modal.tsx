@@ -568,6 +568,8 @@ export function MatchFeedModal({
   const [isTimelineLoading, setIsTimelineLoading] = useState(false)
   const [clockTick, setClockTick] = useState(0)
   const allowAutoRefresh = matchStatus === "live" || matchStatus === "halftime"
+  const canFetchDetailedTimeline = matchData?.timelineAvailable !== false || matchData?.eventsAvailable !== false
+  const modalRefreshIntervalMs = matchData?.provider === "procup" ? 7_500 : 5_000
   const effectiveClockState = detailClockState ?? clockState ?? null
   const effectivePenalties = detailPenalties.length > 0 ? detailPenalties : penalties
   const shouldWaitForDetailedTimeline =
@@ -659,8 +661,10 @@ export function MatchFeedModal({
     setDetailClockState(null)
     setDetailPenalties([])
     setClockTick(0)
-    fetchDetailData().catch(() => undefined)
-  }, [isOpen, matchData?.apiMatchId])
+    if (canFetchDetailedTimeline) {
+      fetchDetailData().catch(() => undefined)
+    }
+  }, [isOpen, matchData?.apiMatchId, canFetchDetailedTimeline])
 
   useEffect(() => {
     if (!isOpen) return
@@ -762,6 +766,11 @@ export function MatchFeedModal({
   }, [sortedFeed])
 
   const emptyTimelineMessage = useMemo(() => {
+    if (matchData?.timelineAvailable === false && matchData?.provider === "procup") {
+      return matchStatus === "live" || matchStatus === "halftime"
+        ? "Livescore uppdateras, men ProCup har ingen publik play-by-play-tidslinje för den här matchen."
+        : "ProCup har ingen publik play-by-play-tidslinje för den här matchen."
+    }
     if (matchStatus === "upcoming") {
       return "Matchen har inte startat ännu."
     }
@@ -845,7 +854,9 @@ export function MatchFeedModal({
       if (onRefresh) {
         await onRefresh()
       }
-      await fetchDetailData()
+      if (canFetchDetailedTimeline) {
+        await fetchDetailData()
+      }
     } finally {
       refreshInFlightRef.current = false
     }
@@ -861,14 +872,17 @@ export function MatchFeedModal({
     }, 450)
 
     const interval = globalThis.setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return
+      }
       refreshNow()
-    }, 5_000)
+    }, modalRefreshIntervalMs)
 
     return () => {
       globalThis.clearTimeout(kickOff)
       globalThis.clearInterval(interval)
     }
-  }, [isOpen, onRefresh, allowAutoRefresh, matchData?.apiMatchId])
+  }, [isOpen, onRefresh, allowAutoRefresh, matchData?.apiMatchId, canFetchDetailedTimeline, modalRefreshIntervalMs])
 
   if (!isOpen) return null
 

@@ -37,7 +37,7 @@ const mergeMatchWindows = (windows: EnhancedMatchData[]): EnhancedMatchData | un
   const recentResults = dedupeMatches(windows.flatMap((window) => window.recentResults ?? [])).sort(compareMatchesByDateDescStable)
   const groupedFeed = buildGroupedFeed(matches)
   const sources = windows.at(-1)?.sources
-  const window = windows.at(-1)?.window
+  const window = windows[0]?.window
 
   return {
     matches,

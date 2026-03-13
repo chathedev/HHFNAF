@@ -254,7 +254,7 @@ type QueryParams = Record<string, string | number | boolean | undefined>
 
 const buildQueryMeta = (params?: QueryParams) => {
   const entries = Object.entries(params ?? {})
-    .filter(([, value]) => value !== undefined)
+    .filter(([key, value]) => key !== "limit" && value !== undefined)
     .map(([key, value]) => [key, String(value)] as const)
     .sort(([a], [b]) => a.localeCompare(b))
 
@@ -273,6 +273,80 @@ const buildQueryMeta = (params?: QueryParams) => {
 }
 
 const getDataEndpoint = () => `${API_BASE_URL}/matcher/data`
+
+const WINDOW_PARAM_KEYS = ["from", "to", "date", "day", "cursorDate", "chunkDays"] as const
+
+const hasWindowedParams = (params?: QueryParams) =>
+  WINDOW_PARAM_KEYS.some((key) => params?.[key] !== undefined)
+
+const getParamsFromWindow = (window?: MatchWindow): QueryParams | undefined => {
+  if (!window?.enabled) {
+    return undefined
+  }
+
+  const cursorDate = window.cursorDate ?? window.from ?? window.dateKeys?.[0]
+  if (!cursorDate) {
+    return undefined
+  }
+
+  return {
+    cursorDate,
+    chunkDays: window.chunkDays ?? (window.days && window.days > 0 ? window.days : 1),
+  }
+}
+
+const getSuggestedRefreshInterval = ({
+  explicitIntervalMs,
+  dataType,
+  window,
+  groupedFeed,
+  recentResults,
+}: {
+  explicitIntervalMs?: number
+  dataType: DataType
+  window?: MatchWindow
+  groupedFeed?: {
+    live: NormalizedMatch[]
+    upcoming: NormalizedMatch[]
+    finished: NormalizedMatch[]
+  }
+  recentResults?: NormalizedMatch[]
+}) => {
+  if (typeof explicitIntervalMs === "number" && explicitIntervalMs > 0) {
+    return explicitIntervalMs
+  }
+
+  if (typeof window?.refreshIntervalMs === "number" && window.refreshIntervalMs > 0) {
+    return Math.max(5_000, Math.min(window.refreshIntervalMs, 60_000))
+  }
+
+  if (dataType === "old") {
+    return 60_000
+  }
+
+  if (window?.priority === "live") {
+    return 5_000
+  }
+  if (window?.priority === "today") {
+    return 10_000
+  }
+  if (window?.priority === "schedule") {
+    return 20_000
+  }
+  if (window?.priority === "archive") {
+    return 60_000
+  }
+
+  if ((groupedFeed?.live.length ?? 0) > 0) {
+    return 5_000
+  }
+
+  if ((groupedFeed?.upcoming.length ?? 0) > 0 || (recentResults?.length ?? 0) > 0) {
+    return 10_000
+  }
+
+  return 20_000
+}
 
 const createNormalizedTeamKey = (value: string) =>
   value
@@ -1441,7 +1515,7 @@ const createMatchDataChannel = () => {
   }
 
   const pollFull = async () => {
-    if (!isBrowser || fullPollInFlight) {
+    if (!isBrowser || fullPollInFlight || isPageHidden()) {
       return
     }
     fullPollInFlight = true
@@ -1465,7 +1539,7 @@ const createMatchDataChannel = () => {
   }
 
   const pollEvents = async () => {
-    if (!isBrowser || eventPollInFlight) {
+    if (!isBrowser || eventPollInFlight || isPageHidden()) {
       return
     }
     eventPollInFlight = true
@@ -1500,6 +1574,9 @@ const createMatchDataChannel = () => {
     eventPollTimer = globalThis.setInterval(() => {
       pollEvents()
     }, EVENT_POLL_INTERVAL_MS)
+    if (isBrowser && typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", pollFull)
+    }
   }
 
   const stopPolling = () => {
@@ -1514,6 +1591,9 @@ const createMatchDataChannel = () => {
     if (eventPollTimer) {
       globalThis.clearInterval(eventPollTimer)
       eventPollTimer = null
+    }
+    if (isBrowser && typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", pollFull)
     }
   }
 
@@ -1569,6 +1649,8 @@ export const getMatchData = async (
   const { queryString } = buildQueryMeta(params)
   const baseEndpoint = getDataEndpoint()
   const endpoint = `${baseEndpoint}${queryString}`
+  const shouldShareWithBaseEndpoint = endpoint === baseEndpoint
+  const allowBaseFallback = shouldShareWithBaseEndpoint
   const cacheKey = `${dataType}-${endpoint}`
   const baseCacheKey = `${dataType}-${baseEndpoint}`
   const applyParamsToResult = (result: EnhancedMatchData) => {
@@ -1584,14 +1666,14 @@ export const getMatchData = async (
   const sharedKey = endpoint
 
   if (!bypassCache) {
-    const sharedCached = sharedMatchCache.get(sharedKey) ?? sharedMatchCache.get(baseEndpoint)
+    const sharedCached = sharedMatchCache.get(sharedKey) ?? (allowBaseFallback ? sharedMatchCache.get(baseEndpoint) : undefined)
     if (sharedCached) {
       return applyParamsToResult(buildEnhancedMatchData(sharedCached, dataType))
     }
   }
 
   if (!bypassCache) {
-    const cached = memoryCache.get(cacheKey) ?? memoryCache.get(baseCacheKey)
+    const cached = memoryCache.get(cacheKey) ?? (allowBaseFallback ? memoryCache.get(baseCacheKey) : undefined)
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
       const hasRegression = cached.data.matches.some((match) => {
         const latest = latestMatchStates.get(match.id)
@@ -1622,7 +1704,7 @@ export const getMatchData = async (
       // ignore
     }
     if (!bypassCache) {
-      const sharedCached = sharedMatchCache.get(sharedKey) ?? sharedMatchCache.get(baseEndpoint)
+      const sharedCached = sharedMatchCache.get(sharedKey) ?? (allowBaseFallback ? sharedMatchCache.get(baseEndpoint) : undefined)
       if (sharedCached) {
         return applyParamsToResult(buildEnhancedMatchData(sharedCached, dataType))
       }
@@ -1681,8 +1763,10 @@ export const getMatchData = async (
           timestamp: Date.now(),
         }
 
-        applyEntryToCaches(entry, [endpoint, baseEndpoint])
-        matchDataChannel.broadcastEntry(entry)
+        applyEntryToCaches(entry, shouldShareWithBaseEndpoint ? [baseEndpoint] : [endpoint])
+        if (shouldShareWithBaseEndpoint) {
+          matchDataChannel.broadcastEntry(entry)
+        }
 
         return entry
       } catch (error) {
@@ -1710,21 +1794,21 @@ export const getMatchData = async (
     return applyParamsToResult(buildEnhancedMatchData(sharedEntry, dataType))
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      const cached = memoryCache.get(cacheKey) ?? memoryCache.get(baseCacheKey)
+      const cached = memoryCache.get(cacheKey) ?? (allowBaseFallback ? memoryCache.get(baseCacheKey) : undefined)
       if (cached) {
         console.log("Timeout reached, using cached data")
         return applyParamsToResult(cached.data)
       }
     }
 
-    const sharedCached = sharedMatchCache.get(sharedKey) ?? sharedMatchCache.get(baseEndpoint)
+    const sharedCached = sharedMatchCache.get(sharedKey) ?? (allowBaseFallback ? sharedMatchCache.get(baseEndpoint) : undefined)
     if (sharedCached) {
       const fallback = buildEnhancedMatchData(sharedCached, dataType)
       console.warn("API failed, returning cached shared data:", error)
       return applyParamsToResult(fallback)
     }
 
-    const cached = memoryCache.get(cacheKey) ?? memoryCache.get(baseCacheKey)
+    const cached = memoryCache.get(cacheKey) ?? (allowBaseFallback ? memoryCache.get(baseCacheKey) : undefined)
     if (cached) {
       const hasRegression = cached.data.matches.some((match) => {
         const latest = latestMatchStates.get(match.id)
@@ -1781,11 +1865,17 @@ export const useMatchData = (options?: {
   initialData?: EnhancedMatchData
   params?: QueryParams
   enabled?: boolean
+  followInitialWindow?: boolean
 }) => {
   const dataType = options?.dataType ?? "liveUpcoming"
-  const refreshIntervalMs = options?.refreshIntervalMs ?? 0
-  const paramsSignature = useMemo(() => buildQueryMeta(options?.params).signature, [options?.params])
-  const params = options?.params
+  const explicitRefreshIntervalMs = options?.refreshIntervalMs
+  const initialWindowParams = useMemo(
+    () => (options?.followInitialWindow ? getParamsFromWindow(options?.initialData?.window) : undefined),
+    [options?.followInitialWindow, options?.initialData?.window],
+  )
+  const params = useMemo(() => ({ ...(initialWindowParams ?? {}), ...(options?.params ?? {}) }), [initialWindowParams, options?.params])
+  const paramsSignature = useMemo(() => buildQueryMeta(params).signature, [params])
+  const useDirectFetching = hasWindowedParams(params)
   const enabled = options?.enabled ?? true
   const paramsLimit = typeof params?.limit === "number" && params.limit >= 0 ? params.limit : undefined
   const [hasPayload, setHasPayload] = useState(Boolean(options?.initialData))
@@ -1854,17 +1944,60 @@ export const useMatchData = (options?: {
     [selectMatchesFromPayload],
   )
 
+  const applyEnhancedPayload = useCallback(
+    (payload: EnhancedMatchData) => {
+      const selectedMatches = paramsLimit !== undefined ? payload.matches.slice(0, paramsLimit) : payload.matches
+      setMatches(selectedMatches)
+      setRecentResults(payload.recentResults ?? [])
+      setGroupedFeed(
+        payload.groupedFeed ?? {
+          live: [],
+          upcoming: [],
+          finished: [],
+        },
+      )
+      setSources(payload.sources)
+      setWindow(payload.window)
+      selectedMatches.forEach((match) => {
+        matchStateManager.queueUpdate(match.id, {
+          ...match,
+          lastUpdated: Date.now(),
+        })
+      })
+      setHasData(selectedMatches.length > 0 || (payload.recentResults?.length ?? 0) > 0)
+      setError(null)
+      setLoading(false)
+      setHasPayload(true)
+      return selectedMatches
+    },
+    [paramsLimit],
+  )
+
+  const effectiveRefreshIntervalMs = useMemo(
+    () =>
+      useDirectFetching
+        ? getSuggestedRefreshInterval({
+            explicitIntervalMs: explicitRefreshIntervalMs,
+            dataType,
+            window,
+            groupedFeed,
+            recentResults,
+          })
+        : explicitRefreshIntervalMs ?? 0,
+    [useDirectFetching, explicitRefreshIntervalMs, dataType, window, groupedFeed, recentResults],
+  )
+
   useEffect(() => {
-    if (!enabled) {
+    if (!enabled || useDirectFetching) {
       return
     }
 
     const unsubscribe = matchDataChannel.subscribe(applyPayload)
     return () => unsubscribe()
-  }, [enabled, applyPayload, paramsSignature])
+  }, [enabled, useDirectFetching, applyPayload, paramsSignature])
 
   useEffect(() => {
-    if (!enabled) {
+    if (!enabled || useDirectFetching) {
       return
     }
 
@@ -1874,7 +2007,7 @@ export const useMatchData = (options?: {
     })
 
     return unsubscribe
-  }, [enabled])
+  }, [enabled, useDirectFetching])
 
   useEffect(() => {
     if (isConnected && !hasData) {
@@ -1890,6 +2023,22 @@ export const useMatchData = (options?: {
 
       setIsRefreshing(true)
       try {
+        if (useDirectFetching) {
+          const payload = await getMatchData(dataType, bypassCache, params)
+          applyEnhancedPayload(payload)
+          return {
+            matches: payload.matches,
+            recentResults: payload.recentResults ?? [],
+            groupedFeed:
+              payload.groupedFeed ?? {
+                live: [],
+                upcoming: [],
+                finished: [],
+              },
+            window: payload.window,
+          }
+        }
+
         await getMatchData(dataType, bypassCache, params)
         const payload = matchDataChannel.getLatest()
         if (!payload) {
@@ -1914,22 +2063,38 @@ export const useMatchData = (options?: {
         setIsRefreshing(false)
       }
     },
-    [enabled, applyPayload, dataType, params],
+    [enabled, useDirectFetching, applyPayload, applyEnhancedPayload, dataType, params],
   )
 
   useEffect(() => {
-    if (!enabled || !refreshIntervalMs || refreshIntervalMs <= 0) {
+    if (!enabled || !useDirectFetching) {
+      return
+    }
+
+    if (!hasPayload) {
+      refresh(false).catch(() => {
+        // initial window refresh can fail silently while preserving initial SSR payload
+      })
+      return
+    }
+  }, [enabled, useDirectFetching, hasPayload, refresh])
+
+  useEffect(() => {
+    if (!enabled || !effectiveRefreshIntervalMs || effectiveRefreshIntervalMs <= 0) {
       return
     }
 
     const timer = globalThis.setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return
+      }
       refresh(true).catch(() => {
         // keep existing state during transient polling failures
       })
-    }, refreshIntervalMs)
+    }, effectiveRefreshIntervalMs)
 
     return () => globalThis.clearInterval(timer)
-  }, [enabled, refreshIntervalMs, refresh, paramsSignature])
+  }, [enabled, effectiveRefreshIntervalMs, refresh, paramsSignature])
 
   return {
     matches,
@@ -1944,3 +2109,4 @@ export const useMatchData = (options?: {
     hasPayload,
   }
 }
+  const isPageHidden = () => isBrowser && typeof document !== "undefined" && document.visibilityState === "hidden"

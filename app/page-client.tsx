@@ -176,6 +176,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     dataType: "liveUpcoming",
     params: limitedParams,
     initialData,
+    followInitialWindow: true,
   })
   const matchError = Boolean(matchErrorMessage)
 

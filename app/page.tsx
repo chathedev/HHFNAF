@@ -7,9 +7,8 @@ export const revalidate = 60
 
 export default async function HomePage() {
   const initialData = await getInitialMatchWindow({
-    minMatches: 12,
-    maxDays: 3,
-    requireUpcomingProviders: ["profixio", "procup"],
+    minMatches: 1,
+    maxDays: 1,
   })
 
   return (
