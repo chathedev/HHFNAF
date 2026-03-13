@@ -18,6 +18,7 @@ import {
   extendTeamDisplayNameFromCandidates,
 } from "@/lib/team-display"
 import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
+import { canOpenMatchTimeline } from "@/lib/match-card-utils"
 
 const PLACEHOLDER_HERO = "/placeholder.jpg"
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
@@ -127,11 +128,9 @@ export default function TeamPage({ params }: TeamPageProps) {
   const [selectedMatch, setSelectedMatch] = useState<NormalizedMatch | null>(null);
   const { matches: currentMatches, loading: currentLoading, error: currentError, refresh } = useMatchData({
     dataType: "liveUpcoming",
-    refreshIntervalMs: 1_000, // 1 second for smooth real-time updates
   });
   const { matches: finishedMatches, loading: finishedLoading, error: finishedError } = useMatchData({
     dataType: "old",
-    refreshIntervalMs: 1_000,
   });
 
   const teamMatchKeys = useMemo(
@@ -309,7 +308,7 @@ export default function TeamPage({ params }: TeamPageProps) {
                   trimmedResult !== "0–0"
 
                 const playLabel = status === "finished" ? "Se repris" : "Se live"
-                const canOpenTimeline = (status === "live" && !matchShouldBeFinished) || status === "finished"
+                const canOpenTimeline = canOpenMatchTimeline(match)
                 const showTicket = shouldShowTicketButton(match, status) && !matchShouldBeFinished
                 const matchTeamLabel = extendTeamDisplayName(match.teamType)
 

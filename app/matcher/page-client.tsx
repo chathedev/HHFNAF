@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation"
 
 import {
   buildMatchScheduleLabel,
+  canOpenMatchTimeline,
   getMatchupLabel,
   getSimplifiedMatchStatus,
   shouldShowFinishedZeroZeroIssue,
@@ -239,14 +240,19 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     [liveUpcomingMatches],
   )
 
+  const finishedMatchesCount = useMemo(
+    () => [...liveUpcomingMatches, ...oldMatches].filter((match) => getMatchStatus(match) === "finished").length,
+    [liveUpcomingMatches, oldMatches],
+  )
+
   const matchStats = useMemo(
     () => ({
       totalMatches: liveUpcomingMatches.length + oldMatches.length,
       liveMatches: liveMatchesCount,
       upcomingMatches: upcomingMatchesCount,
-      finishedMatches: oldMatches.length,
+      finishedMatches: finishedMatchesCount,
     }),
-    [liveUpcomingMatches.length, liveMatchesCount, upcomingMatchesCount, oldMatches.length],
+    [liveUpcomingMatches.length, liveMatchesCount, upcomingMatchesCount, oldMatches.length, finishedMatchesCount],
   )
 
   const allMatches = useMemo(() => [...liveUpcomingMatches, ...oldMatches], [liveUpcomingMatches, oldMatches])
@@ -408,6 +414,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
 
   const renderMatchCard = (match: NormalizedMatch) => {
     const status = getSimplifiedMatchStatus(match)
+    const canOpenTimeline = canOpenMatchTimeline(match)
     const scheduleLabel = buildMatchScheduleLabel(match)
     const matchupLabel = getMatchupLabel(match)
     const showProfixioWarning = shouldShowProfixioTechnicalIssue(match)
@@ -416,36 +423,45 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
     const cleanedResult = match.result?.trim()
     const scoreValue =
-      status === "upcoming"
+      status === "upcoming" || match.resultState === "not_started" || match.resultState === "live_pending"
         ? null
         : cleanedResult && cleanedResult.length > 0
           ? cleanedResult
-          : status === "live"
-            ? "0-0"
-            : "—"
+          : status === "finished"
+            ? "Resultat inväntas"
+            : null
 
     const statusBadge = (() => {
       if (status === "live") {
-        return { label: "LIVE", tone: "bg-rose-50 text-rose-600" }
+        return { label: match.statusLabel ?? "LIVE", tone: "bg-rose-50 text-rose-600" }
       }
       if (status === "finished") {
-        return { label: "SLUT", tone: "bg-gray-100 text-gray-600" }
+        return { label: match.statusLabel ?? "SLUT", tone: "bg-gray-100 text-gray-600" }
       }
-      return { label: "KOMMANDE", tone: "bg-blue-50 text-blue-600" }
+      return { label: match.statusLabel ?? "KOMMANDE", tone: "bg-blue-50 text-blue-600" }
     })()
 
     return (
       <article
         key={match.id}
         id={`match-card-${match.id}`}
-        className="relative flex cursor-pointer flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-all duration-200 active:scale-[0.99] hover:border-emerald-400 hover:shadow-lg sm:gap-4 sm:p-6"
+        className={`relative flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-all duration-200 active:scale-[0.99] sm:gap-4 sm:p-6 ${
+          canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:shadow-lg" : ""
+        }`}
         onMouseEnter={() => {
-          fetchMatchTimeline(match).catch(() => undefined)
+          if (canOpenTimeline) {
+            fetchMatchTimeline(match).catch(() => undefined)
+          }
         }}
         onTouchStart={() => {
-          fetchMatchTimeline(match).catch(() => undefined)
+          if (canOpenTimeline) {
+            fetchMatchTimeline(match).catch(() => undefined)
+          }
         }}
         onClick={(event) => {
+          if (!canOpenTimeline) {
+            return
+          }
           const target = event.target as HTMLElement
           if (target.closest("a,button")) {
             return

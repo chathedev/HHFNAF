@@ -21,9 +21,9 @@ const stripHomeAway = (value?: string) => {
 }
 
 export const formatMatchDateLabel = (match: NormalizedMatch) =>
-  DATE_FORMATTER.format(match.date).toLowerCase()
+  (match.display?.dateCard || DATE_FORMATTER.format(match.date)).toLowerCase()
 
-export const formatMatchTimeLabel = (match: NormalizedMatch) => TIME_FORMATTER.format(match.date)
+export const formatMatchTimeLabel = (match: NormalizedMatch) => match.display?.time || TIME_FORMATTER.format(match.date)
 
 export const buildMatchScheduleLabel = (match: NormalizedMatch) => {
   const parts = [
@@ -57,8 +57,7 @@ export const getSimplifiedMatchStatus = (match: NormalizedMatch): "live" | "fini
 }
 
 export const canOpenMatchTimeline = (match: NormalizedMatch) => {
-  const status = getSimplifiedMatchStatus(match)
-  return status === "live" || status === "finished"
+  return match.timelineAvailable === true
 }
 
 const parseScore = (result?: string) => {
@@ -84,6 +83,9 @@ const hasTimelineSignal = (match: NormalizedMatch) => {
 }
 
 export const shouldShowProfixioTechnicalIssue = (match: NormalizedMatch, nowMs = Date.now()) => {
+  if (match.provider === "procup") return false
+  if (match.timelineAvailable === false) return false
+  if (match.resultState === "live_pending" || match.resultState === "not_started") return false
   const status = getSimplifiedMatchStatus(match)
   if (status !== "live") return false
 
@@ -98,6 +100,7 @@ export const shouldShowProfixioTechnicalIssue = (match: NormalizedMatch, nowMs =
 }
 
 export const shouldShowFinishedZeroZeroIssue = (match: NormalizedMatch) => {
+  if (match.provider === "procup") return false
   const status = getSimplifiedMatchStatus(match)
   if (status !== "finished") return false
 

@@ -13,7 +13,20 @@ export function MatchCardCTA({ match, status }: { match: NormalizedMatch; status
   const showTicketCTA = isTicketTeam && isAtObacka && isHomeMatch && status !== "finished"
 
   const playUrl = (match.playUrl ?? "").trim()
-  const hasPlayLink = playUrl.length > 0 && playUrl.toLowerCase() !== "null"
+  const hasPlayLink =
+    match.hasStream === true &&
+    Boolean(playUrl) &&
+    playUrl.toLowerCase() !== "null"
+
+  const streamLabel = (() => {
+    if (match.streamProvider === "handbollplay") {
+      return "HandbollPlay"
+    }
+    if (match.streamProvider === "solidsport") {
+      return "Se live"
+    }
+    return "Se match"
+  })()
 
   if (!showTicketCTA && !hasPlayLink) {
     return null
@@ -33,7 +46,7 @@ export function MatchCardCTA({ match, status }: { match: NormalizedMatch; status
             alt="HandbollPlay"
             className="h-4 w-4"
           />
-          <span>{status === "finished" ? "Se repris" : "Se live"}</span>
+          <span>{status === "finished" ? "Se repris" : streamLabel}</span>
         </a>
       )}
       {showTicketCTA && (

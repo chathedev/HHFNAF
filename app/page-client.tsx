@@ -31,10 +31,10 @@ import type { FullContent, Partner } from "@/lib/content-types"
 import { deriveSiteVariant, type SiteVariant, getThemeVariant, getHeroImages, type ThemeVariant } from "@/lib/site-variant"
 import { canShowTicketForMatch } from "@/lib/matches"
 import { extendTeamDisplayName } from "@/lib/team-display"
-import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
 import { resolvePreferredTimeline } from "@/lib/match-timeline"
 import {
   buildMatchScheduleLabel,
+  canOpenMatchTimeline,
   getMatchupLabel,
   getSimplifiedMatchStatus,
   shouldShowFinishedZeroZeroIssue,
@@ -159,6 +159,8 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const { shopVisible } = useShopStatus()
   const {
     matches: currentMatches,
+    recentResults,
+    groupedFeed,
     loading: matchLoading,
     error: matchErrorMessage,
     hasPayload: hasMatchPayload,
@@ -169,16 +171,10 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     params: limitedParams,
     initialData,
   })
-  const {
-    matches: finishedMatches,
-  } = useMatchData({
-    dataType: "old",
-    params: limitedParams,
-  })
   const matchError = Boolean(matchErrorMessage)
 
   useEffect(() => {
-    const matches = [...currentMatches, ...finishedMatches]
+    const matches = [...currentMatches, ...recentResults]
     if (matches.length === 0) return
 
     setStableScoreByMatchId((prev) => {
@@ -193,7 +189,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       }
       return changed ? next : prev
     })
-  }, [currentMatches, finishedMatches])
+  }, [currentMatches, recentResults])
 
   useEffect(() => {
     if (hasStartedInitialHomeMatchFetchRef.current) {
@@ -248,14 +244,14 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
   const allHomeMatches = useMemo(() => {
     const seenIds = new Set<string>()
-    return [...currentMatches, ...finishedMatches].filter((match) => {
+    return [...currentMatches, ...recentResults].filter((match) => {
       if (seenIds.has(match.id)) {
         return false
       }
       seenIds.add(match.id)
       return true
     })
-  }, [currentMatches, finishedMatches])
+  }, [currentMatches, recentResults])
 
   const selectedMatch = useMemo(
     () => allHomeMatches.find((match) => match.id === selectedMatchId) ?? null,
@@ -333,6 +329,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
   const renderHomeMatchCard = (match: NormalizedMatch) => {
     const status = getMatchStatus(match)
+    const canOpenTimeline = canOpenMatchTimeline(match)
     const scheduleLabel = buildMatchScheduleLabel(match)
     const matchupLabel = getMatchupLabel(match)
     const showProfixioWarning = shouldShowProfixioTechnicalIssue(match)
@@ -346,26 +343,35 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
     const statusBadge = (() => {
       if (status === "live") {
-        return { label: "LIVE", tone: "bg-rose-50 text-rose-600" }
+        return { label: match.statusLabel ?? "LIVE", tone: "bg-rose-50 text-rose-600" }
       }
       if (status === "finished") {
-        return { label: "SLUT", tone: "bg-gray-100 text-gray-600" }
+        return { label: match.statusLabel ?? "SLUT", tone: "bg-gray-100 text-gray-600" }
       }
-      return { label: "KOMMANDE", tone: "bg-blue-50 text-blue-600" }
+      return { label: match.statusLabel ?? "KOMMANDE", tone: "bg-blue-50 text-blue-600" }
     })()
 
     return (
       <li key={match.id}>
         <article
           id={`match-card-${match.id}`}
-          className="group relative flex cursor-pointer flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-emerald-400 hover:shadow-lg"
+          className={`group relative flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all ${
+            canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:shadow-lg" : ""
+          }`}
           onMouseEnter={() => {
-            fetchMatchTimeline(match).catch(() => undefined)
+            if (canOpenTimeline) {
+              fetchMatchTimeline(match).catch(() => undefined)
+            }
           }}
           onTouchStart={() => {
-            fetchMatchTimeline(match).catch(() => undefined)
+            if (canOpenTimeline) {
+              fetchMatchTimeline(match).catch(() => undefined)
+            }
           }}
           onClick={(event) => {
+            if (!canOpenTimeline) {
+              return
+            }
             const target = event.target as HTMLElement
             if (target.closest("a,button")) {
               return
@@ -421,21 +427,12 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const showInitialMatchLoader =
     !isInitialHomeMatchFetchDone && (matchLoading || matchRefreshing || !hasMatchPayload)
   const groupedHomeMatches = useMemo(() => {
-    const live = allHomeMatches
-      .filter((match) => getMatchStatus(match) === "live")
-      .sort(compareMatchesByDateAscStable)
-      .slice(0, 4)
-    const upcoming = allHomeMatches
-      .filter((match) => getMatchStatus(match) === "upcoming")
-      .sort(compareMatchesByDateAscStable)
-      .slice(0, 6)
-    const finished = allHomeMatches
-      .filter((match) => getMatchStatus(match) === "finished")
-      .sort(compareMatchesByDateDescStable)
-      .slice(0, 4)
+    const live = (groupedFeed?.live ?? []).slice(0, 4)
+    const upcoming = (groupedFeed?.upcoming ?? []).slice(0, 6)
+    const finished = recentResults.slice(0, 4)
 
     return { live, upcoming, finished }
-  }, [allHomeMatches])
+  }, [groupedFeed, recentResults])
   const totalDisplayedMatches =
     groupedHomeMatches.live.length + groupedHomeMatches.upcoming.length + groupedHomeMatches.finished.length
   const shouldRenderMatchSection =

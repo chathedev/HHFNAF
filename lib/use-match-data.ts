@@ -32,6 +32,66 @@ export type MatchFeedEvent = {
   createdAt?: string
 }
 
+type MatchProvider = "profixio" | "procup"
+type MatchProviderType = "league" | "cup"
+type MatchResultState = "available" | "not_started" | "live_pending" | "pending"
+
+type MatchDisplay = {
+  dateShort?: string
+  dateFull?: string
+  dateWithYear?: string
+  dateCard?: string
+  time?: string
+  showYearInDate?: boolean
+  statusLabel?: string
+}
+
+type MatchPresentation = {
+  layoutHint?: "default" | "cup_compact" | string
+  groupBy?: string[]
+  primaryGroupKey?: string
+  secondaryGroupKey?: string
+  tertiaryGroupKey?: string
+  primaryGroupLabel?: string
+  secondaryGroupLabel?: string
+  tertiaryGroupLabel?: string
+  preferCompactBadges?: boolean
+  preferDenseSchedule?: boolean
+  isArchivedSource?: boolean
+}
+
+type MatchDataAvailability = {
+  timeline?: boolean
+  events?: boolean
+  liveEventFeed?: boolean
+  scoreUpdates?: boolean
+  stream?: boolean
+  streamProvider?: string | null
+  infoPage?: boolean
+  detailPage?: boolean
+  lineups?: boolean
+  playerStats?: boolean
+  teamStats?: boolean
+  result?: boolean
+  resultState?: MatchResultState
+}
+
+type MatchSources = {
+  profixio?: {
+    current?: number
+    old?: number
+  }
+  procup?: {
+    current?: number
+    old?: number
+    tournaments?: Array<{
+      eventId?: string | number
+      title?: string
+      matches?: number
+    }>
+  }
+}
+
 type ApiMatch = {
   id?: string | number
   matchId?: string | number
@@ -54,6 +114,26 @@ type ApiMatch = {
   scoreTimeline?: unknown
   timeline?: MatchFeedEvent[]
   events?: MatchFeedEvent[]
+  provider?: MatchProvider
+  providerType?: MatchProviderType
+  startTimestamp?: number
+  timelineAvailable?: boolean
+  eventsAvailable?: boolean
+  liveEventFeed?: boolean
+  scoreUpdateAvailable?: boolean
+  liveScoreAvailable?: boolean
+  timelineMode?: "full" | "score_only" | string
+  timelineUnavailableReason?: string | null
+  hasStream?: boolean
+  streamProvider?: string | null
+  statusLabel?: string
+  resultState?: MatchResultState
+  display?: MatchDisplay
+  presentation?: MatchPresentation
+  dataAvailability?: MatchDataAvailability
+  homeScore?: number
+  awayScore?: number
+  arena?: string | null
 }
 
 export type NormalizedMatch = {
@@ -76,10 +156,36 @@ export type NormalizedMatch = {
   matchFeed?: MatchFeedEvent[]
   isHalftime?: boolean // Special flag for halftime breaks
   apiMatchId?: string
+  provider?: MatchProvider
+  providerType?: MatchProviderType
+  startTimestamp?: number
+  timelineAvailable?: boolean
+  eventsAvailable?: boolean
+  liveEventFeed?: boolean
+  scoreUpdateAvailable?: boolean
+  liveScoreAvailable?: boolean
+  timelineMode?: "full" | "score_only" | string
+  timelineUnavailableReason?: string | null
+  hasStream?: boolean
+  streamProvider?: string | null
+  statusLabel?: string
+  resultState?: MatchResultState
+  display?: MatchDisplay
+  presentation?: MatchPresentation
+  dataAvailability?: MatchDataAvailability
+  homeScore?: number
+  awayScore?: number
 }
 
 export type EnhancedMatchData = {
   matches: NormalizedMatch[]
+  recentResults?: NormalizedMatch[]
+  groupedFeed?: {
+    live: NormalizedMatch[]
+    upcoming: NormalizedMatch[]
+    finished: NormalizedMatch[]
+  }
+  sources?: MatchSources
   metadata?: {
     totalMatches: number
     liveMatches: number
@@ -101,6 +207,13 @@ export type EnhancedMatchData = {
 type SharedMatchCacheEntry = {
   current: NormalizedMatch[]
   old: NormalizedMatch[]
+  groupedFeed: {
+    live: NormalizedMatch[]
+    upcoming: NormalizedMatch[]
+    finished: NormalizedMatch[]
+  }
+  recentResults: NormalizedMatch[]
+  sources?: MatchSources
   lastUpdated: string | null
   timestamp: number
 }
@@ -147,6 +260,16 @@ const formatDisplayDate = (date: Date) =>
     day: "numeric",
     month: "long",
   }).format(date)
+
+const buildStatusLabel = (status?: NormalizedMatch["matchStatus"]) => {
+  if (status === "live" || status === "halftime") {
+    return "LIVE"
+  }
+  if (status === "finished") {
+    return "SLUT"
+  }
+  return "KOMMANDE"
+}
 const normalizeStatusValue = (
   value?: string | null,
 ): NormalizedMatch["matchStatus"] | undefined => {
@@ -370,7 +493,10 @@ const shouldShowFinishedMatchForTeam = (match: { date: Date; matchFeed?: MatchFe
 const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
   const teamType = match.teamType?.trim()
   const opponent = match.opponent?.trim()
-  const parsedDate = toDate(match.date, match.time)
+  const parsedDate =
+    typeof match.startTimestamp === "number" && Number.isFinite(match.startTimestamp)
+      ? new Date(match.startTimestamp)
+      : toDate(match.date, match.time)
   const apiId = match.id ?? match.matchId
 
   if (!teamType || !opponent || !parsedDate) {
@@ -391,6 +517,7 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
 
   // ALWAYS analyze timeline for halftime detection (override backend status if needed)
   {
+    const canUseTimelineSignals = match.timelineAvailable !== false
     const timeline = match.matchFeed ?? []
     const hasTimelineEvents = timeline.some((event) => Boolean(event?.type || event?.description))
 
@@ -450,17 +577,17 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     })
 
     // PRIORITY OVERRIDE: Timeline-based status always wins for halftime/finished detection
-    if (matchActuallyEnded) {
+    if (canUseTimelineSignals && matchActuallyEnded) {
       derivedStatus = "finished"
-    } else if (isHalftimeBreak && !secondHalfStarted) {
+    } else if (canUseTimelineSignals && isHalftimeBreak && !secondHalfStarted) {
       // OVERRIDE: Always show halftime when detected, regardless of backend status
       derivedStatus = "halftime"
-    } else if (secondHalfStarted) {
+    } else if (canUseTimelineSignals && secondHalfStarted) {
       // OVERRIDE: Force live when second half starts
       derivedStatus = "live"
     } else if (!derivedStatus) {
       // Fallback to timeline-based detection if backend provided no status
-      if (hasTimelineEvents) {
+      if (canUseTimelineSignals && hasTimelineEvents) {
         derivedStatus = "live"
       } else {
         derivedStatus = "upcoming"
@@ -477,9 +604,9 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     opponent,
     normalizedTeam,
     date: parsedDate,
-    displayDate: formatDisplayDate(parsedDate),
-    time: match.time ?? undefined,
-    venue: mapVenueIdToName(match.venue),
+    displayDate: match.display?.dateCard ?? formatDisplayDate(parsedDate),
+    time: match.display?.time ?? match.time ?? undefined,
+    venue: mapVenueIdToName(match.venue ?? match.arena),
     series: match.series ?? undefined,
     infoUrl: match.infoUrl ?? undefined,
     result: match.result ?? undefined,
@@ -489,6 +616,25 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     matchFeed: match.matchFeed ?? undefined,
     isHalftime: derivedStatus === "halftime",
     apiMatchId: apiId ? String(apiId) : undefined,
+    provider: match.provider,
+    providerType: match.providerType,
+    startTimestamp: typeof match.startTimestamp === "number" ? match.startTimestamp : parsedDate.getTime(),
+    timelineAvailable: match.timelineAvailable ?? match.dataAvailability?.timeline,
+    eventsAvailable: match.eventsAvailable ?? match.dataAvailability?.events,
+    liveEventFeed: match.liveEventFeed ?? match.dataAvailability?.liveEventFeed,
+    scoreUpdateAvailable: match.scoreUpdateAvailable ?? match.dataAvailability?.scoreUpdates,
+    liveScoreAvailable: match.liveScoreAvailable,
+    timelineMode: match.timelineMode,
+    timelineUnavailableReason: match.timelineUnavailableReason ?? null,
+    hasStream: match.hasStream ?? match.dataAvailability?.stream ?? Boolean(match.playUrl),
+    streamProvider: match.streamProvider ?? match.dataAvailability?.streamProvider ?? null,
+    statusLabel: match.statusLabel ?? match.display?.statusLabel ?? buildStatusLabel(derivedStatus),
+    resultState: match.resultState ?? match.dataAvailability?.resultState,
+    display: match.display,
+    presentation: match.presentation,
+    dataAvailability: match.dataAvailability,
+    homeScore: typeof match.homeScore === "number" ? match.homeScore : undefined,
+    awayScore: typeof match.awayScore === "number" ? match.awayScore : undefined,
   }
 }
 
@@ -502,6 +648,17 @@ const compareMatchesByDateDesc = compareMatchesByDateDescStable
 
 const sortMatchesAscending = (matches: NormalizedMatch[]) => [...matches].sort(compareMatchesByDateAsc)
 const sortMatchesDescending = (matches: NormalizedMatch[]) => [...matches].sort(compareMatchesByDateDesc)
+
+const dedupeNormalizedMatches = (matches: NormalizedMatch[]) => {
+  const seen = new Set<string>()
+  return matches.filter((match) => {
+    if (seen.has(match.id)) {
+      return false
+    }
+    seen.add(match.id)
+    return true
+  })
+}
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -523,6 +680,12 @@ const sharedFetchPromises = new Map<string, Promise<SharedMatchCacheEntry>>()
 const isLiveMatch = (match: NormalizedMatch) =>
   match.matchStatus === "live" || match.matchStatus === "halftime"
 
+const buildGroupedFeed = (matches: NormalizedMatch[]) => ({
+  live: dedupeNormalizedMatches(matches.filter((match) => isLiveMatch(match))).sort(compareMatchesByDateAsc),
+  upcoming: dedupeNormalizedMatches(matches.filter((match) => match.matchStatus === "upcoming")).sort(compareMatchesByDateAsc),
+  finished: dedupeNormalizedMatches(matches.filter((match) => match.matchStatus === "finished")).sort(compareMatchesByDateDesc),
+})
+
 const buildEnhancedMatchData = (entry: SharedMatchCacheEntry, dataType: DataType): EnhancedMatchData => {
   const matches =
     dataType === "old"
@@ -533,6 +696,9 @@ const buildEnhancedMatchData = (entry: SharedMatchCacheEntry, dataType: DataType
 
   return {
     matches,
+    recentResults: entry.recentResults,
+    groupedFeed: entry.groupedFeed,
+    sources: entry.sources,
   }
 }
 
@@ -625,8 +791,12 @@ const resolveCurrentMatchPayload = (payload: any): ApiMatch[] => {
   if (Array.isArray(payload.currentMatches)) {
     return normalizeList(payload.currentMatches)
   }
-  if (payload.grouped && (Array.isArray(payload.grouped.live) || Array.isArray(payload.grouped.upcoming))) {
-    return dedupeApiMatches([...normalizeList(payload.grouped.live), ...normalizeList(payload.grouped.upcoming)])
+  if (payload.grouped && (Array.isArray(payload.grouped.live) || Array.isArray(payload.grouped.upcoming) || Array.isArray(payload.grouped.finished))) {
+    return dedupeApiMatches([
+      ...normalizeList(payload.grouped.live),
+      ...normalizeList(payload.grouped.upcoming),
+      ...normalizeList(payload.grouped.finished),
+    ])
   }
   if (Array.isArray(payload.liveUpcoming)) {
     return normalizeList(payload.liveUpcoming)
@@ -669,19 +839,7 @@ const resolveOldMatchPayload = (payload: any): ApiMatch[] => {
   }
 
   if (Array.isArray(payload.old)) {
-    return dedupeApiMatches([
-      ...normalizeList(payload.old),
-      ...normalizeList(payload.recentFinished),
-      ...normalizeList(payload.finished),
-      ...normalizeList(payload?.grouped?.finished),
-    ])
-  }
-  if (Array.isArray(payload.recentFinished) || Array.isArray(payload?.grouped?.finished) || Array.isArray(payload.finished)) {
-    return dedupeApiMatches([
-      ...normalizeList(payload.recentFinished),
-      ...normalizeList(payload.finished),
-      ...normalizeList(payload?.grouped?.finished),
-    ])
+    return dedupeApiMatches(normalizeList(payload.old))
   }
   if (Array.isArray(payload.matches)) {
     return normalizeList(payload.matches)
@@ -691,13 +849,48 @@ const resolveOldMatchPayload = (payload: any): ApiMatch[] => {
   return []
 }
 
-const FULL_POLL_INTERVAL_MS = 20_000
+const resolveRecentResultsPayload = (payload: any): ApiMatch[] => {
+  const normalizeIncomingMatch = (match: any): ApiMatch => {
+    const fallbackTimeline = resolvePreferredTimeline(match)
+
+    return {
+      ...match,
+      id: match?.id ?? match?.matchId,
+      matchId: match?.matchId ?? match?.id,
+      home: match?.home ?? match?.homeTeam ?? "",
+      away: match?.away ?? match?.awayTeam ?? "",
+      matchFeed: fallbackTimeline,
+    }
+  }
+
+  const normalizeList = (input: unknown): ApiMatch[] =>
+    Array.isArray(input) ? input.map((match) => normalizeIncomingMatch(match)) : []
+
+  if (Array.isArray(payload?.recentResults)) {
+    return dedupeApiMatches(normalizeList(payload.recentResults))
+  }
+
+  if (Array.isArray(payload?.recentFinished)) {
+    return dedupeApiMatches(normalizeList(payload.recentFinished))
+  }
+
+  return []
+}
+
+const FULL_POLL_INTERVAL_MS = 10_000
 const EVENT_POLL_INTERVAL_MS = 3_000
 const LAST_EVENT_ID_STORAGE_KEY = "matcher_last_event_id"
 const CHANNEL_ENDPOINT = getDataEndpoint()
 type MatchChannelPayload = {
   current: NormalizedMatch[]
   old: NormalizedMatch[]
+  groupedFeed: {
+    live: NormalizedMatch[]
+    upcoming: NormalizedMatch[]
+    finished: NormalizedMatch[]
+  }
+  recentResults: NormalizedMatch[]
+  sources?: MatchSources
   lastUpdated: string | null
 }
 
@@ -888,6 +1081,25 @@ const createMatchDataChannel = () => {
     teamType: match.teamType,
     opponent: match.opponent,
     isHome: match.isHome,
+    provider: match.provider,
+    providerType: match.providerType,
+    startTimestamp: match.startTimestamp,
+    timelineAvailable: match.timelineAvailable,
+    eventsAvailable: match.eventsAvailable,
+    liveEventFeed: match.liveEventFeed,
+    scoreUpdateAvailable: match.scoreUpdateAvailable,
+    liveScoreAvailable: match.liveScoreAvailable,
+    timelineMode: match.timelineMode,
+    timelineUnavailableReason: match.timelineUnavailableReason,
+    hasStream: match.hasStream,
+    streamProvider: match.streamProvider,
+    statusLabel: match.statusLabel,
+    resultState: match.resultState,
+    display: match.display,
+    presentation: match.presentation,
+    dataAvailability: match.dataAvailability,
+    homeScore: match.homeScore,
+    awayScore: match.awayScore,
     homeImg: undefined,
     awayImg: undefined,
   })
@@ -937,6 +1149,9 @@ const createMatchDataChannel = () => {
     latestPayload = {
       current: currentMatches,
       old: oldMatches,
+      groupedFeed: latestEntry?.groupedFeed ?? buildGroupedFeed(currentMatches),
+      recentResults: latestEntry?.recentResults ?? [],
+      sources: latestEntry?.sources,
       lastUpdated,
     }
   }
@@ -1091,6 +1306,9 @@ const createMatchDataChannel = () => {
 
     const normalizedCurrent = normalizeAndRegisterMatches(resolveCurrentMatchPayload(payload))
     const normalizedOld = normalizeAndRegisterMatches(resolveOldMatchPayload(payload))
+    const normalizedRecentResults = sortMatchesDescending(
+      dedupeNormalizedMatches(normalizeMatches(resolveRecentResultsPayload(payload))),
+    )
 
     currentMatches = sortMatchesAscending(normalizedCurrent)
     oldMatches = sortMatchesDescending(normalizedOld)
@@ -1101,6 +1319,9 @@ const createMatchDataChannel = () => {
     latestEntry = {
       current: currentMatches,
       old: oldMatches,
+      groupedFeed: buildGroupedFeed(currentMatches),
+      recentResults: normalizedRecentResults,
+      sources: payload?.sources,
       lastUpdated,
       timestamp: Date.now(),
     }
@@ -1139,6 +1360,9 @@ const createMatchDataChannel = () => {
     latestEntry = {
       current: currentMatches,
       old: oldMatches,
+      groupedFeed: buildGroupedFeed(currentMatches),
+      recentResults: latestEntry?.recentResults ?? [],
+      sources: latestEntry?.sources,
       lastUpdated,
       timestamp: Date.now(),
     }
@@ -1170,6 +1394,9 @@ const createMatchDataChannel = () => {
     latestEntry = {
       current: currentMatches,
       old: oldMatches,
+      groupedFeed: buildGroupedFeed(currentMatches),
+      recentResults: latestEntry?.recentResults ?? [],
+      sources: latestEntry?.sources,
       lastUpdated,
       timestamp: Date.now(),
     }
@@ -1406,10 +1633,16 @@ export const getMatchData = async (
 
         const normalizedCurrent = sortMatchesAscending(normalizeMatches(currentPayload))
         const normalizedOld = sortMatchesDescending(normalizeMatches(oldPayload))
+        const normalizedRecentResults = sortMatchesDescending(
+          dedupeNormalizedMatches(normalizeMatches(resolveRecentResultsPayload(payload))),
+        )
 
         const entry: SharedMatchCacheEntry = {
           current: normalizedCurrent,
           old: normalizedOld,
+          groupedFeed: buildGroupedFeed(normalizedCurrent),
+          recentResults: normalizedRecentResults,
+          sources: payload?.sources,
           lastUpdated: typeof payload.lastUpdated === "string" ? payload.lastUpdated : null,
           timestamp: Date.now(),
         }
@@ -1526,6 +1759,19 @@ export const useMatchData = (options?: {
   const initialConnectionState = matchDataChannel.getConnectionState()
   const initialHasData = initialConnectionState.hasData || Boolean(options?.initialData?.matches?.length)
   const [matches, setMatches] = useState<NormalizedMatch[]>(options?.initialData?.matches ?? [])
+  const [recentResults, setRecentResults] = useState<NormalizedMatch[]>(options?.initialData?.recentResults ?? [])
+  const [groupedFeed, setGroupedFeed] = useState<{
+    live: NormalizedMatch[]
+    upcoming: NormalizedMatch[]
+    finished: NormalizedMatch[]
+  }>(
+    options?.initialData?.groupedFeed ?? {
+      live: [],
+      upcoming: [],
+      finished: [],
+    },
+  )
+  const [sources, setSources] = useState<MatchSources | undefined>(options?.initialData?.sources)
   const [loading, setLoading] = useState(!initialHasData && enabled)
   const [error, setError] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -1554,6 +1800,9 @@ export const useMatchData = (options?: {
     (payload: MatchChannelPayload) => {
       const selectedMatches = selectMatchesFromPayload(payload)
       setMatches(selectedMatches)
+      setRecentResults(payload.recentResults)
+      setGroupedFeed(payload.groupedFeed)
+      setSources(payload.sources)
       selectedMatches.forEach((match) => {
         matchStateManager.queueUpdate(match.id, {
           ...match,
@@ -1608,13 +1857,15 @@ export const useMatchData = (options?: {
         await getMatchData(dataType, bypassCache, params)
         const payload = matchDataChannel.getLatest()
         if (!payload) {
-          return { matches: [] }
+          return { matches: [], recentResults: [], groupedFeed: { live: [], upcoming: [], finished: [] } }
         }
         const selectedMatches = applyPayload(payload)
         setError(null)
         setLoading(false)
         return {
           matches: selectedMatches,
+          recentResults: payload.recentResults,
+          groupedFeed: payload.groupedFeed,
         }
       } catch (caught) {
         const message =
@@ -1645,6 +1896,9 @@ export const useMatchData = (options?: {
 
   return {
     matches,
+    recentResults,
+    groupedFeed,
+    sources,
     loading,
     error,
     refresh,

@@ -9,6 +9,7 @@ import { canShowTicketForMatch } from "@/lib/matches"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
+import { canOpenMatchTimeline } from "@/lib/match-card-utils"
 
 const normalizeTeamKey = (value: string) =>
   value
@@ -92,11 +93,9 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   
   // ALL HOOKS MUST BE AT THE TOP - before any conditional returns
   const { matches: currentMatches, loading: currentLoading, error: currentError, refresh } = useMatchData({
-    refreshIntervalMs: 1_000,
     dataType: "liveUpcoming"
   })
   const { matches: finishedMatches, loading: finishedLoading, error: finishedError } = useMatchData({
-    refreshIntervalMs: 1_000,
     dataType: "old",
   })
 
@@ -289,7 +288,7 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   const showTicket = isTicketEligibleBase && !outcomeInfo && isFutureOrLive
 
   // Only allow clicking timeline for live or finished matches
-  const canOpenTimeline = status === "live" || status === "finished"
+  const canOpenTimeline = nextMatch ? canOpenMatchTimeline(nextMatch) : false
 
   return (
     <>
