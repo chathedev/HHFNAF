@@ -703,6 +703,39 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
               </div>
             </div>
           </section>
+
+          {shopVisible && (
+            <section className="bg-white pb-8">
+              <div className="container mx-auto px-4">
+                <div className="-mt-6 overflow-hidden rounded-xl border border-emerald-200 bg-gradient-to-r from-slate-950 via-emerald-950 to-emerald-700 text-white shadow-[0_24px_70px_rgba(15,23,42,0.12)] sm:-mt-8">
+                  <div className="flex flex-col gap-6 px-6 py-7 md:flex-row md:items-center md:justify-between md:px-8">
+                    <div className="max-w-3xl">
+                      <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-300">Supporterbutik</p>
+                      <h3 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Stötta HHF även mellan matcherna.</h3>
+                      <p className="mt-2 text-sm text-emerald-50/85 sm:text-base">
+                        Beställ matchtröjor, supporterplagg och presenter i webbutiken. Alla köp hämtas lokalt och hjälper föreningen framåt.
+                      </p>
+                      <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-100">
+                        <span className="rounded-sm bg-white/10 px-3 py-2">Matchtröjor</span>
+                        <span className="rounded-sm bg-white/10 px-3 py-2">Supporterplagg</span>
+                        <span className="rounded-sm bg-white/10 px-3 py-2">Presenter</span>
+                      </div>
+                    </div>
+                    <Link
+                      href={SHOP_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-2 rounded-md bg-white px-6 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-950 transition hover:bg-emerald-100"
+                    >
+                      <ShoppingBag className="h-4 w-4" />
+                      Till Butiken
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
           {shouldRenderMatchSection && (
             <section className="py-10 bg-white">
               <div className="container mx-auto px-4">
@@ -784,29 +817,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
           {/* Cards Section */}
           <section className="py-12 bg-white">
             <div className="container mx-auto px-4">
-              {shopVisible && (
-                <div className="mx-auto mb-8 max-w-5xl overflow-hidden rounded-xl border border-emerald-200 bg-gradient-to-r from-slate-950 via-emerald-950 to-emerald-700 text-white shadow-[0_24px_70px_rgba(15,23,42,0.12)]">
-                  <div className="flex flex-col gap-6 px-6 py-7 md:flex-row md:items-center md:justify-between md:px-8">
-                    <div className="max-w-2xl">
-                      <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-300">Supporterbutik</p>
-                      <h3 className="mt-2 text-2xl font-black tracking-tight">Gör matchintresset till butiksköp.</h3>
-                      <p className="mt-2 text-sm text-emerald-50/85">
-                        Shoppa HHF-plagg och supporterprylar i webbutiken. Beställ online och hämta lokalt.
-                      </p>
-                    </div>
-                    <Link
-                      href={SHOP_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2 rounded-md bg-white px-6 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-950 transition hover:bg-emerald-100"
-                    >
-                      <ShoppingBag className="h-4 w-4" />
-                      Öppna Butiken
-                    </Link>
-                  </div>
-                </div>
-              )}
-
               <div className="text-center mb-8">
                 <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
                   Upplev <span className={isPinkTheme ? "text-pink-400" : "text-orange-500"}>Handboll</span> Live
@@ -816,7 +826,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                 </p>
               </div>
 
-              <div className={`grid gap-6 mx-auto ${shopVisible ? "max-w-5xl md:grid-cols-2 xl:grid-cols-3" : "max-w-3xl md:grid-cols-2"}`}>
+              <div className="mx-auto grid max-w-3xl gap-6 md:grid-cols-2">
                 {/* Se Matcher Card */}
                 <div className={`group bg-white rounded-lg border border-gray-200 ${isPinkTheme ? "hover:border-pink-300" : "hover:border-green-300"} transition-all duration-200 overflow-hidden`}>
                   <div className="p-6">
@@ -868,36 +878,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                     </Link>
                   </div>
                 </div>
-
-                {shopVisible && (
-                  <div className="group overflow-hidden rounded-md border border-gray-200 bg-white transition-all duration-200 hover:border-emerald-300">
-                    <div className="p-6">
-                      <div className="mb-4 flex items-center">
-                        <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
-                          <ShoppingBag className="h-5 w-5 text-emerald-600" />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-semibold text-gray-900">Butik</h3>
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600">Beställ online</p>
-                        </div>
-                      </div>
-
-                      <p className="mb-6 text-sm leading-relaxed text-gray-600">
-                        Sälj supporterplagg där engagemanget redan finns. Beställning sker i webbutiken och alla köp hämtas upp lokalt.
-                      </p>
-
-                      <Link
-                        href={SHOP_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center font-medium text-sm text-emerald-600 transition-transform group-hover:translate-x-1 hover:text-emerald-700"
-                      >
-                        Handla HHF-produkter
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Link>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </section>
