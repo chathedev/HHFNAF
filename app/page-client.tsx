@@ -31,6 +31,7 @@ import { deriveSiteVariant, type SiteVariant, getThemeVariant, getHeroImages, ty
 import { canShowTicketForMatch } from "@/lib/matches"
 import { extendTeamDisplayName } from "@/lib/team-display"
 import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
+import { resolvePreferredTimeline } from "@/lib/match-timeline"
 import {
   buildMatchScheduleLabel,
   getMatchupLabel,
@@ -282,13 +283,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       }
 
       const payload = await response.json()
-      const rawTimeline = Array.isArray(payload?.events)
-        ? payload.events
-        : Array.isArray(payload?.timeline)
-          ? payload.timeline
-          : Array.isArray(payload?.matchFeed)
-            ? payload.matchFeed
-            : []
+      const rawTimeline = resolvePreferredTimeline(payload, match.matchFeed ?? [])
 
       const normalized = dedupeTimelineEvents(rawTimeline.map((event: any) => mapTimelineEvent(event)))
       setTimelineByMatchId((prev) => ({ ...prev, [match.id]: normalized }))

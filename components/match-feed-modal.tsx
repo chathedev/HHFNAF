@@ -3,6 +3,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react"
 import { X } from "lucide-react"
 import type { NormalizedMatch } from "@/lib/use-match-data"
+import { preferRicherTimeline, resolvePreferredTimeline } from "@/lib/match-timeline"
 
 export type MatchFeedEvent = {
   time?: string
@@ -330,11 +331,12 @@ export function MatchFeedModal({
   const [detailTimeline, setDetailTimeline] = useState<MatchFeedEvent[] | null>(null)
   const [detailClockState, setDetailClockState] = useState<MatchClockState | null>(null)
   const [detailPenalties, setDetailPenalties] = useState<MatchPenalty[]>([])
+  const [isTimelineLoading, setIsTimelineLoading] = useState(false)
   const [clockTick, setClockTick] = useState(0)
   const allowAutoRefresh = matchStatus === "live" || matchStatus === "halftime"
   const effectiveClockState = detailClockState ?? clockState ?? null
   const effectivePenalties = detailPenalties.length > 0 ? detailPenalties : penalties
-  const timelineSource = detailTimeline ?? matchFeed
+  const timelineSource = detailTimeline ? preferRicherTimeline(detailTimeline, matchFeed) : matchFeed
   const hasClockData = Boolean(
     effectiveClockState &&
       (typeof effectiveClockState.currentSeconds === "number" || Boolean(effectiveClockState.clock)),
@@ -358,24 +360,23 @@ export function MatchFeedModal({
   const fetchDetailData = async () => {
     const apiMatchId = matchData?.apiMatchId
     if (!apiMatchId) return
-    const response = await fetch(`${API_BASE_URL}/matcher/match/${encodeURIComponent(apiMatchId)}?includeEvents=1`, {
-      cache: "no-store",
-      headers: { Accept: "application/json" },
-    })
-    if (!response.ok) return
-    const payload = await response.json()
-    const rawTimeline = Array.isArray(payload?.events)
-      ? payload.events
-      : Array.isArray(payload?.timeline)
-        ? payload.timeline
-        : Array.isArray(payload?.matchFeed)
-          ? payload.matchFeed
-          : []
-    const normalized = dedupeTimelineEvents(rawTimeline.map((event: any) => normalizeTimelineEvent(event)))
-    setDetailTimeline(normalized)
-    setDetailClockState((payload?.clockState as MatchClockState) ?? null)
-    setDetailPenalties(Array.isArray(payload?.penalties) ? payload.penalties : [])
-    setClockTick(0)
+    setIsTimelineLoading(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/matcher/match/${encodeURIComponent(apiMatchId)}?includeEvents=1`, {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      })
+      if (!response.ok) return
+      const payload = await response.json()
+      const rawTimeline = resolvePreferredTimeline(payload, matchFeed)
+      const normalized = dedupeTimelineEvents(rawTimeline.map((event: any) => normalizeTimelineEvent(event)))
+      setDetailTimeline(normalized)
+      setDetailClockState((payload?.clockState as MatchClockState) ?? null)
+      setDetailPenalties(Array.isArray(payload?.penalties) ? payload.penalties : [])
+      setClockTick(0)
+    } finally {
+      setIsTimelineLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -415,6 +416,9 @@ export function MatchFeedModal({
 
   useEffect(() => {
     if (!isOpen) return
+    setDetailTimeline(null)
+    setDetailClockState(null)
+    setDetailPenalties([])
     setClockTick(0)
     fetchDetailData().catch(() => undefined)
   }, [isOpen, matchData?.apiMatchId])
@@ -733,6 +737,11 @@ export function MatchFeedModal({
         <div className="flex-1 overflow-y-auto bg-slate-50 px-3 py-4 sm:px-8 sm:py-6">
           {activeTab === "timeline" && (
             <div className="space-y-6 sm:space-y-8">
+              {isTimelineLoading && (
+                <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-medium text-sky-800">
+                  Hämtar komplett tidslinje...
+                </div>
+              )}
               {sortedFeed.length === 0 && (
                 <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center">
                   <p className="text-base font-semibold text-slate-700">{emptyTimelineMessage}</p>

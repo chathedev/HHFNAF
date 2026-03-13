@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useState, useRef } from "react"
 import { normalizeStatusValue } from "./use-match-data"
+import { resolvePreferredTimeline } from "./match-timeline"
 
 export type GameClock = {
   minutes: number
@@ -128,20 +129,26 @@ const resolveCurrentMatchPayload = (payload: any): ApiMatch[] => {
     return []
   }
 
+  const normalizeList = (matches: ApiMatch[]) =>
+    matches.map((match) => ({
+      ...match,
+      matchFeed: resolvePreferredTimeline(match as any),
+    }))
+
   if (Array.isArray(payload.current)) {
-    return payload.current
+    return normalizeList(payload.current)
   }
   if (payload.grouped && (Array.isArray(payload.grouped.live) || Array.isArray(payload.grouped.upcoming))) {
-    return dedupeApiMatches([...(payload.grouped.live ?? []), ...(payload.grouped.upcoming ?? [])])
+    return dedupeApiMatches(normalizeList([...(payload.grouped.live ?? []), ...(payload.grouped.upcoming ?? [])]))
   }
   if (Array.isArray(payload.liveUpcoming)) {
-    return payload.liveUpcoming
+    return normalizeList(payload.liveUpcoming)
   }
   if (Array.isArray(payload.matches)) {
-    return payload.matches.filter((match) => normalizeStatusValue(match.matchStatus) !== "finished")
+    return normalizeList(payload.matches.filter((match) => normalizeStatusValue(match.matchStatus) !== "finished"))
   }
   if (Array.isArray(payload)) {
-    return payload
+    return normalizeList(payload)
   }
 
   return []
@@ -152,23 +159,29 @@ const resolveOldMatchPayload = (payload: any): ApiMatch[] => {
     return []
   }
 
+  const normalizeList = (matches: ApiMatch[]) =>
+    matches.map((match) => ({
+      ...match,
+      matchFeed: resolvePreferredTimeline(match as any),
+    }))
+
   if (Array.isArray(payload.old)) {
     return dedupeApiMatches([
-      ...payload.old,
-      ...(Array.isArray(payload.recentFinished) ? payload.recentFinished : []),
-      ...(Array.isArray(payload.finished) ? payload.finished : []),
-      ...(Array.isArray(payload?.grouped?.finished) ? payload.grouped.finished : []),
+      ...normalizeList(payload.old),
+      ...normalizeList(Array.isArray(payload.recentFinished) ? payload.recentFinished : []),
+      ...normalizeList(Array.isArray(payload.finished) ? payload.finished : []),
+      ...normalizeList(Array.isArray(payload?.grouped?.finished) ? payload.grouped.finished : []),
     ])
   }
   if (Array.isArray(payload.recentFinished) || Array.isArray(payload.finished) || Array.isArray(payload?.grouped?.finished)) {
     return dedupeApiMatches([
-      ...(Array.isArray(payload.recentFinished) ? payload.recentFinished : []),
-      ...(Array.isArray(payload.finished) ? payload.finished : []),
-      ...(Array.isArray(payload?.grouped?.finished) ? payload.grouped.finished : []),
+      ...normalizeList(Array.isArray(payload.recentFinished) ? payload.recentFinished : []),
+      ...normalizeList(Array.isArray(payload.finished) ? payload.finished : []),
+      ...normalizeList(Array.isArray(payload?.grouped?.finished) ? payload.grouped.finished : []),
     ])
   }
   if (Array.isArray(payload.matches)) {
-    return payload.matches.filter((match) => normalizeStatusValue(match.matchStatus) === "finished")
+    return normalizeList(payload.matches.filter((match) => normalizeStatusValue(match.matchStatus) === "finished"))
   }
 
   return []

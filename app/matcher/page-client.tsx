@@ -17,6 +17,7 @@ import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPe
 import { normalizeMatchKey } from "@/lib/matches"
 import { extendTeamDisplayName, createTeamMatchKeySet } from "@/lib/team-display"
 import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
+import { resolvePreferredTimeline } from "@/lib/match-timeline"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
 type MatchTopScorer = {
   team: string
@@ -278,13 +279,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
       }
 
       const payload = await response.json()
-      const rawTimeline = Array.isArray(payload?.events)
-        ? payload.events
-        : Array.isArray(payload?.timeline)
-          ? payload.timeline
-          : Array.isArray(payload?.matchFeed)
-            ? payload.matchFeed
-            : []
+      const rawTimeline = resolvePreferredTimeline(payload, match.matchFeed ?? [])
 
       const normalized = dedupeTimelineEvents(rawTimeline.map((event: any) => mapTimelineEvent(event)))
       setTimelineByMatchId((prev) => ({ ...prev, [match.id]: normalized }))

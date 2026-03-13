@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { matchStateManager } from "./match-state-manager"
 import { mapVenueIdToName } from "./venue-mapper"
 import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "./match-sort"
+import { resolvePreferredTimeline } from "./match-timeline"
 
 export type MatchFeedEvent = {
   time: string
@@ -599,13 +600,7 @@ const applyEntryToCaches = (entry: SharedMatchCacheEntry, endpoints: string[] = 
 
 const resolveCurrentMatchPayload = (payload: any): ApiMatch[] => {
   const normalizeIncomingMatch = (match: any): ApiMatch => {
-    const fallbackTimeline = Array.isArray(match?.timeline)
-      ? match.timeline
-      : Array.isArray(match?.events)
-        ? match.events
-        : Array.isArray(match?.scoreTimeline)
-          ? match.scoreTimeline
-          : []
+    const fallbackTimeline = resolvePreferredTimeline(match)
 
     return {
       ...match,
@@ -613,7 +608,7 @@ const resolveCurrentMatchPayload = (payload: any): ApiMatch[] => {
       matchId: match?.matchId ?? match?.id,
       home: match?.home ?? match?.homeTeam ?? "",
       away: match?.away ?? match?.awayTeam ?? "",
-      matchFeed: Array.isArray(match?.matchFeed) ? match.matchFeed : fallbackTimeline,
+      matchFeed: fallbackTimeline,
     }
   }
 
@@ -654,13 +649,7 @@ const resolveCurrentMatchPayload = (payload: any): ApiMatch[] => {
 
 const resolveOldMatchPayload = (payload: any): ApiMatch[] => {
   const normalizeIncomingMatch = (match: any): ApiMatch => {
-    const fallbackTimeline = Array.isArray(match?.timeline)
-      ? match.timeline
-      : Array.isArray(match?.events)
-        ? match.events
-        : Array.isArray(match?.scoreTimeline)
-          ? match.scoreTimeline
-          : []
+    const fallbackTimeline = resolvePreferredTimeline(match)
 
     return {
       ...match,
@@ -668,7 +657,7 @@ const resolveOldMatchPayload = (payload: any): ApiMatch[] => {
       matchId: match?.matchId ?? match?.id,
       home: match?.home ?? match?.homeTeam ?? "",
       away: match?.away ?? match?.awayTeam ?? "",
-      matchFeed: Array.isArray(match?.matchFeed) ? match.matchFeed : fallbackTimeline,
+      matchFeed: fallbackTimeline,
     }
   }
 
