@@ -838,6 +838,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
           </div>
         )}
 
+        </div>
       </div>
       {selectedMatch && (
         <MatchFeedModal
