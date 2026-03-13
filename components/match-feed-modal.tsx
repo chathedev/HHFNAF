@@ -372,6 +372,24 @@ const isPeriodOrMatchEndEvent = (event: MatchFeedEvent) => {
   )
 }
 
+const isMatchEndEvent = (event: MatchFeedEvent) => {
+  const text = getEventCombinedText(event)
+  return (
+    text.includes("matchen är slut") ||
+    text.includes("matchen slut") ||
+    text.includes("match slut") ||
+    text.includes("slutresultat") ||
+    text.includes("fulltid")
+  )
+}
+
+const getEventGroupKey = (event: MatchFeedEvent) => {
+  if (isMatchEndEvent(event)) {
+    return 3
+  }
+  return event.period ?? 0
+}
+
 const getEventDisplayText = (event: MatchFeedEvent) => {
   const payloadDescription = event.payload?.description?.toString().trim()
   if (payloadDescription) return payloadDescription
@@ -413,6 +431,7 @@ const getEventTypeLabel = (event: MatchFeedEvent) => {
 }
 
 const getPeriodLabel = (period?: number) => {
+  if (period === 3) return "Matchslut"
   if (period === 1) return "Första halvlek"
   if (period === 2) return "Andra halvlek"
   return "Övriga händelser"
@@ -694,9 +713,9 @@ export function MatchFeedModal({
       .sort((a, b) => {
       const eventA = a.event
       const eventB = b.event
-      const periodA = eventA.period ?? 0
-      const periodB = eventB.period ?? 0
-      if (periodA !== periodB) return periodB - periodA
+      const groupA = getEventGroupKey(eventA)
+      const groupB = getEventGroupKey(eventB)
+      if (groupA !== groupB) return groupB - groupA
       const timeDiff = parseEventTimeToSeconds(eventB.time) - parseEventTimeToSeconds(eventA.time)
       if (timeDiff !== 0) return timeDiff
 
@@ -735,7 +754,7 @@ export function MatchFeedModal({
 
   const groupedByPeriod = useMemo(() => {
     return sortedFeed.reduce<Record<number, MatchFeedEvent[]>>((acc, event) => {
-      const key = event.period ?? 0
+      const key = getEventGroupKey(event)
       if (!acc[key]) acc[key] = []
       acc[key].push(event)
       return acc
