@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useEffect, useCallback, useRef } from "react"
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
 
 import {
   buildMatchScheduleLabel,
@@ -16,6 +15,7 @@ import {
 } from "@/lib/match-card-utils"
 import { getMatchEndTime, useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchCardCTA } from "@/components/match-card-cta"
+import { CompactCupSchedule } from "@/components/compact-cup-schedule"
 import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
 import { normalizeMatchKey } from "@/lib/matches"
 import { extendTeamDisplayName, createTeamMatchKeySet } from "@/lib/team-display"
@@ -28,8 +28,6 @@ type MatchTopScorer = {
   playerNumber?: string
   goals: number
 }
-
-const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 
 type StatusFilter = "current" | "live" | "upcoming" | "finished"
 
@@ -158,7 +156,6 @@ const dedupeTimelineEvents = (events: MatchFeedEvent[]) => {
 }
 
 export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatchData }) {
-  const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   const [selectedTeam, setSelectedTeam] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("current")
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
@@ -180,7 +177,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   } = useMatchData({
     dataType: "liveUpcoming",
     initialData,
-    params: { limit: 80 },
   })
 
   const {
@@ -414,6 +410,21 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     return { live, upcoming, finished }
   }, [filteredMatches])
 
+  const splitProviderMatches = useCallback((matches: NormalizedMatch[]) => {
+    const cup: NormalizedMatch[] = []
+    const standard: NormalizedMatch[] = []
+
+    matches.forEach((match) => {
+      if (match.provider === "procup" || match.presentation?.layoutHint === "cup_compact" || match.providerType === "cup") {
+        cup.push(match)
+        return
+      }
+      standard.push(match)
+    })
+
+    return { cup, standard }
+  }, [])
+
   const renderMatchCard = (match: NormalizedMatch) => {
     const status = getSimplifiedMatchStatus(match)
     const canOpenTimeline = canOpenMatchTimeline(match)
@@ -522,6 +533,45 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
         )}
         <MatchCardCTA match={match} status={status} />
       </article>
+    )
+  }
+
+  const renderProviderBlocks = (
+    matches: NormalizedMatch[],
+    emptyTitle: string,
+    emptyDescription: string,
+    defaultOpenDates = 1,
+  ) => {
+    const { cup, standard } = splitProviderMatches(matches)
+
+    return (
+      <div className="space-y-6">
+        {cup.length > 0 && (
+          <CompactCupSchedule
+            matches={cup}
+            title="ProCup"
+            description={emptyDescription}
+            defaultOpenDates={defaultOpenDates}
+          />
+        )}
+
+        {standard.length > 0 && (
+          <div>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-700">{emptyTitle}</h3>
+                <p className="mt-1 text-sm text-slate-500">Seriespel och övriga matcher renderas som vanliga matchkort.</p>
+              </div>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                {standard.length} matcher
+              </span>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 sm:gap-6">
+              {standard.map(renderMatchCard)}
+            </div>
+          </div>
+        )}
+      </div>
     )
   }
   useEffect(() => {
@@ -687,9 +737,12 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                     {groupedMatches.live.length}
                   </span>
                 </div>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 sm:gap-6">
-                  {groupedMatches.live.map(renderMatchCard)}
-                </div>
+                {renderProviderBlocks(
+                  groupedMatches.live,
+                  "Live i seriespel",
+                  "Livecupmatcher i ProCup visas kompakt per dag och starttid. Seriespel ligger kvar som separata kort.",
+                  1,
+                )}
               </section>
             )}
 
@@ -705,9 +758,12 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                     {groupedMatches.upcoming.length}
                   </span>
                 </div>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 sm:gap-6">
-                  {groupedMatches.upcoming.map(renderMatchCard)}
-                </div>
+                {renderProviderBlocks(
+                  groupedMatches.upcoming,
+                  "Kommande seriespel",
+                  "Cupdagar i ProCup grupperas kompakt så du ser fler matcher direkt utan att drunkna i stora kort.",
+                  2,
+                )}
               </section>
             )}
 
@@ -723,9 +779,12 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                     {groupedMatches.finished.length}
                   </span>
                 </div>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 sm:gap-6">
-                  {groupedMatches.finished.map(renderMatchCard)}
-                </div>
+                {renderProviderBlocks(
+                  groupedMatches.finished,
+                  "Resultat från seriespel",
+                  "Avslutade ProCup-matcher visas också kompakt när en hel cupdag producerar många resultat samtidigt.",
+                  1,
+                )}
               </section>
             )}
           </div>

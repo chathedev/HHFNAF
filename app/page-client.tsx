@@ -44,6 +44,7 @@ import {
 } from "@/lib/match-card-utils"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchCardCTA } from "@/components/match-card-cta"
+import { CompactCupSchedule } from "@/components/compact-cup-schedule"
 import { InstagramFeed } from "@/components/instagram-feed"
 import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
 import { SHOP_URL, useShopStatus } from "@/components/shop-status-provider"
@@ -244,6 +245,10 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     return getSimplifiedMatchStatus(match)
   }
 
+  function isCompactCupMatch(match: NormalizedMatch) {
+    return match.provider === "procup" || match.presentation?.layoutHint === "cup_compact" || match.providerType === "cup"
+  }
+
   const allHomeMatches = useMemo(() => {
     const seenIds = new Set<string>()
     return [...currentMatches, ...recentResults].filter((match) => {
@@ -440,13 +445,18 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     !isInitialHomeMatchFetchDone && (matchLoading || matchRefreshing || !hasMatchPayload)
   const groupedHomeMatches = useMemo(() => {
     const live = (groupedFeed?.live ?? []).slice(0, 4)
-    const upcoming = (groupedFeed?.upcoming ?? []).slice(0, 6)
+    const allUpcoming = groupedFeed?.upcoming ?? []
+    const upcomingCup = allUpcoming.filter(isCompactCupMatch)
+    const upcomingLeague = allUpcoming.filter((match) => !isCompactCupMatch(match)).slice(0, 6)
     const finished = recentResults.slice(0, 4)
 
-    return { live, upcoming, finished }
+    return { live, upcomingCup, upcomingLeague, finished }
   }, [groupedFeed, recentResults])
   const totalDisplayedMatches =
-    groupedHomeMatches.live.length + groupedHomeMatches.upcoming.length + groupedHomeMatches.finished.length
+    groupedHomeMatches.live.length +
+    groupedHomeMatches.upcomingCup.length +
+    groupedHomeMatches.upcomingLeague.length +
+    groupedHomeMatches.finished.length
   const shouldRenderMatchSection =
     !matchError && (showInitialMatchLoader || totalDisplayedMatches > 0)
 
@@ -753,7 +763,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                     <p className="text-xs font-semibold uppercase tracking-[0.4em] text-emerald-600">Matcher</p>
                     <h3 className="text-3xl font-black text-gray-900 sm:text-4xl">Live, Kommande & Resultat</h3>
                     <p className="mt-1 text-sm text-gray-500">
-                      Här visas matcherna direkt från backend, inklusive avslutade matcher med resultat.
+                      Här visas matcherna direkt från backend. Tunga cupdagar grupperas kompakt dag för dag så fler matcher ryms direkt.
                     </p>
                   </div>
                   <div className="flex items-center gap-3 text-right">
@@ -797,13 +807,28 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                         </div>
                       )}
 
-                      {groupedHomeMatches.upcoming.length > 0 && (
+                      {groupedHomeMatches.upcomingCup.length > 0 && (
                         <div>
                           <div className="mb-3 flex items-center gap-2">
                             <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
-                            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-600">Kommande</h4>
+                            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-600">Cupdag i ProCup</h4>
                           </div>
-                          <ul className="space-y-3">{groupedHomeMatches.upcoming.map(renderHomeMatchCard)}</ul>
+                          <CompactCupSchedule
+                            matches={groupedHomeMatches.upcomingCup}
+                            title="Kommande cupmatcher"
+                            description="Täta spelscheman visas per dag och starttid, så du ser hela cupdagen utan att korten tar över sidan."
+                            defaultOpenDates={1}
+                          />
+                        </div>
+                      )}
+
+                      {groupedHomeMatches.upcomingLeague.length > 0 && (
+                        <div>
+                          <div className="mb-3 flex items-center gap-2">
+                            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-700">Seriespel & övrigt</h4>
+                          </div>
+                          <ul className="space-y-3">{groupedHomeMatches.upcomingLeague.map(renderHomeMatchCard)}</ul>
                         </div>
                       )}
 
