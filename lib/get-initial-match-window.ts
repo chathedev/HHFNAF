@@ -383,13 +383,46 @@ const mergeMatchWindows = (windows: EnhancedMatchData[]): EnhancedMatchData | un
 
   const matches = dedupeMatches(windows.flatMap((window) => window.matches ?? [])).sort(compareMatchesByDateAscStable)
   const recentResults = dedupeMatches(windows.flatMap((window) => window.recentResults ?? [])).sort(compareMatchesByDateDescStable)
+  const firstWindow = windows[0]?.window
+  const lastWindow = windows[windows.length - 1]?.window
+  const mergedDateKeys = Array.from(
+    new Set(
+      windows.flatMap((window) => window.window?.dateKeys ?? []).filter(Boolean),
+    ),
+  )
+  const mergedWindow =
+    firstWindow?.enabled
+      ? {
+          ...firstWindow,
+          from: firstWindow.from ?? firstWindow.cursorDate,
+          to: lastWindow?.to ?? lastWindow?.cursorDate ?? firstWindow.to ?? firstWindow.cursorDate,
+          days: windows.length,
+          chunkDays: windows.length,
+          cursorDate: firstWindow.cursorDate ?? firstWindow.from ?? mergedDateKeys[0],
+          containsToday: windows.some((window) => window.window?.containsToday === true),
+          priority: windows.some((window) => window.window?.priority === "live")
+            ? "live"
+            : windows.some((window) => window.window?.priority === "today")
+              ? "today"
+              : firstWindow.priority,
+          refreshIntervalMs: Math.min(
+            ...windows
+              .map((window) => window.window?.refreshIntervalMs)
+              .filter((value): value is number => typeof value === "number" && value > 0),
+            firstWindow.refreshIntervalMs ?? 60_000,
+          ),
+          nextCursorDate: lastWindow?.nextCursorDate ?? null,
+          previousCursorDate: firstWindow.previousCursorDate ?? null,
+          dateKeys: mergedDateKeys.length > 0 ? mergedDateKeys : firstWindow.dateKeys,
+        }
+      : firstWindow
 
   return {
     matches,
     recentResults,
     groupedFeed: buildGroupedFeed(matches),
     sources: windows.at(-1)?.sources,
-    window: windows[0]?.window,
+    window: mergedWindow,
   }
 }
 

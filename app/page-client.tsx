@@ -580,9 +580,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const showInitialMatchLoader =
     !isInitialHomeMatchFetchDone && (matchLoading || matchRefreshing || !hasMatchPayload)
   const groupedHomeMatches = useMemo(() => {
-    const live = (groupedFeed?.live ?? []).slice(0, 2)
+    const live = (groupedFeed?.live ?? []).slice(0, 3)
     const upcoming = (groupedFeed?.upcoming ?? []).slice(0, 10)
-    const recent = recentResults.slice(0, 3)
+    const recent = recentResults.slice(0, 4)
     return {
       live,
       upcoming,
