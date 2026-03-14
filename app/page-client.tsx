@@ -558,6 +558,117 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     )
   }
 
+  const renderHomeFlowRow = (match: NormalizedMatch) => {
+    const status = getMatchStatus(match)
+    const canOpenTimeline = canOpenMatchTimeline(match)
+    const scheduleLabel = buildMatchScheduleLabel(match)
+    const matchupLabel = getMatchupLabel(match)
+    const teamTypeRaw = match.teamType?.trim() || ""
+    const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
+    const hasStream = match.hasStream === true && Boolean((match.playUrl ?? "").trim()) && (match.playUrl ?? "").trim().toLowerCase() !== "null"
+    const liveScore = typeof match.result === "string" ? match.result.trim() : ""
+    const stableScore = liveScore || stableScoreByMatchId[match.id] || ""
+    const hasStarted = match.date.getTime() <= Date.now() + 60_000
+    const scoreValue = stableScore && (status !== "upcoming" || hasStarted) ? stableScore : null
+    const showLivePendingScore = status === "live" && match.resultState === "live_pending" && !scoreValue
+
+    const statusBadge = (() => {
+      if (status === "live") {
+        return { label: match.statusLabel ?? "LIVE", tone: "bg-rose-50 text-rose-600" }
+      }
+      if (status === "finished") {
+        return { label: match.statusLabel ?? "SLUT", tone: "bg-slate-100 text-slate-600" }
+      }
+      return { label: match.statusLabel ?? "KOMMANDE", tone: "bg-sky-50 text-sky-700" }
+    })()
+
+    return (
+      <li key={match.id}>
+        <article
+          className={`flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 transition ${
+            canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:bg-slate-50" : ""
+          }`}
+          onMouseEnter={() => {
+            if (canOpenTimeline) {
+              fetchMatchTimeline(match).catch(() => undefined)
+            }
+          }}
+          onTouchStart={() => {
+            if (canOpenTimeline) {
+              fetchMatchTimeline(match).catch(() => undefined)
+            }
+          }}
+          onClick={(event) => {
+            if (!canOpenTimeline) {
+              return
+            }
+            const target = event.target as HTMLElement
+            if (target.closest("a,button")) {
+              return
+            }
+            openMatchModal(match)
+          }}
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${statusBadge.tone}`}>
+              {statusBadge.label}
+            </span>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">{teamTypeLabel}</span>
+            {match.series ? <span className="text-[11px] text-slate-400">{match.series}</span> : null}
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-slate-950 break-words sm:text-[15px]">{matchupLabel}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500 break-words">{scheduleLabel}</p>
+              {showLivePendingScore ? (
+                <p className="mt-2 text-xs font-medium text-sky-700">Livescore väntar från matchflödet.</p>
+              ) : null}
+            </div>
+
+            <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
+              {scoreValue ? (
+                <span className="inline-flex w-full items-center justify-center rounded-md bg-slate-950 px-3 py-2 text-xs font-bold text-white sm:w-auto">
+                  {scoreValue}
+                </span>
+              ) : null}
+              {hasStream ? (
+                <a
+                  href={(match.playUrl ?? "").trim()}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(event) => event.stopPropagation()}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800 transition hover:border-slate-900 hover:text-slate-950 sm:w-auto"
+                >
+                  {getMatchWatchLabel(status)}
+                </a>
+              ) : canOpenTimeline ? (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    openMatchModal(match)
+                  }}
+                  className="inline-flex w-full items-center justify-center gap-1 rounded-md border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:border-emerald-400 hover:text-emerald-900 sm:w-auto"
+                >
+                  Öppna
+                </button>
+              ) : (
+                <Link
+                  href="/matcher"
+                  onClick={(event) => event.stopPropagation()}
+                  className="inline-flex w-full items-center justify-center gap-1 rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-900 hover:text-slate-950 sm:w-auto"
+                >
+                  Till matcher
+                </Link>
+              )}
+            </div>
+          </div>
+        </article>
+      </li>
+    )
+  }
+
   const renderUpcomingSkeletonRows = () => (
     <div className="space-y-2">
       {Array.from({ length: 4 }).map((_, index) => (
@@ -579,19 +690,23 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
   const showInitialMatchLoader =
     !isInitialHomeMatchFetchDone && (matchLoading || matchRefreshing || !hasMatchPayload)
-  const groupedHomeMatches = useMemo(() => {
-    const live = (groupedFeed?.live ?? []).slice(0, 3)
-    const upcoming = (groupedFeed?.upcoming ?? []).slice(0, 10)
-    const recent = recentResults.slice(0, 4)
+  const homeMatchFlow = useMemo(() => {
+    const seen = new Set<string>()
+    const ordered = [
+      ...(groupedFeed?.live ?? []),
+      ...(groupedFeed?.upcoming ?? []),
+      ...recentResults,
+    ].filter((match) => {
+      if (seen.has(match.id)) {
+        return false
+      }
+      seen.add(match.id)
+      return true
+    })
+
     return {
-      live,
-      upcoming,
-      recent,
-      counts: {
-        live: groupedFeed?.live?.length ?? 0,
-        upcoming: groupedFeed?.upcoming?.length ?? 0,
-        recent: recentResults.length,
-      },
+      items: ordered.slice(0, 10),
+      total: ordered.length,
     }
   }, [groupedFeed, recentResults])
 
@@ -831,145 +946,46 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                     </div>
                   </div>
 
-                  <div className="mt-5 grid gap-2 sm:grid-cols-3">
-                    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                      <div className="flex items-center gap-2 text-rose-600">
-                        <TrendingUp className="h-4 w-4" />
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.18em]">Live</span>
-                      </div>
-                      <p className="mt-2 text-2xl font-black text-slate-950">{groupedHomeMatches.counts.live}</p>
-                    </div>
-                    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                      <div className="flex items-center gap-2 text-sky-700">
-                        <Trophy className="h-4 w-4" />
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.18em]">Kommande</span>
-                      </div>
-                      <p className="mt-2 text-2xl font-black text-slate-950">{groupedHomeMatches.counts.upcoming}</p>
-                    </div>
-                    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                      <div className="flex items-center gap-2 text-slate-700">
-                        <History className="h-4 w-4" />
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.18em]">Senaste resultat</span>
-                      </div>
-                      <p className="mt-2 text-2xl font-black text-slate-950">{groupedHomeMatches.counts.recent}</p>
-                    </div>
-                  </div>
                 </div>
 
                 <div className="space-y-4 p-4 sm:p-6">
                   {showInitialMatchLoader ? (
-                    <>
-                      <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-                        <div className="mb-4 h-5 w-24 rounded bg-slate-200" />
-                        <div className="space-y-3">
-                          {Array.from({ length: 2 }).map((_, index) => (
-                            <div key={`live-skeleton-${index}`} className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                              <div className="h-3 w-16 rounded bg-slate-100" />
-                              <div className="mt-3 h-4 w-4/5 rounded bg-slate-200" />
-                              <div className="mt-2 h-3 w-3/5 rounded bg-slate-100" />
-                            </div>
-                          ))}
-                        </div>
-                      </section>
-                      <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-                        <div className="mb-4 h-5 w-28 rounded bg-slate-200" />
-                        {renderUpcomingSkeletonRows()}
-                      </section>
-                      <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-                        <div className="mb-4 h-5 w-32 rounded bg-slate-200" />
-                        <div className="space-y-3">
-                          {Array.from({ length: 3 }).map((_, index) => (
-                            <div key={`recent-skeleton-${index}`} className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                              <div className="h-3 w-20 rounded bg-slate-100" />
-                              <div className="mt-3 h-4 w-4/5 rounded bg-slate-200" />
-                              <div className="mt-2 h-3 w-3/5 rounded bg-slate-100" />
-                            </div>
-                          ))}
-                        </div>
-                      </section>
-                    </>
+                    <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+                      <div className="mb-4 h-5 w-40 rounded bg-slate-200" />
+                      {renderUpcomingSkeletonRows()}
+                    </section>
                   ) : matchError ? (
                     <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-6 text-center text-sm text-amber-800">
                       Matcherna kunde inte läsas in just nu.
                     </div>
                   ) : (
-                    <>
-                      <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-                        <div className="flex items-center justify-between gap-3">
-                          <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-rose-600">Live</p>
-                            <h3 className="mt-1 text-lg font-semibold text-slate-950">På planen nu</h3>
-                          </div>
-                          <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-500">
-                            {groupedHomeMatches.counts.live}
-                          </span>
-                        </div>
-                        <div className="mt-4 space-y-3">
-                          {groupedHomeMatches.live.length > 0 ? (
-                            <ul className="space-y-3">{groupedHomeMatches.live.map(renderHomeMatchCard)}</ul>
-                          ) : (
-                            <div className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-500">
-                              Inga live matcher just nu.
-                            </div>
-                          )}
-                        </div>
-                      </section>
-
-                      <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-                        <div className="flex items-center justify-between gap-3">
-                          <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700">Kommande</p>
-                            <h3 className="mt-1 text-lg font-semibold text-slate-950">Närmast framåt</h3>
-                          </div>
-                          <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-500">
-                            {groupedHomeMatches.counts.upcoming}
-                          </span>
-                        </div>
-                        <div className="mt-4 space-y-2">
-                          {groupedHomeMatches.upcoming.length > 0 ? (
-                            <ul className="space-y-2">
-                              {groupedHomeMatches.upcoming.map(renderUpcomingPreviewRow)}
-                            </ul>
-                          ) : (
-                            <div className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-500">
-                              Inga kommande matcher att visa just nu.
-                            </div>
-                          )}
-                        </div>
-                        <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-                          <p className="text-sm text-slate-500">
-                            Visar de närmaste {groupedHomeMatches.upcoming.length} matcherna. För fler dagar och full översikt går du vidare till matchsidan.
+                    <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+                      <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-600">Översikt</p>
+                          <h3 className="mt-1 text-lg font-semibold text-slate-950">Tio matcher närmast just nu</h3>
+                          <p className="mt-1 text-sm text-slate-500">
+                            En rak lista med live, kommande och färska resultat i samma flöde.
                           </p>
-                          <Link
-                            href="/matcher"
-                            className="inline-flex items-center justify-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
-                          >
-                            Till matcher
-                          </Link>
                         </div>
-                      </section>
+                        <Link
+                          href="/matcher"
+                          className="inline-flex items-center justify-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+                        >
+                          Till matcher
+                        </Link>
+                      </div>
 
-                      <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-                        <div className="flex items-center justify-between gap-3">
-                          <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Resultat</p>
-                            <h3 className="mt-1 text-lg font-semibold text-slate-950">Nyss klara</h3>
+                      <div className="mt-4 space-y-2">
+                        {homeMatchFlow.items.length > 0 ? (
+                          <ul className="space-y-2">{homeMatchFlow.items.map(renderHomeFlowRow)}</ul>
+                        ) : (
+                          <div className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-500">
+                            Inga matcher att visa just nu.
                           </div>
-                          <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-500">
-                            {groupedHomeMatches.counts.recent}
-                          </span>
-                        </div>
-                        <div className="mt-4 space-y-3">
-                          {groupedHomeMatches.recent.length > 0 ? (
-                            <ul className="space-y-3">{groupedHomeMatches.recent.map(renderHomeMatchCard)}</ul>
-                          ) : (
-                            <div className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-500">
-                              Inga färska resultat just nu.
-                            </div>
-                          )}
-                        </div>
-                      </section>
-                    </>
+                        )}
+                      </div>
+                    </section>
                   )}
                 </div>
               </div>
