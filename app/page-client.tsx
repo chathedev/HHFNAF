@@ -581,7 +581,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     !isInitialHomeMatchFetchDone && (matchLoading || matchRefreshing || !hasMatchPayload)
   const groupedHomeMatches = useMemo(() => {
     const live = (groupedFeed?.live ?? []).slice(0, 2)
-    const upcoming = (groupedFeed?.upcoming ?? []).slice(0, 4)
+    const upcoming = (groupedFeed?.upcoming ?? []).slice(0, 10)
     const recent = recentResults.slice(0, 3)
     return {
       live,
@@ -856,7 +856,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                   </div>
                 </div>
 
-                <div className="grid gap-4 p-4 sm:p-6 xl:grid-cols-3">
+                <div className="space-y-4 p-4 sm:p-6">
                   {showInitialMatchLoader ? (
                     <>
                       <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
@@ -889,7 +889,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                       </section>
                     </>
                   ) : matchError ? (
-                    <div className="xl:col-span-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-6 text-center text-sm text-amber-800">
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-6 text-center text-sm text-amber-800">
                       Matcherna kunde inte läsas in just nu.
                     </div>
                   ) : (
@@ -935,6 +935,17 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                               Inga kommande matcher att visa just nu.
                             </div>
                           )}
+                        </div>
+                        <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                          <p className="text-sm text-slate-500">
+                            Visar de närmaste {groupedHomeMatches.upcoming.length} matcherna. För fler dagar och full översikt går du vidare till matchsidan.
+                          </p>
+                          <Link
+                            href="/matcher"
+                            className="inline-flex items-center justify-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+                          >
+                            Till matcher
+                          </Link>
                         </div>
                       </section>
 
