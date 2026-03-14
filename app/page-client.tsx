@@ -788,8 +788,8 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
           <section className="relative z-30 -mt-10 pb-14 sm:-mt-20 sm:pb-16">
             <div className="container mx-auto px-4">
-              <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/95 shadow-[0_24px_80px_rgba(15,23,42,0.12)] backdrop-blur">
-                <div className="border-b border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,0.98),rgba(241,245,249,0.96),rgba(236,253,245,0.94))] px-5 py-5 sm:px-8 sm:py-7">
+              <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+                <div className="border-b border-slate-200 bg-[linear-gradient(135deg,rgba(255,255,255,1),rgba(249,250,251,1),rgba(236,253,245,0.9))] px-5 py-5 sm:px-8 sm:py-7">
                   <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                     <div className="max-w-2xl">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-emerald-600">Matchläge</p>
@@ -859,7 +859,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                 <div className="space-y-4 p-4 sm:p-6">
                   {showInitialMatchLoader ? (
                     <>
-                      <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                      <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
                         <div className="mb-4 h-5 w-24 rounded bg-slate-200" />
                         <div className="space-y-3">
                           {Array.from({ length: 2 }).map((_, index) => (
@@ -871,11 +871,11 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                           ))}
                         </div>
                       </section>
-                      <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                      <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
                         <div className="mb-4 h-5 w-28 rounded bg-slate-200" />
                         {renderUpcomingSkeletonRows()}
                       </section>
-                      <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                      <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
                         <div className="mb-4 h-5 w-32 rounded bg-slate-200" />
                         <div className="space-y-3">
                           {Array.from({ length: 3 }).map((_, index) => (
@@ -894,7 +894,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                     </div>
                   ) : (
                     <>
-                      <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                      <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
                         <div className="flex items-center justify-between gap-3">
                           <div>
                             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-rose-600">Live</p>
@@ -915,7 +915,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                         </div>
                       </section>
 
-                      <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                      <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
                         <div className="flex items-center justify-between gap-3">
                           <div>
                             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700">Kommande</p>
@@ -949,7 +949,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                         </div>
                       </section>
 
-                      <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                      <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
                         <div className="flex items-center justify-between gap-3">
                           <div>
                             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Resultat</p>
