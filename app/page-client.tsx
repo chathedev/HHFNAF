@@ -457,14 +457,17 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     const canOpenTimeline = canOpenMatchTimeline(match)
     const scheduleLabel = buildMatchScheduleLabel(match)
     const matchupLabel = getMatchupLabel(match)
+    const providerBadge = getMatchProviderBadge(match)
     const teamTypeRaw = match.teamType?.trim() || ""
     const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
     const hasStream = match.hasStream === true && Boolean((match.playUrl ?? "").trim()) && (match.playUrl ?? "").trim().toLowerCase() !== "null"
+    const dayLabel = match.display?.dateCard?.trim() || match.displayDate
+    const timeLabel = match.display?.time?.trim() || match.time?.trim() || ""
 
     return (
       <li key={match.id}>
         <article
-          className={`flex flex-col items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 transition sm:flex-row sm:items-center sm:justify-between ${
+          className={`flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 transition ${
             canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:bg-slate-50" : ""
           }`}
           onClick={(event) => {
@@ -478,94 +481,87 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
             openMatchModal(match)
           }}
         >
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">{teamTypeLabel}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
+              {dayLabel}
+            </span>
+            {timeLabel ? (
               <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
-                {match.statusLabel ?? "KOMMANDE"}
+                {timeLabel}
               </span>
-            </div>
-            <p className="mt-1 text-sm font-semibold text-slate-950 break-words sm:text-[15px]">{matchupLabel}</p>
-            <p className="mt-1 text-xs leading-5 text-slate-500 break-words">{scheduleLabel}</p>
-            {match.series ? <p className="mt-1 text-[11px] leading-5 text-slate-400 break-words">{match.series}</p> : null}
+            ) : null}
+            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">{teamTypeLabel}</span>
+            {providerBadge ? (
+              <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${providerBadge.tone}`}>
+                {providerBadge.label}
+              </span>
+            ) : null}
           </div>
 
-          <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
-            {hasStream ? (
-              <a
-                href={(match.playUrl ?? "").trim()}
-                target="_blank"
-                rel="noreferrer"
-                onClick={(event) => event.stopPropagation()}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800 transition hover:border-slate-900 hover:text-slate-950 sm:w-auto"
-              >
-                {getMatchWatchLabel("upcoming")}
-              </a>
-            ) : canOpenTimeline ? (
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  openMatchModal(match)
-                }}
-                className="inline-flex w-full items-center justify-center gap-1 rounded-md border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:border-emerald-400 hover:text-emerald-900 sm:w-auto sm:border-0 sm:px-2 sm:py-1"
-              >
-                Visa
-                <ArrowRight className="h-3.5 w-3.5" />
-              </button>
-            ) : null}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-slate-950 break-words sm:text-[15px]">{matchupLabel}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500 break-words">{scheduleLabel}</p>
+              {match.series ? <p className="mt-1 text-[11px] leading-5 text-slate-400 break-words">{match.series}</p> : null}
+            </div>
+
+            <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
+              {hasStream ? (
+                <a
+                  href={(match.playUrl ?? "").trim()}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(event) => event.stopPropagation()}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800 transition hover:border-slate-900 hover:text-slate-950 sm:w-auto"
+                >
+                  {getMatchWatchLabel("upcoming")}
+                </a>
+              ) : canOpenTimeline ? (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    openMatchModal(match)
+                  }}
+                  className="inline-flex w-full items-center justify-center gap-1 rounded-md border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:border-emerald-400 hover:text-emerald-900 sm:w-auto"
+                >
+                  Visa
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </button>
+              ) : (
+                <Link
+                  href="/matcher"
+                  onClick={(event) => event.stopPropagation()}
+                  className="inline-flex w-full items-center justify-center gap-1 rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-900 hover:text-slate-950 sm:w-auto"
+                >
+                  Till matcher
+                </Link>
+              )}
+            </div>
           </div>
         </article>
       </li>
     )
   }
 
-  const renderUpcomingSkeletonPanel = (provider: "profixio" | "procup") => {
-    const isProcup = provider === "procup"
-
-    return (
-      <section
-        className={`rounded-2xl border bg-white p-4 sm:p-5 ${
-          isProcup ? "border-sky-200" : "border-emerald-200"
-        }`}
-      >
-        <div className="mb-4 flex items-start justify-between gap-4">
-          <div>
-            <div
-              className={`h-3 w-20 rounded ${
-                isProcup ? "bg-sky-100" : "bg-emerald-100"
-              }`}
-            />
-            <div className="mt-3 h-6 w-52 rounded bg-slate-200" />
-            <div className="mt-2 h-4 w-64 max-w-full rounded bg-slate-100" />
+  const renderUpcomingSkeletonRows = () => (
+    <div className="mt-4 space-y-2">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div key={`upcoming-skeleton-${index}`} className="rounded-2xl border border-slate-200 bg-white px-4 py-3.5">
+          <div className="flex flex-wrap gap-2">
+            <div className="h-6 w-20 rounded-full bg-slate-100" />
+            <div className="h-6 w-16 rounded-full bg-slate-100" />
+            <div className="h-6 w-14 rounded-full bg-emerald-50" />
           </div>
-          <div className="h-7 w-10 rounded-full bg-slate-100" />
+          <div className="mt-3 h-4 w-4/5 rounded bg-slate-200" />
+          <div className="mt-2 h-3 w-3/5 rounded bg-slate-100" />
+          <div className="mt-3 flex justify-end">
+            <div className="h-8 w-24 rounded-md bg-slate-100" />
+          </div>
         </div>
-        <div className="space-y-2 sm:min-h-[22rem]">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <div
-              key={`${provider}-skeleton-${index}`}
-              className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3"
-            >
-              <div className="flex items-center justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <div className="h-3 w-24 rounded bg-slate-200" />
-                  <div className="mt-2 h-4 w-5/6 rounded bg-slate-200" />
-                  <div className="mt-2 h-3 w-2/3 rounded bg-slate-100" />
-                  <div className="mt-2 h-3 w-1/2 rounded bg-slate-100" />
-                </div>
-                <div className="h-8 w-20 rounded-md bg-slate-200" />
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
-          <div className="h-3 w-40 rounded bg-slate-100" />
-          <div className="h-8 w-24 rounded-md bg-slate-200" />
-        </div>
-      </section>
-    )
-  }
+      ))}
+    </div>
+  )
 
   const showInitialMatchLoader =
     !isInitialHomeMatchFetchDone && (matchLoading || matchRefreshing || !hasMatchPayload)
@@ -583,15 +579,12 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     }
   }, [groupedFeed])
   const homeUpcomingPreviewMatches = useMemo(
-    () => ({
-      profixio: (groupedFeed?.upcoming ?? []).filter((match) => match.provider === "profixio").slice(0, 4),
-      procup: (groupedFeed?.upcoming ?? []).filter((match) => match.provider === "procup").slice(0, 4),
-    }),
+    () => (groupedFeed?.upcoming ?? []).slice(0, 6),
     [groupedFeed],
   )
   const hasUpcomingProfixio = upcomingProviderSummary.profixio > 0
   const hasUpcomingProcup = upcomingProviderSummary.procup > 0
-  const showSplitUpcomingPreview = hasUpcomingProfixio && hasUpcomingProcup
+  const upcomingPreviewOverflowCount = Math.max((groupedFeed?.upcoming?.length ?? 0) - homeUpcomingPreviewMatches.length, 0)
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -852,7 +845,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                   </div>
                 </div>
 
-                <div className="grid gap-4 p-4 sm:p-6 xl:grid-cols-[minmax(0,0.62fr)_minmax(0,1.38fr)]">
+                <div className="grid items-start gap-4 p-4 sm:p-6 xl:grid-cols-[minmax(0,0.62fr)_minmax(0,1.38fr)]">
                   <div className="space-y-4">
                     <section className="rounded-2xl border border-slate-200 bg-slate-950 p-4 text-white sm:p-5">
                       <div className="flex items-center justify-between gap-3">
@@ -931,35 +924,35 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                     <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
                       <div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Kommande</p>
-                        <h3 className="mt-1 text-2xl font-semibold text-slate-950">Nästa matcher</h3>
+                        <h3 className="mt-1 text-2xl font-semibold text-slate-950">Närmast i kalendern</h3>
                         <p className="mt-1 max-w-2xl text-sm text-slate-500">
-                          {showSplitUpcomingPreview
-                            ? "Två tydliga spår när både seriespel och cupdagar finns. För fler tider och filter går du vidare till matchsidan."
-                            : "En ren preview av nästa matcher. För hela flödet och fler tider går du vidare till matchsidan."}
+                          Sex närmaste matcher direkt i tidsordning. Öppna matchsidan när du vill se hela dagens schema, fler tider eller filtrera mellan lag.
                         </p>
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        {hasUpcomingProfixio && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        {hasUpcomingProfixio ? (
                           <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-800">
                             <span className="h-2 w-2 rounded-full bg-emerald-500" />
                             Profixio {upcomingProviderSummary.profixio}
                           </span>
-                        )}
-                        {hasUpcomingProcup && (
+                        ) : null}
+                        {hasUpcomingProcup ? (
                           <span className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white px-3 py-1 text-xs font-semibold text-sky-800">
                             <span className="h-2 w-2 rounded-full bg-sky-500" />
                             ProCup {upcomingProviderSummary.procup}
                           </span>
-                        )}
+                        ) : null}
+                        <Link
+                          href="/matcher"
+                          className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white transition hover:bg-slate-800"
+                        >
+                          Till matcher
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        </Link>
                       </div>
                     </div>
 
-                    {showInitialMatchLoader && (
-                      <div className={`mt-4 grid gap-4 ${showSplitUpcomingPreview ? "lg:grid-cols-2" : ""}`}>
-                        {renderUpcomingSkeletonPanel("profixio")}
-                        {showSplitUpcomingPreview && renderUpcomingSkeletonPanel("procup")}
-                      </div>
-                    )}
+                    {showInitialMatchLoader && renderUpcomingSkeletonRows()}
 
                     {!showInitialMatchLoader && matchError && (
                       <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-6 text-center text-sm text-amber-800">
@@ -977,66 +970,25 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                       )}
 
                     {!showInitialMatchLoader && !matchError && (hasUpcomingProfixio || hasUpcomingProcup) && (
-                      <div className={`mt-4 grid gap-4 ${showSplitUpcomingPreview ? "xl:grid-cols-2" : ""}`}>
-                        {hasUpcomingProfixio && (
-                          <section className="rounded-2xl border border-emerald-200 bg-white p-4 sm:p-5">
-                            <div className="mb-4 flex items-start justify-between gap-4">
-                              <div>
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">Profixio</p>
-                                <h5 className="mt-1 text-lg font-semibold text-slate-950">Seriespel och större matcher</h5>
-                              </div>
-                              <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                                {upcomingProviderSummary.profixio}
-                              </span>
-                            </div>
-                            <ul className="space-y-2">
-                              {homeUpcomingPreviewMatches.profixio.map(renderUpcomingPreviewRow)}
-                            </ul>
-                            <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
-                              <p className="text-xs text-slate-500">
-                                {upcomingProviderSummary.profixio > homeUpcomingPreviewMatches.profixio.length
-                                  ? `${upcomingProviderSummary.profixio - homeUpcomingPreviewMatches.profixio.length} fler på matchsidan.`
-                                  : "Full översikt finns på matchsidan."}
-                              </p>
-                              <Link
-                                href="/matcher"
-                                className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
-                              >
-                                Till matcher
-                              </Link>
-                            </div>
-                          </section>
-                        )}
-
-                        {hasUpcomingProcup && (
-                          <section className="rounded-2xl border border-sky-200 bg-white p-4 sm:p-5">
-                            <div className="mb-4 flex items-start justify-between gap-4">
-                              <div>
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700">ProCup</p>
-                                <h5 className="mt-1 text-lg font-semibold text-slate-950">Cupdagar i kort format</h5>
-                              </div>
-                              <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">
-                                {upcomingProviderSummary.procup}
-                              </span>
-                            </div>
-                            <ul className="space-y-2">
-                              {homeUpcomingPreviewMatches.procup.map(renderUpcomingPreviewRow)}
-                            </ul>
-                            <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
-                              <p className="text-xs text-slate-500">
-                                {upcomingProviderSummary.procup > homeUpcomingPreviewMatches.procup.length
-                                  ? `${upcomingProviderSummary.procup - homeUpcomingPreviewMatches.procup.length} fler på matchsidan.`
-                                  : "Full översikt finns på matchsidan."}
-                              </p>
-                              <Link
-                                href="/matcher"
-                                className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
-                              >
-                                Till matcher
-                              </Link>
-                            </div>
-                          </section>
-                        )}
+                      <div className="mt-4 space-y-2">
+                        <ul className="space-y-2">
+                          {homeUpcomingPreviewMatches.map(renderUpcomingPreviewRow)}
+                        </ul>
+                        <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="text-sm text-slate-500">
+                            {upcomingPreviewOverflowCount > 0
+                              ? `${upcomingPreviewOverflowCount} fler matcher väntar längre fram på matchsidan.`
+                              : "Fler filter, dagar och detaljer finns på matchsidan."}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Link
+                              href="/matcher"
+                              className="inline-flex items-center justify-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+                            >
+                              Öppna matchöversikt
+                            </Link>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </section>
