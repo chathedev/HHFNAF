@@ -221,8 +221,8 @@ export function InstagramFeed() {
         </div>
 
         {loading && (
-          <div className="grid gap-4 md:grid-cols-3">
-            {[0, 1, 2, 3, 4, 5].map((item) => (
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
+            {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((item) => (
               <div key={item} className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
                 <div className="aspect-square animate-pulse bg-slate-200" />
                 <div className="space-y-2 p-3">
@@ -241,7 +241,7 @@ export function InstagramFeed() {
         )}
 
         {!loading && !unavailable && posts.length > 0 && (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
             {posts.map((post) => {
               const postKey = getPostKey(post)
 
@@ -262,14 +262,14 @@ export function InstagramFeed() {
                       className="aspect-square w-full object-cover"
                       onError={() => markImageBroken(post)}
                     />
-                    <div className="space-y-1 p-3">
+                    <div className="space-y-1.5 p-3 sm:p-3.5">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                           {post.isVideo ? "Video" : "Bild"}
                         </span>
                         <span className="text-[11px] text-slate-500">{formatPostDate(post.takenAt)}</span>
                       </div>
-                      <p className="text-xs text-slate-700">{truncateCaption(post.caption, 90)}</p>
+                      <p className="line-clamp-3 text-xs leading-5 text-slate-700 sm:text-[13px]">{truncateCaption(post.caption, 100)}</p>
                       <div className="flex items-center gap-3 text-[11px] text-slate-500">
                         <span>{formatCompactNumber(post.likesCount)} likes</span>
                       </div>
