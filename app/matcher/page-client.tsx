@@ -6,8 +6,6 @@ import Link from "next/link"
 import {
   buildMatchScheduleLabel,
   canOpenMatchTimeline,
-  getMatchProviderBadge,
-  getProviderHelperText,
   getMatchupLabel,
   getSimplifiedMatchStatus,
   shouldShowFinishedZeroZeroIssue,
@@ -15,7 +13,6 @@ import {
 } from "@/lib/match-card-utils"
 import { getMatchEndTime, useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchCardCTA } from "@/components/match-card-cta"
-import { CompactCupSchedule } from "@/components/compact-cup-schedule"
 import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
 import { normalizeMatchKey } from "@/lib/matches"
 import { extendTeamDisplayName, createTeamMatchKeySet } from "@/lib/team-display"
@@ -410,21 +407,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     return { live, upcoming, finished }
   }, [filteredMatches])
 
-  const splitProviderMatches = useCallback((matches: NormalizedMatch[]) => {
-    const cup: NormalizedMatch[] = []
-    const standard: NormalizedMatch[] = []
-
-    matches.forEach((match) => {
-      if (match.provider === "procup" || match.presentation?.layoutHint === "cup_compact" || match.providerType === "cup") {
-        cup.push(match)
-        return
-      }
-      standard.push(match)
-    })
-
-    return { cup, standard }
-  }, [])
-
   const renderMatchCard = (match: NormalizedMatch) => {
     const status = getSimplifiedMatchStatus(match)
     const canOpenTimeline = canOpenMatchTimeline(match)
@@ -432,8 +414,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     const matchupLabel = getMatchupLabel(match)
     const showProfixioWarning = shouldShowProfixioTechnicalIssue(match)
     const showFinishedZeroZeroIssue = shouldShowFinishedZeroZeroIssue(match)
-    const providerBadge = getMatchProviderBadge(match)
-    const providerHelperText = getProviderHelperText(match)
     const teamTypeRaw = match.teamType?.trim() || ""
     const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
     const cleanedResult = match.result?.trim()
@@ -489,11 +469,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-700">{teamTypeLabel}</p>
-              {providerBadge && (
-                <span className={`inline-flex items-center rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] ${providerBadge.tone}`}>
-                  {providerBadge.label}
-                </span>
-              )}
             </div>
             <h3 className="mt-2 text-base font-semibold leading-tight text-slate-950 sm:text-lg">
               {matchupLabel}
@@ -501,7 +476,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
             {scheduleLabel && <p className="mt-1 text-sm leading-6 text-slate-500 break-words">{scheduleLabel}</p>}
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
               {match.series && <span className="rounded-full bg-slate-100 px-2.5 py-1">{match.series}</span>}
-              {providerHelperText && <span className="rounded-full bg-sky-50 px-2.5 py-1 text-sky-700">{providerHelperText}</span>}
             </div>
           </div>
 
@@ -523,9 +497,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
         </div>
         {showLivePendingScore && (
           <p className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-medium text-sky-800">
-            {match.provider === "procup"
-              ? "ProCup markerar matchen som live, men någon poäng har ännu inte publicerats."
-              : "Matchen är live men poängen har ännu inte publicerats."}
+            Matchen är live men poängen har ännu inte publicerats.
           </p>
         )}
         {showProfixioWarning && (
@@ -542,103 +514,64 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     )
   }
 
-  const providerPanels = useMemo(() => {
-    const byStatus = {
-      live: splitProviderMatches(groupedMatches.live),
-      upcoming: splitProviderMatches(groupedMatches.upcoming),
-      finished: splitProviderMatches(groupedMatches.finished),
+  const statusPanels = useMemo(() => {
+    const allPanels = [
+      {
+        key: "live" as const,
+        label: "Live",
+        title: "Pågår nu",
+        description: "Matcher som just nu är igång.",
+        matches: groupedMatches.live,
+      },
+      {
+        key: "upcoming" as const,
+        label: "Kommande",
+        title: "Närmast framåt",
+        description: "Det som står på tur i matchkalendern.",
+        matches: groupedMatches.upcoming,
+      },
+      {
+        key: "finished" as const,
+        label: "Resultat",
+        title: "Nyss klara",
+        description: "Senaste resultaten från Profixio-flödet.",
+        matches: groupedMatches.finished,
+      },
+    ]
+
+    if (statusFilter === "current") {
+      return allPanels
     }
 
-    const buildSections = (provider: "profixio" | "procup") => {
-      const sourceKey = provider === "profixio" ? "standard" : "cup"
-      const items = [
-        { key: "live", label: "Live nu", matches: byStatus.live[sourceKey] },
-        { key: "upcoming", label: "Kommande", matches: byStatus.upcoming[sourceKey] },
-        { key: "finished", label: "Resultat", matches: byStatus.finished[sourceKey] },
-      ]
+    return allPanels.filter((panel) => panel.key === statusFilter)
+  }, [groupedMatches, statusFilter])
 
-      if (statusFilter === "current") {
-        return items.filter((item) => item.matches.length > 0)
-      }
-
-      return items.filter((item) => item.key === statusFilter && item.matches.length > 0)
-    }
-
-    return {
-      profixio: buildSections("profixio"),
-      procup: buildSections("procup"),
-    }
-  }, [groupedMatches, splitProviderMatches, statusFilter])
-
-  const renderProviderPanel = (provider: "profixio" | "procup") => {
-    const sections = providerPanels[provider]
-
-    if (sections.length === 0) {
-      return null
-    }
-
-    const isProcup = provider === "procup"
-    const title = isProcup ? "ProCup" : "Profixio"
-    const subtitle =
-      statusFilter === "current"
-        ? isProcup
-          ? "Cupdagar och livescore i samma spår."
-          : "Seriespel och vanliga matcher i ett tätare flöde."
-        : isProcup
-          ? "Cupmatcher i vald vy."
-          : "Profixio-matcher i vald vy."
-
-    return (
-      <section
-        key={provider}
-        className={`overflow-hidden rounded-[24px] border bg-white ${
-          isProcup ? "border-sky-200" : "border-emerald-200"
-        }`}
-      >
-        <div className="border-b border-slate-200 px-4 py-4 sm:px-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className={`text-[11px] font-semibold uppercase tracking-[0.24em] ${isProcup ? "text-sky-700" : "text-emerald-700"}`}>
-                {title}
-              </p>
-              <h2 className="mt-1 text-xl font-semibold text-slate-950">{title}</h2>
-              <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
-            </div>
-            <span
-              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                isProcup ? "bg-sky-50 text-sky-700" : "bg-emerald-50 text-emerald-700"
-              }`}
-            >
-              {sections.reduce((sum, section) => sum + section.matches.length, 0)}
-            </span>
+  const renderStatusPanel = (panel: (typeof statusPanels)[number]) => (
+    <section key={panel.key} className="overflow-hidden rounded-[24px] border border-slate-200 bg-white">
+      <div className="border-b border-slate-200 px-4 py-4 sm:px-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">{panel.label}</p>
+            <h2 className="mt-1 text-xl font-semibold text-slate-950">{panel.title}</h2>
+            <p className="mt-1 text-sm text-slate-500">{panel.description}</p>
           </div>
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+            {panel.matches.length}
+          </span>
         </div>
+      </div>
 
-        <div className="space-y-5 p-4 sm:p-5">
-          {sections.map((section) => (
-            <section key={`${provider}-${section.key}`} className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-600">{section.label}</h3>
-                <span className="text-xs font-semibold text-slate-400">{section.matches.length}</span>
-              </div>
-              {isProcup ? (
-                <CompactCupSchedule
-                  matches={section.matches}
-                  title={section.label}
-                  defaultOpenDates={1}
-                  previewTimeBucketsPerDate={section.key === "live" ? 4 : 3}
-                  previewMatchesPerTimeBucket={section.key === "finished" ? 4 : 3}
-                  className="rounded-2xl border-slate-200 bg-slate-50/70"
-                />
-              ) : (
-                <div className="space-y-3">{section.matches.map(renderMatchCard)}</div>
-              )}
-            </section>
-          ))}
-        </div>
-      </section>
-    )
-  }
+      <div className="space-y-3 p-4 sm:p-5">
+        {panel.matches.length > 0 ? (
+          panel.matches.map(renderMatchCard)
+        ) : (
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+            Inga matcher i den här vyn just nu.
+          </div>
+        )}
+      </div>
+    </section>
+  )
   useEffect(() => {
     // Remove ?team filtering from URL, only set selectedTeam from dropdown
     // This disables auto-select from URL and fixes jumping back to 'Alla lag'
@@ -651,8 +584,8 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
       <div className="container mx-auto max-w-7xl px-4">
         <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
           <div className="border-b border-slate-200 px-5 py-5 sm:px-8 sm:py-6">
-            <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-              <div className="max-w-3xl">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-2xl">
                 <Link
                   href="/"
                   className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700 transition hover:text-emerald-900"
@@ -663,13 +596,13 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                   Till startsidan
                 </Link>
                 <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.35em] text-emerald-600">Matcher</p>
-                <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">Matcher i två tydliga spår.</h1>
+                <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">Live, kommande och resultat.</h1>
                 <p className="mt-3 text-sm text-slate-600 sm:text-base">
-                  Profixio och ProCup visas sida vid sida. Välj lag eller status och läs samma matchflöde utan att cupdagar trycker ned resten av sidan.
+                  Ett renare Profixio-flöde med tydliga sektioner, filter och matchdetaljer där tidslinje faktiskt finns.
                 </p>
               </div>
 
-              <div className="grid gap-2 sm:grid-cols-3 xl:min-w-[24rem]">
+              <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[24rem]">
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Live</p>
                   <p className="mt-1 text-2xl font-black text-slate-950">{matchStats.liveMatches}</p>
@@ -736,19 +669,19 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
             </section>
 
             <section className="rounded-2xl bg-slate-950 px-4 py-4 text-white sm:px-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/55">Så läser du sidan</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/55">Kort om flödet</p>
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-xl bg-white/5 px-4 py-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">Profixio</p>
-                  <p className="mt-1 text-sm text-white/90">Vanliga matcher med detaljvisning när timeline finns.</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">Status</p>
+                  <p className="mt-1 text-sm text-white/90">Live, kommande och slut hämtas direkt från backend utan egna gissningar.</p>
                 </div>
                 <div className="rounded-xl bg-white/5 px-4 py-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">ProCup</p>
-                  <p className="mt-1 text-sm text-white/90">Cupdagar grupperas kompakt per dag och tid.</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">Resultat</p>
+                  <p className="mt-1 text-sm text-white/90">Färska resultat visas i en kort senaste-lista innan de går över till historik.</p>
                 </div>
                 <div className="rounded-xl bg-white/5 px-4 py-3">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">Detalj</p>
-                  <p className="mt-1 text-sm text-white/90">Timeline öppnas bara där backend faktiskt stödjer den.</p>
+                  <p className="mt-1 text-sm text-white/90">Tidslinjen öppnas bara när Profixio rapporterar att den finns.</p>
                 </div>
               </div>
             </section>
@@ -800,9 +733,8 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
           )}
 
           {!isLoading && filteredMatches.length > 0 && (
-            <div className={`grid gap-5 ${providerPanels.profixio.length > 0 && providerPanels.procup.length > 0 ? "xl:grid-cols-2" : ""}`}>
-              {renderProviderPanel("profixio")}
-              {renderProviderPanel("procup")}
+            <div className={`grid gap-5 ${statusFilter === "current" ? "xl:grid-cols-3" : ""}`}>
+              {statusPanels.map(renderStatusPanel)}
             </div>
           )}
         </div>
