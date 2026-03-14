@@ -240,16 +240,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     [liveUpcomingMatches, oldMatches],
   )
 
-  const matchStats = useMemo(
-    () => ({
-      totalMatches: liveUpcomingMatches.length + oldMatches.length,
-      liveMatches: liveMatchesCount,
-      upcomingMatches: upcomingMatchesCount,
-      finishedMatches: finishedMatchesCount,
-    }),
-    [liveUpcomingMatches.length, liveMatchesCount, upcomingMatchesCount, oldMatches.length, finishedMatchesCount],
-  )
-
   const allMatches = useMemo(() => [...liveUpcomingMatches, ...oldMatches], [liveUpcomingMatches, oldMatches])
   const selectedMatch = useMemo(
     () => allMatches.find((match) => match.id === selectedMatchId) ?? null,
@@ -546,9 +536,38 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     return allPanels.filter((panel) => panel.key === statusFilter)
   }, [groupedMatches, statusFilter])
 
+  const focusCards = useMemo(() => {
+    const nextUpcoming = groupedMatches.upcoming[0] ?? null
+    const nextLive = groupedMatches.live[0] ?? null
+    const latestFinished = groupedMatches.finished[0] ?? null
+
+    return [
+      {
+        label: "Live nu",
+        value: groupedMatches.live.length.toString(),
+        text: nextLive ? getMatchupLabel(nextLive) : "Ingen match pågår just nu.",
+        tone: "border-rose-200 bg-rose-50/70 text-rose-700",
+      },
+      {
+        label: "Närmast framåt",
+        value: groupedMatches.upcoming.length.toString(),
+        text: nextUpcoming ? buildMatchScheduleLabel(nextUpcoming) : "Inget nytt schema just nu.",
+        tone: "border-sky-200 bg-sky-50/70 text-sky-700",
+      },
+      {
+        label: "Senaste resultat",
+        value: groupedMatches.finished.length.toString(),
+        text: latestFinished ? getMatchupLabel(latestFinished) : "Inga färska resultat just nu.",
+        tone: "border-slate-200 bg-slate-100/90 text-slate-700",
+      },
+    ]
+  }, [groupedMatches])
+
+  const activeStatusLabel = STATUS_OPTIONS.find((option) => option.value === statusFilter)?.label ?? "Översikt"
+
   const renderStatusPanel = (panel: (typeof statusPanels)[number]) => (
-    <section key={panel.key} className="overflow-hidden rounded-[24px] border border-slate-200 bg-white">
-      <div className="border-b border-slate-200 px-4 py-4 sm:px-5">
+    <section key={panel.key} className="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.04)]">
+      <div className="border-b border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,0.95),rgba(255,255,255,0.95))] px-4 py-4 sm:px-5">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">{panel.label}</p>
@@ -563,7 +582,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
 
       <div className="space-y-3 p-4 sm:p-5">
         {panel.matches.length > 0 ? (
-          panel.matches.map(renderMatchCard)
+          <div className="space-y-3">{panel.matches.map(renderMatchCard)}</div>
         ) : (
           <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
             Inga matcher i den här vyn just nu.
@@ -580,12 +599,12 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   }, [teamOptions])
 
   return (
-    <main className="min-h-screen bg-slate-50 py-8 sm:py-10">
+    <main className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_32%,#f8fafc_100%)] py-8 sm:py-10">
       <div className="container mx-auto max-w-7xl px-4">
-        <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
-          <div className="border-b border-slate-200 px-5 py-5 sm:px-8 sm:py-6">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-2xl">
+        <section className="overflow-hidden rounded-[30px] border border-slate-200/80 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
+          <div className="border-b border-slate-200 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(248,250,252,0.96),rgba(236,253,245,0.82))] px-5 py-6 sm:px-8 sm:py-7">
+            <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+              <div className="max-w-3xl">
                 <Link
                   href="/"
                   className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700 transition hover:text-emerald-900"
@@ -595,41 +614,62 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                   </svg>
                   Till startsidan
                 </Link>
-                <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.35em] text-emerald-600">Matcher</p>
-                <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">Live, kommande och resultat.</h1>
-                <p className="mt-3 text-sm text-slate-600 sm:text-base">
-                  Ett renare Profixio-flöde med tydliga sektioner, filter och matchdetaljer där tidslinje faktiskt finns.
+                <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.35em] text-emerald-600">Matchcenter</p>
+                <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">Matcher i ett lugnare flöde.</h1>
+                <p className="mt-3 max-w-2xl text-sm text-slate-600 sm:text-base">
+                  En tydligare matchsida för live, kommande och resultat. Filtrera lag, byt vy och öppna detaljläget där tidslinje finns.
                 </p>
               </div>
 
-              <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[24rem]">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Live</p>
-                  <p className="mt-1 text-2xl font-black text-slate-950">{matchStats.liveMatches}</p>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Kommande</p>
-                  <p className="mt-1 text-2xl font-black text-slate-950">{matchStats.upcomingMatches}</p>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Resultat</p>
-                  <p className="mt-1 text-2xl font-black text-slate-950">{matchStats.finishedMatches}</p>
-                </div>
+              <div className="grid gap-3 sm:grid-cols-3 xl:min-w-[28rem]">
+                {focusCards.map((card) => (
+                  <div key={card.label} className={`rounded-2xl border px-4 py-4 ${card.tone}`}>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em]">{card.label}</p>
+                    <p className="mt-2 text-2xl font-black">{card.value}</p>
+                    <p className="mt-2 text-sm leading-5 opacity-90">{card.text}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
 
-          <div className="grid gap-4 px-5 py-5 sm:px-8 sm:py-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-            <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Filter</p>
-              <div className="mt-4 space-y-4">
+          <div className="grid gap-4 px-5 py-5 sm:px-8 sm:py-6 xl:grid-cols-[minmax(0,1.15fr)_22rem]">
+            <section className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-4 sm:p-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Filtrering</p>
+                  <h2 className="mt-1 text-xl font-semibold text-slate-950">Välj lag och vy</h2>
+                  <p className="mt-1 text-sm text-slate-500">Byt mellan hel översikt, live, kommande eller avslutade matcher.</p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-white p-1.5">
+                  {STATUS_OPTIONS.map((option) => {
+                    const isActive = statusFilter === option.value
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        aria-pressed={isActive}
+                        onClick={() => setStatusFilter(option.value)}
+                        className={`rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition sm:text-sm ${
+                          isActive ? "bg-slate-950 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                <div className="max-w-md">
                   <label htmlFor="team-filter" className="block text-sm font-semibold text-slate-900">
                     Lag
                   </label>
                   <select
                     id="team-filter"
-                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 transition focus:border-emerald-400 focus:outline-none"
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 transition focus:border-emerald-400 focus:outline-none"
                     value={selectedTeam}
                     onChange={(e) => setSelectedTeam(e.target.value)}
                   >
@@ -642,46 +682,37 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                   </select>
                 </div>
 
-                <div>
-                  <p className="block text-sm font-semibold text-slate-900">Vy</p>
-                  <div className="mt-2 grid grid-cols-2 gap-2">
-                    {STATUS_OPTIONS.map((option) => {
-                      const isActive = statusFilter === option.value
-                      return (
-                        <button
-                          key={option.value}
-                          type="button"
-                          aria-pressed={isActive}
-                          onClick={() => setStatusFilter(option.value)}
-                          className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
-                            isActive
-                              ? "border-slate-950 bg-slate-950 text-white"
-                              : "border-slate-200 bg-white text-slate-700 hover:border-emerald-400 hover:bg-emerald-50"
-                          }`}
-                        >
-                          {option.label}
-                        </button>
-                      )
-                    })}
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Aktiv vy</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-950">{activeStatusLabel}</p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Totalt</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-950">{filteredMatches.length} matcher</p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Detaljläge</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-950">Endast där tidslinje finns</p>
                   </div>
                 </div>
               </div>
             </section>
 
-            <section className="rounded-2xl bg-slate-950 px-4 py-4 text-white sm:px-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/55">Kort om flödet</p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-xl bg-white/5 px-4 py-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">Status</p>
-                  <p className="mt-1 text-sm text-white/90">Live, kommande och slut hämtas direkt från backend utan egna gissningar.</p>
+            <section className="rounded-[24px] bg-slate-950 p-5 text-white">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/55">Så fungerar sidan</p>
+              <div className="mt-4 space-y-3">
+                <div className="rounded-2xl bg-white/5 px-4 py-3">
+                  <p className="text-sm font-semibold">Status direkt från backend</p>
+                  <p className="mt-1 text-sm text-white/70">Live, kommande och avslutat byggs inte om i frontend.</p>
                 </div>
-                <div className="rounded-xl bg-white/5 px-4 py-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">Resultat</p>
-                  <p className="mt-1 text-sm text-white/90">Färska resultat visas i en kort senaste-lista innan de går över till historik.</p>
+                <div className="rounded-2xl bg-white/5 px-4 py-3">
+                  <p className="text-sm font-semibold">Resultat nära i tiden</p>
+                  <p className="mt-1 text-sm text-white/70">Färska resultat visas överst innan de glider över till historik.</p>
                 </div>
-                <div className="rounded-xl bg-white/5 px-4 py-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">Detalj</p>
-                  <p className="mt-1 text-sm text-white/90">Tidslinjen öppnas bara när Profixio rapporterar att den finns.</p>
+                <div className="rounded-2xl bg-white/5 px-4 py-3">
+                  <p className="text-sm font-semibold">Tidslinje när den finns</p>
+                  <p className="mt-1 text-sm text-white/70">Matchdetalj öppnas bara när Profixio faktiskt levererar ett flöde.</p>
                 </div>
               </div>
             </section>
@@ -732,11 +763,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
             </div>
           )}
 
-          {!isLoading && filteredMatches.length > 0 && (
-            <div className={`grid gap-5 ${statusFilter === "current" ? "xl:grid-cols-3" : ""}`}>
-              {statusPanels.map(renderStatusPanel)}
-            </div>
-          )}
+          {!isLoading && filteredMatches.length > 0 && <div className="space-y-5">{statusPanels.map(renderStatusPanel)}</div>}
         </div>
       </div>
 
