@@ -445,6 +445,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
           : status === "finished"
             ? "Resultat inväntas"
             : null
+    const showLivePendingScore = status === "live" && match.resultState === "live_pending"
 
     const statusBadge = (() => {
       if (status === "live") {
@@ -520,6 +521,13 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
             </div>
           </div>
         </div>
+        {showLivePendingScore && (
+          <p className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-medium text-sky-800">
+            {match.provider === "procup"
+              ? "ProCup markerar matchen som live, men någon poäng har ännu inte publicerats."
+              : "Matchen är live men poängen har ännu inte publicerats."}
+          </p>
+        )}
         {showProfixioWarning && (
           <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
             Profixio har tekniska problem med liveuppdateringen för den här matchen just nu.

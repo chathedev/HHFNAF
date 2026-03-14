@@ -349,6 +349,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     const stableScore = liveScore || stableScoreByMatchId[match.id] || ""
     const hasStarted = match.date.getTime() <= Date.now() + 60_000
     const scoreValue = stableScore && (status !== "upcoming" || hasStarted) ? stableScore : null
+    const showLivePendingScore = status === "live" && match.resultState === "live_pending" && !scoreValue
 
     const statusBadge = (() => {
       if (status === "live") {
@@ -415,6 +416,15 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
               </span>
               <span className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-500">
                 {status === "live" ? "Pågår" : "Resultat"}
+              </span>
+            </div>
+          )}
+
+          {showLivePendingScore && (
+            <div className="flex flex-col gap-1 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2">
+              <span className="text-sm font-semibold text-sky-800">Livescore väntar</span>
+              <span className="text-xs text-sky-700">
+                {match.provider === "procup" ? "ProCup har markerat matchen som live men har ännu inte publicerat poängen." : "Poäng publiceras så fort liveflödet skickar dem."}
               </span>
             </div>
           )}

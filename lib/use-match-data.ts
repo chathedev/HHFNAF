@@ -6,6 +6,9 @@ import { mapVenueIdToName } from "./venue-mapper"
 import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "./match-sort"
 import { resolvePreferredTimeline } from "./match-timeline"
 
+const isBrowser = typeof window !== "undefined"
+const isPageHidden = () => isBrowser && typeof document !== "undefined" && document.visibilityState === "hidden"
+
 export type MatchFeedEvent = {
   time: string
   type: string
@@ -2109,4 +2112,3 @@ export const useMatchData = (options?: {
     hasPayload,
   }
 }
-  const isPageHidden = () => isBrowser && typeof document !== "undefined" && document.visibilityState === "hidden"
