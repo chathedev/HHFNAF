@@ -903,7 +903,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
           <section className="relative z-30 -mt-10 pb-14 sm:-mt-20 sm:pb-16">
             <div className="container mx-auto px-4">
-              <div className="overflow-hidden rounded-[28px] bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+              <div className="overflow-hidden rounded-[28px] bg-white">
                 <div className="border-b border-slate-200 bg-[linear-gradient(135deg,rgba(255,255,255,1),rgba(249,250,251,1),rgba(236,253,245,0.9))] px-5 py-5 sm:px-8 sm:py-7">
                   <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                     <div className="max-w-2xl">
