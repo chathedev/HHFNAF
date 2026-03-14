@@ -950,7 +950,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
                 <div className="space-y-4 p-4 sm:p-6">
                   {showInitialMatchLoader ? (
-                    <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+                    <section className="bg-white p-4 sm:p-5">
                       <div className="mb-4 h-5 w-40 rounded bg-slate-200" />
                       {renderUpcomingSkeletonRows()}
                     </section>
