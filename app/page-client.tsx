@@ -903,8 +903,8 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
           <section className="relative z-30 -mt-10 pb-14 sm:-mt-20 sm:pb-16">
             <div className="container mx-auto px-4">
-              <div className="overflow-hidden rounded-[28px] bg-white">
-                <div className="border-b border-slate-200 bg-[linear-gradient(135deg,rgba(255,255,255,1),rgba(249,250,251,1),rgba(236,253,245,0.9))] px-5 py-5 sm:px-8 sm:py-7">
+              <div className="overflow-hidden rounded-[28px] bg-[linear-gradient(180deg,rgba(248,250,252,0.98),rgba(241,245,249,0.96),rgba(236,253,245,0.9))]">
+                <div className="border-b border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.9),rgba(248,250,252,0.88),rgba(236,253,245,0.78))] px-5 py-5 sm:px-8 sm:py-7">
                   <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                     <div className="max-w-2xl">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-emerald-600">Matchläge</p>
