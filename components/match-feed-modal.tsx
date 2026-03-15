@@ -785,6 +785,9 @@ export function MatchFeedModal({
       .map(Number)
       .sort((a, b) => b - a)
   }, [groupedByPeriod])
+  const hasVisibleTimeline = sortedFeed.length > 0
+  const showTimelineSkeleton = isTimelineLoading && !hasVisibleTimeline
+  const showQuietRefresh = isTimelineLoading && hasVisibleTimeline
   const hasTimelineUpdates = sortedFeed.length > 0
   const isNoLiveUpdatesIssue = !hasTimelineUpdates || clockReason === "no_events"
   const showTimeoutTimer = clockReason === "timeout" && timeoutSecondsLeft > 0
@@ -914,6 +917,12 @@ export function MatchFeedModal({
                 )}
                 {matchStatus === "finished" && <span className="rounded-full bg-slate-900/25 px-3 py-1">SLUT</span>}
                 {matchStatus === "upcoming" && <span className="rounded-full bg-slate-900/25 px-3 py-1">KOMMANDE</span>}
+                {showQuietRefresh && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-slate-200">
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-300" />
+                    Uppdaterar
+                  </span>
+                )}
               </div>
             </div>
 
@@ -992,13 +1001,30 @@ export function MatchFeedModal({
 
         <div className="flex-1 overflow-y-auto bg-slate-50 px-3 py-4 sm:px-8 sm:py-6">
           {activeTab === "timeline" && (
-            <div className="space-y-6 sm:space-y-8">
-              {isTimelineLoading && (
-                <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-medium text-sky-800">
-                  Hämtar komplett tidslinje...
+            <div className="space-y-6 transition-opacity duration-200 sm:space-y-8">
+              {showTimelineSkeleton && (
+                <div className="space-y-4">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <div key={`timeline-skeleton-${index}`} className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+                      <div className="flex items-start gap-3">
+                        <div className="w-14 shrink-0 sm:w-20">
+                          <div className="h-4 w-12 animate-pulse rounded bg-slate-200" />
+                          <div className="mt-2 h-3 w-8 animate-pulse rounded bg-slate-100" />
+                        </div>
+                        <div className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-slate-200" />
+                        <div className="min-w-0 flex-1">
+                          <div className="h-4 w-2/3 animate-pulse rounded bg-slate-200" />
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <div className="h-5 w-20 animate-pulse rounded-full bg-slate-100" />
+                            <div className="h-5 w-16 animate-pulse rounded-full bg-slate-100" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
-              {sortedFeed.length === 0 && (
+              {!showTimelineSkeleton && sortedFeed.length === 0 && (
                 <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center">
                   <p className="text-base font-semibold text-slate-700">{emptyTimelineMessage}</p>
                 </div>
