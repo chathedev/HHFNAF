@@ -142,17 +142,75 @@ const normalizeTimelineEvent = (event: any): MatchFeedEvent => ({
   payload: event?.payload,
 })
 
+const normalizeText = (value?: string) => (value ?? "").trim().toLowerCase()
+
+const getEventSemanticType = (event: MatchFeedEvent) => {
+  const text = getEventCombinedText(event)
+  if (text.includes("spelare aktiverad")) return "activated"
+  if (text.includes("tilldömd 7-m")) return "seven_awarded"
+  if (text.includes("timeout")) return "timeout"
+  if (text.includes("utvisning")) return "suspension"
+  if (text.includes("fulltid") || text.includes("slutresultat") || text.includes("matchen är slut")) return "fulltime"
+  if (text.includes("1:a halvlek är slut") || text.includes("första halvlek slut") || text.includes("halvtid")) return "halftime"
+  if (text.includes("2:a halvlek startades") || text.includes("start andra halvlek")) return "second_half_start"
+  if (text.includes("start första halvlek")) return "first_half_start"
+  if (text.includes("mål") || text.includes("goal")) return "goal"
+  return normalizeText(event.type) || normalizeText(event.description) || "event"
+}
+
+const getEventRichnessScore = (event: MatchFeedEvent) => {
+  let score = 0
+  if (event.eventId !== undefined) score += 5
+  if (event.player) score += 4
+  if (event.playerNumber) score += 2
+  if (typeof event.homeScore === "number" && typeof event.awayScore === "number") score += 3
+  if (!isGenericEventLabel(event.type)) score += 1
+  if (!isGenericEventLabel(event.description)) score += 1
+  return score
+}
+
+const getEventDeduplicationKey = (event: MatchFeedEvent) => {
+  if (event.eventId !== undefined) {
+    return `id:${event.eventId}`
+  }
+
+  const semanticType = getEventSemanticType(event)
+  const base = [
+    normalizeText(event.time),
+    event.period ?? inferPeriodFromTime(event.time),
+    normalizeText(event.team),
+    normalizeText(event.player),
+    normalizeText(event.playerNumber),
+    semanticType,
+  ]
+
+  if (semanticType === "goal") {
+    base.push(String(event.homeScore ?? ""))
+    base.push(String(event.awayScore ?? ""))
+  }
+
+  return base.join("|")
+}
+
 const dedupeTimelineEvents = (events: MatchFeedEvent[]) => {
-  const seen = new Set<string>()
-  return events.filter((event) => {
-    const key =
-      event.eventId !== undefined
-        ? `id:${event.eventId}`
-        : `${event.time}|${event.type}|${event.description}|${event.homeScore ?? ""}-${event.awayScore ?? ""}`
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
+  const bestByKey = new Map<string, { event: MatchFeedEvent; index: number }>()
+
+  events.forEach((event, index) => {
+    const key = getEventDeduplicationKey(event)
+    const existing = bestByKey.get(key)
+    if (!existing) {
+      bestByKey.set(key, { event, index })
+      return
+    }
+
+    if (getEventRichnessScore(event) > getEventRichnessScore(existing.event)) {
+      bestByKey.set(key, { event, index: existing.index })
+    }
   })
+
+  return [...bestByKey.values()]
+    .sort((a, b) => a.index - b.index)
+    .map((entry) => entry.event)
 }
 
 const getEventCombinedText = (event: MatchFeedEvent) =>
@@ -512,7 +570,7 @@ const getRowStyle = (event: MatchFeedEvent, homeTeam: string, awayTeam: string) 
 
   if (isPenalty) {
     return {
-      tone: "border-amber-200 bg-amber-50",
+      tone: "border-amber-200 bg-white",
       dot: "bg-amber-500",
       teamClass: "text-amber-700",
       kindLabel: "UTVISNING",
@@ -521,7 +579,7 @@ const getRowStyle = (event: MatchFeedEvent, homeTeam: string, awayTeam: string) 
 
   if (isGoal && teamTone === "home") {
     return {
-      tone: "border-emerald-200 bg-emerald-50",
+      tone: "border-emerald-200 bg-white",
       dot: "bg-emerald-500",
       teamClass: "text-emerald-700",
       kindLabel: "MÅL",
@@ -530,7 +588,7 @@ const getRowStyle = (event: MatchFeedEvent, homeTeam: string, awayTeam: string) 
 
   if (isGoal && teamTone !== "home") {
     return {
-      tone: "border-indigo-200 bg-indigo-50",
+      tone: "border-indigo-200 bg-white",
       dot: "bg-indigo-500",
       teamClass: "text-indigo-700",
       kindLabel: "MÅL",
@@ -566,6 +624,8 @@ export function MatchFeedModal({
   const [detailClockState, setDetailClockState] = useState<MatchClockState | null>(null)
   const [detailPenalties, setDetailPenalties] = useState<MatchPenalty[]>([])
   const [isTimelineLoading, setIsTimelineLoading] = useState(false)
+  const [displayedFeed, setDisplayedFeed] = useState<MatchFeedEvent[]>([])
+  const [isFeedTransitioning, setIsFeedTransitioning] = useState(false)
   const [clockTick, setClockTick] = useState(0)
   const allowAutoRefresh = matchStatus === "live" || matchStatus === "halftime"
   const canFetchDetailedTimeline = matchData?.timelineAvailable !== false || matchData?.eventsAvailable !== false
@@ -732,13 +792,42 @@ export function MatchFeedModal({
       .map(({ event }) => event)
   }, [timelineSource])
 
+  const sortedFeedKey = useMemo(() => sortedFeed.map(buildTimelineIdentityKey).join("||"), [sortedFeed])
+  const displayedFeedKey = useMemo(() => displayedFeed.map(buildTimelineIdentityKey).join("||"), [displayedFeed])
+
+  useEffect(() => {
+    if (!isOpen) {
+      setDisplayedFeed([])
+      setIsFeedTransitioning(false)
+      return
+    }
+
+    if (sortedFeedKey === displayedFeedKey) {
+      return
+    }
+
+    if (displayedFeed.length === 0 || sortedFeed.length === 0) {
+      setDisplayedFeed(sortedFeed)
+      setIsFeedTransitioning(false)
+      return
+    }
+
+    setIsFeedTransitioning(true)
+    const frame = requestAnimationFrame(() => {
+      setDisplayedFeed(sortedFeed)
+      setIsFeedTransitioning(false)
+    })
+
+    return () => cancelAnimationFrame(frame)
+  }, [isOpen, sortedFeed, sortedFeedKey, displayedFeedKey, displayedFeed.length])
+
   const latestScore = useMemo(() => {
-    const eventWithScore = sortedFeed.find(
+    const eventWithScore = displayedFeed.find(
       (event) => typeof event.homeScore === "number" && typeof event.awayScore === "number",
     )
     if (!eventWithScore) return null
     return `${eventWithScore.homeScore}-${eventWithScore.awayScore}`
-  }, [sortedFeed])
+  }, [displayedFeed])
 
   const scoreboard = useMemo(() => {
     if (matchStatus === "upcoming") {
@@ -757,13 +846,13 @@ export function MatchFeedModal({
   }, [finalScore, latestScore, matchStatus])
 
   const groupedByPeriod = useMemo(() => {
-    return sortedFeed.reduce<Record<number, MatchFeedEvent[]>>((acc, event) => {
+    return displayedFeed.reduce<Record<number, MatchFeedEvent[]>>((acc, event) => {
       const key = getEventGroupKey(event)
       if (!acc[key]) acc[key] = []
       acc[key].push(event)
       return acc
     }, {})
-  }, [sortedFeed])
+  }, [displayedFeed])
 
   const emptyTimelineMessage = useMemo(() => {
     if (matchData?.timelineAvailable === false && matchData?.provider === "procup") {
@@ -785,16 +874,16 @@ export function MatchFeedModal({
       .map(Number)
       .sort((a, b) => b - a)
   }, [groupedByPeriod])
-  const hasVisibleTimeline = sortedFeed.length > 0
+  const hasVisibleTimeline = displayedFeed.length > 0
   const showTimelineSkeleton = isTimelineLoading && !hasVisibleTimeline
-  const hasTimelineUpdates = sortedFeed.length > 0
+  const hasTimelineUpdates = displayedFeed.length > 0
   const isNoLiveUpdatesIssue = !hasTimelineUpdates || clockReason === "no_events"
   const showTimeoutTimer = clockReason === "timeout" && timeoutSecondsLeft > 0
   const showPenaltyTimers = activePenalties.length > 0
   const showClockAndTimers = matchStatus !== "finished" && !isNoLiveUpdatesIssue && (showTimeoutTimer || showPenaltyTimers)
 
   const calculatedTopScorersByTeam = useMemo(() => {
-    const goalEvents = sortedFeed.filter((event) => (event.type || "").toLowerCase().includes("mål") && event.player)
+    const goalEvents = displayedFeed.filter((event) => (event.type || "").toLowerCase().includes("mål") && event.player)
     const grouped = goalEvents.reduce<Record<string, Record<string, { player: string; playerNumber?: string; goals: number }>>>(
       (acc, event) => {
         const team = event.team || "Okänt lag"
@@ -822,7 +911,7 @@ export function MatchFeedModal({
       },
       {},
     )
-  }, [sortedFeed])
+  }, [displayedFeed])
 
   const topScorersByTeam = useMemo(() => {
     if (!topScorers.length) {
@@ -980,7 +1069,7 @@ export function MatchFeedModal({
               activeTab === "timeline" ? "bg-white text-slate-900" : "text-slate-600"
             }`}
           >
-            Tidslinje ({sortedFeed.length})
+            Tidslinje ({displayedFeed.length})
           </button>
           <button
             type="button"
@@ -994,7 +1083,7 @@ export function MatchFeedModal({
 
         <div className="flex-1 overflow-y-auto bg-slate-50 px-3 py-4 sm:px-8 sm:py-6">
           {activeTab === "timeline" && (
-            <div className="space-y-6 transition-opacity duration-200 sm:space-y-8">
+            <div className={`space-y-6 transition-[opacity,transform] duration-200 sm:space-y-8 ${isFeedTransitioning ? "opacity-95" : "opacity-100"}`}>
               {showTimelineSkeleton && (
                 <div className="space-y-4">
                   {Array.from({ length: 3 }).map((_, index) => (
@@ -1017,7 +1106,7 @@ export function MatchFeedModal({
                   ))}
                 </div>
               )}
-              {!showTimelineSkeleton && sortedFeed.length === 0 && (
+              {!showTimelineSkeleton && displayedFeed.length === 0 && (
                 <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center">
                   <p className="text-base font-semibold text-slate-700">{emptyTimelineMessage}</p>
                 </div>
@@ -1032,34 +1121,34 @@ export function MatchFeedModal({
                       const typeLabel = getEventTypeLabel(event)
                       return (
                         <li key={`${event.eventId ?? "idx"}-${index}`}>
-                          <div className={`w-full rounded-2xl border px-3 py-3 sm:px-4 ${style.tone}`}>
-                          <div className="flex items-start gap-2.5 sm:gap-3">
-                            <div className="w-14 shrink-0 sm:w-20">
-                              <p className="text-xs font-bold text-slate-700">{event.time || "--:--"}</p>
-                              <p className="mt-1 text-[10px] uppercase tracking-[0.15em] text-slate-500">
-                                {typeof event.period === "number" && event.period > 0 ? `P${event.period}` : "Match"}
-                              </p>
-                            </div>
-                            <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${style.dot}`} />
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-col items-start gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                                <p className="text-sm font-semibold text-slate-900">{getEventDisplayText(event)}</p>
-                                {score && <p className="shrink-0 text-sm font-black text-slate-900">{score}</p>}
+                          <div className={`relative overflow-hidden rounded-2xl border px-3 py-3 shadow-sm transition-colors sm:px-4 ${style.tone}`}>
+                            <span className={`absolute inset-y-0 left-0 w-1 ${style.dot}`} />
+                            <div className="flex items-start gap-2.5 pl-2 sm:gap-3">
+                              <div className="w-14 shrink-0 sm:w-20">
+                                <p className="text-xs font-bold text-slate-700">{event.time || "--:--"}</p>
+                                <p className="mt-1 text-[10px] uppercase tracking-[0.15em] text-slate-500">
+                                  {typeof event.period === "number" && event.period > 0 ? `P${event.period}` : "Match"}
+                                </p>
                               </div>
-                              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-                                <span className={`font-bold uppercase tracking-[0.15em] ${style.teamClass}`}>
-                                  {getEventTeamLabel(event)}
-                                </span>
-                                <span className="rounded-full bg-white/80 px-2 py-0.5 font-semibold text-slate-500">{typeLabel}</span>
-                                {event.player && (
-                                  <span className="text-slate-700">
-                                    {event.player}
-                                    {event.playerNumber ? ` #${event.playerNumber}` : ""}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-col items-start gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                                  <p className="text-sm font-semibold text-slate-900">{getEventDisplayText(event)}</p>
+                                  {score && <p className="shrink-0 text-sm font-black text-slate-900">{score}</p>}
+                                </div>
+                                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                                  <span className={`font-bold uppercase tracking-[0.15em] ${style.teamClass}`}>
+                                    {getEventTeamLabel(event)}
                                   </span>
-                                )}
+                                  <span className="rounded-full bg-white/90 px-2 py-0.5 font-semibold text-slate-500">{typeLabel}</span>
+                                  {event.player && (
+                                    <span className="text-slate-700">
+                                      {event.player}
+                                      {event.playerNumber ? ` #${event.playerNumber}` : ""}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
                           </div>
                         </li>
                       )
