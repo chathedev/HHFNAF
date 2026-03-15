@@ -692,11 +692,12 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     !isInitialHomeMatchFetchDone && (matchLoading || matchRefreshing || !hasMatchPayload)
   const homeMatchFlow = useMemo(() => {
     const seen = new Set<string>()
-    const ordered = [
-      ...(groupedFeed?.live ?? []),
-      ...(groupedFeed?.upcoming ?? []),
-      ...recentResults,
-    ].filter((match) => {
+    const liveItems = (groupedFeed?.live ?? []).slice(0, 3)
+    const resultItems = recentResults.slice(0, 2)
+    const remainingSlots = Math.max(10 - liveItems.length - resultItems.length, 0)
+    const upcomingItems = (groupedFeed?.upcoming ?? []).slice(0, remainingSlots)
+
+    const ordered = [...liveItems, ...resultItems, ...upcomingItems].filter((match) => {
       if (seen.has(match.id)) {
         return false
       }
@@ -965,7 +966,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-600">Översikt</p>
                           <h3 className="mt-1 text-lg font-semibold text-slate-950">Tio matcher närmast just nu</h3>
                           <p className="mt-1 text-sm text-slate-500">
-                            En rak lista med live, kommande och färska resultat i samma flöde.
+                            Live först, färska resultat direkt därefter, sedan nästa matcher framåt.
                           </p>
                         </div>
                         <Link
