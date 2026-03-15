@@ -787,7 +787,6 @@ export function MatchFeedModal({
   }, [groupedByPeriod])
   const hasVisibleTimeline = sortedFeed.length > 0
   const showTimelineSkeleton = isTimelineLoading && !hasVisibleTimeline
-  const showQuietRefresh = isTimelineLoading && hasVisibleTimeline
   const hasTimelineUpdates = sortedFeed.length > 0
   const isNoLiveUpdatesIssue = !hasTimelineUpdates || clockReason === "no_events"
   const showTimeoutTimer = clockReason === "timeout" && timeoutSecondsLeft > 0
@@ -917,12 +916,6 @@ export function MatchFeedModal({
                 )}
                 {matchStatus === "finished" && <span className="rounded-full bg-slate-900/25 px-3 py-1">SLUT</span>}
                 {matchStatus === "upcoming" && <span className="rounded-full bg-slate-900/25 px-3 py-1">KOMMANDE</span>}
-                {showQuietRefresh && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-slate-200">
-                    <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-300" />
-                    Uppdaterar
-                  </span>
-                )}
               </div>
             </div>
 
