@@ -6,7 +6,6 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import {
   ArrowRight,
@@ -14,14 +13,14 @@ import {
   TrendingUp,
   Users,
   Star,
-  Plus,
-  Minus,
   Trophy,
-  Award,
-  History,
+  ChevronDown,
   Facebook,
   Instagram,
   ShoppingBag,
+  MapPin,
+  Calendar,
+  Clock,
 } from "lucide-react"
 import { Header } from "@/components/header"
 import Footer from "@/components/footer"
@@ -129,8 +128,6 @@ const dedupeTimelineEvents = (events: MatchFeedEvent[]) => {
   })
 }
 
-// Add type import for EnhancedMatchData if not already present or use any
-
 
 export function HomePageClient({ initialData }: { initialData?: EnhancedMatchData }) {
   const searchParams = useSearchParams()
@@ -145,7 +142,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     return "orange"
   })
   const [showHeroContent, setShowHeroContent] = useState<boolean>(true)
-  const [openTier, setOpenTier] = useState<string | null>("Diamantpartner")
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   const [timelineByMatchId, setTimelineByMatchId] = useState<Record<string, MatchFeedEvent[]>>({})
   const [topScorersByMatchId, setTopScorersByMatchId] = useState<Record<string, MatchTopScorer[]>>({})
@@ -211,7 +207,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       })
   }, [hasMatchPayload, refreshHomeMatches])
 
-  // Track previous scores to highlight live updates
   const partnersForDisplay = Array.isArray(content.partners) ? content.partners.filter((p) => p.visibleInCarousel) : []
 
   const grannstadenPartner: Partner = {
@@ -328,361 +323,125 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     [timelineByMatchId],
   )
 
-  const renderHomeMatchCard = (match: NormalizedMatch) => {
+  // --- Match card renderers ---
+
+  const renderHomeFlowRow = (match: NormalizedMatch) => {
     const status = getMatchStatus(match)
-    const canOpenTimeline = canOpenMatchTimeline(match)
+    const canOpen = canOpenMatchTimeline(match)
     const scheduleLabel = buildMatchScheduleLabel(match)
     const matchupLabel = getMatchupLabel(match)
     const showProfixioWarning = shouldShowProfixioTechnicalIssue(match)
     const showFinishedZeroZeroIssue = shouldShowFinishedZeroZeroIssue(match)
     const teamTypeRaw = match.teamType?.trim() || ""
     const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
+    const hasStream = match.hasStream === true && Boolean((match.playUrl ?? "").trim()) && (match.playUrl ?? "").trim().toLowerCase() !== "null"
     const liveScore = typeof match.result === "string" ? match.result.trim() : ""
     const stableScore = liveScore || stableScoreByMatchId[match.id] || ""
     const hasStarted = match.date.getTime() <= Date.now() + 60_000
     const scoreValue = stableScore && (status !== "upcoming" || hasStarted) ? stableScore : null
     const showLivePendingScore = status === "live" && match.resultState === "live_pending" && !scoreValue
-    const hasStream =
-      match.hasStream === true &&
-      Boolean((match.playUrl ?? "").trim()) &&
-      (match.playUrl ?? "").trim().toLowerCase() !== "null"
 
-    const statusBadge = (() => {
-      if (status === "live") {
-        return { label: match.statusLabel ?? "LIVE", tone: "bg-rose-50 text-rose-600" }
-      }
-      if (status === "finished") {
-        return { label: match.statusLabel ?? "SLUT", tone: "bg-gray-100 text-gray-600" }
-      }
-      return { label: match.statusLabel ?? "KOMMANDE", tone: "bg-blue-50 text-blue-600" }
+    const statusConfig = (() => {
+      if (status === "live") return { label: match.statusLabel ?? "LIVE", bg: "bg-red-500", text: "text-white", dot: true }
+      if (status === "finished") return { label: match.statusLabel ?? "SLUT", bg: "bg-neutral-100", text: "text-neutral-500", dot: false }
+      return { label: match.statusLabel ?? "KOMMANDE", bg: "bg-emerald-50", text: "text-emerald-700", dot: false }
     })()
 
     return (
       <li key={match.id}>
         <article
-          id={`match-card-${match.id}`}
-          className={`group relative flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition-all ${
-            canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:shadow-md" : ""
+          className={`group relative rounded-xl border border-neutral-200/80 bg-white p-5 transition-all duration-200 ${
+            canOpen ? "cursor-pointer hover:border-neutral-300 hover:shadow-lg hover:shadow-neutral-200/50" : ""
           }`}
-          onMouseEnter={() => {
-            if (canOpenTimeline) {
-              fetchMatchTimeline(match).catch(() => undefined)
-            }
-          }}
-          onTouchStart={() => {
-            if (canOpenTimeline) {
-              fetchMatchTimeline(match).catch(() => undefined)
-            }
-          }}
+          onMouseEnter={() => { if (canOpen) fetchMatchTimeline(match).catch(() => undefined) }}
+          onTouchStart={() => { if (canOpen) fetchMatchTimeline(match).catch(() => undefined) }}
           onClick={(event) => {
-            if (!canOpenTimeline) {
-              return
-            }
-            const target = event.target as HTMLElement
-            if (target.closest("a,button")) {
-              return
-            }
+            if (!canOpen) return
+            if ((event.target as HTMLElement).closest("a,button")) return
             openMatchModal(match)
           }}
         >
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">{teamTypeLabel}</p>
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusConfig.bg} ${statusConfig.text}`}>
+                  {statusConfig.dot && <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />}
+                  {statusConfig.label}
+                </span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-700">{teamTypeLabel}</span>
+                {match.series && <span className="text-[11px] text-neutral-400">{match.series}</span>}
               </div>
-              <h3 className="mt-1.5 text-sm font-semibold leading-tight text-slate-950 sm:text-[15px]">
-                {matchupLabel}
-              </h3>
-              {scheduleLabel && <p className="mt-1 text-xs leading-5 text-slate-500 break-words">{scheduleLabel}</p>}
-            </div>
-            <span className={`inline-flex w-fit items-center justify-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${statusBadge.tone}`}>
-              {statusBadge.label}
-            </span>
-          </div>
-
-          {scoreValue && (
-            <div className="flex items-end justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2">
-              <span className="text-xl font-black text-slate-950" data-score-value="true">
-                {scoreValue}
-              </span>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-                {status === "live" ? "Pågår" : "Resultat"}
-              </span>
-            </div>
-          )}
-
-          {showLivePendingScore && (
-            <div className="flex flex-col gap-1 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2">
-              <span className="text-sm font-semibold text-sky-800">Livescore väntar</span>
-              <span className="text-xs text-sky-700">
-                Poäng publiceras så fort liveflödet skickar dem.
-              </span>
-            </div>
-          )}
-
-          <div className="flex flex-wrap items-center gap-2">
-            {match.series && (
-              <p className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] text-slate-500">{match.series}</p>
-            )}
-          </div>
-        {showProfixioWarning && (
-          <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
-            Profixio har tekniska problem med liveuppdateringen för den här matchen just nu.
-          </p>
-        )}
-        {showFinishedZeroZeroIssue && (
-          <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
-            Misstänkt resultatfel från Profixio: avslutad match visas som 0–0.
-          </p>
-        )}
-          <div className="flex items-center justify-between gap-3 pt-1">
-            <span className="text-xs text-slate-400">{status === "upcoming" ? "Fler detaljer på matchsidan" : "Öppna för detaljer"}</span>
-            {hasStream ? (
-              <a
-                href={(match.playUrl ?? "").trim()}
-                target="_blank"
-                rel="noreferrer"
-                onClick={(event) => event.stopPropagation()}
-                className="inline-flex items-center justify-center rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800 transition hover:border-slate-900 hover:text-slate-950"
-              >
-                {getMatchWatchLabel(status)}
-              </a>
-            ) : canOpenTimeline ? (
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  openMatchModal(match)
-                }}
-                className="inline-flex items-center justify-center rounded-md bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
-              >
-                Öppna
-              </button>
-            ) : (
-              <Link
-                href="/matcher"
-                onClick={(event) => event.stopPropagation()}
-                className="inline-flex items-center justify-center rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-900 hover:text-slate-950"
-              >
-                Till matcher
-              </Link>
-            )}
-          </div>
-      </article>
-      </li>
-    )
-  }
-
-  const renderUpcomingPreviewRow = (match: NormalizedMatch) => {
-    const canOpenTimeline = canOpenMatchTimeline(match)
-    const scheduleLabel = buildMatchScheduleLabel(match)
-    const matchupLabel = getMatchupLabel(match)
-    const teamTypeRaw = match.teamType?.trim() || ""
-    const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
-    const hasStream = match.hasStream === true && Boolean((match.playUrl ?? "").trim()) && (match.playUrl ?? "").trim().toLowerCase() !== "null"
-    const dayLabel = match.display?.dateCard?.trim() || match.displayDate
-    const timeLabel = match.display?.time?.trim() || match.time?.trim() || ""
-
-    return (
-      <li key={match.id}>
-        <article
-          className={`flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 transition ${
-            canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:bg-slate-50" : ""
-          }`}
-          onClick={(event) => {
-            if (!canOpenTimeline) {
-              return
-            }
-            const target = event.target as HTMLElement
-            if (target.closest("a,button")) {
-              return
-            }
-            openMatchModal(match)
-          }}
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
-              {dayLabel}
-            </span>
-            {timeLabel ? (
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
-                {timeLabel}
-              </span>
-            ) : null}
-            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">{teamTypeLabel}</span>
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-slate-950 break-words sm:text-[15px]">{matchupLabel}</p>
-              <p className="mt-1 text-xs leading-5 text-slate-500 break-words">{scheduleLabel}</p>
-              {match.series ? <p className="mt-1 text-[11px] leading-5 text-slate-400 break-words">{match.series}</p> : null}
-            </div>
-
-            <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
-              {hasStream ? (
-                <a
-                  href={(match.playUrl ?? "").trim()}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={(event) => event.stopPropagation()}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800 transition hover:border-slate-900 hover:text-slate-950 sm:w-auto"
-                >
-                  {getMatchWatchLabel("upcoming")}
-                </a>
-              ) : canOpenTimeline ? (
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    openMatchModal(match)
-                  }}
-                  className="inline-flex w-full items-center justify-center gap-1 rounded-md border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:border-emerald-400 hover:text-emerald-900 sm:w-auto"
-                >
-                  Visa
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </button>
-              ) : (
-                <Link
-                  href="/matcher"
-                  onClick={(event) => event.stopPropagation()}
-                  className="inline-flex w-full items-center justify-center gap-1 rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-900 hover:text-slate-950 sm:w-auto"
-                >
-                  Till matcher
-                </Link>
+              <h3 className="text-[15px] font-semibold leading-snug text-neutral-900 break-words">{matchupLabel}</h3>
+              {scheduleLabel && <p className="mt-1 text-xs text-neutral-500 break-words">{scheduleLabel}</p>}
+              {showLivePendingScore && (
+                <p className="mt-2 text-xs font-medium text-sky-600">Livescore publiceras snart.</p>
               )}
             </div>
-          </div>
-        </article>
-      </li>
-    )
-  }
 
-  const renderHomeFlowRow = (match: NormalizedMatch) => {
-    const status = getMatchStatus(match)
-    const canOpenTimeline = canOpenMatchTimeline(match)
-    const scheduleLabel = buildMatchScheduleLabel(match)
-    const matchupLabel = getMatchupLabel(match)
-    const teamTypeRaw = match.teamType?.trim() || ""
-    const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
-    const hasStream = match.hasStream === true && Boolean((match.playUrl ?? "").trim()) && (match.playUrl ?? "").trim().toLowerCase() !== "null"
-    const liveScore = typeof match.result === "string" ? match.result.trim() : ""
-    const stableScore = liveScore || stableScoreByMatchId[match.id] || ""
-    const hasStarted = match.date.getTime() <= Date.now() + 60_000
-    const scoreValue = stableScore && (status !== "upcoming" || hasStarted) ? stableScore : null
-    const showLivePendingScore = status === "live" && match.resultState === "live_pending" && !scoreValue
-
-    const statusBadge = (() => {
-      if (status === "live") {
-        return { label: match.statusLabel ?? "LIVE", tone: "bg-rose-50 text-rose-600" }
-      }
-      if (status === "finished") {
-        return { label: match.statusLabel ?? "SLUT", tone: "bg-slate-100 text-slate-600" }
-      }
-      return { label: match.statusLabel ?? "KOMMANDE", tone: "bg-sky-50 text-sky-700" }
-    })()
-
-    return (
-      <li key={match.id}>
-        <article
-          className={`flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 transition ${
-            canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:bg-slate-50" : ""
-          }`}
-          onMouseEnter={() => {
-            if (canOpenTimeline) {
-              fetchMatchTimeline(match).catch(() => undefined)
-            }
-          }}
-          onTouchStart={() => {
-            if (canOpenTimeline) {
-              fetchMatchTimeline(match).catch(() => undefined)
-            }
-          }}
-          onClick={(event) => {
-            if (!canOpenTimeline) {
-              return
-            }
-            const target = event.target as HTMLElement
-            if (target.closest("a,button")) {
-              return
-            }
-            openMatchModal(match)
-          }}
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${statusBadge.tone}`}>
-              {statusBadge.label}
-            </span>
-            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">{teamTypeLabel}</span>
-            {match.series ? <span className="text-[11px] text-slate-400">{match.series}</span> : null}
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-slate-950 break-words sm:text-[15px]">{matchupLabel}</p>
-              <p className="mt-1 text-xs leading-5 text-slate-500 break-words">{scheduleLabel}</p>
-              {showLivePendingScore ? (
-                <p className="mt-2 text-xs font-medium text-sky-700">Livescore väntar från matchflödet.</p>
-              ) : null}
-            </div>
-
-            <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
-              {scoreValue ? (
-                <span className="inline-flex w-full items-center justify-center rounded-md bg-slate-950 px-3 py-2 text-xs font-bold text-white sm:w-auto">
+            <div className="flex flex-col items-end gap-2 shrink-0">
+              {scoreValue && (
+                <span className="text-2xl font-black tabular-nums text-neutral-900" data-score-value="true">
                   {scoreValue}
                 </span>
-              ) : null}
-              {hasStream ? (
-                <a
-                  href={(match.playUrl ?? "").trim()}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={(event) => event.stopPropagation()}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800 transition hover:border-slate-900 hover:text-slate-950 sm:w-auto"
-                >
-                  {getMatchWatchLabel(status)}
-                </a>
-              ) : canOpenTimeline ? (
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    openMatchModal(match)
-                  }}
-                  className="inline-flex w-full items-center justify-center gap-1 rounded-md border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:border-emerald-400 hover:text-emerald-900 sm:w-auto"
-                >
-                  Öppna
-                </button>
-              ) : (
-                <Link
-                  href="/matcher"
-                  onClick={(event) => event.stopPropagation()}
-                  className="inline-flex w-full items-center justify-center gap-1 rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-900 hover:text-slate-950 sm:w-auto"
-                >
-                  Till matcher
-                </Link>
               )}
+              <div className="flex items-center gap-2">
+                {hasStream ? (
+                  <a
+                    href={(match.playUrl ?? "").trim()}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-1.5 text-[11px] font-semibold text-neutral-700 transition hover:border-neutral-900 hover:text-neutral-900"
+                  >
+                    {getMatchWatchLabel(status)}
+                  </a>
+                ) : canOpen ? (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); openMatchModal(match) }}
+                    className="inline-flex items-center gap-1 rounded-lg bg-neutral-900 px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-neutral-700"
+                  >
+                    Detaljer
+                    <ArrowRight className="h-3 w-3" />
+                  </button>
+                ) : (
+                  <Link
+                    href="/matcher"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center gap-1 rounded-lg border border-neutral-200 px-3 py-1.5 text-[11px] font-semibold text-neutral-600 transition hover:border-neutral-400"
+                  >
+                    Matcher
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
+
+          {showProfixioWarning && (
+            <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Profixio har tekniska problem med liveuppdateringen just nu.
+            </p>
+          )}
+          {showFinishedZeroZeroIssue && (
+            <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Misstänkt resultatfel: avslutad match visas som 0–0.
+            </p>
+          )}
         </article>
       </li>
     )
   }
 
   const renderUpcomingSkeletonRows = () => (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {Array.from({ length: 4 }).map((_, index) => (
-        <div key={`upcoming-skeleton-${index}`} className="rounded-2xl border border-slate-200 bg-white px-4 py-3.5">
-          <div className="flex flex-wrap gap-2">
-            <div className="h-6 w-20 rounded-full bg-slate-100" />
-            <div className="h-6 w-16 rounded-full bg-slate-100" />
-            <div className="h-6 w-14 rounded-full bg-emerald-50" />
+        <div key={`skeleton-${index}`} className="rounded-xl border border-neutral-100 bg-white p-5">
+          <div className="flex gap-2 mb-3">
+            <div className="h-5 w-16 rounded-md bg-neutral-100 animate-pulse" />
+            <div className="h-5 w-20 rounded-md bg-neutral-100 animate-pulse" />
           </div>
-          <div className="mt-3 h-4 w-4/5 rounded bg-slate-200" />
-          <div className="mt-2 h-3 w-3/5 rounded bg-slate-100" />
-          <div className="mt-3 flex justify-end">
-            <div className="h-8 w-24 rounded-md bg-slate-100" />
-          </div>
+          <div className="h-4 w-3/4 rounded bg-neutral-100 animate-pulse" />
+          <div className="mt-2 h-3 w-1/2 rounded bg-neutral-50 animate-pulse" />
         </div>
       ))}
     </div>
@@ -690,6 +449,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
   const showInitialMatchLoader =
     !isInitialHomeMatchFetchDone && (matchLoading || matchRefreshing || !hasMatchPayload)
+
   const homeMatchFlow = useMemo(() => {
     const seen = new Set<string>()
     const liveItems = (groupedFeed?.live ?? []).slice(0, 3)
@@ -698,418 +458,322 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     const upcomingItems = (groupedFeed?.upcoming ?? []).slice(0, remainingSlots)
 
     const ordered = [...liveItems, ...resultItems, ...upcomingItems].filter((match) => {
-      if (seen.has(match.id)) {
-        return false
-      }
+      if (seen.has(match.id)) return false
       seen.add(match.id)
       return true
     })
 
-    return {
-      items: ordered.slice(0, 10),
-      total: ordered.length,
-    }
+    return { items: ordered.slice(0, 10), total: ordered.length }
   }, [groupedFeed, recentResults])
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return
-    }
+    if (typeof window === "undefined") return
     const resolved = deriveSiteVariant(window.location.host)
     setSiteVariant(resolved)
-
     const resolvedTheme = getThemeVariant(window.location.host)
     setThemeVariant(resolvedTheme)
   }, [])
 
   const isPinkTheme = themeVariant === "pink"
   const heroImages = typeof window !== "undefined" ? getHeroImages(window.location.host) : getHeroImages()
-  const heroOverlayClass = isPinkTheme
-    ? "from-pink-900/40 via-pink-800/20 to-rose-900/60"
-    : "from-black/70 via-black/40 to-transparent"
+
+  // --- Tier display config ---
+  const tierBadgeConfig: Record<string, { label: string; color: string }> = {
+    Diamantpartner: { label: "Diamant", color: "bg-amber-50 text-amber-700 border-amber-200" },
+    Platinapartner: { label: "Platina", color: "bg-slate-50 text-slate-600 border-slate-200" },
+    Guldpartner: { label: "Guld", color: "bg-yellow-50 text-yellow-700 border-yellow-200" },
+    Silverpartner: { label: "Silver", color: "bg-neutral-50 text-neutral-500 border-neutral-200" },
+    Bronspartner: { label: "Brons", color: "bg-orange-50 text-orange-600 border-orange-200" },
+  }
 
   return (
     <ErrorBoundary>
-      <div>
+      <div className="bg-white">
         <Header />
         <main>
-          {/* Hero Section */}
-          <section className={`relative w-full h-screen flex items-center justify-center overflow-hidden ${isPinkTheme ? "bg-gradient-to-br from-pink-50 via-pink-100 to-rose-200" : ""
-            }`}>
-            {/* Mobile Image */}
+          {/* ===================== HERO ===================== */}
+          <section className="relative w-full h-[100svh] min-h-[600px] flex items-end overflow-hidden bg-neutral-950">
             {isPinkTheme && (
               <Image
                 src={heroImages.mobile}
-                alt="Härnösands HF Memorial - Laget Före Allt"
+                alt="Härnösands HF Memorial"
                 fill
-                quality={100}
-                priority={true}
-                unoptimized={true}
-                className="z-0 transition-all duration-700 object-cover saturate-125 contrast-110 brightness-105 hue-rotate-15 block sm:hidden"
+                quality={90}
+                priority
+                unoptimized
+                className="z-0 object-cover block sm:hidden"
                 sizes="100vw"
-                style={{
-                  objectPosition: 'center center'
-                }}
-                onLoad={() => {
-                  if (!showHeroContent) {
-                    setTimeout(() => setShowHeroContent(true), 1000)
-                  }
-                }}
-                onError={(e) => {
-                  console.error('Mobile hero image failed to load:', heroImages.mobile)
-                }}
+                style={{ objectPosition: "center center" }}
               />
             )}
-
-            {/* Desktop Image */}
             <Image
               src={isPinkTheme ? heroImages.desktop : heroImages.desktop}
-              alt={isPinkTheme ? "Härnösands HF Memorial - Laget Före Allt" : "Härnösands HF herrlag och damlag 2025"}
+              alt="Härnösands HF"
               fill
-              quality={100}
-              priority={true}
+              quality={90}
+              priority
               unoptimized={isPinkTheme}
-              className={`z-0 transition-all duration-700 object-cover ${isPinkTheme
-                ? "saturate-125 contrast-110 brightness-105 hue-rotate-15 hidden sm:block"
-                : "block"
-                }`}
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 100vw"
-              style={{
-                objectPosition: 'center center'
-              }}
-              onLoad={() => {
-                if (isPinkTheme && !showHeroContent) {
-                  setTimeout(() => setShowHeroContent(true), 1000)
-                }
-              }}
-              onError={(e) => {
-                console.error('Hero image failed to load:', heroImages.desktop)
-                if (isPinkTheme) {
-                  // Force reload attempt
-                  const img = e.target as HTMLImageElement
-                  setTimeout(() => {
-                    img.src = heroImages.desktop + '?v=' + Date.now()
-                  }, 1000)
-                }
-              }}
-              {...(isEditorMode && {
-                "data-editable": "true",
-                "data-field-path": "home.hero.imageUrl",
-              })}
+              className={`z-0 object-cover ${isPinkTheme ? "hidden sm:block" : "block"}`}
+              sizes="100vw"
+              style={{ objectPosition: "center 30%" }}
+              {...(isEditorMode && { "data-editable": "true", "data-field-path": "home.hero.imageUrl" })}
             />
-            <div className={`absolute inset-0 bg-gradient-to-t ${heroOverlayClass} z-10 ${isPinkTheme ? "backdrop-blur-[0.5px]" : ""
-              }`} />
-            {isPinkTheme && (
-              <>
-                <div className="absolute inset-0 z-5 bg-gradient-to-br from-pink-500/8 via-rose-400/5 to-pink-900/15 pointer-events-none" />
-                <div className="absolute inset-0 z-6 pointer-events-none" style={{
-                  background: 'radial-gradient(circle at center, transparent 20%, rgba(236,72,153,0.05) 50%, rgba(190,24,93,0.12) 100%)'
-                }} />
-              </>
-            )}
-            <div
-              className={`relative z-20 text-white text-center px-4 sm:px-6 md:px-8 max-w-5xl mx-auto transition-opacity duration-700 w-full h-full flex flex-col justify-center items-center ${showHeroContent ? "opacity-100" : "opacity-0"
-                }`}
-            >
-              <h1
-                className={`text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold mb-3 sm:mb-4 md:mb-6 leading-tight tracking-tight animate-fade-in-up text-shadow-outline ${isPinkTheme ? "drop-shadow-2xl filter drop-shadow-[0_0_20px_rgba(236,72,153,0.3)]" : ""
-                  }`}
-                {...(isEditorMode && {
-                  "data-editable": "true",
-                  "data-field-path": "home.hero.title",
-                })}
-              >
-                {isPinkTheme ? (
-                  <>LAGET <span className="text-pink-300 drop-shadow-[0_0_30px_rgba(244,114,182,0.8)] animate-pulse">FÖRE ALLT</span></>
-                ) : (
-                  <>LAGET <span className="text-orange-500">FÖRE ALLT</span></>
-                )}
-              </h1>
-              <p
-                className="text-sm sm:text-base md:text-lg lg:text-xl mb-6 sm:mb-8 max-w-2xl sm:max-w-3xl mx-auto animate-fade-in-up delay-200 text-shadow-md px-4 sm:px-2 md:px-0 leading-relaxed"
-                {...(isEditorMode && {
-                  "data-editable": "true",
-                  "data-field-path": "home.hero.description",
-                })}
-              >
-                {content.hero.description}
-              </p>
-              <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 animate-fade-in-up delay-400 mb-8 sm:mb-12 px-2 sm:px-0">
-                <Button
-                  asChild
-                  className={`${isPinkTheme
-                    ? "bg-pink-500 hover:bg-pink-600 focus:ring-pink-300 shadow-pink-500/25"
-                    : "bg-orange-500 hover:bg-orange-600 focus:ring-orange-300"
-                    } text-white px-6 sm:px-10 py-3 sm:py-4 rounded-md text-base sm:text-lg font-semibold shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-4 w-full sm:w-auto`}
-                >
-                  <Link href={content.hero.button1Link}>
-                    <span
-                      {...(isEditorMode && {
-                        "data-editable": "true",
-                        "data-field-path": "home.hero.button1Text",
-                      })}
-                    >
-                      {content.hero.button1Text}
-                    </span>
-                    <ArrowRight className="ml-3 h-5 w-5" />
-                  </Link>
-                </Button>
-                <Button
-                  asChild
-                  className={`${isPinkTheme
-                    ? "bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-300 shadow-emerald-500/25"
-                    : "bg-green-700 hover:bg-green-800 focus:ring-green-300"
-                    } text-white px-6 sm:px-10 py-3 sm:py-4 rounded-md text-base sm:text-lg font-semibold shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-4 w-full sm:w-auto`}
-                >
-                  <Link href={content.hero.button2Link}>
-                    <span
-                      {...(isEditorMode && {
-                        "data-editable": "true",
-                        "data-field-path": "home.hero.button2Text",
-                      })}
-                    >
-                      {content.hero.button2Text}
-                    </span>
-                  </Link>
-                </Button>
-              </div>
 
-              <div className="flex justify-center space-x-6 animate-fade-in-up delay-600">
-                <Link
-                  href="https://www.facebook.com/profile.php?id=61566621756014"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center space-x-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 transition-all duration-300 hover:scale-105"
-                >
-                  <Facebook className="w-5 h-5" />
-                  <span className="font-medium hidden sm:block">Facebook</span>
-                </Link>
-                <Link
-                  href="https://www.instagram.com/harnosandshf"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center space-x-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 transition-all duration-300 hover:scale-105"
-                >
-                  <Instagram className="w-5 h-5" />
-                  <span className="font-medium hidden sm:block">Instagram</span>
-                </Link>
+            {/* Gradient overlays */}
+            <div className="absolute inset-0 z-10 bg-gradient-to-t from-neutral-950 via-neutral-950/50 to-transparent" />
+            <div className="absolute inset-0 z-10 bg-gradient-to-r from-neutral-950/40 to-transparent" />
+
+            {/* Hero content - positioned at bottom */}
+            <div className={`relative z-20 w-full pb-16 sm:pb-20 lg:pb-24 transition-opacity duration-700 ${showHeroContent ? "opacity-100" : "opacity-0"}`}>
+              <div className="container mx-auto px-4 sm:px-6">
+                <div className="max-w-3xl">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-400 mb-4 landing-fade-up">
+                    Härnösands Handbollsförening
+                  </p>
+                  <h1
+                    className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white leading-[0.95] tracking-tight mb-6 landing-fade-up landing-delay-1"
+                    {...(isEditorMode && { "data-editable": "true", "data-field-path": "home.hero.title" })}
+                  >
+                    {isPinkTheme ? (
+                      <>LAGET<br /><span className="text-pink-400">FÖRE ALLT</span></>
+                    ) : (
+                      <>LAGET<br /><span className="text-emerald-400">FÖRE ALLT</span></>
+                    )}
+                  </h1>
+                  <p
+                    className="text-base sm:text-lg text-neutral-300 max-w-xl mb-8 leading-relaxed landing-fade-up landing-delay-2"
+                    {...(isEditorMode && { "data-editable": "true", "data-field-path": "home.hero.description" })}
+                  >
+                    {content.hero.description}
+                  </p>
+
+                  <div className="flex flex-col sm:flex-row gap-3 mb-10 landing-fade-up landing-delay-3">
+                    <Link
+                      href={content.hero.button1Link}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-6 py-3.5 text-sm font-semibold text-neutral-900 transition hover:bg-neutral-100"
+                    >
+                      <span {...(isEditorMode && { "data-editable": "true", "data-field-path": "home.hero.button1Text" })}>
+                        {content.hero.button1Text}
+                      </span>
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                    <Link
+                      href={content.hero.button2Link}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/20 bg-white/10 backdrop-blur-sm px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-white/20"
+                    >
+                      <span {...(isEditorMode && { "data-editable": "true", "data-field-path": "home.hero.button2Text" })}>
+                        {content.hero.button2Text}
+                      </span>
+                    </Link>
+                  </div>
+
+                  {/* Social links */}
+                  <div className="flex items-center gap-3 landing-fade-up landing-delay-4">
+                    <Link
+                      href="https://www.facebook.com/profile.php?id=61566621756014"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center w-10 h-10 rounded-full border border-white/15 bg-white/5 text-white/70 transition hover:bg-white/15 hover:text-white"
+                    >
+                      <Facebook className="w-4 h-4" />
+                    </Link>
+                    <Link
+                      href="https://www.instagram.com/harnosandshf"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center w-10 h-10 rounded-full border border-white/15 bg-white/5 text-white/70 transition hover:bg-white/15 hover:text-white"
+                    >
+                      <Instagram className="w-4 h-4" />
+                    </Link>
+                  </div>
+                </div>
               </div>
+            </div>
+
+            {/* Scroll indicator */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 hidden sm:flex flex-col items-center gap-1 text-white/40">
+              <ChevronDown className="h-5 w-5 animate-bounce" />
             </div>
           </section>
 
-          {/* SEO H1 Section */}
+          {/* SEO H1 */}
           <section className="sr-only" aria-hidden="true">
             <h1>Härnösands HF – Handboll i Härnösand</h1>
           </section>
 
-          <section className="relative z-30 -mt-10 pb-14 sm:-mt-20 sm:pb-16">
-            <div className="container mx-auto px-4">
-              <div className="overflow-hidden rounded-[28px] bg-[linear-gradient(180deg,rgba(248,250,252,0.98),rgba(241,245,249,0.96),rgba(236,253,245,0.9))]">
-                <div className="border-b border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.9),rgba(248,250,252,0.88),rgba(236,253,245,0.78))] px-5 py-5 sm:px-8 sm:py-7">
-                  <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                    <div className="max-w-2xl">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-emerald-600">Matchläge</p>
-                      <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-                        Live, på tur och nyss klart.
-                      </h2>
-                      <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600 sm:text-base">
-                        Ett snabbt läge direkt från Profixio. För hela listan, fler lag och full detaljvy går du vidare till matchsidan.
-                      </p>
-                    </div>
-
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      <Link
-                        href="/matcher"
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-                      >
-                        Till matcher
-                        <ArrowRight className="h-4 w-4" />
-                      </Link>
-                      <Link
-                        href={TICKET_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-800 transition hover:border-orange-400 hover:bg-orange-100"
-                      >
-                        Köp biljett
-                      </Link>
-                      {shopVisible ? (
-                        <Link
-                          href={SHOP_URL}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 transition hover:border-emerald-400 hover:bg-emerald-100"
-                        >
-                          <ShoppingBag className="h-4 w-4" />
-                          Butik
-                        </Link>
-                      ) : null}
+          {/* ===================== STATS BAR ===================== */}
+          <section className="relative z-30 bg-neutral-900">
+            <div className="container mx-auto px-4 sm:px-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-neutral-800">
+                {[
+                  { value: content.stats.totalTeams, label: "Lag totalt", icon: Users },
+                  { value: content.stats.aTeams, label: "A-lag", icon: Trophy },
+                  { value: content.stats.youthTeams, label: "Ungdomslag", icon: Heart },
+                  { value: content.stats.yearsHistory, label: "År av historia", icon: Calendar },
+                ].map((stat) => (
+                  <div key={stat.label} className="flex items-center gap-4 py-6 sm:py-8 px-4 sm:px-6">
+                    <stat.icon className="h-5 w-5 text-emerald-400 shrink-0 hidden sm:block" />
+                    <div>
+                      <p className="text-2xl sm:text-3xl font-black text-white">{stat.value}</p>
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-neutral-400">{stat.label}</p>
                     </div>
                   </div>
-
-                </div>
-
-                <div className="space-y-4 p-4 sm:p-6">
-                  {showInitialMatchLoader ? (
-                    <section className="bg-white p-4 sm:p-5">
-                      <div className="mb-4 h-5 w-40 rounded bg-slate-200" />
-                      {renderUpcomingSkeletonRows()}
-                    </section>
-                  ) : matchError ? (
-                    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-6 text-center text-sm text-amber-800">
-                      Matcherna kunde inte läsas in just nu.
-                    </div>
-                  ) : (
-                    <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-                      <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
-                        <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-600">Översikt</p>
-                          <h3 className="mt-1 text-lg font-semibold text-slate-950">Tio matcher närmast just nu</h3>
-                          <p className="mt-1 text-sm text-slate-500">
-                            Live först, färska resultat direkt därefter, sedan nästa matcher framåt.
-                          </p>
-                        </div>
-                        <Link
-                          href="/matcher"
-                          className="inline-flex items-center justify-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
-                        >
-                          Till matcher
-                        </Link>
-                      </div>
-
-                      <div className="mt-4 space-y-2">
-                        {homeMatchFlow.items.length > 0 ? (
-                          <ul className="space-y-2">{homeMatchFlow.items.map(renderHomeFlowRow)}</ul>
-                        ) : (
-                          <div className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-500">
-                            Inga matcher att visa just nu.
-                          </div>
-                        )}
-                      </div>
-                    </section>
-                  )}
-                </div>
+                ))}
               </div>
             </div>
           </section>
 
-          {/* Instagram Feed Section */}
-          <InstagramFeed />
+          {/* ===================== MATCH FEED ===================== */}
+          <section className="py-16 sm:py-20 bg-neutral-50">
+            <div className="container mx-auto px-4 sm:px-6">
+              <div className="max-w-4xl mx-auto">
+                {/* Section header */}
+                <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between mb-8">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-600 mb-2">Matchcenter</p>
+                    <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-neutral-900">
+                      Live & kommande
+                    </h2>
+                    <p className="mt-2 text-sm text-neutral-500 max-w-lg">
+                      Direkt från Profixio. Klicka p&aring; en match f&ouml;r detaljer.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Link
+                      href="/matcher"
+                      className="inline-flex items-center gap-2 rounded-lg bg-neutral-900 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-neutral-700"
+                    >
+                      Alla matcher
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                    <Link
+                      href={TICKET_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-xs font-semibold text-neutral-700 transition hover:border-neutral-300 hover:bg-neutral-50"
+                    >
+                      Köp biljett
+                    </Link>
+                    {shopVisible && (
+                      <Link
+                        href={SHOP_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100"
+                      >
+                        <ShoppingBag className="h-3.5 w-3.5" />
+                        Butik
+                      </Link>
+                    )}
+                  </div>
+                </div>
 
-          {/* About Club Section */}
-          <section className="py-16">
-            <div className="container mx-auto px-4">
-              <div className="grid md:grid-cols-2 gap-12 items-center">
-                <div>
+                {/* Match list */}
+                {showInitialMatchLoader ? (
+                  renderUpcomingSkeletonRows()
+                ) : matchError ? (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-8 text-center text-sm text-amber-800">
+                    Matcherna kunde inte läsas in just nu.
+                  </div>
+                ) : homeMatchFlow.items.length > 0 ? (
+                  <ul className="space-y-3">
+                    {homeMatchFlow.items.map(renderHomeFlowRow)}
+                  </ul>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-neutral-300 bg-white px-5 py-12 text-center text-sm text-neutral-500">
+                    Inga matcher att visa just nu.
+                  </div>
+                )}
+
+                {homeMatchFlow.items.length > 0 && (
+                  <div className="mt-6 text-center">
+                    <Link
+                      href="/matcher"
+                      className="inline-flex items-center gap-2 text-sm font-semibold text-neutral-600 transition hover:text-neutral-900"
+                    >
+                      Visa alla matcher
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* ===================== ABOUT CLUB ===================== */}
+          <section className="py-16 sm:py-24 bg-white">
+            <div className="container mx-auto px-4 sm:px-6">
+              <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+                {/* Text side */}
+                <div className="max-w-xl">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-600 mb-3">Om klubben</p>
                   <h2
-                    className={`text-4xl font-bold ${isPinkTheme ? "text-pink-600" : "text-green-600"} mb-2`}
-                    {...(isEditorMode && {
-                      "data-editable": "true",
-                      "data-field-path": "home.aboutClub.title",
-                    })}
+                    className="text-3xl sm:text-4xl font-black tracking-tight text-neutral-900 mb-6"
+                    {...(isEditorMode && { "data-editable": "true", "data-field-path": "home.aboutClub.title" })}
                   >
                     {content.aboutClub.title}
                   </h2>
-
                   <p
-                    className="text-gray-700 mb-6"
-                    {...(isEditorMode && {
-                      "data-editable": "true",
-                      "data-field-path": "home.aboutClub.paragraph1",
-                    })}
+                    className="text-neutral-600 leading-relaxed mb-4"
+                    {...(isEditorMode && { "data-editable": "true", "data-field-path": "home.aboutClub.paragraph1" })}
                   >
                     {content.aboutClub.paragraph1}
                   </p>
-
                   <p
-                    className="text-gray-700 mb-8"
-                    {...(isEditorMode && {
-                      "data-editable": "true",
-                      "data-field-path": "home.aboutClub.paragraph2",
-                    })}
+                    className="text-neutral-600 leading-relaxed mb-8"
+                    {...(isEditorMode && { "data-editable": "true", "data-field-path": "home.aboutClub.paragraph2" })}
                   >
                     {content.aboutClub.paragraph2}
                   </p>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-                    <div className="border border-gray-200 rounded-lg p-6 text-center">
-                      <Heart className={`w-8 h-8 ${isPinkTheme ? "text-pink-600" : "text-green-600"} mx-auto mb-3`} />
-                      <h4 className="font-medium mb-2 text-black text-base">Passion</h4>
-                      <p
-                        className="text-sm text-gray-600 leading-relaxed"
-                        {...(isEditorMode && {
-                          "data-editable": "true",
-                          "data-field-path": "home.aboutClub.passionText",
-                        })}
-                      >
-                        {content.aboutClub.passionText}
-                      </p>
-                    </div>
-
-                    <div className="border border-gray-200 rounded-lg p-6 text-center">
-                      <TrendingUp className="w-8 h-8 text-orange-500 mx-auto mb-3" />
-                      <h4 className="font-medium mb-2 text-black text-base">Utveckling</h4>
-                      <p
-                        className="text-sm text-gray-600 leading-relaxed"
-                        {...(isEditorMode && {
-                          "data-editable": "true",
-                          "data-field-path": "home.aboutClub.developmentText",
-                        })}
-                      >
-                        {content.aboutClub.developmentText}
-                      </p>
-                    </div>
-
-                    <div className="border border-gray-200 rounded-lg p-6 text-center">
-                      <Users className={`w-8 h-8 ${isPinkTheme ? "text-emerald-600" : "text-green-600"} mx-auto mb-3`} />
-                      <h4 className="font-medium mb-2 text-black text-base">Gemenskap</h4>
-                      <p
-                        className="text-sm text-gray-600 leading-relaxed"
-                        {...(isEditorMode && {
-                          "data-editable": "true",
-                          "data-field-path": "home.aboutClub.communityText",
-                        })}
-                      >
-                        {content.aboutClub.communityText}
-                      </p>
-                    </div>
+                  {/* Value pillars */}
+                  <div className="grid grid-cols-3 gap-4 mb-8">
+                    {[
+                      { icon: Heart, title: "Passion", desc: content.aboutClub.passionText, field: "passionText" },
+                      { icon: TrendingUp, title: "Utveckling", desc: content.aboutClub.developmentText, field: "developmentText" },
+                      { icon: Users, title: "Gemenskap", desc: content.aboutClub.communityText, field: "communityText" },
+                    ].map((pillar) => (
+                      <div key={pillar.title} className="text-center">
+                        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50">
+                          <pillar.icon className="h-5 w-5 text-emerald-600" />
+                        </div>
+                        <h4 className="text-sm font-semibold text-neutral-900 mb-1">{pillar.title}</h4>
+                        <p
+                          className="text-xs text-neutral-500 leading-relaxed"
+                          {...(isEditorMode && { "data-editable": "true", "data-field-path": `home.aboutClub.${pillar.field}` })}
+                        >
+                          {pillar.desc}
+                        </p>
+                      </div>
+                    ))}
                   </div>
 
-                  <div className="flex flex-wrap gap-4">
+                  <div className="flex flex-wrap gap-3">
                     <Link
                       href={content.aboutClub.button1Link}
-                      className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-md font-medium transition-colors"
+                      className="inline-flex items-center gap-2 rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-neutral-700"
                     >
-                      <span
-                        {...(isEditorMode && {
-                          "data-editable": "true",
-                          "data-field-path": "home.aboutClub.button1Text",
-                        })}
-                      >
+                      <span {...(isEditorMode && { "data-editable": "true", "data-field-path": "home.aboutClub.button1Text" })}>
                         {content.aboutClub.button1Text}
                       </span>
                     </Link>
                     <Link
                       href={content.aboutClub.button2Link}
-                      className="bg-white border border-gray-300 hover:bg-gray-100 text-gray-800 px-6 py-2 rounded-md font-medium transition-colors"
+                      className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 px-5 py-2.5 text-sm font-semibold text-neutral-700 transition hover:border-neutral-300 hover:bg-neutral-50"
                     >
-                      <span
-                        {...(isEditorMode && {
-                          "data-editable": "true",
-                          "data-field-path": "home.aboutClub.button2Text",
-                        })}
-                      >
+                      <span {...(isEditorMode && { "data-editable": "true", "data-field-path": "home.aboutClub.button2Text" })}>
                         {content.aboutClub.button2Text}
                       </span>
                     </Link>
                   </div>
                 </div>
 
+                {/* Image side */}
                 <div className="relative">
-                  <div className="relative h-[400px] rounded-lg overflow-hidden shadow-xl">
+                  <div className="relative aspect-[4/5] rounded-2xl overflow-hidden">
                     <Image
                       src={content.aboutClub.imageSrc || "/placeholder.svg"}
-                      alt="Härnösands HF ungdomslag"
+                      alt="Härnösands HF"
                       fill
                       className="object-cover"
                       loading="lazy"
@@ -1117,227 +781,210 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                       blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
                       onContextMenu={(e) => e.preventDefault()}
                       onDragStart={(e) => e.preventDefault()}
-                      {...(isEditorMode && {
-                        "data-editable": "true",
-                        "data-field-path": "home.aboutClub.imageSrc",
-                      })}
+                      {...(isEditorMode && { "data-editable": "true", "data-field-path": "home.aboutClub.imageSrc" })}
                     />
                   </div>
-
-                  <div className="absolute -top-4 -right-4 bg-orange-500 text-white rounded-lg p-4 shadow-lg">
-                    <div
-                      className="text-3xl font-bold"
-                      {...(isEditorMode && {
-                        "data-editable": "true",
-                        "data-field-path": "home.aboutClub.statNumber",
-                      })}
+                  {/* Floating stat badge */}
+                  <div className="absolute -bottom-5 -left-5 sm:-bottom-6 sm:-left-6 bg-neutral-900 text-white rounded-2xl p-5 shadow-2xl">
+                    <p
+                      className="text-3xl sm:text-4xl font-black"
+                      {...(isEditorMode && { "data-editable": "true", "data-field-path": "home.aboutClub.statNumber" })}
                     >
                       {content.aboutClub.statNumber}
-                    </div>
-                    <div
-                      className="text-sm"
-                      {...(isEditorMode && {
-                        "data-editable": "true",
-                        "data-field-path": "home.aboutClub.statLabel",
-                      })}
+                    </p>
+                    <p
+                      className="text-xs font-medium uppercase tracking-wider text-neutral-400"
+                      {...(isEditorMode && { "data-editable": "true", "data-field-path": "home.aboutClub.statLabel" })}
                     >
                       {content.aboutClub.statLabel}
-                    </div>
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* Partners Carousel Section */}
-          <section className="py-16">
-            <div className="container mx-auto px-4">
-              <h2 className="text-4xl font-bold text-center mb-2">
-                Våra <span className="text-orange-500">Partners</span>
-              </h2>
-              <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">
-                Vi är stolta över att samarbeta med lokala företag och organisationer som stödjer vår verksamhet och
-                hjälper oss att utveckla handbollen i Härnösand.
-              </p>
+          {/* ===================== INSTAGRAM ===================== */}
+          <InstagramFeed />
 
-              {tierOrder.map(
-                (tierName) =>
-                  partnersByTier[tierName] && (
-                    <Collapsible
-                      key={tierName}
-                      open={openTier === tierName}
-                      onOpenChange={() => setOpenTier(openTier === tierName ? null : tierName)}
-                      className="mb-8 border-b border-gray-200 pb-4"
-                    >
-                      <CollapsibleTrigger asChild>
-                        <div className="flex justify-between items-center mb-4 cursor-pointer">
-                          <h3 className={`text-3xl font-bold ${isPinkTheme ? "text-emerald-600" : "text-green-600"}`}>{tierName}</h3>
-                          <Button variant="ghost" size="icon" aria-expanded={openTier === tierName}>
-                            {openTier === tierName ? (
-                              <Minus className={`w-6 h-6 ${isPinkTheme ? "text-emerald-700" : "text-green-700"}`} />
-                            ) : (
-                              <Plus className={`w-6 h-6 ${isPinkTheme ? "text-emerald-700" : "text-green-700"}`} />
+          {/* ===================== PARTNERS ===================== */}
+          <section className="py-16 sm:py-24 bg-white">
+            <div className="container mx-auto px-4 sm:px-6">
+              <div className="text-center mb-12">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-600 mb-3">Samarbeten</p>
+                <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-neutral-900 mb-4">
+                  Våra partners
+                </h2>
+                <p className="text-neutral-500 max-w-xl mx-auto text-sm leading-relaxed">
+                  Lokala företag och organisationer som stödjer vår verksamhet och hjälper oss utveckla handbollen i Härnösand.
+                </p>
+              </div>
+
+              <div className="space-y-10 max-w-5xl mx-auto">
+                {tierOrder.map((tierName) => {
+                  const partners = partnersByTier[tierName]
+                  if (!partners || partners.length === 0) return null
+                  const config = tierBadgeConfig[tierName] || { label: tierName, color: "bg-neutral-50 text-neutral-600 border-neutral-200" }
+                  const isDiamant = tierName === "Diamantpartner"
+
+                  return (
+                    <div key={tierName}>
+                      <div className="flex items-center gap-3 mb-5">
+                        <span className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${config.color}`}>
+                          {isDiamant && <Star className="h-3 w-3 fill-current" />}
+                          {config.label}
+                        </span>
+                        <div className="flex-1 h-px bg-neutral-100" />
+                      </div>
+                      <div className={`grid gap-4 ${isDiamant ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4" : "grid-cols-3 sm:grid-cols-4 lg:grid-cols-6"}`}>
+                        {partners.map((partner) => (
+                          <div
+                            key={partner.id}
+                            className={`group relative flex items-center justify-center rounded-xl border bg-white p-4 transition-all duration-200 hover:shadow-md ${
+                              isDiamant ? "border-neutral-200 h-28 sm:h-32" : "border-neutral-100 h-20 sm:h-24"
+                            }`}
+                          >
+                            <div className={`relative w-full ${isDiamant ? "h-16 sm:h-20" : "h-10 sm:h-14"}`}>
+                              <Image
+                                src={partner.src || "/placeholder.svg"}
+                                alt={partner.alt}
+                                fill
+                                className="object-contain transition-transform duration-200 group-hover:scale-105"
+                                loading="lazy"
+                                placeholder="blur"
+                                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
+                              />
+                            </div>
+                            {partner.linkUrl && (
+                              <a
+                                href={partner.linkUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="absolute inset-0 z-10"
+                                aria-label={`Besök ${partner.alt}`}
+                              />
                             )}
-                          </Button>
-                        </div>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="CollapsibleContent animate-fade-in">
-                        <div className="flex justify-center">
-                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-                            {partnersByTier[tierName].map((partner) => {
-                              const isDiamant = partner.tier === "Diamantpartner"
-                              const isHighcon = partner.id === "highcon"
-                              return (
-                                <div key={partner.id} className="relative group w-full h-36">
-                                  <Card
-                                    className={`p-4 shadow-lg rounded-lg flex flex-col items-center justify-center h-full w-full text-center
-                                  ${isDiamant ? "border-2 border-yellow-500 bg-white" : "bg-white"}
-                                `}
-                                  >
-                                    {isDiamant && (
-                                      <Star className="absolute top-1 right-1 w-5 h-5 text-yellow-500 fill-yellow-500" />
-                                    )}
-                                    <div className={`relative w-full mb-2 ${isHighcon ? "h-24" : "h-20"}`}>
-                                      <Image
-                                        src={partner.src || "/placeholder.svg"}
-                                        alt={partner.alt}
-                                        fill
-                                        className="object-contain transition-transform duration-300 group-hover:scale-105"
-                                        loading="lazy"
-                                        placeholder="blur"
-                                        blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
-                                      />
-                                    </div>
-                                    <h4
-                                      className={`text-sm font-semibold ${isDiamant ? "text-gray-900" : "text-gray-800"}`}
-                                    >
-                                      {partner.alt}
-                                    </h4>
-                                    {partner.linkUrl && (
-                                      <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center rounded-lg transition-opacity duration-300 opacity-0 group-hover:opacity-100">
-                                        <Button
-                                          onClick={() => window.open(partner.linkUrl, "_blank")}
-                                          className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md"
-                                        >
-                                          Gå till
-                                        </Button>
-                                      </div>
-                                    )}
-                                  </Card>
-                                </div>
-                              )
-                            })}
                           </div>
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  ),
-              )}
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
 
-              <section className={`${isPinkTheme ? "bg-gradient-to-r from-rose-600 to-pink-700" : "bg-green-700"} text-white p-10 rounded-lg shadow-xl text-center mt-16`}>
-                <h2 className="text-4xl font-bold mb-4">Vill du stödja Härnösands HF?</h2>
-                <p className="text-xl mb-8">
-                  Vi välkomnar nya partners som vill stödja vår verksamhet och bidra till utvecklingen av handbollen i
-                  regionen.
+              {/* Partner CTA */}
+              <div className="mt-16 rounded-2xl bg-neutral-900 p-8 sm:p-12 text-center max-w-3xl mx-auto">
+                <h3 className="text-2xl sm:text-3xl font-black text-white mb-3">Vill du stödja Härnösands HF?</h3>
+                <p className="text-neutral-400 mb-6 max-w-lg mx-auto text-sm leading-relaxed">
+                  Vi välkomnar nya partners som vill bidra till utvecklingen av handbollen i regionen.
                 </p>
-                <div className="flex flex-col sm:flex-row justify-center gap-4">
-                  <Link
-                    href="/kontakt"
-                    className="bg-orange-500 hover:bg-orange-600 text-white px-10 py-4 rounded-full text-lg font-semibold shadow-lg transition-transform transform hover:scale-105"
-                  >
-                    Kontakta oss för mer information
-                  </Link>
-                </div>
-              </section>
-
-              <section className="py-16 text-center">
-                <h2 className={`text-4xl font-bold ${isPinkTheme ? "text-white" : "text-green-700"} mb-8`}>Bli en del av vårt lag!</h2>
-                <p className="text-xl text-gray-700 mb-10 max-w-3xl mx-auto">
-                  Oavsett om du är nybörjare eller erfaren spelare, finns det en plats för dig i Härnösands HF. Kom och
-                  upplev glädjen med handboll!
-                </p>
-                <div className="flex flex-col sm:flex-row justify-center gap-6">
-                  <Button
-                    asChild
-                    className="bg-orange-500 hover:bg-orange-600 text-white px-10 py-4 rounded-md text-lg font-semibold shadow-lg transition-transform duration-300 hover:scale-105"
-                  >
-                    <Link href="/kontakt">Börja Träna</Link>
-                  </Button>
-                  <Button
-                    asChild
-                    className="bg-green-700 hover:bg-green-800 text-white px-10 py-4 rounded-md text-lg font-semibold shadow-lg transition-transform duration-300 hover:scale-105"
-                  >
-                    <Link href="/kontakt">Bli en del av föreningen</Link>
-                  </Button>
-                </div>
-              </section>
+                <Link
+                  href="/kontakt"
+                  className="inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3 text-sm font-semibold text-neutral-900 transition hover:bg-neutral-100"
+                >
+                  Kontakta oss
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
             </div>
           </section>
 
-          {/* FAQ Section */}
-          <section className="py-16">
-            <div className="container mx-auto px-4">
-              <div className="bg-white shadow-lg rounded-lg p-8 md:p-12 max-w-4xl mx-auto">
-                <h2 className="text-3xl font-bold text-green-700 mb-8 text-center">
-                  Vanliga frågor om att börja träna
+          {/* ===================== JOIN CTA ===================== */}
+          <section className="py-16 sm:py-24 bg-neutral-50">
+            <div className="container mx-auto px-4 sm:px-6 text-center">
+              <div className="max-w-2xl mx-auto">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-600 mb-3">Bli en del av laget</p>
+                <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-neutral-900 mb-4">
+                  Börja spela handboll
                 </h2>
+                <p className="text-neutral-500 text-sm sm:text-base leading-relaxed mb-8 max-w-lg mx-auto">
+                  Oavsett om du är nybörjare eller erfaren spelare finns det en plats för dig i Härnösands HF.
+                </p>
+                <div className="flex flex-col sm:flex-row justify-center gap-3">
+                  <Link
+                    href="/kontakt"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-neutral-900 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-neutral-700"
+                  >
+                    Börja träna
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <Link
+                    href="/lag"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-6 py-3.5 text-sm font-semibold text-neutral-700 transition hover:border-neutral-300 hover:bg-neutral-50"
+                  >
+                    Se våra lag
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ===================== FAQ ===================== */}
+          <section className="py-16 sm:py-24 bg-white">
+            <div className="container mx-auto px-4 sm:px-6">
+              <div className="max-w-2xl mx-auto">
+                <div className="text-center mb-10">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-600 mb-3">Vanliga frågor</p>
+                  <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-neutral-900">
+                    Att börja med handboll
+                  </h2>
+                </div>
+
                 <Accordion type="single" collapsible className="w-full">
-                  <AccordionItem value="item-1">
-                    <AccordionTrigger className="text-lg font-semibold text-gray-800 hover:no-underline">
-                      Hur börjar jag spela handboll i Härnösands HF?
+                  <AccordionItem value="item-1" className="border-b border-neutral-100">
+                    <AccordionTrigger className="text-left text-base font-semibold text-neutral-900 hover:no-underline py-5">
+                      Hur börjar jag spela handboll?
                     </AccordionTrigger>
-                    <AccordionContent className="text-gray-700 text-base">
-                      Det enklaste sättet att börja är att kontakta oss! Vi hjälper dig att hitta rätt lag baserat på
-                      din ålder och erfarenhet. Du kan fylla i vårt kontaktformulär eller skicka ett mejl direkt till
-                      oss.
-                      <Link href="/kontakt" className="text-orange-500 hover:underline ml-2">
-                        Kontakta oss här.
+                    <AccordionContent className="text-neutral-600 text-sm leading-relaxed pb-5">
+                      Kontakta oss så hjälper vi dig hitta rätt lag baserat på ålder och erfarenhet. Du kan fylla i vårt kontaktformulär eller mejla oss direkt.
+                      <Link href="/kontakt" className="text-emerald-600 hover:text-emerald-700 font-medium ml-1">
+                        Kontakta oss →
                       </Link>
                     </AccordionContent>
                   </AccordionItem>
-                  <AccordionItem value="item-2">
-                    <AccordionTrigger className="text-lg font-semibold text-gray-800 hover:no-underline">
+                  <AccordionItem value="item-2" className="border-b border-neutral-100">
+                    <AccordionTrigger className="text-left text-base font-semibold text-neutral-900 hover:no-underline py-5">
                       Vilken utrustning behöver jag?
                     </AccordionTrigger>
-                    <AccordionContent className="text-gray-700 text-base">
-                      Till en början behöver du bara bekväma träningskläder, inomhusskor och en vattenflaska. Handbollar
-                      finns att låna under träningarna. När du väl bestämmer dig för att fortsätta kan du behöva annan utrustning.
+                    <AccordionContent className="text-neutral-600 text-sm leading-relaxed pb-5">
+                      Till en början behöver du bara bekväma träningskläder, inomhusskor och en vattenflaska. Handbollar finns att låna under träningarna.
                     </AccordionContent>
                   </AccordionItem>
-                  <AccordionItem value="item-3">
-                    <AccordionTrigger className="text-lg font-semibold text-gray-800 hover:no-underline">
+                  <AccordionItem value="item-3" className="border-b border-neutral-100">
+                    <AccordionTrigger className="text-left text-base font-semibold text-neutral-900 hover:no-underline py-5">
                       Finns det provträningar?
                     </AccordionTrigger>
-                    <AccordionContent className="text-gray-700 text-base">
-                      Absolut! Vi erbjuder alltid några kostnadsfria provträningar så att du kan känna efter om handboll
-                      är något för dig. Detta ger dig en chans att träffa laget och tränarna innan du bestämmer dig.
+                    <AccordionContent className="text-neutral-600 text-sm leading-relaxed pb-5">
+                      Ja! Vi erbjuder kostnadsfria provträningar så att du kan känna efter om handboll är något för dig. Du får träffa laget och tränarna innan du bestämmer dig.
                     </AccordionContent>
                   </AccordionItem>
-                  <AccordionItem value="item-4">
-                    <AccordionTrigger className="text-lg font-semibold text-gray-800 hover:no-underline">
+                  <AccordionItem value="item-4" className="border-b border-neutral-100">
+                    <AccordionTrigger className="text-left text-base font-semibold text-neutral-900 hover:no-underline py-5">
                       Hur anmäler jag mig?
                     </AccordionTrigger>
-                    <AccordionContent className="text-gray-700 text-base">
-                      Efter dina provträningar får du information om hur du enkelt anmäler dig och blir en fullvärdig
-                      medlem i Härnösands HF. Vi ser fram emot att välkomna dig till vår handbollsfamilj!
-                      <Link href="/kontakt" className="text-orange-500 hover:underline ml-2">
-                        Anmäl dig via kontaktformuläret.
+                    <AccordionContent className="text-neutral-600 text-sm leading-relaxed pb-5">
+                      Efter dina provträningar får du information om hur du enkelt blir en fullvärdig medlem i Härnösands HF.
+                      <Link href="/kontakt" className="text-emerald-600 hover:text-emerald-700 font-medium ml-1">
+                        Anmäl dig →
                       </Link>
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
+
                 <div className="text-center mt-8">
-                  <Button
-                    asChild
-                    className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-md text-lg font-semibold transition-colors"
+                  <Link
+                    href="/kontakt"
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-600 transition hover:text-emerald-700"
                   >
-                    <Link href="/kontakt">Kontakta oss för mer information</Link>
-                  </Button>
+                    Har du fler frågor? Kontakta oss
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
                 </div>
               </div>
             </div>
           </section>
         </main>
+
         {selectedMatch && (
           <MatchFeedModal
             isOpen={true}
@@ -1358,7 +1005,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
           />
         )}
         <Footer />
-
       </div>
     </ErrorBoundary>
   )

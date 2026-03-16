@@ -1,179 +1,142 @@
 "use client"
 
 import Link from "next/link"
-import { Mail, MapPin, ShoppingBag } from "lucide-react"
+import { Mail, MapPin, ShoppingBag, ArrowUpRight } from "lucide-react"
 import { SHOP_URL, useShopStatus } from "@/components/shop-status-provider"
 
 export default function Footer() {
   const { shopVisible } = useShopStatus()
 
   return (
-    <footer className="bg-gradient-to-b from-gray-900 to-black text-white">
-      <div className="container mx-auto px-4 py-12 md:py-16">
-        {shopVisible && (
-          <div className="mb-10 rounded-xl border border-emerald-400/20 bg-gradient-to-r from-emerald-500 via-green-500 to-lime-400 p-6 text-black shadow-[0_20px_60px_rgba(74,222,128,0.12)]">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-              <div className="max-w-2xl">
-                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-black/65">Supporterbutik</p>
-                <h3 className="mt-2 text-2xl font-black tracking-tight">Sälj läktarstöd också utanför matchdag.</h3>
-                <p className="mt-3 text-sm text-black/75">
-                  Beställ via webbutiken och hämta lokalt. Ingen leverans. Perfekt för matchtröjor,
-                  supporterplagg och presenter.
-                </p>
+    <footer className="bg-neutral-950 text-white">
+      {/* Shop banner */}
+      {shopVisible && (
+        <div className="border-b border-white/5">
+          <div className="container mx-auto px-4 sm:px-6 py-8">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-400 mb-1">Supporterbutik</p>
+                <p className="text-lg font-bold text-white">Beställ online, hämta lokalt.</p>
+                <p className="text-sm text-neutral-400 mt-1">Matchtröjor, supporterplagg och presenter.</p>
               </div>
               <Link
                 href={SHOP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-md bg-black px-6 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-white hover:text-black"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-400 shrink-0"
               >
                 <ShoppingBag className="h-4 w-4" />
-                Öppna Butiken
+                Öppna butiken
               </Link>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Main Footer Content */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 mb-12">
-          {/* Club Info */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <img 
-                src="/logo.png" 
-                alt="Härnösands HF Logo" 
-                className="w-12 h-12 object-contain"
-              />
-              <h3 className="text-xl font-bold">Härnösands HF</h3>
+      <div className="container mx-auto px-4 sm:px-6 py-12 sm:py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-12 mb-12">
+          {/* Club info */}
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <img src="/logo.png" alt="Härnösands HF" className="w-10 h-10 object-contain" />
+              <div>
+                <p className="font-bold text-sm">Härnösands HF</p>
+                <p className="text-[10px] uppercase tracking-wider text-neutral-500">Handbollsförening</p>
+              </div>
             </div>
-            <p className="text-gray-400 text-sm leading-relaxed">
-              Härnösands Handbollsförening - En förening för alla som älskar handboll i Härnösand.
+            <p className="text-sm text-neutral-400 leading-relaxed mb-3">
+              En förening för alla som älskar handboll i Härnösand.
             </p>
-            <p className="text-xs text-gray-500 italic">
+            <p className="text-[11px] text-neutral-600">
               Medlem i Svenska Handbollförbundet
             </p>
           </div>
 
-          {/* Quick Links */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold text-emerald-400 uppercase tracking-wider">Navigation</h3>
-            <ul className="space-y-3">
-              <li>
-                <a
-                  href="https://clubs.clubmate.se/harnosandshf/overview/"
-                  className="text-gray-300 hover:text-emerald-400 transition-colors text-sm flex items-center gap-2 group"
-                >
-                  <span className="w-1 h-1 bg-emerald-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                  Köp biljett
-                </a>
-              </li>
-              {shopVisible && (
-                <li>
-                  <a
-                    href={SHOP_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-gray-300 hover:text-emerald-400 transition-colors text-sm flex items-center gap-2 group"
+          {/* Navigation */}
+          <div>
+            <h3 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-500 mb-4">Navigation</h3>
+            <ul className="space-y-2.5">
+              {[
+                { name: "Biljetter", href: "https://clubs.clubmate.se/harnosandshf/overview/" },
+                ...(shopVisible ? [{ name: "Butik", href: SHOP_URL }] : []),
+                { name: "Våra lag", href: "/lag" },
+                { name: "Matcher", href: "/matcher" },
+                { name: "Kontakt", href: "/kontakt" },
+              ].map((link) => (
+                <li key={link.name}>
+                  <Link
+                    href={link.href}
+                    {...(link.href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                    className="text-sm text-neutral-400 hover:text-white transition-colors"
                   >
-                    <span className="w-1 h-1 bg-emerald-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                    Butik
-                  </a>
+                    {link.name}
+                  </Link>
                 </li>
-              )}
-              <li>
-                <Link href="/lag" className="text-gray-300 hover:text-emerald-400 transition-colors text-sm flex items-center gap-2 group">
-                  <span className="w-1 h-1 bg-emerald-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                  Våra Lag
-                </Link>
-              </li>
-              <li>
-                <Link href="/matcher" className="text-gray-300 hover:text-emerald-400 transition-colors text-sm flex items-center gap-2 group">
-                  <span className="w-1 h-1 bg-emerald-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                  Matcher
-                </Link>
-              </li>
-              <li>
-                <Link href="/kontakt" className="text-gray-300 hover:text-emerald-400 transition-colors text-sm flex items-center gap-2 group">
-                  <span className="w-1 h-1 bg-emerald-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                  Kontakt
-                </Link>
-              </li>
+              ))}
             </ul>
           </div>
 
-          {/* Contact Info */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold text-emerald-400 uppercase tracking-wider">Kontakt</h3>
+          {/* Contact */}
+          <div>
+            <h3 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-500 mb-4">Kontakt</h3>
             <div className="space-y-3">
-              <a 
+              <a
                 href="mailto:kontakt@harnosandshf.se"
-                className="flex items-start gap-3 text-gray-300 hover:text-emerald-400 transition-colors text-sm group"
+                className="flex items-center gap-2.5 text-sm text-neutral-400 hover:text-white transition-colors"
               >
-                <Mail size={18} className="mt-0.5 flex-shrink-0 group-hover:scale-110 transition-transform" />
-                <span>kontakt@harnosandshf.se</span>
+                <Mail className="h-4 w-4 shrink-0" />
+                kontakt@harnosandshf.se
               </a>
-              <div className="flex items-start gap-3 text-gray-400 text-sm">
-                <MapPin size={18} className="mt-0.5 flex-shrink-0" />
-                <span>Härnösand, Sverige</span>
+              <div className="flex items-center gap-2.5 text-sm text-neutral-500">
+                <MapPin className="h-4 w-4 shrink-0" />
+                Härnösand, Sverige
               </div>
             </div>
           </div>
 
-          {/* Tips & Support */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold text-emerald-400 uppercase tracking-wider">Feedback</h3>
-            <p className="text-gray-400 text-sm leading-relaxed">
-              Har du förslag eller idéer för hemsidan? Vi uppskattar dina synpunkter!
+          {/* Feedback */}
+          <div>
+            <h3 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-500 mb-4">Feedback</h3>
+            <p className="text-sm text-neutral-400 leading-relaxed mb-3">
+              Förslag eller idéer? Vi uppskattar alla synpunkter.
             </p>
-            <a 
+            <a
               href="mailto:styrelsen@harnosandshf.se"
-              className="inline-flex items-center gap-2 text-sm text-gray-300 hover:text-emerald-400 transition-colors group"
+              className="flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
             >
-              <Mail size={16} className="group-hover:scale-110 transition-transform" />
-              <span>styrelsen@harnosandshf.se</span>
+              <Mail className="h-4 w-4 shrink-0" />
+              styrelsen@harnosandshf.se
             </a>
           </div>
         </div>
 
-        {/* Bottom Section */}
-          <div className="border-t border-gray-800 pt-8">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            {/* Copyright */}
+        {/* Divider */}
+        <div className="border-t border-white/5 pt-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="text-center md:text-left">
-              <p className="text-gray-400 text-sm mb-1">
-                © {new Date().getFullYear()} Härnösands HF. Alla rättigheter förbehållna.
+              <p className="text-sm text-neutral-500">
+                &copy; {new Date().getFullYear()} Härnösands HF. Alla rättigheter förbehållna.
               </p>
-              <p className="text-gray-600 text-xs">
-                Officiell hemsida för Härnösands Handbollsförening
-              </p>
-              <p className="text-gray-400 text-xs font-semibold mt-1">
-                HÄRNÖSANDS HANDBOLLSFÖRENING · 888000-3713
+              <p className="text-[11px] text-neutral-600 font-medium mt-1">
+                HÄRNÖSANDS HANDBOLLSFÖRENING &middot; 888000-3713
               </p>
             </div>
 
-            {/* Websites By You Badge */}
             <a
               href="https://wby.se"
               target="_blank"
               rel="noopener noreferrer"
-              className="group inline-flex items-center gap-3 px-4 py-3 bg-black border border-gray-700 rounded-lg hover:bg-white hover:border-black transition-all duration-200"
+              className="group inline-flex items-center gap-2.5 px-4 py-2.5 rounded-lg border border-white/5 hover:border-white/15 transition-all"
             >
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[9px] font-medium tracking-[1.5px] uppercase text-gray-400 group-hover:text-gray-600 transition-colors">
-                  BYGGD AV
-                </span>
-                <span className="text-[15px] font-semibold tracking-tight text-white group-hover:text-black transition-colors">
+              <div>
+                <p className="text-[9px] font-medium uppercase tracking-[0.15em] text-neutral-600 group-hover:text-neutral-400 transition-colors">
+                  Byggd av
+                </p>
+                <p className="text-[13px] font-semibold text-neutral-400 group-hover:text-white transition-colors">
                   Websites By You
-                </span>
+                </p>
               </div>
-              <svg 
-                className="w-5 h-5 text-gray-400 group-hover:text-black transition-colors" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
+              <ArrowUpRight className="h-4 w-4 text-neutral-600 group-hover:text-neutral-400 transition-colors" />
             </a>
           </div>
         </div>
