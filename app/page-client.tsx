@@ -635,7 +635,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                       Live & kommande
                     </h2>
                     <p className="mt-2 text-sm text-neutral-500 max-w-lg">
-                      Direkt från Profixio. Klicka p&aring; en match f&ouml;r detaljer.
+                      Direkt från Profixio. Klicka på en match för detaljer.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -701,11 +701,11 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
           </section>
 
           {/* ===================== ABOUT CLUB ===================== */}
-          <section className="py-16 sm:py-24 bg-white">
+          <section className="py-16 sm:py-24 bg-white overflow-visible">
             <div className="container mx-auto px-4 sm:px-6">
-              <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+              <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
                 {/* Text side */}
-                <div className="max-w-xl">
+                <div className="max-w-xl lg:sticky lg:top-28">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-600 mb-3">Om klubben</p>
                   <h2
                     className="text-3xl sm:text-4xl font-black tracking-tight text-neutral-900 mb-6"
@@ -768,9 +768,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                   </div>
                 </div>
 
-                {/* Image side */}
-                <div className="relative">
-                  <div className="relative aspect-[4/5] rounded-2xl overflow-hidden">
+                {/* Image side - no negative positioning, contained properly */}
+                <div className="relative pb-8 pl-6">
+                  <div className="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl shadow-neutral-200/50">
                     <Image
                       src={content.aboutClub.imageSrc || "/placeholder.svg"}
                       alt="Härnösands HF"
@@ -784,16 +784,16 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                       {...(isEditorMode && { "data-editable": "true", "data-field-path": "home.aboutClub.imageSrc" })}
                     />
                   </div>
-                  {/* Floating stat badge */}
-                  <div className="absolute -bottom-5 -left-5 sm:-bottom-6 sm:-left-6 bg-neutral-900 text-white rounded-2xl p-5 shadow-2xl">
+                  {/* Floating stat badge - inside padding area, no overflow */}
+                  <div className="absolute bottom-0 left-0 bg-neutral-900 text-white rounded-2xl p-5 shadow-2xl z-10">
                     <p
-                      className="text-3xl sm:text-4xl font-black"
+                      className="text-3xl sm:text-4xl font-black leading-none"
                       {...(isEditorMode && { "data-editable": "true", "data-field-path": "home.aboutClub.statNumber" })}
                     >
                       {content.aboutClub.statNumber}
                     </p>
                     <p
-                      className="text-xs font-medium uppercase tracking-wider text-neutral-400"
+                      className="text-xs font-medium uppercase tracking-wider text-neutral-400 mt-1"
                       {...(isEditorMode && { "data-editable": "true", "data-field-path": "home.aboutClub.statLabel" })}
                     >
                       {content.aboutClub.statLabel}
@@ -808,9 +808,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
           <InstagramFeed />
 
           {/* ===================== PARTNERS ===================== */}
-          <section className="py-16 sm:py-24 bg-white">
+          <section className="py-16 sm:py-24 bg-neutral-50 overflow-visible">
             <div className="container mx-auto px-4 sm:px-6">
-              <div className="text-center mb-12">
+              <div className="text-center mb-14">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-600 mb-3">Samarbeten</p>
                 <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-neutral-900 mb-4">
                   Våra partners
@@ -834,13 +834,13 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                           {isDiamant && <Star className="h-3 w-3 fill-current" />}
                           {config.label}
                         </span>
-                        <div className="flex-1 h-px bg-neutral-100" />
+                        <div className="flex-1 h-px bg-neutral-200/60" />
                       </div>
-                      <div className={`grid gap-4 ${isDiamant ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4" : "grid-cols-3 sm:grid-cols-4 lg:grid-cols-6"}`}>
+                      <div className={`grid gap-3 sm:gap-4 ${isDiamant ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4" : "grid-cols-3 sm:grid-cols-4 lg:grid-cols-6"}`}>
                         {partners.map((partner) => (
                           <div
                             key={partner.id}
-                            className={`group relative flex items-center justify-center rounded-xl border bg-white p-4 transition-all duration-200 hover:shadow-md ${
+                            className={`group relative flex items-center justify-center rounded-xl border bg-white p-3 sm:p-4 transition-all duration-200 hover:shadow-lg hover:shadow-neutral-200/60 hover:border-neutral-200 ${
                               isDiamant ? "border-neutral-200 h-28 sm:h-32" : "border-neutral-100 h-20 sm:h-24"
                             }`}
                           >
@@ -860,7 +860,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                                 href={partner.linkUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="absolute inset-0 z-10"
+                                className="absolute inset-0 z-10 rounded-xl"
                                 aria-label={`Besök ${partner.alt}`}
                               />
                             )}
@@ -873,44 +873,48 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
               </div>
 
               {/* Partner CTA */}
-              <div className="mt-16 rounded-2xl bg-neutral-900 p-8 sm:p-12 text-center max-w-3xl mx-auto">
-                <h3 className="text-2xl sm:text-3xl font-black text-white mb-3">Vill du stödja Härnösands HF?</h3>
-                <p className="text-neutral-400 mb-6 max-w-lg mx-auto text-sm leading-relaxed">
-                  Vi välkomnar nya partners som vill bidra till utvecklingen av handbollen i regionen.
-                </p>
-                <Link
-                  href="/kontakt"
-                  className="inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3 text-sm font-semibold text-neutral-900 transition hover:bg-neutral-100"
-                >
-                  Kontakta oss
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
+              <div className="mt-16 rounded-2xl bg-neutral-900 p-8 sm:p-12 text-center max-w-3xl mx-auto relative overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.08),transparent_60%)]" />
+                <div className="relative z-10">
+                  <h3 className="text-2xl sm:text-3xl font-black text-white mb-3">Vill du stödja Härnösands HF?</h3>
+                  <p className="text-neutral-400 mb-6 max-w-lg mx-auto text-sm leading-relaxed">
+                    Vi välkomnar nya partners som vill bidra till utvecklingen av handbollen i regionen.
+                  </p>
+                  <Link
+                    href="/kontakt"
+                    className="inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3 text-sm font-semibold text-neutral-900 transition hover:bg-neutral-100"
+                  >
+                    Kontakta oss
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
               </div>
             </div>
           </section>
 
           {/* ===================== JOIN CTA ===================== */}
-          <section className="py-16 sm:py-24 bg-neutral-50">
-            <div className="container mx-auto px-4 sm:px-6 text-center">
+          <section className="py-20 sm:py-28 bg-neutral-900 relative overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.06),transparent_70%)]" />
+            <div className="container mx-auto px-4 sm:px-6 text-center relative z-10">
               <div className="max-w-2xl mx-auto">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-600 mb-3">Bli en del av laget</p>
-                <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-neutral-900 mb-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-400 mb-4">Bli en del av laget</p>
+                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white mb-5">
                   Börja spela handboll
                 </h2>
-                <p className="text-neutral-500 text-sm sm:text-base leading-relaxed mb-8 max-w-lg mx-auto">
+                <p className="text-neutral-400 text-sm sm:text-base leading-relaxed mb-10 max-w-lg mx-auto">
                   Oavsett om du är nybörjare eller erfaren spelare finns det en plats för dig i Härnösands HF.
                 </p>
                 <div className="flex flex-col sm:flex-row justify-center gap-3">
                   <Link
                     href="/kontakt"
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-neutral-900 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-neutral-700"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-7 py-3.5 text-sm font-semibold text-neutral-900 transition hover:bg-neutral-100"
                   >
                     Börja träna
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                   <Link
                     href="/lag"
-                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-6 py-3.5 text-sm font-semibold text-neutral-700 transition hover:border-neutral-300 hover:bg-neutral-50"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/5 px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-white/10"
                   >
                     Se våra lag
                   </Link>
@@ -920,7 +924,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
           </section>
 
           {/* ===================== FAQ ===================== */}
-          <section className="py-16 sm:py-24 bg-white">
+          <section className="py-16 sm:py-24 bg-neutral-50">
             <div className="container mx-auto px-4 sm:px-6">
               <div className="max-w-2xl mx-auto">
                 <div className="text-center mb-10">

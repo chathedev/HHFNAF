@@ -202,19 +202,19 @@ export function InstagramFeed() {
   }
 
   return (
-    <section className="bg-white py-14">
-      <div className="container mx-auto px-4">
-        <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <section className="bg-white py-16 sm:py-20 overflow-visible">
+      <div className="container mx-auto px-4 sm:px-6">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-pink-600">Instagram</p>
-            <h2 className="text-3xl font-black text-slate-900 sm:text-4xl">Senaste från @harnosandshf</h2>
-            <p className="mt-1 text-sm text-slate-500">Nya inlägg från Instagram.</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-600 mb-2">Instagram</p>
+            <h2 className="text-3xl font-black tracking-tight text-neutral-900 sm:text-4xl">Senaste från @harnosandshf</h2>
+            <p className="mt-1 text-sm text-neutral-500">Nya inlägg från Instagram.</p>
           </div>
           <Link
             href="https://www.instagram.com/harnosandshf"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[11px] font-semibold uppercase tracking-[0.35em] text-pink-600 hover:text-pink-700"
+            className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-600 hover:text-emerald-700 transition-colors"
           >
             Öppna Instagram →
           </Link>
@@ -250,7 +250,7 @@ export function InstagramFeed() {
                   <button
                     type="button"
                     onClick={() => setSelectedPost(post)}
-                    className="w-full text-left transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
+                    className="w-full text-left transition hover:bg-neutral-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
                     aria-label={`Öppna inlägg från ${formatPostDate(post.takenAt) || "@"+username}`}
                   >
                     <img
@@ -318,7 +318,7 @@ export function InstagramFeed() {
                   href={selectedPost.permalink || `https://www.instagram.com/${username}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex w-full items-center justify-center rounded-md bg-pink-600 px-4 py-2 text-sm font-semibold text-white hover:bg-pink-700 sm:w-auto"
+                  className="inline-flex w-full items-center justify-center rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700 transition sm:w-auto"
                 >
                   Visa på Instagram
                 </Link>

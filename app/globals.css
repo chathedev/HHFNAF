@@ -135,21 +135,14 @@ body {
 @layer base {
   * {
     @apply border-border;
-    /* Added box-sizing and max-width constraints to all elements */
     box-sizing: border-box;
-    max-width: 100%;
   }
   body {
     @apply bg-background text-foreground;
   }
 
-  /* Ensure all containers and images respect viewport width */
-  .container {
-    max-width: 100vw;
-    overflow-x: hidden;
-  }
-
-  img,
+  /* Only constrain direct content elements, NOT positioned/fill children */
+  img:not([data-nimg]),
   video,
   iframe {
     max-width: 100%;
