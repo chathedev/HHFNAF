@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   auto-merge:
@@ -24,28 +23,18 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Merge to main
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Sync main to branch
         run: |
           set -e
           BRANCH="${GITHUB_REF#refs/heads/}"
-          echo "::group::Merging $BRANCH into main"
+          BRANCH_SHA=$(git rev-parse "origin/$BRANCH")
+          echo "Syncing main to $BRANCH ($BRANCH_SHA)"
 
-          git fetch origin main
-          git checkout main
-          git pull origin main
+          git checkout main || git checkout -b main origin/main
+          git pull origin main || true
 
-          # Try normal merge first
-          if git merge "origin/$BRANCH" --no-edit -m "Auto-merge $BRANCH into main"; then
-            echo "Clean merge succeeded"
-          else
-            echo "Merge conflict detected — resolving in favor of $BRANCH"
-            git merge --abort
-            # Force-merge: accept all changes from the feature branch
-            git merge "origin/$BRANCH" --no-edit -X theirs -m "Auto-merge $BRANCH into main (theirs)"
-          fi
+          # Reset main to match the branch exactly — no merge needed
+          git reset --hard "$BRANCH_SHA"
+          git push origin main --force
 
-          git push origin main
-          echo "::endgroup::"
-          echo "Successfully merged $BRANCH into main"
+          echo "main is now at $BRANCH_SHA"
