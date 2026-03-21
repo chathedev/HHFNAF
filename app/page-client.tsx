@@ -368,9 +368,11 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       <li key={match.id}>
         <article
           id={`match-card-${match.id}`}
-          className={`group relative flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition-all ${
-            canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:shadow-md" : ""
-          }`}
+          className={`group relative flex flex-col gap-3 rounded-2xl border p-4 transition-all ${
+            status === "live"
+              ? "border-rose-200 bg-rose-50/40 ring-1 ring-rose-100"
+              : "border-slate-200 bg-white"
+          } ${canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:shadow-md" : ""}`}
           onMouseEnter={() => {
             if (canOpenTimeline) {
               fetchMatchTimeline(match).catch(() => undefined)
@@ -408,18 +410,30 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
           </div>
 
           {scoreValue && (
-            <div className="flex items-end justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2">
-              <span className="text-xl font-black text-slate-950" data-score-value="true">
-                {scoreValue}
-              </span>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-                {status === "live" ? "Pågår" : "Resultat"}
-              </span>
+            <div className={`rounded-xl px-4 py-3 ${status === "live" ? "bg-rose-50 ring-1 ring-rose-200" : "bg-slate-50"}`}>
+              <div className="flex items-center justify-center gap-4">
+                <span className="flex-1 text-right text-xs font-semibold text-slate-600 truncate">{match.isHome !== false ? "HHF" : ((match.opponent ?? "").replace(/\s*\((hemma|borta)\)\s*$/i, "").trim() || "Borta")}</span>
+                <div className="flex items-center gap-1" data-score-value="true">
+                  {status === "live" && (
+                    <span className="relative mr-2 flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-500 opacity-75" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-rose-500" />
+                    </span>
+                  )}
+                  <span className={`text-2xl font-black tabular-nums ${status === "live" ? "text-rose-700" : "text-slate-900"}`}>
+                    {scoreValue}
+                  </span>
+                </div>
+                <span className="flex-1 text-left text-xs font-semibold text-slate-600 truncate">{match.isHome !== false ? ((match.opponent ?? "").replace(/\s*\((hemma|borta)\)\s*$/i, "").trim() || "Borta") : "HHF"}</span>
+              </div>
+              {status === "live" && (
+                <p className="mt-1 text-center text-[10px] font-bold uppercase tracking-widest text-rose-500">Pågår nu</p>
+              )}
             </div>
           )}
 
           {showLivePendingScore && (
-            <div className="flex flex-col gap-1 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2">
+            <div className="flex flex-col gap-1 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2">
               <span className="text-sm font-semibold text-sky-800">Livescore väntar</span>
               <span className="text-xs text-sky-700">
                 Poäng publiceras så fort liveflödet skickar dem.
@@ -493,9 +507,11 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     return (
       <li key={match.id}>
         <article
-          className={`flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 transition ${
-            canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:bg-slate-50" : ""
-          }`}
+          className={`flex flex-col gap-3 rounded-2xl border px-4 py-3.5 transition ${
+            status === "live"
+              ? "border-rose-200 bg-rose-50/40 ring-1 ring-rose-100"
+              : "border-slate-200 bg-white"
+          } ${canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:bg-slate-50" : ""}`}
           onClick={(event) => {
             if (!canOpenTimeline) {
               return
@@ -592,9 +608,11 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     return (
       <li key={match.id}>
         <article
-          className={`flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 transition ${
-            canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:bg-slate-50" : ""
-          }`}
+          className={`flex flex-col gap-3 rounded-2xl border px-4 py-3.5 transition ${
+            status === "live"
+              ? "border-rose-200 bg-rose-50/40 ring-1 ring-rose-100"
+              : "border-slate-200 bg-white"
+          } ${canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:bg-slate-50" : ""}`}
           onMouseEnter={() => {
             if (canOpenTimeline) {
               fetchMatchTimeline(match).catch(() => undefined)
@@ -635,7 +653,13 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
             <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
               {scoreValue ? (
-                <span className="inline-flex w-full items-center justify-center rounded-md bg-slate-950 px-3 py-2 text-xs font-bold text-white sm:w-auto">
+                <span className={`inline-flex items-center gap-1.5 text-lg font-black tabular-nums ${status === "live" ? "text-rose-600" : "text-slate-900"}`} data-score-value="true">
+                  {status === "live" && (
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-500 opacity-75" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-rose-500" />
+                    </span>
+                  )}
                   {scoreValue}
                 </span>
               ) : null}
@@ -1073,9 +1097,14 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                                   </div>
                                   <div className="flex flex-col items-end gap-2 shrink-0">
                                     {scoreValue && (
-                                      <span className="text-3xl font-black tabular-nums text-white" data-score-value="true">
-                                        {scoreValue}
-                                      </span>
+                                      <div className="flex flex-col items-center" data-score-value="true">
+                                        {isLive && (
+                                          <span className="mb-1 text-[10px] font-bold uppercase tracking-widest text-rose-400">Pågår nu</span>
+                                        )}
+                                        <span className={`text-4xl font-black tabular-nums ${isLive ? "text-white" : "text-white/80"}`}>
+                                          {scoreValue}
+                                        </span>
+                                      </div>
                                     )}
                                     <Link
                                       href={TICKET_URL}
