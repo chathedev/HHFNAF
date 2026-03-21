@@ -36,6 +36,7 @@ import { defaultContent } from "@/lib/default-content"
 import type { FullContent, Partner } from "@/lib/content-types"
 import { deriveSiteVariant, type SiteVariant, getThemeVariant, getHeroImages, type ThemeVariant } from "@/lib/site-variant"
 import { extendTeamDisplayName } from "@/lib/team-display"
+import { canShowTicketForMatch } from "@/lib/matches"
 import { resolvePreferredTimeline } from "@/lib/match-timeline"
 import {
   buildMatchScheduleLabel,
@@ -161,7 +162,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const timelineFetchInFlightRef = useRef<Record<string, Promise<void>>>({})
   const [isInitialHomeMatchFetchDone, setIsInitialHomeMatchFetchDone] = useState(Boolean(initialData?.matches?.length))
   const hasStartedInitialHomeMatchFetchRef = useRef(false)
-  const limitedParams = useMemo(() => ({ limit: 10 }), [])
+  const limitedParams = useMemo(() => ({ limit: 15 }), [])
   const { shopVisible } = useShopStatus()
   const {
     matches: currentMatches,
@@ -698,9 +699,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     !isInitialHomeMatchFetchDone && (matchLoading || matchRefreshing || !hasMatchPayload)
   const homeMatchFlow = useMemo(() => {
     const seen = new Set<string>()
-    const liveItems = (groupedFeed?.live ?? []).slice(0, 3)
-    const resultItems = recentResults.slice(0, 2)
-    const remainingSlots = Math.max(10 - liveItems.length - resultItems.length, 0)
+    const liveItems = (groupedFeed?.live ?? []).slice(0, 5)
+    const resultItems = recentResults.slice(0, 3)
+    const remainingSlots = Math.max(15 - liveItems.length - resultItems.length, 0)
     const upcomingItems = (groupedFeed?.upcoming ?? []).slice(0, remainingSlots)
 
     const ordered = [...liveItems, ...resultItems, ...upcomingItems].filter((match) => {
@@ -712,7 +713,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     })
 
     return {
-      items: ordered.slice(0, 10),
+      items: ordered.slice(0, 15),
       total: ordered.length,
     }
   }, [groupedFeed, recentResults])
@@ -1006,140 +1007,133 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
             </div>
           </section>
 
-          {/* ===================== MATCHES — GROUPED BY STATUS ===================== */}
-          <section className="py-10 sm:py-14 bg-slate-50">
+          {/* ===================== MATCHES ===================== */}
+          <section className="pt-10 pb-14 sm:pt-14 sm:pb-16">
             <div className="container mx-auto px-4 sm:px-6">
               <div className="max-w-4xl mx-auto">
                 {showInitialMatchLoader ? (
                   renderUpcomingSkeletonRows()
                 ) : matchError ? (
-                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-6 text-center text-sm text-amber-800">
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-6 text-center text-sm text-amber-800">
                     Matcherna kunde inte läsas in just nu.
                   </div>
                 ) : homeMatchFlow.items.length > 0 ? (
-                  <div className="space-y-8">
-                    {/* LIVE matches */}
+                  <div className="space-y-6">
+                    {/* Promoted A-lag ticket matches */}
                     {(() => {
-                      const liveMatches = homeMatchFlow.items.filter((m) => getMatchStatus(m) === "live")
+                      const ticketMatches = homeMatchFlow.items.filter(
+                        (m) => getMatchStatus(m) !== "finished" && canShowTicketForMatch(m)
+                      )
+                      if (ticketMatches.length === 0) return null
+                      return (
+                        <div className="space-y-3">
+                          {ticketMatches.map((match) => {
+                            const status = getMatchStatus(match)
+                            const canOpen = canOpenMatchTimeline(match)
+                            const scheduleLabel = buildMatchScheduleLabel(match)
+                            const matchupLabel = getMatchupLabel(match)
+                            const teamTypeRaw = match.teamType?.trim() || ""
+                            const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
+                            const liveScore = typeof match.result === "string" ? match.result.trim() : ""
+                            const stableScore = liveScore || stableScoreByMatchId[match.id] || ""
+                            const hasStarted = match.date.getTime() <= Date.now() + 60_000
+                            const scoreValue = stableScore && (status !== "upcoming" || hasStarted) ? stableScore : null
+                            const isLive = status === "live"
+
+                            return (
+                              <article
+                                key={`promoted-${match.id}`}
+                                className={`group relative rounded-2xl border border-slate-900 bg-slate-950 p-5 sm:p-6 text-white transition-all ${
+                                  canOpen ? "cursor-pointer hover:shadow-xl" : ""
+                                }`}
+                                onMouseEnter={() => { if (canOpen) fetchMatchTimeline(match).catch(() => undefined) }}
+                                onClick={(event) => {
+                                  if (!canOpen) return
+                                  if ((event.target as HTMLElement).closest("a,button")) return
+                                  openMatchModal(match)
+                                }}
+                              >
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                                      {isLive ? (
+                                        <span className="inline-flex items-center gap-1.5 rounded-md bg-rose-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                                          <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                                          LIVE
+                                        </span>
+                                      ) : (
+                                        <span className="inline-flex items-center gap-1 rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white/80">
+                                          {match.statusLabel ?? "KOMMANDE"}
+                                        </span>
+                                      )}
+                                      <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400">{teamTypeLabel}</span>
+                                    </div>
+                                    <h3 className="text-base sm:text-lg font-bold leading-snug break-words">{matchupLabel}</h3>
+                                    {scheduleLabel && <p className="mt-1 text-xs text-white/50 break-words">{scheduleLabel}</p>}
+                                  </div>
+                                  <div className="flex flex-col items-end gap-2 shrink-0">
+                                    {scoreValue && (
+                                      <span className="text-3xl font-black tabular-nums text-white" data-score-value="true">
+                                        {scoreValue}
+                                      </span>
+                                    )}
+                                    <Link
+                                      href={TICKET_URL}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2 text-xs font-bold text-white transition hover:bg-emerald-400"
+                                    >
+                                      <Ticket className="h-3.5 w-3.5" />
+                                      Köp biljett
+                                    </Link>
+                                  </div>
+                                </div>
+                              </article>
+                            )
+                          })}
+                        </div>
+                      )
+                    })()}
+
+                    {/* LIVE matches (non-promoted) */}
+                    {(() => {
+                      const liveMatches = homeMatchFlow.items.filter(
+                        (m) => getMatchStatus(m) === "live" && !canShowTicketForMatch(m)
+                      )
                       if (liveMatches.length === 0) return null
                       return (
                         <div>
-                          <div className="flex items-center gap-3 mb-4">
-                            <span className="inline-flex items-center gap-2 rounded-lg bg-rose-500 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-white shadow-lg shadow-rose-500/25">
-                              <Radio className="h-3.5 w-3.5 animate-pulse" />
-                              Live just nu
+                          <div className="flex items-center gap-3 mb-3">
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-rose-500">
+                              <Radio className="h-3 w-3 animate-pulse" />
+                              Live
                             </span>
-                            <div className="flex-1 h-px bg-rose-200" />
+                            <div className="flex-1 h-px bg-slate-100" />
                           </div>
-                          <ul className="space-y-3">
-                            {liveMatches.map((match) => {
-                              const canOpenTimeline = canOpenMatchTimeline(match)
-                              const scheduleLabel = buildMatchScheduleLabel(match)
-                              const matchupLabel = getMatchupLabel(match)
-                              const showProfixioWarning = shouldShowProfixioTechnicalIssue(match)
-                              const showFinishedZeroZeroIssue = shouldShowFinishedZeroZeroIssue(match)
-                              const teamTypeRaw = match.teamType?.trim() || ""
-                              const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
-                              const hasStream = match.hasStream === true && Boolean((match.playUrl ?? "").trim()) && (match.playUrl ?? "").trim().toLowerCase() !== "null"
-                              const liveScore = typeof match.result === "string" ? match.result.trim() : ""
-                              const stableScore = liveScore || stableScoreByMatchId[match.id] || ""
-                              const hasStarted = match.date.getTime() <= Date.now() + 60_000
-                              const scoreValue = stableScore && hasStarted ? stableScore : null
-                              const showLivePendingScore = match.resultState === "live_pending" && !scoreValue
-
-                              return (
-                                <li key={match.id}>
-                                  <article
-                                    className={`group relative rounded-2xl border-2 border-rose-200 bg-gradient-to-r from-rose-50/80 via-white to-white p-5 sm:p-6 transition-all duration-200 ring-2 ring-rose-100 ${
-                                      canOpenTimeline ? "cursor-pointer hover:border-rose-300 hover:shadow-xl hover:shadow-rose-100/50" : ""
-                                    }`}
-                                    onMouseEnter={() => { if (canOpenTimeline) fetchMatchTimeline(match).catch(() => undefined) }}
-                                    onTouchStart={() => { if (canOpenTimeline) fetchMatchTimeline(match).catch(() => undefined) }}
-                                    onClick={(event) => {
-                                      if (!canOpenTimeline) return
-                                      if ((event.target as HTMLElement).closest("a,button")) return
-                                      openMatchModal(match)
-                                    }}
-                                  >
-                                    <div className="flex items-start justify-between gap-4">
-                                      <div className="min-w-0 flex-1">
-                                        <div className="flex flex-wrap items-center gap-2 mb-2">
-                                          <span className="inline-flex items-center gap-1.5 rounded-md bg-rose-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
-                                            <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
-                                            {match.statusLabel ?? "LIVE"}
-                                          </span>
-                                          <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-700">{teamTypeLabel}</span>
-                                          {match.series && <span className="text-[11px] text-slate-400">{match.series}</span>}
-                                        </div>
-                                        <h3 className="text-base sm:text-lg font-bold leading-snug text-slate-950 break-words">{matchupLabel}</h3>
-                                        {scheduleLabel && <p className="mt-1 text-xs text-slate-500 break-words">{scheduleLabel}</p>}
-                                        {showLivePendingScore && (
-                                          <p className="mt-2 text-xs font-medium text-sky-600">Livescore publiceras snart.</p>
-                                        )}
-                                      </div>
-                                      <div className="flex flex-col items-end gap-2 shrink-0">
-                                        {scoreValue && (
-                                          <span className="text-3xl sm:text-4xl font-black tabular-nums text-rose-600" data-score-value="true">
-                                            {scoreValue}
-                                          </span>
-                                        )}
-                                        <div className="flex items-center gap-2">
-                                          {hasStream ? (
-                                            <a
-                                              href={(match.playUrl ?? "").trim()}
-                                              target="_blank"
-                                              rel="noreferrer"
-                                              onClick={(e) => e.stopPropagation()}
-                                              className="inline-flex items-center gap-1.5 rounded-lg bg-rose-500 px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-rose-600"
-                                            >
-                                              {getMatchWatchLabel("live")}
-                                            </a>
-                                          ) : canOpenTimeline ? (
-                                            <button
-                                              type="button"
-                                              onClick={(e) => { e.stopPropagation(); openMatchModal(match) }}
-                                              className="inline-flex items-center gap-1 rounded-lg bg-slate-950 px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-slate-800"
-                                            >
-                                              Detaljer
-                                              <ArrowRight className="h-3 w-3" />
-                                            </button>
-                                          ) : null}
-                                        </div>
-                                      </div>
-                                    </div>
-                                    {showProfixioWarning && (
-                                      <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                                        Profixio har tekniska problem med liveuppdateringen just nu.
-                                      </p>
-                                    )}
-                                    {showFinishedZeroZeroIssue && (
-                                      <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                                        Misstänkt resultatfel: avslutad match visas som 0–0.
-                                      </p>
-                                    )}
-                                  </article>
-                                </li>
-                              )
-                            })}
+                          <ul className="space-y-2">
+                            {liveMatches.map(renderHomeFlowRow)}
                           </ul>
                         </div>
                       )
                     })()}
 
-                    {/* UPCOMING matches */}
+                    {/* UPCOMING matches (non-promoted) */}
                     {(() => {
-                      const upcomingMatches = homeMatchFlow.items.filter((m) => getMatchStatus(m) === "upcoming")
+                      const upcomingMatches = homeMatchFlow.items.filter(
+                        (m) => getMatchStatus(m) === "upcoming" && !canShowTicketForMatch(m)
+                      )
                       if (upcomingMatches.length === 0) return null
                       return (
                         <div>
-                          <div className="flex items-center gap-3 mb-4">
-                            <span className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-white">
-                              <Clock className="h-3.5 w-3.5" />
+                          <div className="flex items-center gap-3 mb-3">
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400">
+                              <Clock className="h-3 w-3" />
                               Kommande
                             </span>
-                            <div className="flex-1 h-px bg-emerald-200" />
+                            <div className="flex-1 h-px bg-slate-100" />
                           </div>
-                          <ul className="space-y-3">
+                          <ul className="space-y-2">
                             {upcomingMatches.map(renderHomeFlowRow)}
                           </ul>
                         </div>
@@ -1152,14 +1146,14 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                       if (finishedMatches.length === 0) return null
                       return (
                         <div>
-                          <div className="flex items-center gap-3 mb-4">
-                            <span className="inline-flex items-center gap-2 rounded-lg bg-slate-500 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-white">
-                              <CheckCircle2 className="h-3.5 w-3.5" />
+                          <div className="flex items-center gap-3 mb-3">
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400">
+                              <CheckCircle2 className="h-3 w-3" />
                               Resultat
                             </span>
-                            <div className="flex-1 h-px bg-slate-200" />
+                            <div className="flex-1 h-px bg-slate-100" />
                           </div>
-                          <ul className="space-y-3">
+                          <ul className="space-y-2">
                             {finishedMatches.map(renderHomeFlowRow)}
                           </ul>
                         </div>
@@ -1167,7 +1161,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                     })()}
                   </div>
                 ) : (
-                  <div className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-500">
+                  <div className="rounded-xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
                     Inga matcher att visa just nu.
                   </div>
                 )}
