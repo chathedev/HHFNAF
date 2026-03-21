@@ -574,6 +574,7 @@ const getRowStyle = (event: MatchFeedEvent, homeTeam: string, awayTeam: string) 
       dot: "bg-amber-500",
       teamClass: "text-amber-700",
       kindLabel: "UTVISNING",
+      side: teamTone as "home" | "away",
     }
   }
 
@@ -583,6 +584,7 @@ const getRowStyle = (event: MatchFeedEvent, homeTeam: string, awayTeam: string) 
       dot: "bg-slate-900",
       teamClass: "text-slate-900",
       kindLabel: "MÅL",
+      side: "home" as const,
     }
   }
 
@@ -592,6 +594,7 @@ const getRowStyle = (event: MatchFeedEvent, homeTeam: string, awayTeam: string) 
       dot: "bg-slate-400",
       teamClass: "text-slate-500",
       kindLabel: "MÅL",
+      side: "away" as const,
     }
   }
 
@@ -600,7 +603,25 @@ const getRowStyle = (event: MatchFeedEvent, homeTeam: string, awayTeam: string) 
     dot: "bg-slate-300",
     teamClass: "text-slate-500",
     kindLabel: "HÄNDELSE",
+    side: teamTone as "home" | "away",
   }
+}
+
+const getEventSide = (event: MatchFeedEvent, homeTeam: string, awayTeam: string): "home" | "away" | "center" => {
+  if (isLifecycleEvent(event)) return "center"
+
+  const text = getEventCombinedText(event)
+  if (text.includes("timeout")) return "center"
+
+  if (isHarnosandTeam(event.scoringTeam) || isHarnosandTeam(event.team)) return "home"
+  if (event.scoringTeam || event.team) return "away"
+
+  if (typeof event.isHomeGoal === "boolean") {
+    if (isHarnosandTeam(homeTeam)) return event.isHomeGoal ? "home" : "away"
+    if (isHarnosandTeam(awayTeam)) return event.isHomeGoal ? "away" : "home"
+  }
+
+  return "center"
 }
 
 export function MatchFeedModal({
@@ -979,62 +1000,58 @@ export function MatchFeedModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
     >
       <div
         ref={modalRef}
-        className="flex h-[92dvh] w-full max-w-2xl flex-col overflow-hidden border border-slate-200 bg-white sm:h-[78vh]"
+        className="flex h-[95dvh] w-full max-w-3xl flex-col overflow-hidden border border-slate-200 bg-white sm:h-[88vh]"
       >
-        <header className="sticky top-0 z-20 border-b border-slate-200 bg-slate-950 px-4 py-4 text-white sm:px-6 sm:py-5">
-          <div className="mb-2 flex justify-center sm:hidden">
-            <span className="h-px w-10 bg-white/30" />
-          </div>
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <div className="flex items-center gap-3">
-                <h2 className="text-base font-bold sm:text-xl truncate">
-                  {homeTeam} <span className="text-white/40">–</span> {awayTeam}
-                </h2>
+        {/* Header */}
+        <header className="sticky top-0 z-20 border-b border-slate-200 bg-slate-950 text-white">
+          <div className="px-4 py-3 sm:px-6 sm:py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 min-w-0">
                 {(matchStatus === "live" || matchStatus === "halftime") && (
-                  <span className="bg-white text-slate-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest shrink-0">
-                    LIVE
-                  </span>
+                  <span className="bg-white text-slate-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest shrink-0">LIVE</span>
                 )}
                 {matchStatus === "finished" && <span className="text-[10px] font-semibold uppercase tracking-widest text-white/40 shrink-0">SLUT</span>}
                 {matchStatus === "upcoming" && <span className="text-[10px] font-semibold uppercase tracking-widest text-white/40 shrink-0">KOMMANDE</span>}
+                <p className="text-3xl font-black tabular-nums sm:text-4xl">{scoreboard}</p>
               </div>
-            </div>
-
-            <div className="flex items-center gap-4 shrink-0">
-              <p className="text-2xl font-black tabular-nums sm:text-3xl">{scoreboard}</p>
               <button
                 type="button"
                 onClick={onClose}
-                className="border border-white/20 p-2 text-white transition hover:bg-white/10"
+                className="border border-white/20 p-2 text-white transition hover:bg-white/10 shrink-0"
                 aria-label="Stäng modal"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
+            {/* Team name columns */}
+            <div className="mt-2 grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
+              <p className="text-xs font-semibold uppercase tracking-widest text-white/70 text-right truncate">{homeTeam}</p>
+              <span className="text-[10px] text-white/30 px-2">–</span>
+              <p className="text-xs font-semibold uppercase tracking-widest text-white/70 truncate">{awayTeam}</p>
+            </div>
           </div>
         </header>
 
+        {/* Timeout/Penalty timers */}
         {showClockAndTimers && (
           <div className="border-b border-slate-200 bg-white px-4 py-3 sm:px-6">
             {showTimeoutTimer && (
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-center gap-3">
                 <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Timeout</span>
                 <span className="font-mono text-lg font-black tabular-nums text-slate-900">
                   {formatSecondsAsClock(timeoutSecondsLeft)}
                 </span>
               </div>
             )}
-
             {showPenaltyTimers && (
-              <div className={showTimeoutTimer ? "mt-3" : ""}>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">Utvisningar</p>
+              <div className={showTimeoutTimer ? "mt-2" : ""}>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2 text-center">Utvisningar</p>
                 <div className="divide-y divide-slate-100">
                   {activePenalties.map((item, index) => (
                     <div key={`${item.team || "team"}-${item.player || "player"}-${index}`} className="flex items-center justify-between gap-3 py-1.5">
@@ -1052,104 +1069,150 @@ export function MatchFeedModal({
           </div>
         )}
 
+        {/* Tabs */}
         {!isNoLiveUpdatesIssue && (
-          <nav className="z-10 flex border-b border-slate-200 bg-white px-4 sm:px-6">
-          <button
-            type="button"
-            onClick={() => setActiveTab("timeline")}
-            className={`px-0 py-3 text-xs font-semibold uppercase tracking-widest mr-6 border-b-2 transition ${
-              activeTab === "timeline" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400"
-            }`}
-          >
-            Tidslinje ({displayedFeed.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("scorers")}
-            className={`px-0 py-3 text-xs font-semibold uppercase tracking-widest border-b-2 transition ${
-              activeTab === "scorers" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400"
-            }`}
-          >
-            Målskyttar
-          </button>
+          <nav className="z-10 flex justify-center border-b border-slate-200 bg-white">
+            <button
+              type="button"
+              onClick={() => setActiveTab("timeline")}
+              className={`px-4 py-2.5 text-[10px] font-semibold uppercase tracking-widest border-b-2 transition ${
+                activeTab === "timeline" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400"
+              }`}
+            >
+              Tidslinje
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("scorers")}
+              className={`px-4 py-2.5 text-[10px] font-semibold uppercase tracking-widest border-b-2 transition ${
+                activeTab === "scorers" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400"
+              }`}
+            >
+              Målskyttar
+            </button>
           </nav>
         )}
 
-        <div className="flex-1 overflow-y-auto bg-white px-4 py-4 sm:px-6 sm:py-6">
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto bg-white">
           {activeTab === "timeline" && (
-            <div className="space-y-6">
+            <div>
               {showTimelineSkeleton && (
-                <div className="divide-y divide-slate-100">
-                  {Array.from({ length: 4 }).map((_, index) => (
-                    <div key={`timeline-skeleton-${index}`} className="py-3">
-                      <div className="flex items-start gap-3">
-                        <div className="w-12 shrink-0">
-                          <div className="h-3 w-10 bg-slate-100" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="h-3 w-3/5 bg-slate-100" />
-                          <div className="mt-2 h-3 w-2/5 bg-slate-50" />
-                        </div>
+                <div className="px-4 py-6 sm:px-6">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <div key={`timeline-skeleton-${index}`} className="relative grid grid-cols-[1fr_auto_1fr] gap-0 py-4">
+                      <div />
+                      <div className="flex flex-col items-center">
+                        <div className="h-3 w-10 bg-slate-100" />
+                      </div>
+                      <div className="pl-4">
+                        <div className="h-3 w-3/5 bg-slate-100" />
+                        <div className="mt-2 h-3 w-2/5 bg-slate-50" />
                       </div>
                     </div>
                   ))}
                 </div>
               )}
               {!showTimelineSkeleton && displayedFeed.length === 0 && (
-                <p className="py-12 text-center text-sm text-slate-400">{emptyTimelineMessage}</p>
+                <p className="py-16 text-center text-sm text-slate-400">{emptyTimelineMessage}</p>
               )}
               {periodKeys.map((period) => (
                 <section key={period}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">{getPeriodLabel(period)}</h3>
-                    <div className="flex-1 h-px bg-slate-100" />
+                  {/* Period header */}
+                  <div className="sticky top-0 z-10 bg-slate-50 border-b border-slate-100 px-4 py-2 sm:px-6">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 text-center">{getPeriodLabel(period)}</p>
                   </div>
-                  <ul className="divide-y divide-slate-100">
-                    {groupedByPeriod[period].map((event, index) => {
-                      const style = getRowStyle(event, homeTeam, awayTeam)
-                      const score = getScoreFromEvent(event)
-                      const typeLabel = getEventTypeLabel(event)
-                      return (
-                        <li key={`${event.eventId ?? "idx"}-${index}`} className="py-3">
-                          <div className="flex items-start gap-3">
-                            <div className="w-12 shrink-0">
-                              <p className="text-xs font-bold tabular-nums text-slate-900">{event.time || "--:--"}</p>
-                            </div>
-                            <span className={`mt-1.5 h-2 w-2 shrink-0 ${style.dot}`} />
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-start justify-between gap-3">
-                                <p className="text-sm font-semibold text-slate-900">{getEventDisplayText(event)}</p>
-                                {score && <p className="shrink-0 text-sm font-black tabular-nums text-slate-900">{score}</p>}
+                  {/* Two-column timeline */}
+                  <div className="relative">
+                    {/* Center vertical line */}
+                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-200 -translate-x-1/2" />
+                    <ul>
+                      {groupedByPeriod[period].map((event, index) => {
+                        const style = getRowStyle(event, homeTeam, awayTeam)
+                        const score = getScoreFromEvent(event)
+                        const typeLabel = getEventTypeLabel(event)
+                        const side = getEventSide(event, homeTeam, awayTeam)
+                        const isGoal = typeLabel === "Mål"
+
+                        return (
+                          <li key={`${event.eventId ?? "idx"}-${index}`} className="relative">
+                            <div className="grid grid-cols-[1fr_auto_1fr] items-start">
+                              {/* Left column (home team) */}
+                              <div className={`flex justify-end py-3 pr-4 pl-2 sm:pl-4 ${side === "home" ? "" : ""}`}>
+                                {side === "home" && (
+                                  <div className="text-right max-w-full">
+                                    {score && (
+                                      <p className="text-xs font-black tabular-nums text-slate-900 mb-0.5">{score}</p>
+                                    )}
+                                    <p className={`text-[11px] font-bold leading-tight ${isGoal ? "text-emerald-700" : "text-slate-700"}`}>
+                                      {typeLabel}
+                                    </p>
+                                    {event.player && (
+                                      <p className="text-[11px] text-slate-500 mt-0.5">
+                                        {event.playerNumber && <span className="font-semibold">{event.playerNumber} </span>}
+                                        {event.player}
+                                      </p>
+                                    )}
+                                    {!event.player && !isGoal && (
+                                      <p className="text-[11px] text-slate-400 mt-0.5">{getEventDisplayText(event)}</p>
+                                    )}
+                                  </div>
+                                )}
                               </div>
-                              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-400">
-                                <span className={`font-semibold ${style.teamClass}`}>
-                                  {getEventTeamLabel(event)}
-                                </span>
-                                <span>{typeLabel}</span>
-                                {event.player && (
-                                  <span className="text-slate-600">
-                                    {event.player}{event.playerNumber ? ` #${event.playerNumber}` : ""}
-                                  </span>
+
+                              {/* Center: time + dot */}
+                              <div className="flex flex-col items-center z-10 py-3">
+                                <span className={`h-2.5 w-2.5 shrink-0 ${
+                                  side === "center" ? "bg-slate-300" : style.dot
+                                } ${isGoal ? "h-3 w-3" : ""}`} />
+                                <p className="mt-1 text-[10px] font-bold tabular-nums text-slate-400">{event.time || ""}</p>
+                              </div>
+
+                              {/* Right column (away team) */}
+                              <div className={`py-3 pl-4 pr-2 sm:pr-4 ${side === "away" ? "" : ""}`}>
+                                {side === "away" && (
+                                  <div className="max-w-full">
+                                    {score && (
+                                      <p className="text-xs font-black tabular-nums text-slate-900 mb-0.5">{score}</p>
+                                    )}
+                                    <p className={`text-[11px] font-bold leading-tight ${isGoal ? "text-emerald-700" : "text-slate-700"}`}>
+                                      {typeLabel}
+                                    </p>
+                                    {event.player && (
+                                      <p className="text-[11px] text-slate-500 mt-0.5">
+                                        {event.playerNumber && <span className="font-semibold">{event.playerNumber} </span>}
+                                        {event.player}
+                                      </p>
+                                    )}
+                                    {!event.player && !isGoal && (
+                                      <p className="text-[11px] text-slate-400 mt-0.5">{getEventDisplayText(event)}</p>
+                                    )}
+                                  </div>
+                                )}
+                                {side === "center" && (
+                                  <div className="max-w-full">
+                                    <p className="text-[11px] font-semibold text-slate-400">{getEventDisplayText(event)}</p>
+                                  </div>
                                 )}
                               </div>
                             </div>
-                          </div>
-                        </li>
-                      )
-                    })}
-                  </ul>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </div>
                 </section>
               ))}
             </div>
           )}
 
           {activeTab === "scorers" && (
-            <div className="space-y-6">
+            <div className="px-4 py-6 sm:px-6">
               {Object.keys(topScorersByTeam).length === 0 && (
                 <p className="py-8 text-center text-sm text-slate-400">Inga registrerade målskyttar än.</p>
               )}
               {Object.entries(topScorersByTeam).map(([team, scorers]) => (
-                <section key={team}>
+                <section key={team} className="mb-6 last:mb-0">
                   <div className="flex items-center gap-3 mb-3">
                     <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">{team}</h3>
                     <div className="flex-1 h-px bg-slate-100" />
@@ -1158,8 +1221,9 @@ export function MatchFeedModal({
                     {scorers.map((scorer, index) => (
                       <li key={`${team}-${scorer.player}-${index}`} className="flex items-center justify-between py-2.5">
                         <p className="text-sm text-slate-900">
-                          <span className="font-bold">{index + 1}.</span> {scorer.player}
-                          {scorer.playerNumber ? <span className="text-slate-400"> #{scorer.playerNumber}</span> : ""}
+                          <span className="font-bold">{index + 1}.</span>{" "}
+                          {scorer.playerNumber && <span className="text-slate-400 font-semibold">{scorer.playerNumber} </span>}
+                          {scorer.player}
                         </p>
                         <p className="text-sm font-black tabular-nums text-slate-900">{scorer.goals}</p>
                       </li>
