@@ -11,7 +11,7 @@ import {
   shouldShowFinishedZeroZeroIssue,
   shouldShowProfixioTechnicalIssue,
 } from "@/lib/match-card-utils"
-import { getMatchEndTime, useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
+import { getMatchEndTime, useMatchData, forceMatchDataPoll, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchCardCTA } from "@/components/match-card-cta"
 import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
 import { normalizeMatchKey } from "@/lib/matches"
@@ -782,6 +782,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
           penalties={penaltiesByMatchId[selectedMatch.id] ?? []}
           topScorers={topScorersByMatchId[selectedMatch.id] ?? []}
           onRefresh={async () => {
+            forceMatchDataPoll()
             await fetchMatchTimeline(selectedMatch, true).catch(() => undefined)
           }}
         />

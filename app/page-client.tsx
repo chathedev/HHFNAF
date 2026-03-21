@@ -44,7 +44,7 @@ import {
   shouldShowFinishedZeroZeroIssue,
   shouldShowProfixioTechnicalIssue,
 } from "@/lib/match-card-utils"
-import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
+import { useMatchData, forceMatchDataPoll, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchCardCTA } from "@/components/match-card-cta"
 import { InstagramFeed } from "@/components/instagram-feed"
 import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
@@ -1465,6 +1465,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
             penalties={penaltiesByMatchId[selectedMatch.id] ?? []}
             topScorers={topScorersByMatchId[selectedMatch.id] ?? []}
             onRefresh={async () => {
+              forceMatchDataPoll()
               await fetchMatchTimeline(selectedMatch, true).catch(() => undefined)
             }}
           />

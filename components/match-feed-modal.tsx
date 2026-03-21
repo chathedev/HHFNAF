@@ -650,7 +650,7 @@ export function MatchFeedModal({
   const [clockTick, setClockTick] = useState(0)
   const allowAutoRefresh = matchStatus === "live" || matchStatus === "halftime"
   const canFetchDetailedTimeline = matchData?.timelineAvailable !== false || matchData?.eventsAvailable !== false
-  const modalRefreshIntervalMs = matchData?.provider === "procup" ? 7_500 : 5_000
+  const modalRefreshIntervalMs = matchData?.provider === "procup" ? 5_000 : 3_000
   const effectiveClockState = detailClockState ?? clockState ?? null
   const effectivePenalties = detailPenalties.length > 0 ? detailPenalties : penalties
   const shouldWaitForDetailedTimeline =
@@ -963,12 +963,16 @@ export function MatchFeedModal({
     if (refreshInFlightRef.current) return
     try {
       refreshInFlightRef.current = true
+      // Run parent refresh (updates cards + page data) and detail fetch in parallel
+      // so both the modal timeline and the match cards update simultaneously
+      const tasks: Promise<void>[] = []
       if (onRefresh) {
-        await onRefresh()
+        tasks.push(onRefresh().catch(() => undefined))
       }
       if (canFetchDetailedTimeline) {
-        await fetchDetailData()
+        tasks.push(fetchDetailData().catch(() => undefined))
       }
+      await Promise.all(tasks)
     } finally {
       refreshInFlightRef.current = false
     }
@@ -981,7 +985,7 @@ export function MatchFeedModal({
 
     const kickOff = globalThis.setTimeout(() => {
       refreshNow()
-    }, 450)
+    }, 150)
 
     const interval = globalThis.setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState === "hidden") {

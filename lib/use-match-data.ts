@@ -1632,6 +1632,11 @@ const createMatchDataChannel = () => {
     scheduleSubscriberNotification()
   }
 
+  const forcePoll = () => {
+    pollFull()
+    pollEvents()
+  }
+
   return {
     subscribe,
     subscribeConnection,
@@ -1639,10 +1644,16 @@ const createMatchDataChannel = () => {
     getConnectionState: () => ({ isConnected, hasData }),
     getLatest: () => latestPayload,
     broadcastEntry,
+    forcePoll,
   }
 }
 
 const matchDataChannel = createMatchDataChannel()
+
+/** Force an immediate poll of all match data channels (cards + page). */
+export const forceMatchDataPoll = () => {
+  matchDataChannel.forcePoll()
+}
 
 export const getMatchData = async (
   dataType: DataType = "liveUpcoming",
