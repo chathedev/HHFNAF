@@ -20,7 +20,7 @@ export type UpcomingMatch = {
 }
 
 export const MATCH_TYPES_WITH_TICKETS = ["a-lag", "dam/utv"]
-export const TICKET_VENUES = ["öbacka sc"]
+export const TICKET_VENUES = ["öbacka sc", "änget sportcenter"]
 
 const HARNOSAND_CLUB_NAME = "härnösands hf"
 

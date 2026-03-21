@@ -9,9 +9,10 @@ const TICKET_TEAM_KEYWORDS = ["a-lag herrar", "a-lag dam", "herr", "dam"]
 export function MatchCardCTA({ match, status }: { match: NormalizedMatch; status: string }) {
   const normalizedTeamType = match.teamType?.toLowerCase() ?? ""
   const isTicketTeam = TICKET_TEAM_KEYWORDS.some((keyword) => normalizedTeamType.includes(keyword))
-  const isAtObacka = Boolean(match.venue?.toLowerCase().includes("öbacka"))
+  const venueLower = match.venue?.toLowerCase() ?? ""
+  const isAtTicketVenue = venueLower.includes("öbacka") || venueLower.includes("änget")
   const isHomeMatch = match.isHome !== false
-  const showTicketCTA = isTicketTeam && isAtObacka && isHomeMatch && status !== "finished"
+  const showTicketCTA = isTicketTeam && isAtTicketVenue && isHomeMatch && status !== "finished"
 
   const playUrl = (match.playUrl ?? "").trim()
   const hasPlayLink =
