@@ -570,7 +570,7 @@ const getRowStyle = (event: MatchFeedEvent, homeTeam: string, awayTeam: string) 
 
   if (isPenalty) {
     return {
-      tone: "border-amber-200 bg-white",
+      tone: "border-slate-200 bg-white",
       dot: "bg-amber-500",
       teamClass: "text-amber-700",
       kindLabel: "UTVISNING",
@@ -579,26 +579,26 @@ const getRowStyle = (event: MatchFeedEvent, homeTeam: string, awayTeam: string) 
 
   if (isGoal && teamTone === "home") {
     return {
-      tone: "border-emerald-200 bg-white",
-      dot: "bg-emerald-500",
-      teamClass: "text-emerald-700",
+      tone: "border-slate-200 bg-white",
+      dot: "bg-slate-900",
+      teamClass: "text-slate-900",
       kindLabel: "MÅL",
     }
   }
 
   if (isGoal && teamTone !== "home") {
     return {
-      tone: "border-indigo-200 bg-white",
-      dot: "bg-indigo-500",
-      teamClass: "text-indigo-700",
+      tone: "border-slate-200 bg-white",
+      dot: "bg-slate-400",
+      teamClass: "text-slate-500",
       kindLabel: "MÅL",
     }
   }
 
   return {
-    tone: "border-slate-200 bg-white",
-    dot: "bg-slate-400",
-    teamClass: "text-slate-600",
+    tone: "border-slate-100 bg-white",
+    dot: "bg-slate-300",
+    teamClass: "text-slate-500",
     kindLabel: "HÄNDELSE",
   }
 }
@@ -979,79 +979,71 @@ export function MatchFeedModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/75 backdrop-blur-[2px] p-0 sm:items-center sm:p-6"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-6"
       role="dialog"
       aria-modal="true"
     >
       <div
         ref={modalRef}
-        className="flex h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white shadow-2xl sm:h-[78vh] sm:rounded-[18px]"
+        className="flex h-[92dvh] w-full max-w-2xl flex-col overflow-hidden border border-slate-200 bg-white sm:h-[78vh]"
       >
-        <header className="sticky top-0 z-20 border-b border-slate-200 bg-slate-900 px-3 py-3 text-white sm:px-5 sm:py-4">
+        <header className="sticky top-0 z-20 border-b border-slate-200 bg-slate-950 px-4 py-4 text-white sm:px-6 sm:py-5">
           <div className="mb-2 flex justify-center sm:hidden">
-            <span className="h-1.5 w-12 rounded-full bg-white/40" />
+            <span className="h-px w-10 bg-white/30" />
           </div>
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-300">Matchtimeline</p>
-              <h2 className="mt-1 text-base font-bold sm:text-2xl">
-                {homeTeam} <span className="text-slate-400">vs</span> {awayTeam}
-              </h2>
-              <div className="mt-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em]">
+            <div className="min-w-0">
+              <div className="flex items-center gap-3">
+                <h2 className="text-base font-bold sm:text-xl truncate">
+                  {homeTeam} <span className="text-white/40">–</span> {awayTeam}
+                </h2>
                 {(matchStatus === "live" || matchStatus === "halftime") && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-red-500 px-3 py-1 text-white">
-                    <span className="h-2 w-2 animate-pulse rounded-full bg-white" /> LIVE
+                  <span className="bg-white text-slate-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest shrink-0">
+                    LIVE
                   </span>
                 )}
-                {matchStatus === "finished" && <span className="rounded-full bg-slate-900/25 px-3 py-1">SLUT</span>}
-                {matchStatus === "upcoming" && <span className="rounded-full bg-slate-900/25 px-3 py-1">KOMMANDE</span>}
+                {matchStatus === "finished" && <span className="text-[10px] font-semibold uppercase tracking-widest text-white/40 shrink-0">SLUT</span>}
+                {matchStatus === "upcoming" && <span className="text-[10px] font-semibold uppercase tracking-widest text-white/40 shrink-0">KOMMANDE</span>}
               </div>
             </div>
 
-            <div className="flex items-start gap-2 sm:gap-3">
-              <div className="rounded-xl bg-white/10 px-3 py-2 text-center sm:px-4">
-                <p className="text-[10px] uppercase tracking-[0.18em] text-slate-300">Score</p>
-                <p className="whitespace-nowrap text-xl font-black leading-none tabular-nums sm:text-2xl">{scoreboard}</p>
-              </div>
+            <div className="flex items-center gap-4 shrink-0">
+              <p className="text-2xl font-black tabular-nums sm:text-3xl">{scoreboard}</p>
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-full border border-white/40 p-2.5 text-white transition hover:bg-white/10"
+                className="border border-white/20 p-2 text-white transition hover:bg-white/10"
                 aria-label="Stäng modal"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </button>
             </div>
           </div>
         </header>
 
         {showClockAndTimers && (
-          <div className="border-b border-slate-200 bg-white px-3 py-3 sm:px-5">
-            <div className="flex flex-col items-center gap-2">
-              {showTimeoutTimer && (
-                <div className="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 shadow-sm transition-all duration-300">
-                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-800">Timeout</span>
-                  <span className="font-mono text-lg font-black tabular-nums text-amber-900">
-                    {formatSecondsAsClock(timeoutSecondsLeft)}
-                  </span>
-                </div>
-              )}
-            </div>
+          <div className="border-b border-slate-200 bg-white px-4 py-3 sm:px-6">
+            {showTimeoutTimer && (
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Timeout</span>
+                <span className="font-mono text-lg font-black tabular-nums text-slate-900">
+                  {formatSecondsAsClock(timeoutSecondsLeft)}
+                </span>
+              </div>
+            )}
 
             {showPenaltyTimers && (
-              <div className="mt-3 space-y-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-700">Utvisningar pågår</p>
-                <div className="grid gap-2 sm:grid-cols-2">
+              <div className={showTimeoutTimer ? "mt-3" : ""}>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">Utvisningar</p>
+                <div className="divide-y divide-slate-100">
                   {activePenalties.map((item, index) => (
-                    <div key={`${item.team || "team"}-${item.player || "player"}-${index}`} className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="min-w-0 truncate text-xs font-semibold text-amber-900">
-                          {item.team || "Lag"} • {item.player || "Spelare"}{item.playerNumber ? ` #${item.playerNumber}` : ""}
-                        </p>
-                        <span className="font-mono text-sm font-black tabular-nums text-amber-900">
-                          {formatSecondsAsClock(item.remaining)}
-                        </span>
-                      </div>
+                    <div key={`${item.team || "team"}-${item.player || "player"}-${index}`} className="flex items-center justify-between gap-3 py-1.5">
+                      <p className="min-w-0 truncate text-xs text-slate-600">
+                        {item.team || "Lag"} — {item.player || "Spelare"}{item.playerNumber ? ` #${item.playerNumber}` : ""}
+                      </p>
+                      <span className="font-mono text-sm font-black tabular-nums text-slate-900">
+                        {formatSecondsAsClock(item.remaining)}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -1061,12 +1053,12 @@ export function MatchFeedModal({
         )}
 
         {!isNoLiveUpdatesIssue && (
-          <nav className="z-10 grid grid-cols-2 border-b border-slate-200 bg-slate-50">
+          <nav className="z-10 flex border-b border-slate-200 bg-white px-4 sm:px-6">
           <button
             type="button"
             onClick={() => setActiveTab("timeline")}
-            className={`px-3 py-3 text-sm font-semibold sm:px-4 ${
-              activeTab === "timeline" ? "bg-white text-slate-900" : "text-slate-600"
+            className={`px-0 py-3 text-xs font-semibold uppercase tracking-widest mr-6 border-b-2 transition ${
+              activeTab === "timeline" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400"
             }`}
           >
             Tidslinje ({displayedFeed.length})
@@ -1074,32 +1066,29 @@ export function MatchFeedModal({
           <button
             type="button"
             onClick={() => setActiveTab("scorers")}
-            className={`px-3 py-3 text-sm font-semibold sm:px-4 ${activeTab === "scorers" ? "bg-white text-slate-900" : "text-slate-600"}`}
+            className={`px-0 py-3 text-xs font-semibold uppercase tracking-widest border-b-2 transition ${
+              activeTab === "scorers" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400"
+            }`}
           >
-            Top 3 målskyttar
+            Målskyttar
           </button>
           </nav>
         )}
 
-        <div className="flex-1 overflow-y-auto bg-slate-50 px-3 py-4 sm:px-8 sm:py-6">
+        <div className="flex-1 overflow-y-auto bg-white px-4 py-4 sm:px-6 sm:py-6">
           {activeTab === "timeline" && (
-            <div className={`space-y-6 transition-[opacity,transform] duration-200 sm:space-y-8 ${isFeedTransitioning ? "opacity-95" : "opacity-100"}`}>
+            <div className="space-y-6">
               {showTimelineSkeleton && (
-                <div className="space-y-4">
-                  {Array.from({ length: 3 }).map((_, index) => (
-                    <div key={`timeline-skeleton-${index}`} className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+                <div className="divide-y divide-slate-100">
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <div key={`timeline-skeleton-${index}`} className="py-3">
                       <div className="flex items-start gap-3">
-                        <div className="w-14 shrink-0 sm:w-20">
-                          <div className="h-4 w-12 animate-pulse rounded bg-slate-200" />
-                          <div className="mt-2 h-3 w-8 animate-pulse rounded bg-slate-100" />
+                        <div className="w-12 shrink-0">
+                          <div className="h-3 w-10 bg-slate-100" />
                         </div>
-                        <div className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-slate-200" />
                         <div className="min-w-0 flex-1">
-                          <div className="h-4 w-2/3 animate-pulse rounded bg-slate-200" />
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            <div className="h-5 w-20 animate-pulse rounded-full bg-slate-100" />
-                            <div className="h-5 w-16 animate-pulse rounded-full bg-slate-100" />
-                          </div>
+                          <div className="h-3 w-3/5 bg-slate-100" />
+                          <div className="mt-2 h-3 w-2/5 bg-slate-50" />
                         </div>
                       </div>
                     </div>
@@ -1107,46 +1096,41 @@ export function MatchFeedModal({
                 </div>
               )}
               {!showTimelineSkeleton && displayedFeed.length === 0 && (
-                <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center">
-                  <p className="text-base font-semibold text-slate-700">{emptyTimelineMessage}</p>
-                </div>
+                <p className="py-12 text-center text-sm text-slate-400">{emptyTimelineMessage}</p>
               )}
               {periodKeys.map((period) => (
-                <section key={period} className="space-y-3">
-                  <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">{getPeriodLabel(period)}</h3>
-                  <ul className="space-y-2.5 sm:space-y-3">
+                <section key={period}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">{getPeriodLabel(period)}</h3>
+                    <div className="flex-1 h-px bg-slate-100" />
+                  </div>
+                  <ul className="divide-y divide-slate-100">
                     {groupedByPeriod[period].map((event, index) => {
                       const style = getRowStyle(event, homeTeam, awayTeam)
                       const score = getScoreFromEvent(event)
                       const typeLabel = getEventTypeLabel(event)
                       return (
-                        <li key={`${event.eventId ?? "idx"}-${index}`}>
-                          <div className={`relative overflow-hidden rounded-2xl border px-3 py-3 shadow-sm transition-colors sm:px-4 ${style.tone}`}>
-                            <span className={`absolute inset-y-0 left-0 w-1 ${style.dot}`} />
-                            <div className="flex items-start gap-2.5 pl-2 sm:gap-3">
-                              <div className="w-14 shrink-0 sm:w-20">
-                                <p className="text-xs font-bold text-slate-700">{event.time || "--:--"}</p>
-                                <p className="mt-1 text-[10px] uppercase tracking-[0.15em] text-slate-500">
-                                  {typeof event.period === "number" && event.period > 0 ? `P${event.period}` : "Match"}
-                                </p>
+                        <li key={`${event.eventId ?? "idx"}-${index}`} className="py-3">
+                          <div className="flex items-start gap-3">
+                            <div className="w-12 shrink-0">
+                              <p className="text-xs font-bold tabular-nums text-slate-900">{event.time || "--:--"}</p>
+                            </div>
+                            <span className={`mt-1.5 h-2 w-2 shrink-0 ${style.dot}`} />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-3">
+                                <p className="text-sm font-semibold text-slate-900">{getEventDisplayText(event)}</p>
+                                {score && <p className="shrink-0 text-sm font-black tabular-nums text-slate-900">{score}</p>}
                               </div>
-                              <div className="min-w-0 flex-1">
-                                <div className="flex flex-col items-start gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                                  <p className="text-sm font-semibold text-slate-900">{getEventDisplayText(event)}</p>
-                                  {score && <p className="shrink-0 text-sm font-black text-slate-900">{score}</p>}
-                                </div>
-                                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-                                  <span className={`font-bold uppercase tracking-[0.15em] ${style.teamClass}`}>
-                                    {getEventTeamLabel(event)}
+                              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-400">
+                                <span className={`font-semibold ${style.teamClass}`}>
+                                  {getEventTeamLabel(event)}
+                                </span>
+                                <span>{typeLabel}</span>
+                                {event.player && (
+                                  <span className="text-slate-600">
+                                    {event.player}{event.playerNumber ? ` #${event.playerNumber}` : ""}
                                   </span>
-                                  <span className="rounded-full bg-white/90 px-2 py-0.5 font-semibold text-slate-500">{typeLabel}</span>
-                                  {event.player && (
-                                    <span className="text-slate-700">
-                                      {event.player}
-                                      {event.playerNumber ? ` #${event.playerNumber}` : ""}
-                                    </span>
-                                  )}
-                                </div>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -1160,21 +1144,24 @@ export function MatchFeedModal({
           )}
 
           {activeTab === "scorers" && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {Object.keys(topScorersByTeam).length === 0 && (
-                <p className="text-center text-sm text-slate-500">Inga registrerade målskyttar än.</p>
+                <p className="py-8 text-center text-sm text-slate-400">Inga registrerade målskyttar än.</p>
               )}
               {Object.entries(topScorersByTeam).map(([team, scorers]) => (
-                <section key={team} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">{team}</h3>
-                  <ul className="mt-3 space-y-2">
+                <section key={team}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">{team}</h3>
+                    <div className="flex-1 h-px bg-slate-100" />
+                  </div>
+                  <ul className="divide-y divide-slate-100">
                     {scorers.map((scorer, index) => (
-                      <li key={`${team}-${scorer.player}-${index}`} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
-                        <p className="text-sm font-semibold text-slate-900">
-                          {index + 1}. {scorer.player}
-                          {scorer.playerNumber ? ` #${scorer.playerNumber}` : ""}
+                      <li key={`${team}-${scorer.player}-${index}`} className="flex items-center justify-between py-2.5">
+                        <p className="text-sm text-slate-900">
+                          <span className="font-bold">{index + 1}.</span> {scorer.player}
+                          {scorer.playerNumber ? <span className="text-slate-400"> #{scorer.playerNumber}</span> : ""}
                         </p>
-                        <p className="rounded-full bg-white px-2 py-0.5 text-xs font-black text-slate-700">{scorer.goals} mål</p>
+                        <p className="text-sm font-black tabular-nums text-slate-900">{scorer.goals}</p>
                       </li>
                     ))}
                   </ul>
