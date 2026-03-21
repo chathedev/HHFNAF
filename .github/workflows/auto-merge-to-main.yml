@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   auto-merge:
@@ -24,13 +25,27 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Merge to main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -e
           BRANCH="${GITHUB_REF#refs/heads/}"
-          echo "Merging $BRANCH into main..."
+          echo "::group::Merging $BRANCH into main"
 
           git fetch origin main
           git checkout main
-          git merge origin/$BRANCH --no-edit -m "Auto-merge $BRANCH into main"
-          git push origin main
+          git pull origin main
 
+          # Try normal merge first
+          if git merge "origin/$BRANCH" --no-edit -m "Auto-merge $BRANCH into main"; then
+            echo "Clean merge succeeded"
+          else
+            echo "Merge conflict detected — resolving in favor of $BRANCH"
+            git merge --abort
+            # Force-merge: accept all changes from the feature branch
+            git merge "origin/$BRANCH" --no-edit -X theirs -m "Auto-merge $BRANCH into main (theirs)"
+          fi
+
+          git push origin main
+          echo "::endgroup::"
           echo "Successfully merged $BRANCH into main"
