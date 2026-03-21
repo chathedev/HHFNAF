@@ -24,9 +24,6 @@ import {
   ShoppingBag,
   Ticket,
   Zap,
-  Radio,
-  CheckCircle2,
-  Clock,
   Calendar,
 } from "lucide-react"
 import { Header } from "@/components/header"
@@ -356,24 +353,22 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
     const statusBadge = (() => {
       if (status === "live") {
-        return { label: match.statusLabel ?? "LIVE", tone: "bg-rose-50 text-rose-600" }
+        return { label: match.statusLabel ?? "LIVE", tone: "bg-slate-900 text-white" }
       }
       if (status === "finished") {
-        return { label: match.statusLabel ?? "SLUT", tone: "bg-gray-100 text-gray-600" }
+        return { label: match.statusLabel ?? "SLUT", tone: "bg-slate-100 text-slate-500" }
       }
-      return { label: match.statusLabel ?? "KOMMANDE", tone: "bg-blue-50 text-blue-600" }
+      return { label: match.statusLabel ?? "KOMMANDE", tone: "bg-white text-slate-500 border border-slate-200" }
     })()
 
     return (
       <li key={match.id}>
         <article
           id={`match-card-${match.id}`}
-          className={`group relative flex flex-col gap-3 rounded-2xl border p-4 transition-all ${
-            status === "live"
-              ? "border-rose-200 bg-rose-50/40 ring-1 ring-rose-100"
-              : "border-slate-200 bg-white"
-          } ${canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:shadow-md" : ""}`}
-          onMouseEnter={() => {
+          className={`group relative flex flex-col gap-3 border-b border-slate-200 px-0 py-4 transition ${
+            canOpenTimeline ? "cursor-pointer hover:bg-slate-50" : ""
+          }`}
+  onMouseEnter={() => {
             if (canOpenTimeline) {
               fetchMatchTimeline(match).catch(() => undefined)
             }
@@ -404,56 +399,34 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
               </h3>
               {scheduleLabel && <p className="mt-1 text-xs leading-5 text-slate-500 break-words">{scheduleLabel}</p>}
             </div>
-            <span className={`inline-flex w-fit items-center justify-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${statusBadge.tone}`}>
+            <span className={`inline-flex w-fit items-center justify-center px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest ${statusBadge.tone}`}>
               {statusBadge.label}
             </span>
           </div>
 
           {scoreValue && (
-            <div className={`rounded-xl px-4 py-3 ${status === "live" ? "bg-rose-50 ring-1 ring-rose-200" : "bg-slate-50"}`}>
-              <div className="flex items-center justify-center gap-4">
-                <span className="flex-1 text-right text-xs font-semibold text-slate-600 truncate">{match.isHome !== false ? "HHF" : ((match.opponent ?? "").replace(/\s*\((hemma|borta)\)\s*$/i, "").trim() || "Borta")}</span>
-                <div className="flex items-center gap-1" data-score-value="true">
-                  {status === "live" && (
-                    <span className="relative mr-2 flex h-2 w-2">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-500 opacity-75" />
-                      <span className="relative inline-flex h-2 w-2 rounded-full bg-rose-500" />
-                    </span>
-                  )}
-                  <span className={`text-2xl font-black tabular-nums ${status === "live" ? "text-rose-700" : "text-slate-900"}`}>
-                    {scoreValue}
-                  </span>
-                </div>
-                <span className="flex-1 text-left text-xs font-semibold text-slate-600 truncate">{match.isHome !== false ? ((match.opponent ?? "").replace(/\s*\((hemma|borta)\)\s*$/i, "").trim() || "Borta") : "HHF"}</span>
-              </div>
-              {status === "live" && (
-                <p className="mt-1 text-center text-[10px] font-bold uppercase tracking-widest text-rose-500">Pågår nu</p>
-              )}
-            </div>
-          )}
-
-          {showLivePendingScore && (
-            <div className="flex flex-col gap-1 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2">
-              <span className="text-sm font-semibold text-sky-800">Livescore väntar</span>
-              <span className="text-xs text-sky-700">
-                Poäng publiceras så fort liveflödet skickar dem.
+            <div className="py-2" data-score-value="true">
+              <span className={`text-3xl font-black tabular-nums tracking-tight ${status === "live" ? "text-slate-900" : "text-slate-900"}`}>
+                {scoreValue}
               </span>
             </div>
           )}
 
-          <div className="flex flex-wrap items-center gap-2">
-            {match.series && (
-              <p className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] text-slate-500">{match.series}</p>
-            )}
-          </div>
+          {showLivePendingScore && (
+            <p className="text-xs text-slate-400">Livescore väntar</p>
+          )}
+
+          {match.series && (
+            <p className="text-[11px] text-slate-400">{match.series}</p>
+          )}
         {showProfixioWarning && (
-          <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
-            Profixio har tekniska problem med liveuppdateringen för den här matchen just nu.
+          <p className="border-l-2 border-amber-400 pl-3 text-xs text-amber-700">
+            Profixio har tekniska problem med liveuppdateringen just nu.
           </p>
         )}
         {showFinishedZeroZeroIssue && (
-          <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
-            Misstänkt resultatfel från Profixio: avslutad match visas som 0–0.
+          <p className="border-l-2 border-amber-400 pl-3 text-xs text-amber-700">
+            Misstänkt resultatfel: avslutad match visas som 0–0.
           </p>
         )}
           <div className="flex items-center justify-between gap-3 pt-1">
@@ -464,7 +437,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                 target="_blank"
                 rel="noreferrer"
                 onClick={(event) => event.stopPropagation()}
-                className="inline-flex items-center justify-center rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800 transition hover:border-slate-900 hover:text-slate-950"
+                className="text-xs font-medium text-slate-500 underline-offset-2 transition hover:text-slate-900 hover:underline"
               >
                 {getMatchWatchLabel(status)}
               </a>
@@ -475,15 +448,15 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                   event.stopPropagation()
                   openMatchModal(match)
                 }}
-                className="inline-flex items-center justify-center rounded-md bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+                className="text-xs font-medium text-slate-500 underline-offset-2 transition hover:text-slate-900 hover:underline"
               >
-                Öppna
+                Detaljer
               </button>
             ) : (
               <Link
                 href="/matcher"
                 onClick={(event) => event.stopPropagation()}
-                className="inline-flex items-center justify-center rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-900 hover:text-slate-950"
+                className="text-xs font-medium text-slate-500 underline-offset-2 transition hover:text-slate-900 hover:underline"
               >
                 Till matcher
               </Link>
@@ -507,11 +480,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     return (
       <li key={match.id}>
         <article
-          className={`flex flex-col gap-3 rounded-2xl border px-4 py-3.5 transition ${
-            status === "live"
-              ? "border-rose-200 bg-rose-50/40 ring-1 ring-rose-100"
-              : "border-slate-200 bg-white"
-          } ${canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:bg-slate-50" : ""}`}
+          className={`flex flex-col gap-2 border-b border-slate-200 py-3.5 transition ${
+            canOpenTimeline ? "cursor-pointer hover:bg-slate-50" : ""
+          }`}
           onClick={(event) => {
             if (!canOpenTimeline) {
               return
@@ -524,57 +495,31 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
           }}
         >
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
+            <span className="text-[11px] font-medium text-slate-400">
               {dayLabel}
             </span>
             {timeLabel ? (
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
-                {timeLabel}
-              </span>
+              <span className="text-[11px] text-slate-300">{timeLabel}</span>
             ) : null}
-            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">{teamTypeLabel}</span>
+            <span className="text-[11px] font-medium text-slate-400">{teamTypeLabel}</span>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-center justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-slate-950 break-words sm:text-[15px]">{matchupLabel}</p>
-              <p className="mt-1 text-xs leading-5 text-slate-500 break-words">{scheduleLabel}</p>
-              {match.series ? <p className="mt-1 text-[11px] leading-5 text-slate-400 break-words">{match.series}</p> : null}
+              <p className="text-sm font-semibold text-slate-900 break-words">{matchupLabel}</p>
             </div>
 
-            <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
-              {hasStream ? (
-                <a
-                  href={(match.playUrl ?? "").trim()}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={(event) => event.stopPropagation()}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800 transition hover:border-slate-900 hover:text-slate-950 sm:w-auto"
-                >
-                  {getMatchWatchLabel("upcoming")}
-                </a>
-              ) : canOpenTimeline ? (
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    openMatchModal(match)
-                  }}
-                  className="inline-flex w-full items-center justify-center gap-1 rounded-md border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:border-emerald-400 hover:text-emerald-900 sm:w-auto"
-                >
-                  Visa
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </button>
-              ) : (
-                <Link
-                  href="/matcher"
-                  onClick={(event) => event.stopPropagation()}
-                  className="inline-flex w-full items-center justify-center gap-1 rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-900 hover:text-slate-950 sm:w-auto"
-                >
-                  Till matcher
-                </Link>
-              )}
-            </div>
+            {hasStream ? (
+              <a
+                href={(match.playUrl ?? "").trim()}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(event) => event.stopPropagation()}
+                className="text-xs font-medium text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline shrink-0"
+              >
+                {getMatchWatchLabel("upcoming")}
+              </a>
+            ) : null}
           </div>
         </article>
       </li>
@@ -597,22 +542,20 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
     const statusBadge = (() => {
       if (status === "live") {
-        return { label: match.statusLabel ?? "LIVE", tone: "bg-rose-50 text-rose-600" }
+        return { label: match.statusLabel ?? "LIVE", tone: "bg-slate-900 text-white" }
       }
       if (status === "finished") {
-        return { label: match.statusLabel ?? "SLUT", tone: "bg-slate-100 text-slate-600" }
+        return { label: match.statusLabel ?? "SLUT", tone: "bg-slate-100 text-slate-500" }
       }
-      return { label: match.statusLabel ?? "KOMMANDE", tone: "bg-sky-50 text-sky-700" }
+      return { label: match.statusLabel ?? "KOMMANDE", tone: "bg-white text-slate-500 border border-slate-200" }
     })()
 
     return (
       <li key={match.id}>
         <article
-          className={`flex flex-col gap-3 rounded-2xl border px-4 py-3.5 transition ${
-            status === "live"
-              ? "border-rose-200 bg-rose-50/40 ring-1 ring-rose-100"
-              : "border-slate-200 bg-white"
-          } ${canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:bg-slate-50" : ""}`}
+          className={`flex flex-col gap-3 border-b border-slate-200 px-0 py-3.5 transition ${
+            canOpenTimeline ? "cursor-pointer hover:bg-slate-50" : ""
+          }`}
           onMouseEnter={() => {
             if (canOpenTimeline) {
               fetchMatchTimeline(match).catch(() => undefined)
@@ -635,11 +578,11 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
           }}
         >
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${statusBadge.tone}`}>
+            <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest ${statusBadge.tone}`}>
               {statusBadge.label}
             </span>
-            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">{teamTypeLabel}</span>
-            {match.series ? <span className="text-[11px] text-slate-400">{match.series}</span> : null}
+            <span className="text-[11px] font-medium text-slate-400">{teamTypeLabel}</span>
+            {match.series ? <span className="text-[11px] text-slate-300">{match.series}</span> : null}
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -647,19 +590,13 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
               <p className="text-sm font-semibold text-slate-950 break-words sm:text-[15px]">{matchupLabel}</p>
               <p className="mt-1 text-xs leading-5 text-slate-500 break-words">{scheduleLabel}</p>
               {showLivePendingScore ? (
-                <p className="mt-2 text-xs font-medium text-sky-700">Livescore väntar från matchflödet.</p>
+                <p className="mt-1 text-xs text-slate-400">Livescore väntar</p>
               ) : null}
             </div>
 
             <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
               {scoreValue ? (
-                <span className={`inline-flex items-center gap-1.5 text-lg font-black tabular-nums ${status === "live" ? "text-rose-600" : "text-slate-900"}`} data-score-value="true">
-                  {status === "live" && (
-                    <span className="relative flex h-2 w-2">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-500 opacity-75" />
-                      <span className="relative inline-flex h-2 w-2 rounded-full bg-rose-500" />
-                    </span>
-                  )}
+                <span className="text-lg font-black tabular-nums text-slate-900" data-score-value="true">
                   {scoreValue}
                 </span>
               ) : null}
@@ -669,7 +606,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                   target="_blank"
                   rel="noreferrer"
                   onClick={(event) => event.stopPropagation()}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800 transition hover:border-slate-900 hover:text-slate-950 sm:w-auto"
+                  className="text-xs font-medium text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline"
                 >
                   {getMatchWatchLabel(status)}
                 </a>
@@ -680,19 +617,11 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                     event.stopPropagation()
                     openMatchModal(match)
                   }}
-                  className="inline-flex w-full items-center justify-center gap-1 rounded-md border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:border-emerald-400 hover:text-emerald-900 sm:w-auto"
+                  className="text-xs font-medium text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline"
                 >
-                  Öppna
+                  Detaljer
                 </button>
-              ) : (
-                <Link
-                  href="/matcher"
-                  onClick={(event) => event.stopPropagation()}
-                  className="inline-flex w-full items-center justify-center gap-1 rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-900 hover:text-slate-950 sm:w-auto"
-                >
-                  Till matcher
-                </Link>
-              )}
+              ) : null}
             </div>
           </div>
         </article>
@@ -701,19 +630,15 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   }
 
   const renderUpcomingSkeletonRows = () => (
-    <div className="space-y-2">
+    <div className="divide-y divide-slate-100">
       {Array.from({ length: 4 }).map((_, index) => (
-        <div key={`upcoming-skeleton-${index}`} className="rounded-2xl border border-slate-200 bg-white px-4 py-3.5">
-          <div className="flex flex-wrap gap-2">
-            <div className="h-6 w-20 rounded-full bg-slate-100" />
-            <div className="h-6 w-16 rounded-full bg-slate-100" />
-            <div className="h-6 w-14 rounded-full bg-emerald-50" />
+        <div key={`upcoming-skeleton-${index}`} className="py-4">
+          <div className="flex gap-2">
+            <div className="h-4 w-14 bg-slate-100" />
+            <div className="h-4 w-10 bg-slate-50" />
           </div>
-          <div className="mt-3 h-4 w-4/5 rounded bg-slate-200" />
-          <div className="mt-2 h-3 w-3/5 rounded bg-slate-100" />
-          <div className="mt-3 flex justify-end">
-            <div className="h-8 w-24 rounded-md bg-slate-100" />
-          </div>
+          <div className="mt-2 h-4 w-3/5 bg-slate-100" />
+          <div className="mt-1.5 h-3 w-2/5 bg-slate-50" />
         </div>
       ))}
     </div>
@@ -942,89 +867,58 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                   href={shopVisible ? SHOP_URL : "/shop"}
                   target={shopVisible ? "_blank" : undefined}
                   rel={shopVisible ? "noopener noreferrer" : undefined}
-                  className="group relative block rounded-2xl overflow-hidden bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 p-7 sm:p-10 mb-5 transition-all duration-300 hover:shadow-2xl hover:shadow-emerald-500/20 hover:scale-[1.01] shadow-xl"
+                  className="group block border border-slate-200 bg-white p-5 sm:p-6 mb-5 transition hover:border-slate-900"
                 >
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_50%,rgba(255,255,255,0.1),transparent_70%)]" />
-                  <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-sm px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white">
-                      <Zap className="h-3 w-3" />
-                      Nyhet
-                    </span>
-                  </div>
-                  <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-6">
-                    <div className="flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/15 backdrop-blur-sm shrink-0">
-                      <ShoppingBag className="h-8 w-8 sm:h-10 sm:w-10 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h2 className="text-2xl sm:text-3xl font-black text-white mb-1.5 tracking-tight">
-                        Härnösands HF Butik
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Nytt i butiken</p>
+                      <h2 className="mt-1 text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+                        Mössor och supporterprylar
                       </h2>
-                      <p className="text-emerald-50/90 text-sm sm:text-base max-w-lg leading-relaxed">
-                        Supporterprylar, matchkläder och mer. Stöd klubben — handla direkt!
+                      <p className="mt-1 text-sm text-slate-500">
+                        Stöd klubben — handla direkt.
                       </p>
                     </div>
-                    <div className="shrink-0">
-                      <span className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3.5 text-sm font-bold text-emerald-700 shadow-lg transition group-hover:shadow-xl group-hover:bg-emerald-50">
-                        Öppna Butiken
-                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                      </span>
-                    </div>
+                    <span className="inline-flex items-center gap-1.5 border border-slate-900 px-4 py-2 text-xs font-semibold text-slate-900 transition group-hover:bg-slate-900 group-hover:text-white shrink-0">
+                      Öppna butiken
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </span>
                   </div>
                 </Link>
 
                 {/* Quick action cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10 sm:mb-14">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-slate-200 border border-slate-200 mb-10 sm:mb-14">
                   <Link
                     href="/matcher"
-                    className="group flex flex-col items-center gap-3 rounded-xl border border-slate-200 bg-white p-5 text-center transition hover:border-slate-300 hover:shadow-md"
+                    className="group flex items-center gap-3 bg-white p-4 transition hover:bg-slate-50"
                   >
-                    <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-slate-100 transition group-hover:bg-slate-900 group-hover:text-white text-slate-600">
-                      <Calendar className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">Alla matcher</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">Matchkalender</p>
-                    </div>
+                    <Calendar className="h-4 w-4 text-slate-400 shrink-0" />
+                    <span className="text-sm font-medium text-slate-700">Matcher</span>
                   </Link>
                   <Link
                     href={TICKET_URL}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group flex flex-col items-center gap-3 rounded-xl border border-slate-200 bg-white p-5 text-center transition hover:border-slate-300 hover:shadow-md"
+                    className="group flex items-center gap-3 bg-white p-4 transition hover:bg-slate-50"
                   >
-                    <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-slate-100 transition group-hover:bg-slate-900 group-hover:text-white text-slate-600">
-                      <Ticket className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">Köp biljett</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">ClubMate</p>
-                    </div>
+                    <Ticket className="h-4 w-4 text-slate-400 shrink-0" />
+                    <span className="text-sm font-medium text-slate-700">Biljetter</span>
                   </Link>
                   <Link
                     href="/lag"
-                    className="group flex flex-col items-center gap-3 rounded-xl border border-slate-200 bg-white p-5 text-center transition hover:border-slate-300 hover:shadow-md"
+                    className="group flex items-center gap-3 bg-white p-4 transition hover:bg-slate-50"
                   >
-                    <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-slate-100 transition group-hover:bg-slate-900 group-hover:text-white text-slate-600">
-                      <Users className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">Våra lag</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">Alla trupper</p>
-                    </div>
+                    <Users className="h-4 w-4 text-slate-400 shrink-0" />
+                    <span className="text-sm font-medium text-slate-700">Lag</span>
                   </Link>
                   <Link
                     href={shopVisible ? SHOP_URL : "/shop"}
                     target={shopVisible ? "_blank" : undefined}
                     rel={shopVisible ? "noopener noreferrer" : undefined}
-                    className="group flex flex-col items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50/50 p-5 text-center transition hover:border-emerald-300 hover:shadow-md hover:bg-emerald-50"
+                    className="group flex items-center gap-3 bg-white p-4 transition hover:bg-slate-50"
                   >
-                    <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-emerald-100 transition group-hover:bg-emerald-600 group-hover:text-white text-emerald-600">
-                      <ShoppingBag className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-emerald-800">Shoppa</p>
-                      <p className="text-[11px] text-emerald-500 mt-0.5">Supporterprylar</p>
-                    </div>
+                    <ShoppingBag className="h-4 w-4 text-slate-400 shrink-0" />
+                    <span className="text-sm font-medium text-slate-700">Butik</span>
                   </Link>
                 </div>
               </div>
@@ -1038,9 +932,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                 {showInitialMatchLoader ? (
                   renderUpcomingSkeletonRows()
                 ) : matchError ? (
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-6 text-center text-sm text-amber-800">
+                  <p className="py-6 text-center text-sm text-slate-400">
                     Matcherna kunde inte läsas in just nu.
-                  </div>
+                  </p>
                 ) : homeMatchFlow.items.length > 0 ? (
                   <div className="space-y-6">
                     {/* Promoted A-lag ticket matches */}
@@ -1067,8 +961,8 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                             return (
                               <article
                                 key={`promoted-${match.id}`}
-                                className={`group relative rounded-2xl border border-slate-900 bg-slate-950 p-5 sm:p-6 text-white transition-all ${
-                                  canOpen ? "cursor-pointer hover:shadow-xl" : ""
+                                className={`group relative border border-slate-900 bg-slate-950 p-5 sm:p-6 text-white transition ${
+                                  canOpen ? "cursor-pointer hover:bg-slate-900" : ""
                                 }`}
                                 onMouseEnter={() => { if (canOpen) fetchMatchTimeline(match).catch(() => undefined) }}
                                 onClick={(event) => {
@@ -1081,37 +975,31 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                                   <div className="min-w-0 flex-1">
                                     <div className="flex flex-wrap items-center gap-2 mb-2">
                                       {isLive ? (
-                                        <span className="inline-flex items-center gap-1.5 rounded-md bg-rose-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
-                                          <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                                        <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest bg-white text-slate-900">
                                           LIVE
                                         </span>
                                       ) : (
-                                        <span className="inline-flex items-center gap-1 rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white/80">
+                                        <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white/60">
                                           {match.statusLabel ?? "KOMMANDE"}
                                         </span>
                                       )}
-                                      <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400">{teamTypeLabel}</span>
+                                      <span className="text-[11px] font-medium text-white/40">{teamTypeLabel}</span>
                                     </div>
                                     <h3 className="text-base sm:text-lg font-bold leading-snug break-words">{matchupLabel}</h3>
-                                    {scheduleLabel && <p className="mt-1 text-xs text-white/50 break-words">{scheduleLabel}</p>}
+                                    {scheduleLabel && <p className="mt-1 text-xs text-white/40 break-words">{scheduleLabel}</p>}
                                   </div>
-                                  <div className="flex flex-col items-end gap-2 shrink-0">
+                                  <div className="flex flex-col items-end gap-3 shrink-0">
                                     {scoreValue && (
-                                      <div className="flex flex-col items-center" data-score-value="true">
-                                        {isLive && (
-                                          <span className="mb-1 text-[10px] font-bold uppercase tracking-widest text-rose-400">Pågår nu</span>
-                                        )}
-                                        <span className={`text-4xl font-black tabular-nums ${isLive ? "text-white" : "text-white/80"}`}>
-                                          {scoreValue}
-                                        </span>
-                                      </div>
+                                      <span className="text-3xl font-black tabular-nums text-white" data-score-value="true">
+                                        {scoreValue}
+                                      </span>
                                     )}
                                     <Link
                                       href={TICKET_URL}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       onClick={(e) => e.stopPropagation()}
-                                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2 text-xs font-bold text-white transition hover:bg-emerald-400"
+                                      className="inline-flex items-center gap-1.5 border border-white/20 px-4 py-2 text-xs font-semibold text-white transition hover:bg-white hover:text-slate-900"
                                     >
                                       <Ticket className="h-3.5 w-3.5" />
                                       Köp biljett
@@ -1134,11 +1022,10 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                       return (
                         <div>
                           <div className="flex items-center gap-3 mb-3">
-                            <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-rose-500">
-                              <Radio className="h-3 w-3 animate-pulse" />
+                            <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-900">
                               Live
                             </span>
-                            <div className="flex-1 h-px bg-slate-100" />
+                            <div className="flex-1 h-px bg-slate-200" />
                           </div>
                           <ul className="space-y-2">
                             {liveMatches.map(renderHomeFlowRow)}
@@ -1156,11 +1043,10 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                       return (
                         <div>
                           <div className="flex items-center gap-3 mb-3">
-                            <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400">
-                              <Clock className="h-3 w-3" />
+                            <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
                               Kommande
                             </span>
-                            <div className="flex-1 h-px bg-slate-100" />
+                            <div className="flex-1 h-px bg-slate-200" />
                           </div>
                           <ul className="space-y-2">
                             {upcomingMatches.map(renderHomeFlowRow)}
@@ -1176,11 +1062,10 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                       return (
                         <div>
                           <div className="flex items-center gap-3 mb-3">
-                            <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400">
-                              <CheckCircle2 className="h-3 w-3" />
+                            <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
                               Resultat
                             </span>
-                            <div className="flex-1 h-px bg-slate-100" />
+                            <div className="flex-1 h-px bg-slate-200" />
                           </div>
                           <ul className="space-y-2">
                             {finishedMatches.map(renderHomeFlowRow)}
@@ -1190,18 +1075,18 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                     })()}
                   </div>
                 ) : (
-                  <div className="rounded-xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
+                  <p className="py-10 text-center text-sm text-slate-400">
                     Inga matcher att visa just nu.
-                  </div>
+                  </p>
                 )}
 
                 {homeMatchFlow.items.length > 0 && (
-                  <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <div className="mt-8 flex items-center justify-center gap-4">
                     <Link
                       href="/matcher"
-                      className="inline-flex items-center gap-2 rounded-lg bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                      className="inline-flex items-center gap-2 border border-slate-900 px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-900 hover:text-white"
                     >
-                      Visa alla matcher
+                      Alla matcher
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                     {shopVisible && (
@@ -1209,10 +1094,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                         href={SHOP_URL}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                        className="text-sm font-medium text-slate-500 underline-offset-2 transition hover:text-slate-900 hover:underline"
                       >
-                        <ShoppingBag className="h-4 w-4" />
-                        Besök Butiken
+                        Besök butiken
                       </Link>
                     )}
                   </div>
