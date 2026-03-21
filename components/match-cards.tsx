@@ -16,6 +16,13 @@ interface Match {
   result?: string
   isHome?: boolean
   playUrl?: string
+  homeTeam?: string
+  awayTeam?: string
+  homeScore?: number | null
+  awayScore?: number | null
+  matchStatus?: string
+  statusLabel?: string
+  elapsedMinutes?: number | null
 }
 
 const API_BASE_URL = "https://api.harnosandshf.se/matcher"
@@ -44,6 +51,60 @@ const InfoCard = ({ icon, title, description }: { icon: ReactNode; title: string
   </div>
 )
 
+function LivePulse() {
+  return (
+    <span className="relative flex h-2.5 w-2.5">
+      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+    </span>
+  )
+}
+
+function ScoreDisplay({ match }: { match: Match }) {
+  const isLive = match.matchStatus === "live"
+  const isFinished = match.matchStatus === "finished"
+  const hasScore = match.homeScore != null && match.awayScore != null
+
+  if (!hasScore && !isLive) return null
+
+  const homeScore = match.homeScore ?? 0
+  const awayScore = match.awayScore ?? 0
+
+  if (isLive) {
+    return (
+      <div className="flex flex-col items-center gap-1">
+        <div className="flex items-center gap-1.5">
+          <LivePulse />
+          <span className="text-[10px] font-bold uppercase tracking-widest text-red-600">Live</span>
+        </div>
+        <div className="flex items-baseline gap-2">
+          <span className="text-3xl font-extrabold tabular-nums text-gray-900">{homeScore}</span>
+          <span className="text-lg font-medium text-gray-400">–</span>
+          <span className="text-3xl font-extrabold tabular-nums text-gray-900">{awayScore}</span>
+        </div>
+        {match.elapsedMinutes != null && (
+          <span className="text-[11px] font-medium tabular-nums text-red-500">{match.elapsedMinutes}&apos;</span>
+        )}
+      </div>
+    )
+  }
+
+  if (isFinished && hasScore) {
+    return (
+      <div className="flex flex-col items-center gap-0.5">
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Slut</span>
+        <div className="flex items-baseline gap-2">
+          <span className="text-2xl font-bold tabular-nums text-gray-700">{homeScore}</span>
+          <span className="text-base font-medium text-gray-300">–</span>
+          <span className="text-2xl font-bold tabular-nums text-gray-700">{awayScore}</span>
+        </div>
+      </div>
+    )
+  }
+
+  return null
+}
+
 export default function MatchCards() {
   const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([])
   const [loading, setLoading] = useState(true)
@@ -56,7 +117,7 @@ export default function MatchCards() {
     const fetchMatches = async () => {
       try {
         const controller = new AbortController()
-        const timeoutId = window.setTimeout(() => controller.abort(), 3000) // Faster timeout
+        const timeoutId = window.setTimeout(() => controller.abort(), 3000)
 
         const response = await fetch(`${API_BASE_URL}/data/current`, {
           signal: controller.signal,
@@ -82,7 +143,7 @@ export default function MatchCards() {
         }
 
         const now = Date.now()
-        const lookBackMs = 1000 * 60 * 60 * 6 // keep matches that started within the last 6h
+        const lookBackMs = 1000 * 60 * 60 * 6
 
         const toDate = (match: Match) => {
           if (!match.date) return null
@@ -102,6 +163,10 @@ export default function MatchCards() {
             return kickoffTime >= now - lookBackMs
           })
           .sort((a, b) => {
+            // Live matches first, then by date
+            const aLive = a.match.matchStatus === "live" ? 0 : 1
+            const bLive = b.match.matchStatus === "live" ? 0 : 1
+            if (aLive !== bLive) return aLive - bLive
             const aTime = a.kickoff ? a.kickoff.getTime() : Infinity
             const bTime = b.kickoff ? b.kickoff.getTime() : Infinity
             return aTime - bTime
@@ -188,49 +253,96 @@ export default function MatchCards() {
                   const opponent = removeHomeAwaySuffix(match.opponent) || "Motståndare meddelas"
                   const teamLabel = extendTeamDisplayName(match.teamType)
                   const scheduleBits = [formatDate(match.date), normalizeTimeLabel(match.time), match.venue].filter(Boolean)
+                  const isLive = match.matchStatus === "live"
+                  const isFinished = match.matchStatus === "finished"
+                  const hasScore = match.homeScore != null && match.awayScore != null
+
+                  const homeLabel = match.isHome !== false ? "Härnösands HF" : opponent
+                  const awayLabel = match.isHome !== false ? opponent : "Härnösands HF"
 
                   return (
                     <div
                       key={`${match.teamType}-${match.date}-${index}`}
-                      className="rounded-2xl border border-gray-200 bg-white/90 px-4 py-4 shadow-sm transition-colors hover:border-gray-300"
+                      className={`rounded-2xl border px-4 py-4 shadow-sm transition-colors ${
+                        isLive
+                          ? "border-red-200 bg-red-50/60 ring-1 ring-red-100"
+                          : "border-gray-200 bg-white/90 hover:border-gray-300"
+                      }`}
                     >
-                      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                        <div className="space-y-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            {teamLabel && (
-                              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-                                {teamLabel}
-                              </span>
-                            )}
-                            {match.isHome !== undefined && (
-                              <span
-                                className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                                  match.isHome ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"
-                                }`}
-                              >
-                                {match.isHome ? "Hemma" : "Borta"}
-                              </span>
-                            )}
-                          </div>
+                      {/* Tags row */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        {isLive && (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white">
+                            <LivePulse />
+                            Pågår nu
+                          </span>
+                        )}
+                        {teamLabel && (
+                          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                            {teamLabel}
+                          </span>
+                        )}
+                        {match.isHome !== undefined && (
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                              match.isHome ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"
+                            }`}
+                          >
+                            {match.isHome ? "Hemma" : "Borta"}
+                          </span>
+                        )}
+                      </div>
 
+                      {/* Scoreboard layout */}
+                      {(isLive || isFinished) && hasScore ? (
+                        <div className="mt-3">
+                          <div className="flex items-center justify-center gap-3 sm:gap-5">
+                            {/* Home team */}
+                            <div className="flex-1 text-right">
+                              <p className={`text-sm font-semibold sm:text-base ${
+                                homeLabel === "Härnösands HF" ? "text-gray-900" : "text-gray-600"
+                              }`}>
+                                {homeLabel}
+                              </p>
+                            </div>
+
+                            {/* Score center */}
+                            <ScoreDisplay match={match} />
+
+                            {/* Away team */}
+                            <div className="flex-1 text-left">
+                              <p className={`text-sm font-semibold sm:text-base ${
+                                awayLabel === "Härnösands HF" ? "text-gray-900" : "text-gray-600"
+                              }`}>
+                                {awayLabel}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Standard upcoming layout */
+                        <div className="mt-2">
                           <h4 className="text-lg font-semibold text-gray-900">
                             {match.isHome === false
                               ? `${opponent} vs Härnösands HF`
                               : `Härnösands HF vs ${opponent}`}
                           </h4>
-
-                          {scheduleBits.length > 0 && (
-                            <p className="text-sm text-gray-600">{scheduleBits.join(" • ")}</p>
-                          )}
                         </div>
+                      )}
 
-                        <div className="flex flex-col items-start gap-2 md:items-end">
+                      {/* Schedule + actions row */}
+                      <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        {scheduleBits.length > 0 && (
+                          <p className="text-sm text-gray-500">{scheduleBits.join(" • ")}</p>
+                        )}
+
+                        <div className="flex items-center gap-3">
                           {match.playUrl && match.playUrl !== "null" && (
                             <a
                               href={match.playUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-2 rounded-full bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-orange-600"
+                              className="inline-flex items-center gap-1.5 rounded-full bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-orange-600"
                             >
                               Se match
                             </a>
