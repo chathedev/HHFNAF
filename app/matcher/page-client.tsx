@@ -171,6 +171,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     loading: liveLoading,
     error: liveError,
     hasPayload: hasLivePayload,
+    hasClientData: hasClientMatchData,
   } = useMatchData({
     dataType: "liveUpcoming",
     initialData,
@@ -407,15 +408,16 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     const teamTypeRaw = match.teamType?.trim() || ""
     const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
     const cleanedResult = match.result?.trim()
+    const isUnconfirmedZero = !hasClientMatchData && status === "live" && cleanedResult != null && /^0\s*[-–—]\s*0$/.test(cleanedResult)
     const scoreValue =
-      status === "upcoming" || match.resultState === "not_started" || match.resultState === "live_pending"
+      status === "upcoming" || match.resultState === "not_started" || match.resultState === "live_pending" || isUnconfirmedZero
         ? null
         : cleanedResult && cleanedResult.length > 0
           ? cleanedResult
           : status === "finished"
             ? "Resultat inväntas"
             : null
-    const showLivePendingScore = status === "live" && match.resultState === "live_pending"
+    const showLivePendingScore = status === "live" && (match.resultState === "live_pending" || isUnconfirmedZero)
 
     const statusBadge = (() => {
       if (status === "live") {

@@ -1893,6 +1893,7 @@ export const useMatchData = (options?: {
   const enabled = options?.enabled ?? true
   const paramsLimit = typeof params?.limit === "number" && params.limit >= 0 ? params.limit : undefined
   const [hasPayload, setHasPayload] = useState(Boolean(options?.initialData))
+  const [hasClientData, setHasClientData] = useState(false)
 
   const initialConnectionState = matchDataChannel.getConnectionState()
   const initialHasData = initialConnectionState.hasData || Boolean(options?.initialData?.matches?.length)
@@ -1953,6 +1954,7 @@ export const useMatchData = (options?: {
       setError(null)
       setLoading(false)
       setHasPayload(true)
+      setHasClientData(true)
       return selectedMatches
     },
     [selectMatchesFromPayload],
@@ -1982,6 +1984,7 @@ export const useMatchData = (options?: {
       setError(null)
       setLoading(false)
       setHasPayload(true)
+      setHasClientData(true)
       return selectedMatches
     },
     [paramsLimit],
@@ -2121,5 +2124,7 @@ export const useMatchData = (options?: {
     refresh,
     isRefreshing,
     hasPayload,
+    /** True once the first client-side poll/fetch has completed (SSR data alone does not count). */
+    hasClientData,
   }
 }

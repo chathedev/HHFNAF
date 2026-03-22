@@ -135,6 +135,7 @@ const dedupeTimelineEvents = (events: MatchFeedEvent[]) => {
 
 // Add type import for EnhancedMatchData if not already present or use any
 
+const isZeroScore = (score: string) => /^0\s*[-–—]\s*0$/.test(score.trim())
 
 export function HomePageClient({ initialData }: { initialData?: EnhancedMatchData }) {
   const searchParams = useSearchParams()
@@ -168,6 +169,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     loading: matchLoading,
     error: matchErrorMessage,
     hasPayload: hasMatchPayload,
+    hasClientData: hasClientMatchData,
     refresh: refreshHomeMatches,
     isRefreshing: matchRefreshing,
   } = useMatchData({
@@ -344,8 +346,10 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     const liveScore = typeof match.result === "string" ? match.result.trim() : ""
     const stableScore = liveScore || stableScoreByMatchId[match.id] || ""
     const hasStarted = match.date.getTime() <= Date.now() + 60_000
-    const scoreValue = stableScore && (status !== "upcoming" || hasStarted) ? stableScore : null
-    const showLivePendingScore = status === "live" && match.resultState === "live_pending" && !scoreValue
+    // Suppress stale SSR 0-0 for live matches until first client poll confirms the score
+    const isUnconfirmedZero = !hasClientMatchData && status === "live" && isZeroScore(stableScore)
+    const scoreValue = stableScore && !isUnconfirmedZero && (status !== "upcoming" || hasStarted) ? stableScore : null
+    const showLivePendingScore = status === "live" && (match.resultState === "live_pending" || isUnconfirmedZero) && !scoreValue
     const hasStream =
       match.hasStream === true &&
       Boolean((match.playUrl ?? "").trim()) &&
@@ -537,8 +541,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     const liveScore = typeof match.result === "string" ? match.result.trim() : ""
     const stableScore = liveScore || stableScoreByMatchId[match.id] || ""
     const hasStarted = match.date.getTime() <= Date.now() + 60_000
-    const scoreValue = stableScore && (status !== "upcoming" || hasStarted) ? stableScore : null
-    const showLivePendingScore = status === "live" && match.resultState === "live_pending" && !scoreValue
+    const isUnconfirmedZero = !hasClientMatchData && status === "live" && isZeroScore(stableScore)
+    const scoreValue = stableScore && !isUnconfirmedZero && (status !== "upcoming" || hasStarted) ? stableScore : null
+    const showLivePendingScore = status === "live" && (match.resultState === "live_pending" || isUnconfirmedZero) && !scoreValue
 
     const statusBadge = (() => {
       if (status === "live") {
