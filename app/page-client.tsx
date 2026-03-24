@@ -1269,8 +1269,8 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
           {/* Partners Carousel Section */}
           <section className="py-16">
             <div className="container mx-auto px-4">
-              <h2 className="text-4xl font-bold text-center mb-2">
-                Våra <span className="text-orange-500">Partners</span>
+              <h2 className="text-4xl font-bold text-center mb-2 text-orange-500">
+                Partners
               </h2>
               <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">
                 Vi är stolta över att samarbeta med lokala företag och organisationer som stödjer vår verksamhet och
