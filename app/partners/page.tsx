@@ -54,10 +54,10 @@ function PartnersPageContent({ partners }: PartnersPageContentProps) {
       <main className="flex-1">
         <div className="h-24"></div> {/* Spacer for fixed header */}
         <div className="container mx-auto px-4 py-12">
-          <h1 className="text-5xl font-extrabold text-center mb-4 text-gray-900">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-center mb-4 text-gray-900 leading-tight">
             Våra <span className="text-orange-500">Partners</span>
           </h1>
-          <p className="text-center text-gray-600 mb-12 max-w-3xl mx-auto text-lg">
+          <p className="text-center text-gray-600 mb-12 max-w-3xl mx-auto text-base sm:text-lg px-2">
             Vi är djupt tacksamma för det ovärderliga stöd vi får från våra partners. Deras engagemang är avgörande för
             att vi ska kunna fortsätta utveckla handbollen i Härnösand och erbjuda en meningsfull fritidsaktivitet för
             alla åldrar.
@@ -67,7 +67,7 @@ function PartnersPageContent({ partners }: PartnersPageContentProps) {
             (tierName) =>
               partnersByTier[tierName] && (
                 <section key={tierName} className="mb-12">
-                  <h2 className="text-4xl font-bold text-green-700 mb-8 text-center">{tierName}</h2>
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-green-700 mb-8 text-center leading-tight">{tierName}</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8">
                     {partnersByTier[tierName].map((partner) => {
                       const isDiamant = partner.tier === "Diamantpartner"
