@@ -1287,14 +1287,13 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                       className="mb-8 border-b border-gray-200 pb-4"
                     >
                       <CollapsibleTrigger asChild>
-                        <div className="flex items-center justify-center mb-4 cursor-pointer">
-                          <div className="w-10 shrink-0" />
-                          <h3 className={`text-3xl font-bold ${isPinkTheme ? "text-emerald-600" : "text-green-600"} text-center`}>{tierName}</h3>
-                          <Button variant="ghost" size="icon" aria-expanded={openTier === tierName} className="shrink-0 ml-2">
+                        <div className="mb-4 cursor-pointer text-center">
+                          <h3 className={`text-3xl font-bold ${isPinkTheme ? "text-emerald-600" : "text-green-600"} inline`}>{tierName}</h3>
+                          <Button variant="ghost" size="icon" aria-expanded={openTier === tierName} className="ml-1 align-middle">
                             {openTier === tierName ? (
-                              <Minus className={`w-6 h-6 ${isPinkTheme ? "text-emerald-700" : "text-green-700"}`} />
+                              <Minus className={`w-5 h-5 ${isPinkTheme ? "text-emerald-700" : "text-green-700"}`} />
                             ) : (
-                              <Plus className={`w-6 h-6 ${isPinkTheme ? "text-emerald-700" : "text-green-700"}`} />
+                              <Plus className={`w-5 h-5 ${isPinkTheme ? "text-emerald-700" : "text-green-700"}`} />
                             )}
                           </Button>
                         </div>
