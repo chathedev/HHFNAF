@@ -13,8 +13,6 @@ import {
   TrendingUp,
   Users,
   Star,
-  Plus,
-  Minus,
   Trophy,
   Award,
   History,

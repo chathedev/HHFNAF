@@ -183,9 +183,27 @@ function StandingsSection({ selectedTeam }: { selectedTeam: string }) {
     fetch(url, { cache: "no-store" })
       .then((res) => res.ok ? res.json() : Promise.reject("Failed"))
       .then((data) => {
-        setStandings(data.standings ?? [])
-        if (data.standings?.length > 0) {
-          setExpandedSeries(data.standings[0].series)
+        // API returns { seriesName: [{team, M, W, D, L, GF, GA, GD, P}, ...] }
+        const parsed: StandingsSeries[] = Object.entries(data)
+          .filter(([, teams]) => Array.isArray(teams) && (teams as any[]).length > 0)
+          .map(([series, teams]) => ({
+            series,
+            teams: (teams as any[]).map((t) => ({
+              team: t.team ?? "",
+              played: t.M ?? 0,
+              wins: t.W ?? 0,
+              draws: t.D ?? 0,
+              losses: t.L ?? 0,
+              goalsFor: t.GF ?? 0,
+              goalsAgainst: t.GA ?? 0,
+              goalDifference: t.GD ?? 0,
+              points: t.P ?? 0,
+            })),
+          }))
+          .sort((a, b) => b.teams.length - a.teams.length)
+        setStandings(parsed)
+        if (parsed.length > 0) {
+          setExpandedSeries(parsed[0].series)
         }
       })
       .catch(() => setStandings([]))
