@@ -250,32 +250,49 @@ export default function LagPage() {
           </section>
 
           <section className="mt-16">
-            <div className="mx-auto max-w-4xl rounded-2xl bg-white p-8 text-gray-700 shadow-lg shadow-emerald-50 md:p-10">
-              <h2 className="text-center text-3xl font-bold text-emerald-700">Vanliga frågor om att börja träna</h2>
+            <div className="mx-auto max-w-4xl rounded-2xl border border-gray-200 bg-white p-8 shadow-sm md:p-10">
+              <h2 className="text-center text-3xl font-bold text-emerald-700">Vanliga frågor om våra lag</h2>
               <p className="mt-2 text-center text-sm text-gray-500">
-                Här hittar du svar på de vanligaste frågorna från nya spelare och vårdnadshavare.
+                Svar på vanliga frågor om lag, träning och hur du kommer igång.
               </p>
               <Accordion type="single" collapsible className="mt-6 w-full">
-                {lagContent.faq.map((faqItem, index) => (
-                  <AccordionItem key={faqItem.question} value={`faq-${index}`}>
-                    <AccordionTrigger className="text-left text-base font-semibold text-gray-900">
-                      {faqItem.question}
-                    </AccordionTrigger>
-                    <AccordionContent className="text-sm text-gray-600">
-                      {faqItem.answer}
-                      {faqItem.question.includes("anmäler") && (
-                        <Link href="/kontakt" className="ml-2 text-orange-500 hover:underline">
-                          Anmäl dig via kontaktformuläret.
-                        </Link>
-                      )}
-                      {faqItem.question.includes("börjar") && (
-                        <Link href="/kontakt" className="ml-2 text-orange-500 hover:underline">
-                          Kontakta oss här.
-                        </Link>
-                      )}
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
+                <AccordionItem value="lag-1">
+                  <AccordionTrigger className="text-left text-base font-semibold text-gray-900">
+                    Hur vet jag vilket lag mitt barn ska spela i?
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm text-gray-600">
+                    Lagen är indelade efter födelseår. Kontakta oss så hjälper vi dig att hitta rätt lag.
+                    Du hittar alla lag och åldersgrupper ovan på sidan.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="lag-2">
+                  <AccordionTrigger className="text-left text-base font-semibold text-gray-900">
+                    Hur ofta tränar lagen?
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm text-gray-600">
+                    Träningsfrekvensen varierar beroende på ålder och nivå. Yngre lag tränar ofta 1–2 gånger per vecka,
+                    medan äldre lag och seniorlag tränar 2–4 gånger per vecka. Se respektive lags sida för aktuella tider.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="lag-3">
+                  <AccordionTrigger className="text-left text-base font-semibold text-gray-900">
+                    Kan jag prova på handboll utan att binda mig?
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm text-gray-600">
+                    Absolut! Vi erbjuder kostnadsfria provträningar. Kom som du är med träningskläder och
+                    inomhusskor — handbollar finns att låna.
+                    <Link href="/kontakt" className="ml-1 text-orange-500 hover:underline">Kontakta oss för att boka.</Link>
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="lag-4">
+                  <AccordionTrigger className="text-left text-base font-semibold text-gray-900">
+                    Vad kostar det att spela?
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm text-gray-600">
+                    Medlemsavgiften varierar beroende på åldersgrupp. Kontakta oss för aktuella avgifter.
+                    Vi vill att alla ska kunna spela handboll — hör av dig om du har frågor om ekonomiskt stöd.
+                  </AccordionContent>
+                </AccordionItem>
               </Accordion>
               <div className="mt-8 text-center">
                 <Button

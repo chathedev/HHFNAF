@@ -4,13 +4,11 @@ import type React from "react"
 
 import { Header } from "@/components/header"
 import Footer from "@/components/footer"
-import { Mail, User, MessageSquare, Send } from "lucide-react"
-import { Loader2 } from "lucide-react"
+import { Mail, User, MessageSquare, Send, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import Link from "next/link"
 import { useState, useEffect } from "react"
 
 export default function KontaktPage() {
@@ -129,18 +127,33 @@ export default function KontaktPage() {
     }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setFormStatus("loading")
 
-    const emailBody = `Namn: ${formData.name}
-E-post: ${formData.email}
+    try {
+      const response = await fetch("https://api.harnosandshf.se/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          subject: formData.subject,
+          message: formData.message,
+        }),
+      })
 
-Meddelande:
-${formData.message}`
+      if (!response.ok) {
+        throw new Error("Request failed")
+      }
 
-    const mailtoLink = `mailto:${content?.generalContact?.email || "kontakt@harnosandshf.se"}?subject=${encodeURIComponent(formData.subject || "Kontakt från hemsidan")}&body=${encodeURIComponent(emailBody)}`
-
-    window.location.href = mailtoLink
+      setFormStatus("success")
+      setFormData({ name: "", email: "", subject: "", message: "" })
+    } catch {
+      setFormStatus("error")
+    }
   }
 
   if (!content) {
@@ -356,84 +369,55 @@ ${formData.message}`
                   />
                 </div>
 
+                {formStatus === "success" && (
+                  <div className="bg-green-50 border border-green-200 text-green-800 rounded-md p-4 text-center">
+                    Tack! Ditt meddelande har skickats. Vi återkommer så snart vi kan.
+                  </div>
+                )}
+
+                {formStatus === "error" && (
+                  <div className="bg-red-50 border border-red-200 text-red-800 rounded-md p-4 text-center">
+                    Något gick fel. Försök igen eller skicka ett mail direkt.
+                  </div>
+                )}
+
                 <div className="text-center">
                   <Button
                     type="submit"
-                    className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-md text-lg font-semibold transition-colors inline-flex items-center"
+                    disabled={formStatus === "loading"}
+                    className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-md text-lg font-semibold transition-colors inline-flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Send className="w-4 h-4 mr-2" />
-                    <span
-                      {...(isEditorMode && {
-                        "data-editable": "true",
-                        "data-field-path": "kontakt.contactForm.submitButton",
-                      })}
-                    >
-                      {content.contactForm.submitButton}
-                    </span>
+                    {formStatus === "loading" ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Skickar...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        <span
+                          {...(isEditorMode && {
+                            "data-editable": "true",
+                            "data-field-path": "kontakt.contactForm.submitButton",
+                          })}
+                        >
+                          {content.contactForm.submitButton}
+                        </span>
+                      </>
+                    )}
                   </Button>
                 </div>
               </form>
             </div>
           </div>
 
-          {/* FAQ Section */}
-          <div className="mt-16">
-            <div className="bg-white shadow-lg rounded-lg p-8 md:p-12 max-w-4xl mx-auto">
-              <h2
-                className="text-3xl font-bold text-green-700 mb-8 text-center"
-                {...(isEditorMode && { "data-editable": "true", "data-field-path": "kontakt.faq.title" })}
-              >
-                {content.faq.title}
-              </h2>
-              <Accordion type="single" collapsible className="w-full">
-                {content.faq.items.map((item: any, index: number) => (
-                  <AccordionItem key={index} value={`item-${index}`}>
-                    <AccordionTrigger
-                      className="text-lg font-semibold text-gray-800 hover:no-underline"
-                      {...(isEditorMode && {
-                        "data-editable": "true",
-                        "data-field-path": `kontakt.faq.items.${index}.question`,
-                      })}
-                    >
-                      {item.question}
-                    </AccordionTrigger>
-                    <AccordionContent
-                      className="text-gray-700 text-base"
-                      {...(isEditorMode && {
-                        "data-editable": "true",
-                        "data-field-path": `kontakt.faq.items.${index}.answer`,
-                      })}
-                    >
-                      {item.answer}
-                      {index === 0 && (
-                        <Link href="/kontakt" className="text-orange-500 hover:underline ml-2">
-                          Kontakta oss här.
-                        </Link>
-                      )}
-                      {index === 3 && (
-                        <Link href="/kontakt" className="text-orange-500 hover:underline ml-2">
-                          Anmäl dig via kontaktformuläret.
-                        </Link>
-                      )}
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-              <div className="text-center mt-8">
-                <Button
-                  asChild
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-md text-lg font-semibold transition-colors"
-                >
-                  <Link href="/kontakt">
-                    <span
-                      {...(isEditorMode && { "data-editable": "true", "data-field-path": "kontakt.faq.ctaButton" })}
-                    >
-                      {content.faq.ctaButton}
-                    </span>
-                  </Link>
-                </Button>
-              </div>
-            </div>
+          <div className="mt-16 text-center">
+            <p className="text-gray-500 text-sm">
+              Du kan också nå oss direkt via e-post på{" "}
+              <a href="mailto:kontakt@harnosandshf.se" className="text-green-700 hover:underline font-medium">
+                kontakt@harnosandshf.se
+              </a>
+            </p>
           </div>
         </div>
       </main>

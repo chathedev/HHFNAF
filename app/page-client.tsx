@@ -6,7 +6,6 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import {
   ArrowRight,
@@ -150,7 +149,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     return "orange"
   })
   const [showHeroContent, setShowHeroContent] = useState<boolean>(true)
-  const [openTier, setOpenTier] = useState<string | null>("Diamantpartner")
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   const [timelineByMatchId, setTimelineByMatchId] = useState<Record<string, MatchFeedEvent[]>>({})
   const [topScorersByMatchId, setTopScorersByMatchId] = useState<Record<string, MatchTopScorer[]>>({})
@@ -1266,7 +1264,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
             </div>
           </section>
 
-          {/* Partners Carousel Section */}
+          {/* Partners Section */}
           <section className="py-16">
             <div className="container mx-auto px-4">
               <h2 className="text-4xl font-bold text-center mb-2 text-orange-500">
@@ -1277,79 +1275,44 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                 hjälper oss att utveckla handbollen i Härnösand.
               </p>
 
-              {tierOrder.map(
-                (tierName) =>
-                  partnersByTier[tierName] && (
-                    <Collapsible
-                      key={tierName}
-                      open={openTier === tierName}
-                      onOpenChange={() => setOpenTier(openTier === tierName ? null : tierName)}
-                      className="mb-8 border-b border-gray-200 pb-4"
+              {/* All partners in a clean grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {allPartnersForDisplay.map((partner) => {
+                  const isDiamant = partner.tier === "Diamantpartner"
+                  const isPlatina = partner.tier === "Platinapartner"
+                  const isTopTier = isDiamant || isPlatina
+                  return (
+                    <a
+                      key={partner.id}
+                      href={partner.linkUrl || undefined}
+                      target={partner.linkUrl ? "_blank" : undefined}
+                      rel={partner.linkUrl ? "noopener noreferrer" : undefined}
+                      className={`group relative flex flex-col items-center justify-center rounded-2xl border bg-white p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${
+                        isDiamant
+                          ? "border-amber-200 shadow-sm hover:border-amber-300 col-span-2 sm:col-span-1"
+                          : isPlatina
+                            ? "border-slate-200 shadow-sm hover:border-slate-300"
+                            : "border-gray-100 hover:border-gray-200"
+                      }`}
+                      style={{ minHeight: isTopTier ? "140px" : "120px" }}
                     >
-                      <CollapsibleTrigger asChild>
-                        <div className="flex justify-center items-center mb-4 cursor-pointer w-full">
-                          <h3 className={`text-3xl font-bold ${isPinkTheme ? "text-emerald-600" : "text-green-600"}`}>{tierName}</h3>
-                          <span className="ml-2 inline-flex items-center" aria-expanded={openTier === tierName}>
-                            {openTier === tierName ? (
-                              <Minus className={`w-5 h-5 ${isPinkTheme ? "text-emerald-700" : "text-green-700"}`} />
-                            ) : (
-                              <Plus className={`w-5 h-5 ${isPinkTheme ? "text-emerald-700" : "text-green-700"}`} />
-                            )}
-                          </span>
-                        </div>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="CollapsibleContent animate-fade-in">
-                        <div className="flex justify-center">
-                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-                            {partnersByTier[tierName].map((partner) => {
-                              const isDiamant = partner.tier === "Diamantpartner"
-                              const isHighcon = partner.id === "highcon"
-                              return (
-                                <div key={partner.id} className="relative group w-full h-36">
-                                  <Card
-                                    className={`p-4 shadow-lg rounded-lg flex flex-col items-center justify-center h-full w-full text-center
-                                  ${isDiamant ? "border-2 border-yellow-500 bg-white" : "bg-white"}
-                                `}
-                                  >
-                                    {isDiamant && (
-                                      <Star className="absolute top-1 right-1 w-5 h-5 text-yellow-500 fill-yellow-500" />
-                                    )}
-                                    <div className={`relative w-full mb-2 ${isHighcon ? "h-24" : "h-20"}`}>
-                                      <Image
-                                        src={partner.src || "/placeholder.svg"}
-                                        alt={partner.alt}
-                                        fill
-                                        className="object-contain transition-transform duration-300 group-hover:scale-105"
-                                        loading="lazy"
-                                        placeholder="blur"
-                                        blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
-                                      />
-                                    </div>
-                                    <h4
-                                      className={`text-sm font-semibold ${isDiamant ? "text-gray-900" : "text-gray-800"}`}
-                                    >
-                                      {partner.alt}
-                                    </h4>
-                                    {partner.linkUrl && (
-                                      <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center rounded-lg transition-opacity duration-300 opacity-0 group-hover:opacity-100">
-                                        <Button
-                                          onClick={() => window.open(partner.linkUrl, "_blank")}
-                                          className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md"
-                                        >
-                                          Gå till
-                                        </Button>
-                                      </div>
-                                    )}
-                                  </Card>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  ),
-              )}
+                      {isDiamant && (
+                        <Star className="absolute top-2 right-2 w-4 h-4 text-amber-400 fill-amber-400" />
+                      )}
+                      <div className={`relative w-full ${isTopTier ? "h-16" : "h-12"} mb-2`}>
+                        <Image
+                          src={partner.src || "/placeholder.svg"}
+                          alt={partner.alt}
+                          fill
+                          className="object-contain transition-transform duration-300 group-hover:scale-105"
+                          loading="lazy"
+                        />
+                      </div>
+                      <p className="text-xs font-medium text-gray-700 text-center mt-auto">{partner.alt}</p>
+                    </a>
+                  )
+                })}
+              </div>
 
               <section className={`${isPinkTheme ? "bg-gradient-to-r from-rose-600 to-pink-700" : "bg-green-700"} text-white p-10 rounded-lg shadow-xl text-center mt-16`}>
                 <h2 className="text-4xl font-bold mb-4">Vill du stödja Härnösands HF?</h2>
@@ -1391,66 +1354,54 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
             </div>
           </section>
 
-          {/* FAQ Section */}
+          {/* FAQ Section - Homepage specific */}
           <section className="py-16">
             <div className="container mx-auto px-4">
-              <div className="bg-white shadow-lg rounded-lg p-8 md:p-12 max-w-4xl mx-auto">
-                <h2 className="text-3xl font-bold text-green-700 mb-8 text-center">
-                  Vanliga frågor om att börja träna
+              <div className="rounded-2xl border border-gray-200 bg-white p-8 md:p-12 max-w-4xl mx-auto shadow-sm">
+                <h2 className="text-3xl font-bold text-green-700 mb-2 text-center">
+                  Vanliga frågor
                 </h2>
+                <p className="text-center text-sm text-gray-500 mb-8">Om Härnösands HF och vår verksamhet</p>
                 <Accordion type="single" collapsible className="w-full">
                   <AccordionItem value="item-1">
-                    <AccordionTrigger className="text-lg font-semibold text-gray-800 hover:no-underline">
-                      Hur börjar jag spela handboll i Härnösands HF?
+                    <AccordionTrigger className="text-base font-semibold text-gray-800 hover:no-underline">
+                      Vad är Härnösands HF?
                     </AccordionTrigger>
-                    <AccordionContent className="text-gray-700 text-base">
-                      Det enklaste sättet att börja är att kontakta oss! Vi hjälper dig att hitta rätt lag baserat på
-                      din ålder och erfarenhet. Du kan fylla i vårt kontaktformulär eller skicka ett mejl direkt till
-                      oss.
-                      <Link href="/kontakt" className="text-orange-500 hover:underline ml-2">
-                        Kontakta oss här.
-                      </Link>
+                    <AccordionContent className="text-gray-600 text-sm leading-relaxed">
+                      Härnösands HF är en handbollsförening i Härnösand som erbjuder handboll för alla åldrar — från de
+                      allra yngsta till seniorlag. Vi har lag inom både dam- och herrverksamhet samt barn- och ungdomsverksamhet.
                     </AccordionContent>
                   </AccordionItem>
                   <AccordionItem value="item-2">
-                    <AccordionTrigger className="text-lg font-semibold text-gray-800 hover:no-underline">
-                      Vilken utrustning behöver jag?
+                    <AccordionTrigger className="text-base font-semibold text-gray-800 hover:no-underline">
+                      Hur kan jag eller mitt barn börja spela?
                     </AccordionTrigger>
-                    <AccordionContent className="text-gray-700 text-base">
-                      Till en början behöver du bara bekväma träningskläder, inomhusskor och en vattenflaska. Handbollar
-                      finns att låna under träningarna. När du väl bestämmer dig för att fortsätta kan du behöva annan utrustning.
+                    <AccordionContent className="text-gray-600 text-sm leading-relaxed">
+                      Kontakta oss så hjälper vi dig hitta rätt lag! Vi erbjuder kostnadsfria provträningar. Du behöver bara
+                      bekväma träningskläder och inomhusskor — handbollar finns att låna.
+                      <Link href="/kontakt" className="text-orange-500 hover:underline ml-1">Kontakta oss här.</Link>
                     </AccordionContent>
                   </AccordionItem>
                   <AccordionItem value="item-3">
-                    <AccordionTrigger className="text-lg font-semibold text-gray-800 hover:no-underline">
-                      Finns det provträningar?
+                    <AccordionTrigger className="text-base font-semibold text-gray-800 hover:no-underline">
+                      Var spelas matcherna?
                     </AccordionTrigger>
-                    <AccordionContent className="text-gray-700 text-base">
-                      Absolut! Vi erbjuder alltid några kostnadsfria provträningar så att du kan känna efter om handboll
-                      är något för dig. Detta ger dig en chans att träffa laget och tränarna innan du bestämmer dig.
+                    <AccordionContent className="text-gray-600 text-sm leading-relaxed">
+                      Våra hemmamatcher spelas huvudsakligen i Landgrenshallen i Härnösand. Se aktuellt matchschema på{" "}
+                      <Link href="/matcher" className="text-orange-500 hover:underline">matchsidan</Link> för tider och platser.
                     </AccordionContent>
                   </AccordionItem>
                   <AccordionItem value="item-4">
-                    <AccordionTrigger className="text-lg font-semibold text-gray-800 hover:no-underline">
-                      Hur anmäler jag mig?
+                    <AccordionTrigger className="text-base font-semibold text-gray-800 hover:no-underline">
+                      Hur köper jag biljetter?
                     </AccordionTrigger>
-                    <AccordionContent className="text-gray-700 text-base">
-                      Efter dina provträningar får du information om hur du enkelt anmäler dig och blir en fullvärdig
-                      medlem i Härnösands HF. Vi ser fram emot att välkomna dig till vår handbollsfamilj!
-                      <Link href="/kontakt" className="text-orange-500 hover:underline ml-2">
-                        Anmäl dig via kontaktformuläret.
-                      </Link>
+                    <AccordionContent className="text-gray-600 text-sm leading-relaxed">
+                      Biljetter köps via Clubmate. Gå till{" "}
+                      <Link href="/kop-biljett" className="text-orange-500 hover:underline">biljettsidan</Link> för att
+                      komma direkt till biljettköpet. Du kan även köpa biljetter vid ingången på matchdagen.
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
-                <div className="text-center mt-8">
-                  <Button
-                    asChild
-                    className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-md text-lg font-semibold transition-colors"
-                  >
-                    <Link href="/kontakt">Kontakta oss för mer information</Link>
-                  </Button>
-                </div>
               </div>
             </div>
           </section>
