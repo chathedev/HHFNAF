@@ -1279,44 +1279,57 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                 hjälper oss att utveckla handbollen i Härnösand.
               </p>
 
-              {/* All partners in a clean grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                {allPartnersForDisplay.map((partner) => {
-                  const isDiamant = partner.tier === "Diamantpartner"
-                  const isPlatina = partner.tier === "Platinapartner"
-                  const isTopTier = isDiamant || isPlatina
-                  return (
-                    <a
-                      key={partner.id}
-                      href={partner.linkUrl || undefined}
-                      target={partner.linkUrl ? "_blank" : undefined}
-                      rel={partner.linkUrl ? "noopener noreferrer" : undefined}
-                      className={`group relative flex flex-col items-center justify-center rounded-2xl border bg-white p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${
-                        isDiamant
-                          ? "border-amber-200 shadow-sm hover:border-amber-300 col-span-2 sm:col-span-1"
-                          : isPlatina
-                            ? "border-slate-200 shadow-sm hover:border-slate-300"
-                            : "border-gray-100 hover:border-gray-200"
-                      }`}
-                      style={{ minHeight: isTopTier ? "140px" : "120px" }}
-                    >
-                      {isDiamant && (
-                        <Star className="absolute top-2 right-2 w-4 h-4 text-amber-400 fill-amber-400" />
-                      )}
-                      <div className={`relative w-full ${isTopTier ? "h-16" : "h-12"} mb-2`}>
-                        <Image
-                          src={partner.src || "/placeholder.svg"}
-                          alt={partner.alt}
-                          fill
-                          className="object-contain transition-transform duration-300 group-hover:scale-105"
-                          loading="lazy"
-                        />
-                      </div>
-                      <p className="text-xs font-medium text-gray-700 text-center mt-auto">{partner.alt}</p>
-                    </a>
-                  )
-                })}
-              </div>
+              {/* Partners by tier */}
+              {tierOrder.map((tierName) => {
+                const tierPartners = partnersByTier[tierName]
+                if (!tierPartners || tierPartners.length === 0) return null
+                const isDiamant = tierName === "Diamantpartner"
+                const isPlatina = tierName === "Platinapartner"
+                const isTopTier = isDiamant || isPlatina
+                return (
+                  <div key={tierName} className="mb-10">
+                    <h3 className={`text-2xl font-bold text-center mb-6 ${isPinkTheme ? "text-emerald-600" : "text-green-600"}`}>
+                      {tierName}
+                    </h3>
+                    <div className={`grid gap-4 ${
+                      isTopTier
+                        ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+                        : "grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6"
+                    }`}>
+                      {tierPartners.map((partner) => (
+                        <a
+                          key={partner.id}
+                          href={partner.linkUrl || undefined}
+                          target={partner.linkUrl ? "_blank" : undefined}
+                          rel={partner.linkUrl ? "noopener noreferrer" : undefined}
+                          className={`group relative flex flex-col items-center justify-center rounded-2xl border bg-white p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${
+                            isDiamant
+                              ? "border-amber-200 shadow-sm hover:border-amber-300"
+                              : isPlatina
+                                ? "border-slate-200 shadow-sm hover:border-slate-300"
+                                : "border-gray-100 hover:border-gray-200"
+                          }`}
+                          style={{ minHeight: isTopTier ? "140px" : "110px" }}
+                        >
+                          {isDiamant && (
+                            <Star className="absolute top-2 right-2 w-4 h-4 text-amber-400 fill-amber-400" />
+                          )}
+                          <div className={`relative w-full ${isTopTier ? "h-16" : "h-12"} mb-2`}>
+                            <Image
+                              src={partner.src || "/placeholder.svg"}
+                              alt={partner.alt}
+                              fill
+                              className="object-contain transition-transform duration-300 group-hover:scale-105"
+                              loading="lazy"
+                            />
+                          </div>
+                          <p className="text-xs font-medium text-gray-700 text-center mt-auto">{partner.alt}</p>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
 
               <section className={`${isPinkTheme ? "bg-gradient-to-r from-rose-600 to-pink-700" : "bg-green-700"} text-white p-10 rounded-2xl shadow-sm text-center mt-16`}>
                 <h2 className="text-4xl font-bold mb-4">Vill du stödja Härnösands HF?</h2>
