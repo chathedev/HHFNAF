@@ -1091,7 +1091,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                     <Link
-                      href="/matcher#tabeller"
+                      href="/tabeller"
                       className="inline-flex items-center gap-2 border border-emerald-700 px-5 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-700 hover:text-white"
                     >
                       Tabeller

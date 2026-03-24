@@ -868,8 +868,18 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
           </div>
         </section>
 
-        {/* Standings Section - right after header */}
-        <StandingsSection selectedTeam={selectedTeam} />
+        {/* Link to standings page */}
+        <div className="mt-6 flex justify-center">
+          <Link
+            href="/tabeller"
+            className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/70 px-5 py-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 6h18M3 14h18M3 18h18" />
+            </svg>
+            Se alla tabeller och serieställningar
+          </Link>
+        </div>
 
         <div className="mt-8 space-y-6">
           {activeError && (
