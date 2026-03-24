@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import Link from "next/link"
 
 type StandingsTeam = {
   team: string
@@ -87,18 +86,10 @@ export function TabellerClient({ initialData }: { initialData: StandingsData }) 
     <div className="container mx-auto max-w-6xl px-4 py-8">
       {/* Header */}
       <div className="mb-8">
-        <Link
-          href="/matcher"
-          className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700 transition hover:text-emerald-900 mb-4"
-        >
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Till matcher
-        </Link>
-        <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">Tabeller</h1>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-emerald-600">Härnösands HF</p>
+        <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">Serietabeller</h1>
         <p className="mt-2 text-sm text-slate-600 sm:text-base max-w-2xl">
-          Serieställningar beräknade från matchresultat. 2 poäng för vinst, 1 poäng för oavgjort.
+          Ställningar för alla serier vi deltar i. Beräknade från matchresultat — 2 poäng för vinst, 1 för oavgjort.
         </p>
       </div>
 
