@@ -1090,6 +1090,12 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                       Alla matcher
                       <ArrowRight className="h-4 w-4" />
                     </Link>
+                    <Link
+                      href="/matcher#tabeller"
+                      className="inline-flex items-center gap-2 border border-emerald-700 px-5 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-700 hover:text-white"
+                    >
+                      Tabeller
+                    </Link>
                     {shopVisible && (
                       <Link
                         href={SHOP_URL}
@@ -1312,7 +1318,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                 })}
               </div>
 
-              <section className={`${isPinkTheme ? "bg-gradient-to-r from-rose-600 to-pink-700" : "bg-green-700"} text-white p-10 rounded-lg shadow-xl text-center mt-16`}>
+              <section className={`${isPinkTheme ? "bg-gradient-to-r from-rose-600 to-pink-700" : "bg-green-700"} text-white p-10 rounded-2xl shadow-sm text-center mt-16`}>
                 <h2 className="text-4xl font-bold mb-4">Vill du stödja Härnösands HF?</h2>
                 <p className="text-xl mb-8">
                   Vi välkomnar nya partners som vill stödja vår verksamhet och bidra till utvecklingen av handbollen i

@@ -224,7 +224,7 @@ function StandingsSection({ selectedTeam }: { selectedTeam: string }) {
   if (standings.length === 0) return null
 
   return (
-    <section className="mt-8">
+    <section id="tabeller" className="mt-8 scroll-mt-8">
       <div className="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.04)]">
         <div className="border-b border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,0.95),rgba(255,255,255,0.95))] px-5 py-5 sm:px-6">
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">Tabeller</p>
@@ -868,6 +868,9 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
           </div>
         </section>
 
+        {/* Standings Section - right after header */}
+        <StandingsSection selectedTeam={selectedTeam} />
+
         <div className="mt-8 space-y-6">
           {activeError && (
             <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
@@ -915,8 +918,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
           {!isLoading && filteredMatches.length > 0 && <div className="space-y-5">{statusPanels.map(renderStatusPanel)}</div>}
         </div>
 
-        {/* Standings Section */}
-        <StandingsSection selectedTeam={selectedTeam} />
       </div>
 
       {selectedMatch && (
