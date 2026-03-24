@@ -1,25 +1,10 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowRight, Package, ShieldAlert, ShoppingBag, Store } from "lucide-react"
+import { ArrowRight, ShoppingBag, ShieldAlert } from "lucide-react"
 import { Header } from "@/components/header"
 import Footer from "@/components/footer"
 import { SHOP_URL, useShopStatus } from "@/components/shop-status-provider"
-
-const shopHighlights = [
-  {
-    title: "Supporterplagg",
-    description: "Hoodies, t-shirts och accessoarer som gör HHF synligt även utanför hallen.",
-  },
-  {
-    title: "Endast upphämtning",
-    description: "Beställ online och hämta upp lokalt. Ingen leverans, tydligt och enkelt.",
-  },
-  {
-    title: "Direkt till föreningen",
-    description: "Varje köp hjälper HHF att bygga starkare verksamhet runt lagen och ungdomarna.",
-  },
-]
 
 export default function ShopPage() {
   const { loading, shopVisible, maintenanceMessage } = useShopStatus()
@@ -27,106 +12,116 @@ export default function ShopPage() {
   return (
     <>
       <Header />
-      <main className="bg-white">
-        <div className="h-24" />
-        <section className="container mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-          <div className="mx-auto max-w-5xl overflow-hidden rounded-xl border border-gray-200 bg-gradient-to-br from-white via-emerald-50 to-lime-50 shadow-[0_30px_90px_rgba(15,23,42,0.06)]">
-            <div className="grid gap-10 px-6 py-10 md:grid-cols-[1.2fr_0.8fr] md:px-10">
-              <div className="space-y-6">
-                <p className="text-sm font-semibold uppercase tracking-[0.4em] text-emerald-600">Butik</p>
-                <h1 className="text-4xl font-black tracking-tight text-gray-900 sm:text-5xl">Härnösands HF Supporterbutik</h1>
-                <p className="text-lg text-gray-600">
-                  Köp HHF-produkter i webbutiken <span className="font-semibold text-gray-900">shop.harnosandshf.se</span>.
-                  Beställ online och hämta lokalt. Det gör det enkelt att stötta föreningen utan leveranssteg.
-                </p>
+      <main className="min-h-screen bg-white">
+        <div className="h-20" />
 
-                <div className="flex flex-wrap gap-3 text-sm font-medium text-gray-700">
-                  <div className="rounded-md border border-emerald-200 bg-white px-4 py-2">Ingen leverans</div>
-                  <div className="rounded-md border border-emerald-200 bg-white px-4 py-2">Endast upphämtning</div>
-                  <div className="rounded-md border border-emerald-200 bg-white px-4 py-2">Officiella HHF-produkter</div>
+        {/* Hero */}
+        <section className="bg-slate-950 text-white">
+          <div className="mx-auto max-w-3xl px-5 py-16 sm:py-20 text-center">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-white/40">Supporterbutik</p>
+            <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">HHF Butiken</h1>
+            <p className="mt-4 text-base text-white/60 max-w-lg mx-auto">
+              Matchtröjor, supporterplagg och presenter. Beställ online, hämta lokalt. Betala snabbt med Swish.
+            </p>
+
+            {shopVisible && (
+              <div className="mt-8 flex flex-col items-center gap-3">
+                <Link
+                  href={SHOP_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-3 bg-white px-8 py-4 text-base font-bold text-slate-900 transition hover:bg-white/90"
+                >
+                  <ShoppingBag className="h-5 w-5" />
+                  Öppna Butiken
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <div className="flex items-center gap-4 text-sm text-white/40">
+                  <span className="flex items-center gap-1.5">
+                    <SwishMark className="h-4 w-auto text-emerald-400" />
+                    Swish
+                  </span>
+                  <span>Kort</span>
+                  <span>Endast upphämtning</span>
                 </div>
-
-                {shopVisible && (
-                  <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-                    <Link
-                      href={SHOP_URL}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-600 px-8 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-emerald-500"
-                    >
-                      <ShoppingBag className="h-4 w-4" />
-                      Öppna Butiken
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
-                    <p className="text-sm text-gray-500">Hämtas lokalt efter köp. Leverans erbjuds inte.</p>
-                  </div>
-                )}
-
-                {!shopVisible && (
-                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-5 text-left">
-                    <div className="flex items-start gap-3">
-                      <ShieldAlert className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
-                      <div>
-                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">
-                          {loading ? "Kontrollerar shopstatus" : "Shoppen är stängd"}
-                        </p>
-                        <p className="mt-2 text-sm text-amber-900">
-                          {loading
-                            ? "Vi hämtar aktuell status från shopen. Länken visas bara när underhåll är avstängt."
-                            : maintenanceMessage || "Shopen är tillfälligt stängd för underhåll. Försök igen om en stund."}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
+            )}
 
-              <div className="rounded-lg bg-slate-950 p-6 text-white">
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-300">Varför shop</p>
-                <div className="mt-6 space-y-5">
-                  <div className="flex items-start gap-3">
-                    <Store className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-300" />
-                    <div>
-                      <h2 className="font-semibold">Mer försäljning runt matchdag</h2>
-                      <p className="mt-1 text-sm text-slate-300">Lägg till produkter i flödet där besökarna redan följer matcher och köper biljetter.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Package className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-300" />
-                    <div>
-                      <h2 className="font-semibold">Tydlig logistik</h2>
-                      <p className="mt-1 text-sm text-slate-300">Endast upphämtning gör beställningen enkel att förstå direkt på sidan.</p>
-                    </div>
+            {!shopVisible && (
+              <div className="mt-8 mx-auto max-w-md border border-white/10 px-6 py-5 text-left">
+                <div className="flex items-start gap-3">
+                  <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
+                  <div>
+                    <p className="text-sm font-bold text-white">
+                      {loading ? "Kontrollerar status…" : "Butiken är stängd"}
+                    </p>
+                    <p className="mt-1 text-sm text-white/50">
+                      {loading
+                        ? "Hämtar aktuell status."
+                        : maintenanceMessage || "Tillfälligt stängd för underhåll. Försök igen om en stund."}
+                    </p>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
+        </section>
 
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {shopHighlights.map((item) => (
-              <article key={item.title} className="rounded-lg border border-gray-100 bg-gradient-to-br from-white via-slate-50 to-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
-                <h2 className="text-lg font-semibold text-gray-900">{item.title}</h2>
-                <p className="mt-3 text-sm text-gray-600">{item.description}</p>
-                <div className="mt-6 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-600">
-                  <span className="h-2 w-2 rounded-full bg-emerald-600" /> HHF Butik
-                </div>
-              </article>
+        {/* Features */}
+        <section className="mx-auto max-w-3xl px-5 py-16">
+          <div className="grid gap-px bg-slate-200 sm:grid-cols-3">
+            {[
+              { title: "Supporterplagg", text: "Hoodies, t-shirts och accessoarer som gör HHF synligt utanför hallen." },
+              { title: "Endast upphämtning", text: "Beställ online och hämta lokalt. Ingen leverans — enkelt och tydligt." },
+              { title: "Stöd föreningen", text: "Varje köp hjälper HHF bygga starkare verksamhet runt lagen." },
+            ].map((item) => (
+              <div key={item.title} className="bg-white p-6">
+                <h3 className="text-base font-bold text-slate-900">{item.title}</h3>
+                <p className="mt-1 text-sm text-slate-500">{item.text}</p>
+              </div>
             ))}
           </div>
+        </section>
 
-          {shopVisible && (
-            <div className="mt-12 rounded-lg border border-dashed border-emerald-200 bg-emerald-50 p-8 text-center">
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-700">Endast upphämtning</p>
-              <p className="mt-3 text-base text-gray-700">
-                Beställ i webbutiken och hämta lokalt. Det håller köpresan enkel och gör det tydligt att butiken
-                inte erbjuder hemleverans.
-              </p>
+        {/* Payment strip */}
+        <section className="border-t border-slate-100 bg-slate-50">
+          <div className="mx-auto max-w-3xl px-5 py-10 text-center">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Betalning</p>
+            <div className="mt-4 flex items-center justify-center gap-6">
+              <div className="flex items-center gap-2">
+                <SwishMark className="h-5 w-auto text-emerald-600" />
+                <span className="text-sm font-bold text-slate-900">Swish</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-1.5 py-0.5">Snabbast</span>
+              </div>
+              <span className="text-sm text-slate-300">|</span>
+              <span className="text-sm text-slate-400">Kort</span>
             </div>
-          )}
+
+            {shopVisible && (
+              <Link
+                href={SHOP_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-6 inline-flex items-center gap-2 bg-slate-900 px-6 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
+              >
+                Handla nu
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            )}
+          </div>
         </section>
       </main>
       <Footer />
     </>
+  )
+}
+
+function SwishMark({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 48 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <text x="0" y="16" fontFamily="system-ui, -apple-system, sans-serif" fontSize="15" fontWeight="800" fill="currentColor" letterSpacing="-0.3">
+        Swish
+      </text>
+    </svg>
   )
 }
