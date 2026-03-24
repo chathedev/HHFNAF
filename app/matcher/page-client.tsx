@@ -152,6 +152,135 @@ const dedupeTimelineEvents = (events: MatchFeedEvent[]) => {
   })
 }
 
+type StandingsTeam = {
+  team: string
+  played: number
+  wins: number
+  draws: number
+  losses: number
+  goalsFor: number
+  goalsAgainst: number
+  goalDifference: number
+  points: number
+}
+
+type StandingsSeries = {
+  series: string
+  teams: StandingsTeam[]
+}
+
+function StandingsSection({ selectedTeam }: { selectedTeam: string }) {
+  const [standings, setStandings] = useState<StandingsSeries[]>([])
+  const [loading, setLoading] = useState(true)
+  const [expandedSeries, setExpandedSeries] = useState<string | null>(null)
+
+  useEffect(() => {
+    const url = selectedTeam && selectedTeam !== "all"
+      ? `${API_BASE_URL}/matcher/standings?team=${encodeURIComponent(selectedTeam)}`
+      : `${API_BASE_URL}/matcher/standings`
+
+    setLoading(true)
+    fetch(url, { cache: "no-store" })
+      .then((res) => res.ok ? res.json() : Promise.reject("Failed"))
+      .then((data) => {
+        setStandings(data.standings ?? [])
+        if (data.standings?.length > 0) {
+          setExpandedSeries(data.standings[0].series)
+        }
+      })
+      .catch(() => setStandings([]))
+      .finally(() => setLoading(false))
+  }, [selectedTeam])
+
+  if (loading) {
+    return (
+      <section className="mt-8">
+        <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-600" />
+          <p className="mt-3 text-sm text-slate-500">Hämtar tabeller...</p>
+        </div>
+      </section>
+    )
+  }
+
+  if (standings.length === 0) return null
+
+  return (
+    <section className="mt-8">
+      <div className="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.04)]">
+        <div className="border-b border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,0.95),rgba(255,255,255,0.95))] px-5 py-5 sm:px-6">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">Tabeller</p>
+          <h2 className="mt-1 text-xl font-semibold text-slate-950">Serieställning</h2>
+          <p className="mt-1 text-sm text-slate-500">Beräknad från matchresultat. 2p för vinst, 1p för oavgjort.</p>
+        </div>
+
+        <div className="divide-y divide-slate-100 p-4 sm:p-5">
+          {standings.map((s) => {
+            const isExpanded = expandedSeries === s.series
+            return (
+              <div key={s.series} className="py-3 first:pt-0 last:pb-0">
+                <button
+                  onClick={() => setExpandedSeries(isExpanded ? null : s.series)}
+                  className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition hover:bg-slate-50"
+                >
+                  <span className="text-sm font-semibold text-slate-900">{s.series}</span>
+                  <span className="text-xs text-slate-400">{isExpanded ? "−" : "+"}</span>
+                </button>
+                {isExpanded && (
+                  <div className="mt-2 overflow-x-auto rounded-xl border border-slate-200">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                          <th className="px-3 py-2.5">#</th>
+                          <th className="px-3 py-2.5">Lag</th>
+                          <th className="px-3 py-2.5 text-center">M</th>
+                          <th className="px-3 py-2.5 text-center">V</th>
+                          <th className="px-3 py-2.5 text-center">O</th>
+                          <th className="px-3 py-2.5 text-center">F</th>
+                          <th className="px-3 py-2.5 text-center hidden sm:table-cell">GM</th>
+                          <th className="px-3 py-2.5 text-center hidden sm:table-cell">IM</th>
+                          <th className="px-3 py-2.5 text-center">+/−</th>
+                          <th className="px-3 py-2.5 text-center font-bold">P</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {s.teams.map((team, idx) => {
+                          const isHHF = team.team.toLowerCase().includes("härnösand") || team.team.toLowerCase().includes("harnosand")
+                          return (
+                            <tr key={team.team} className={`${isHHF ? "bg-emerald-50/60 font-medium" : ""} hover:bg-slate-50/80 transition`}>
+                              <td className="px-3 py-2.5 text-slate-400 text-xs">{idx + 1}</td>
+                              <td className="px-3 py-2.5 text-slate-900 whitespace-nowrap max-w-[180px] truncate">
+                                {isHHF && <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 align-middle" />}
+                                {team.team}
+                              </td>
+                              <td className="px-3 py-2.5 text-center text-slate-600">{team.played}</td>
+                              <td className="px-3 py-2.5 text-center text-slate-600">{team.wins}</td>
+                              <td className="px-3 py-2.5 text-center text-slate-600">{team.draws}</td>
+                              <td className="px-3 py-2.5 text-center text-slate-600">{team.losses}</td>
+                              <td className="px-3 py-2.5 text-center text-slate-600 hidden sm:table-cell">{team.goalsFor}</td>
+                              <td className="px-3 py-2.5 text-center text-slate-600 hidden sm:table-cell">{team.goalsAgainst}</td>
+                              <td className="px-3 py-2.5 text-center">
+                                <span className={`text-xs font-medium ${team.goalDifference > 0 ? "text-emerald-600" : team.goalDifference < 0 ? "text-rose-500" : "text-slate-400"}`}>
+                                  {team.goalDifference > 0 ? "+" : ""}{team.goalDifference}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2.5 text-center font-bold text-slate-900">{team.points}</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatchData }) {
   const [selectedTeam, setSelectedTeam] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("current")
@@ -767,6 +896,9 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
 
           {!isLoading && filteredMatches.length > 0 && <div className="space-y-5">{statusPanels.map(renderStatusPanel)}</div>}
         </div>
+
+        {/* Standings Section */}
+        <StandingsSection selectedTeam={selectedTeam} />
       </div>
 
       {selectedMatch && (

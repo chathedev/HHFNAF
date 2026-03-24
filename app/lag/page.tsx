@@ -197,58 +197,6 @@ export default function LagPage() {
             })}
           </section>
 
-          {/* Render all teams in a single grid, each linking to its lag page */}
-          <section className="mt-12">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-              {teams.map((team) => (
-                <Card
-                  key={team.id}
-                  className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-emerald-300 hover:shadow-lg"
-                >
-                  <div className="relative h-32 w-full overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
-                    <div
-                      className="h-full w-full transition group-hover:scale-[1.02]"
-                      style={{
-                        backgroundImage: `url(${team.heroImage})`,
-                        backgroundSize: "contain",
-                        backgroundPosition: "center",
-                        backgroundRepeat: "no-repeat",
-                      }}
-                      aria-hidden
-                    />
-                    <Link
-                      href={`/lag/${team.id}`}
-                      className="pointer-events-none absolute inset-0 flex items-center justify-center bg-emerald-800/85 opacity-0 transition group-hover:pointer-events-auto group-hover:opacity-100"
-                    >
-                      <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.35em] text-emerald-700 shadow">
-                        Läs mer →
-                      </span>
-                    </Link>
-                  </div>
-                  <div className="px-4 py-4 space-y-3">
-                    <h3 className="text-sm font-semibold tracking-tight text-gray-900">
-                      {extendTeamDisplayName(team.displayName ?? team.name)}
-                    </h3>
-                    {team.link ? (
-                      <Link
-                        href={team.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex w-full items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-emerald-700"
-                      >
-                        Till laget.se
-                      </Link>
-                    ) : (
-                      <span className="inline-flex w-full items-center justify-center rounded-full border border-dashed border-gray-300 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-gray-400">
-                        Länk kommer snart
-                      </span>
-                    )}
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </section>
-
           <section className="mt-16">
             <div className="mx-auto max-w-4xl rounded-2xl border border-gray-200 bg-white p-8 shadow-sm md:p-10">
               <h2 className="text-center text-3xl font-bold text-emerald-700">Vanliga frågor om våra lag</h2>
