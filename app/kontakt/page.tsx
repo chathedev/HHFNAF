@@ -5,7 +5,7 @@ import type React from "react"
 import { Header } from "@/components/header"
 import Footer from "@/components/footer"
 import { Mail, User, MessageSquare, Send } from "lucide-react"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -22,6 +22,7 @@ export default function KontaktPage() {
     subject: "",
     message: "",
   })
+  const [formStatus, setFormStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
