@@ -1287,15 +1287,15 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                       className="mb-8 border-b border-gray-200 pb-4"
                     >
                       <CollapsibleTrigger asChild>
-                        <div className="mb-4 cursor-pointer text-center">
-                          <h3 className={`text-3xl font-bold ${isPinkTheme ? "text-emerald-600" : "text-green-600"} inline`}>{tierName}</h3>
-                          <Button variant="ghost" size="icon" aria-expanded={openTier === tierName} className="ml-1 align-middle">
+                        <div className="flex justify-center items-center mb-4 cursor-pointer w-full">
+                          <h3 className={`text-3xl font-bold ${isPinkTheme ? "text-emerald-600" : "text-green-600"}`}>{tierName}</h3>
+                          <span className="ml-2 inline-flex items-center" aria-expanded={openTier === tierName}>
                             {openTier === tierName ? (
                               <Minus className={`w-5 h-5 ${isPinkTheme ? "text-emerald-700" : "text-green-700"}`} />
                             ) : (
                               <Plus className={`w-5 h-5 ${isPinkTheme ? "text-emerald-700" : "text-green-700"}`} />
                             )}
-                          </Button>
+                          </span>
                         </div>
                       </CollapsibleTrigger>
                       <CollapsibleContent className="CollapsibleContent animate-fade-in">
