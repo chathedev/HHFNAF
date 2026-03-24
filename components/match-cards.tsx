@@ -123,9 +123,7 @@ export default function MatchCards() {
           signal: controller.signal,
           headers: {
             Accept: "application/json",
-            'Cache-Control': 'no-cache',
           },
-          cache: "no-store",
         })
 
         window.clearTimeout(timeoutId)
@@ -200,7 +198,9 @@ export default function MatchCards() {
         return
       }
 
-      timerId = window.setTimeout(runLoop, 3000)
+      // Poll every 5s during live matches, otherwise every 30s
+      const hasLive = upcomingMatches.some(m => m.matchStatus === 'live')
+      timerId = window.setTimeout(runLoop, hasLive ? 5000 : 30000)
     }
 
     void runLoop()

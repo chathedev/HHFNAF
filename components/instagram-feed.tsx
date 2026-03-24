@@ -82,7 +82,6 @@ export function InstagramFeed() {
 
       try {
         const response = await fetch(`${INSTAGRAM_API_BASE}/instagram/posts?limit=${MAX_POSTS}`, {
-          cache: "no-store",
           headers: { Accept: "application/json" },
         })
 

@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
         "User-Agent":
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
       },
-      cache: "no-store",
+      next: { revalidate: 3600 },
     })
   } catch {
     return NextResponse.json({ ok: false, error: "Upstream fetch failed" }, { status: 502 })
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     status: 200,
     headers: {
       "Content-Type": contentType,
-      "Cache-Control": "public, max-age=600, stale-while-revalidate=3600",
+      "Cache-Control": "public, max-age=7200, stale-while-revalidate=86400, immutable",
     },
   })
 }
