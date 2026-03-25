@@ -691,9 +691,8 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                 src={heroImages.mobile}
                 alt="Härnösands HF Memorial - Laget Före Allt"
                 fill
-                quality={100}
+                quality={75}
                 priority={true}
-                unoptimized={true}
                 className="z-0 transition-all duration-700 object-cover saturate-125 contrast-110 brightness-105 hue-rotate-15 block sm:hidden"
                 sizes="100vw"
                 style={{
@@ -712,12 +711,11 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
             {/* Desktop Image */}
             <Image
-              src={isPinkTheme ? heroImages.desktop : heroImages.desktop}
+              src={heroImages.desktop}
               alt={isPinkTheme ? "Härnösands HF Memorial - Laget Före Allt" : "Härnösands HF herrlag och damlag 2025"}
               fill
-              quality={100}
+              quality={75}
               priority={true}
-              unoptimized={isPinkTheme}
               className={`z-0 transition-all duration-700 object-cover ${isPinkTheme
                 ? "saturate-125 contrast-110 brightness-105 hue-rotate-15 hidden sm:block"
                 : "block"
