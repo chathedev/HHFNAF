@@ -190,6 +190,8 @@ export default async function RootLayout({
         <meta name="format-detection" content="telephone=no" />
         <link rel="preconnect" href="https://api.harnosandshf.se" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://api.harnosandshf.se" />
+      </head>
+      <body className={`${inter.className} ${spaceGrotesk.className} bg-white ${themeVariant === "pink" ? "hhf-staging" : ""}`}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -307,8 +309,6 @@ export default async function RootLayout({
             ]),
           }}
         />
-      </head>
-      <body className={`${inter.className} ${spaceGrotesk.className} bg-white ${themeVariant === "pink" ? "hhf-staging" : ""}`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ShopStatusProvider>
             <ScrollToTop />
@@ -316,6 +316,13 @@ export default async function RootLayout({
             {children}
           </ShopStatusProvider>
         </ThemeProvider>
+        {/* Clean up Next.js streaming SSR artifacts (hidden divs, templates) after hydration.
+            Without this, DOM scanners see duplicate header/footer/main elements. */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          requestAnimationFrame(function(){requestAnimationFrame(function(){
+            document.querySelectorAll('div[hidden],template[id^="B:"]').forEach(function(el){el.remove()});
+          })});
+        `}} />
       </body>
     </html>
   )
