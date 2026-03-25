@@ -432,13 +432,13 @@ type InitialMatchWindowOptions = {
   requireUpcomingProviders?: MatchProvider[]
 }
 
-const fetchMatchWindow = async (cursorDate: string) => {
+const fetchMatchWindow = async (cursorDate: string, chunkDays = 1) => {
   const url = new URL(MATCH_DATA_ENDPOINT)
   url.searchParams.set("cursorDate", cursorDate)
-  url.searchParams.set("chunkDays", "1")
+  url.searchParams.set("chunkDays", String(chunkDays))
 
   const response = await fetch(url.toString(), {
-    next: { revalidate: 15 },
+    next: { revalidate: 30 },
     headers: {
       Accept: "application/json",
     },
@@ -456,34 +456,13 @@ const fetchMatchWindow = async (cursorDate: string) => {
 }
 
 export async function getInitialMatchWindow(options?: InitialMatchWindowOptions): Promise<EnhancedMatchData | undefined> {
-  const minMatches = options?.minMatches ?? 8
   const maxDays = options?.maxDays ?? 3
-  const requireUpcomingProviders = options?.requireUpcomingProviders ?? []
 
   try {
-    const windows: EnhancedMatchData[] = []
-    let nextCursorDate: string | null = getStockholmToday()
-    let daysLoaded = 0
-
-    while (nextCursorDate && daysLoaded < maxDays) {
-      const { data, nextCursorDate: upcomingCursor } = await fetchMatchWindow(nextCursorDate)
-      windows.push(data)
-      daysLoaded += 1
-
-      const merged = mergeMatchWindows(windows)
-      const matchCount = merged?.matches.length ?? 0
-      const recentCount = merged?.recentResults?.length ?? 0
-      const upcomingProviders = new Set((merged?.groupedFeed?.upcoming ?? []).map((match) => match.provider).filter(Boolean))
-      const hasRequiredProviders = requireUpcomingProviders.every((provider) => upcomingProviders.has(provider))
-
-      if ((matchCount >= minMatches || recentCount >= 4) && hasRequiredProviders) {
-        return merged
-      }
-
-      nextCursorDate = upcomingCursor
-    }
-
-    return mergeMatchWindows(windows)
+    // Single API call with multi-day chunk instead of sequential day-by-day requests.
+    // This reduces server-side latency from N*RTT to 1*RTT.
+    const { data } = await fetchMatchWindow(getStockholmToday(), maxDays)
+    return data
   } catch (error) {
     console.warn("Failed to load initial matcher window", error)
     return undefined
