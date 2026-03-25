@@ -13,9 +13,7 @@ const inter = Inter({ subsets: ["latin"] })
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["400", "500", "600"] })
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_VERCEL_URL
-    ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-    : "https://www.harnosandshf.se"),
+  metadataBase: new URL("https://www.harnosandshf.se"),
   title: {
     default: "Härnösands HF – Officiell hemsida för handboll i Härnösand",
     template: "%s | Härnösands HF – Officiell hemsida för handboll i Härnösand",
@@ -312,17 +310,6 @@ export default async function RootLayout({
         />
       </head>
       <body className={`${inter.className} ${spaceGrotesk.className} bg-white ${themeVariant === "pink" ? "hhf-staging" : ""}`}>
-        <div style={{ display: "none", visibility: "hidden", position: "absolute", left: "-9999px" }}>
-          <h1>Härnösands HF Handbollsförening</h1>
-          <p>
-            Härnösands HF är Härnösands främsta handbollsklubb med A-lag herr, A-lag dam och ungdomslag för alla åldrar.
-            Vi tränar i Öbackahallen och spelar matcher i svenska handbollsserier.
-          </p>
-          <span>
-            handboll härnösand, härnösands hf, hhf, handbollsklubb, a-lag handboll, ungdomshandboll, träning, matcher,
-            västernorrland, ångermanland, öbackahallen, laget före allt
-          </span>
-        </div>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ShopStatusProvider>
             <ScrollToTop />

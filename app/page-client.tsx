@@ -854,11 +854,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
             </div>
           </section>
 
-          {/* SEO H1 Section */}
-          <section className="sr-only" aria-hidden="true">
-            <h1>Härnösands HF – Handboll i Härnösand</h1>
-          </section>
-
           {/* ===================== SHOP & QUICK ACTIONS HUB ===================== */}
           <section className="relative z-30 -mt-10 sm:-mt-16">
             <div className="container mx-auto px-4 sm:px-6">
@@ -1153,7 +1148,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
                     <div className="border border-gray-200 rounded-lg p-6 text-center">
                       <Heart className={`w-8 h-8 ${isPinkTheme ? "text-pink-600" : "text-green-600"} mx-auto mb-3`} />
-                      <h4 className="font-medium mb-2 text-black text-base">Passion</h4>
+                      <h3 className="font-medium mb-2 text-black text-base">Passion</h3>
                       <p
                         className="text-sm text-gray-600 leading-relaxed"
                         {...(isEditorMode && {
@@ -1167,7 +1162,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
                     <div className="border border-gray-200 rounded-lg p-6 text-center">
                       <TrendingUp className="w-8 h-8 text-orange-500 mx-auto mb-3" />
-                      <h4 className="font-medium mb-2 text-black text-base">Utveckling</h4>
+                      <h3 className="font-medium mb-2 text-black text-base">Utveckling</h3>
                       <p
                         className="text-sm text-gray-600 leading-relaxed"
                         {...(isEditorMode && {
@@ -1181,7 +1176,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
                     <div className="border border-gray-200 rounded-lg p-6 text-center">
                       <Users className={`w-8 h-8 ${isPinkTheme ? "text-emerald-600" : "text-green-600"} mx-auto mb-3`} />
-                      <h4 className="font-medium mb-2 text-black text-base">Gemenskap</h4>
+                      <h3 className="font-medium mb-2 text-black text-base">Gemenskap</h3>
                       <p
                         className="text-sm text-gray-600 leading-relaxed"
                         {...(isEditorMode && {
