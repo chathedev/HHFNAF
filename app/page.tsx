@@ -29,7 +29,7 @@ function stripHeavyMatchData(data: EnhancedMatchData | undefined): EnhancedMatch
 export default async function HomePage() {
   const initialData = await getInitialMatchWindow({
     minMatches: 6,
-    maxDays: 3,
+    maxDays: 10,
   })
 
   return <HomePageClient initialData={stripHeavyMatchData(initialData)} />

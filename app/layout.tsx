@@ -316,11 +316,16 @@ export default async function RootLayout({
             {children}
           </ShopStatusProvider>
         </ThemeProvider>
-        {/* Clean up Next.js streaming SSR artifacts (hidden divs, templates) after hydration.
-            Without this, DOM scanners see duplicate header/footer/main elements. */}
+        {/* Clean up Next.js streaming SSR artifacts after hydration.
+            Empty hidden divs so DOM scanners don't count duplicate elements.
+            We clear innerHTML instead of removing nodes — React still holds
+            references and would crash with removeChild errors if we remove them. */}
         <script dangerouslySetInnerHTML={{ __html: `
           requestAnimationFrame(function(){requestAnimationFrame(function(){
-            document.querySelectorAll('div[hidden],template[id^="B:"]').forEach(function(el){el.remove()});
+            document.querySelectorAll('div[hidden]').forEach(function(el){
+              el.innerHTML='';
+              el.setAttribute('aria-hidden','true');
+            });
           })});
         `}} />
       </body>
