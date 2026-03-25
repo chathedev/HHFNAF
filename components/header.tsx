@@ -119,10 +119,10 @@ function Header() {
             )}
             {/* Social links moved inside this flex container for right alignment */}
             <div className="flex items-center space-x-4">
-              <Link href="https://www.instagram.com/harnosandshf/" target="_blank" rel="noopener noreferrer">
+              <Link href="https://www.instagram.com/harnosandshf/" target="_blank" rel="noopener noreferrer" aria-label="Följ Härnösands HF på Instagram">
                 <Instagram className="h-6 w-6 text-gray-400 hover:text-white" />
               </Link>
-              <Link href="https://www.facebook.com/harnosandshf/" target="_blank" rel="noopener noreferrer">
+              <Link href="https://www.facebook.com/harnosandshf/" target="_blank" rel="noopener noreferrer" aria-label="Följ Härnösands HF på Facebook">
                 <Facebook className="h-6 w-6 text-gray-400 hover:text-white" />
               </Link>
             </div>

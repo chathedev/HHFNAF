@@ -836,6 +836,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                   href="https://www.facebook.com/profile.php?id=61566621756014"
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label="Följ oss på Facebook"
                   className="group flex items-center space-x-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 transition-all duration-300 hover:scale-105"
                 >
                   <Facebook className="w-5 h-5" />
@@ -845,6 +846,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                   href="https://www.instagram.com/harnosandshf"
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label="Följ oss på Instagram"
                   className="group flex items-center space-x-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 transition-all duration-300 hover:scale-105"
                 >
                   <Instagram className="w-5 h-5" />

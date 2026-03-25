@@ -9,8 +9,8 @@ import { VisitBeacon } from "@/components/visit-beacon"
 import { ShopStatusProvider } from "@/components/shop-status-provider"
 import { deriveSiteVariant, getThemeVariant } from "@/lib/site-variant"
 
-const inter = Inter({ subsets: ["latin"] })
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["400", "500", "600"] })
+const inter = Inter({ subsets: ["latin"], display: "swap" })
+const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["400", "500", "600"], display: "swap" })
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.harnosandshf.se"),
@@ -144,14 +144,11 @@ export const metadata: Metadata = {
   ],
   manifest: "/manifest.json",
   alternates: {
-    canonical: "https://harnosandshf.se",
+    canonical: "https://www.harnosandshf.se",
   },
   category: "Sports",
   classification: "Handbollsklubb",
   other: {
-    "google-site-verification": "your-google-verification-code",
-    "msvalidate.01": "your-bing-verification-code",
-    "yandex-verification": "your-yandex-verification-code",
     "geo.region": "SE-Y",
     "geo.placename": "Härnösand",
     "geo.position": "62.6327;17.9378",
@@ -191,6 +188,8 @@ export default async function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content={themeColor} />
         <meta name="format-detection" content="telephone=no" />
+        <link rel="preconnect" href="https://api.harnosandshf.se" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://api.harnosandshf.se" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -245,8 +244,8 @@ export default async function RootLayout({
                 "@type": "SportsTeam",
                 name: "Härnösands HF",
                 sport: "Handboll",
-                url: "https://harnosandshf.se",
-                foundingDate: "2024",
+                url: "https://www.harnosandshf.se",
+                foundingDate: "1970",
                 location: {
                   "@type": "Place",
                   name: "Härnösand, Sverige",
