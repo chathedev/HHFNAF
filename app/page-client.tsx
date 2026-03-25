@@ -408,7 +408,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
           )}
         {showProfixioWarning && (
           <p className="border-l-2 border-amber-400 pl-3 text-xs text-amber-700">
-            Profixio har tekniska problem med liveuppdateringen just nu.
+            Liveuppdateringen har tekniska problem just nu.
           </p>
         )}
         {showFinishedZeroZeroIssue && (

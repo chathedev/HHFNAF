@@ -641,12 +641,12 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
         )}
         {showProfixioWarning && (
           <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
-            Profixio har tekniska problem med liveuppdateringen för den här matchen just nu.
+            Liveuppdateringen har tekniska problem för den här matchen just nu.
           </p>
         )}
         {showFinishedZeroZeroIssue && (
           <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
-            Misstänkt resultatfel från Profixio: matchen är avslutad men står som 0–0. Kontrollera matchrapporten.
+            Misstänkt resultatfel: matchen är avslutad men står som 0–0. Kontrollera matchrapporten.
           </p>
         )}
       </article>
@@ -673,7 +673,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
         key: "finished" as const,
         label: "Resultat",
         title: "Nyss klara",
-        description: "Senaste resultaten från Profixio-flödet.",
+        description: "Senaste resultaten.",
         matches: groupedMatches.finished,
       },
     ]
@@ -852,8 +852,8 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
               <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/55">Så fungerar sidan</p>
               <div className="mt-4 space-y-3">
                 <div className="rounded-2xl bg-white/5 px-4 py-3">
-                  <p className="text-sm font-semibold">Status direkt från backend</p>
-                  <p className="mt-1 text-sm text-white/70">Live, kommande och avslutat byggs inte om i frontend.</p>
+                  <p className="text-sm font-semibold">Alltid uppdaterat</p>
+                  <p className="mt-1 text-sm text-white/70">Live, kommande och avslutade matcher uppdateras automatiskt.</p>
                 </div>
                 <div className="rounded-2xl bg-white/5 px-4 py-3">
                   <p className="text-sm font-semibold">Resultat nära i tiden</p>
@@ -861,7 +861,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                 </div>
                 <div className="rounded-2xl bg-white/5 px-4 py-3">
                   <p className="text-sm font-semibold">Tidslinje när den finns</p>
-                  <p className="mt-1 text-sm text-white/70">Matchdetalj öppnas bara när Profixio faktiskt levererar ett flöde.</p>
+                  <p className="mt-1 text-sm text-white/70">Matchdetalj öppnas när tidslinjedata finns tillgänglig.</p>
                 </div>
               </div>
             </section>
