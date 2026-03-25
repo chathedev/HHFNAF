@@ -3,7 +3,7 @@ import type { FullContent } from "./content-types"
 
 export const defaultContent: FullContent = {
   hero: {
-    imageUrl: "/heropic.png",
+    imageUrl: "/heropic.webp",
     title: "LAGET FÖRE ALLT",
     description: "Härnösands HF - En förening med stolthet, gemenskap och passion för sporten.",
     button1Text: "Våra 23 Lag",

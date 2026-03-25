@@ -86,14 +86,14 @@ export const getHeroImages = (host?: string | null): HeroImages => {
   if (themeVariant === "pink") {
     // Pink theme gets memorial images
     return {
-      mobile: "/c38715eb-2128-43e0-b80b-48cc95620ffa.png",
-      desktop: "/7ea5a4bb-f938-43ea-b514-783a8fa1b236.png"
+      mobile: "/c38715eb-2128-43e0-b80b-48cc95620ffa.webp",
+      desktop: "/7ea5a4bb-f938-43ea-b514-783a8fa1b236.webp"
     }
   } else {
     // Orange theme gets default hero
     return {
-      mobile: "/heropic.png",
-      desktop: "/heropic.png"
+      mobile: "/heropic.webp",
+      desktop: "/heropic.webp"
     }
   }
 }
