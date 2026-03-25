@@ -1,5 +1,4 @@
 import { HomePageClient } from "./page-client"
-import { Suspense } from "react"
 import { getInitialMatchWindow } from "@/lib/get-initial-match-window"
 import type { EnhancedMatchData, NormalizedMatch } from "@/lib/use-match-data"
 
