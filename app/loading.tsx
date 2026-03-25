@@ -1,3 +1,4 @@
 export default function Loading() {
-  return null
+  // Minimal non-white background prevents the white flash during page transitions
+  return <div className="min-h-screen bg-slate-50" />
 }
