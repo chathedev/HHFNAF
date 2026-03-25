@@ -66,7 +66,7 @@ function Header() {
                 fill
                 className="object-contain"
                 priority
-                quality={100}
+                quality={75}
                 sizes="56px"
               />
             </div>

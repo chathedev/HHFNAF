@@ -37,7 +37,7 @@ const PLACEHOLDER_IMAGE =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='800'><rect width='100%25' height='100%25' fill='%23f1f5f9'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2364748b' font-family='Arial' font-size='28'>Instagram-bild</text></svg>"
 
 const POLL_INTERVAL_MS = 10 * 60 * 1000
-const MAX_POSTS = 9
+const MAX_POSTS = 6
 const getProxiedInstagramImageUrl = (url: string) => `/api/instagram-image?url=${encodeURIComponent(url)}`
 
 const formatCompactNumber = (value?: number) => {
@@ -258,6 +258,8 @@ export function InstagramFeed() {
                       loading="lazy"
                       decoding="async"
                       referrerPolicy="no-referrer"
+                      width={400}
+                      height={400}
                       className="aspect-square w-full object-cover"
                       onError={() => markImageBroken(post)}
                     />

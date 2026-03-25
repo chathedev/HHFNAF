@@ -192,123 +192,43 @@ export default async function RootLayout({
         <link rel="dns-prefetch" href="https://api.harnosandshf.se" />
       </head>
       <body className={`${inter.className} ${spaceGrotesk.className} bg-white ${themeVariant === "pink" ? "hhf-staging" : ""}`}>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify([
-              {
-                "@context": "https://schema.org",
-                "@type": "SportsOrganization",
-                name: "Härnösands HF",
-                alternateName: ["HHF", "Härnösands Handbollsförening"],
-                description:
-                  "Härnösands Handbollsförening - Härnösands främsta handbollsklubb med A-lag, ungdomslag och träningar för alla åldrar",
-                url: "https://www.harnosandshf.se",
-                logo: "https://www.harnosandshf.se/logo.png",
-                image: "https://www.harnosandshf.se/opengraph-image.png",
-                sport: "Handball",
-                slogan: "Laget Före Allt",
-                foundingDate: "1970",
-                address: {
-                  "@type": "PostalAddress",
-                  addressLocality: "Härnösand",
-                  addressRegion: "Västernorrlands län",
-                  addressCountry: "SE",
-                  postalCode: "871 30",
-                },
-                geo: {
-                  "@type": "GeoCoordinates",
-                  latitude: 62.6327,
-                  longitude: 17.9378,
-                },
-                sameAs: [
-                  "https://www.facebook.com/harnosandshf",
-                  "https://www.instagram.com/harnosandshf",
-                  "https://www.profixio.com/app/tournaments?klubbid=26031",
-                ],
-                memberOf: {
-                  "@type": "Organization",
-                  name: "Svenska Handbollsförbundet",
-                  url: "https://www.handboll.se",
-                },
-                location: {
-                  "@type": "Place",
-                  name: "Öbackahallen",
-                },
-                contactPoint: {
-                  "@type": "ContactPoint",
-                  email: "kontakt@harnosandshf.se",
-                  contactType: "customer service",
-                },
-              },
-              {
-                "@context": "https://schema.org",
-                "@type": "SportsTeam",
-                name: "Härnösands HF",
-                sport: "Handboll",
-                url: "https://www.harnosandshf.se",
-                foundingDate: "1970",
-                location: {
-                  "@type": "Place",
-                  name: "Härnösand, Sverige",
-                },
-                memberOf: {
-                  "@type": "SportsOrganization",
-                  name: "Svenska Handbollsförbundet",
-                },
-              },
-              {
-                "@context": "https://schema.org",
-                "@type": "WebSite",
-                name: "Härnösands HF",
-                url: "https://www.harnosandshf.se",
-                description: "Officiell webbplats för Härnösands Handbollsförening",
-                inLanguage: "sv-SE",
-                potentialAction: {
-                  "@type": "SearchAction",
-                  target: "https://www.harnosandshf.se/search?q={search_term_string}",
-                  "query-input": "required name=search_term_string",
-                },
-              },
-              {
-                "@context": "https://schema.org",
-                "@type": "BreadcrumbList",
-                itemListElement: [
-                  {
-                    "@type": "ListItem",
-                    position: 1,
-                    name: "Hem",
-                    item: "https://www.harnosandshf.se",
-                  },
-                  {
-                    "@type": "ListItem",
-                    position: 2,
-                    name: "Lag",
-                    item: "https://www.harnosandshf.se/lag",
-                  },
-                  {
-                    "@type": "ListItem",
-                    position: 3,
-                    name: "Matcher",
-                    item: "https://www.harnosandshf.se/matcher",
-                  },
-                  {
-                    "@type": "ListItem",
-                    position: 4,
-                    name: "Bli Medlem",
-                    item: "https://www.harnosandshf.se/bli-medlem",
-                  },
-                  {
-                    "@type": "ListItem",
-                    position: 5,
-                    name: "Köp Biljett",
-                    item: "https://www.harnosandshf.se/kop-biljett",
-                  },
-                ],
-              },
-            ]),
-          }}
-        />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SportsOrganization",
+          name: "Härnösands HF",
+          alternateName: ["HHF", "Härnösands Handbollsförening"],
+          description: "Härnösands Handbollsförening - Härnösands främsta handbollsklubb med A-lag, ungdomslag och träningar för alla åldrar",
+          url: "https://www.harnosandshf.se",
+          logo: "https://www.harnosandshf.se/logo.png",
+          image: "https://www.harnosandshf.se/opengraph-image.png",
+          sport: "Handball",
+          slogan: "Laget Före Allt",
+          foundingDate: "1970",
+          address: { "@type": "PostalAddress", addressLocality: "Härnösand", addressRegion: "Västernorrlands län", addressCountry: "SE", postalCode: "871 30" },
+          geo: { "@type": "GeoCoordinates", latitude: 62.6327, longitude: 17.9378 },
+          sameAs: ["https://www.facebook.com/harnosandshf", "https://www.instagram.com/harnosandshf"],
+          memberOf: { "@type": "Organization", name: "Svenska Handbollsförbundet", url: "https://www.handboll.se" },
+          location: { "@type": "Place", name: "Öbackahallen" },
+          contactPoint: { "@type": "ContactPoint", email: "kontakt@harnosandshf.se", contactType: "customer service" },
+        }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SportsTeam",
+          name: "Härnösands HF",
+          sport: "Handboll",
+          url: "https://www.harnosandshf.se",
+          foundingDate: "1970",
+          location: { "@type": "Place", name: "Härnösand, Sverige" },
+          memberOf: { "@type": "SportsOrganization", name: "Svenska Handbollsförbundet" },
+        }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "Härnösands HF",
+          url: "https://www.harnosandshf.se",
+          description: "Officiell webbplats för Härnösands Handbollsförening",
+          inLanguage: "sv-SE",
+        }) }} />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ShopStatusProvider>
             <ScrollToTop />
