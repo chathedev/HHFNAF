@@ -98,7 +98,7 @@ export function TabellerClient({ initialData }: { initialData: StandingsData }) 
         <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-emerald-600">Härnösands HF</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">Serietabeller</h1>
         <p className="mt-2 text-sm text-slate-600 sm:text-base max-w-2xl">
-          Ställningar för alla serier vi deltar i. Beräknade från matchresultat — 2 poäng för vinst, 1 för oavgjort.
+          Ställningar för alla serier vi deltar i. Hämtas direkt från Profixio — 2 poäng för vinst, 1 för oavgjort.
         </p>
       </div>
 
