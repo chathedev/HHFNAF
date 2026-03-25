@@ -316,17 +316,27 @@ export default async function RootLayout({
             {children}
           </ShopStatusProvider>
         </ThemeProvider>
-        {/* Clean up Next.js streaming SSR artifacts after hydration.
-            Empty hidden divs so DOM scanners don't count duplicate elements.
-            We clear innerHTML instead of removing nodes — React still holds
-            references and would crash with removeChild errors if we remove them. */}
+        {/* Clean up Next.js streaming SSR duplicate DOM.
+            The streaming SSR places page content in a hidden div (S:0) that gets
+            swapped in by $RC. We use MutationObserver to catch it the moment it
+            appears and empty it immediately after $RC moves its children out. */}
         <script dangerouslySetInnerHTML={{ __html: `
-          requestAnimationFrame(function(){requestAnimationFrame(function(){
-            document.querySelectorAll('div[hidden]').forEach(function(el){
-              el.innerHTML='';
-              el.setAttribute('aria-hidden','true');
-            });
-          })});
+          (function(){
+            var cleaned=false;
+            function cleanup(){
+              if(cleaned)return;
+              document.querySelectorAll('div[hidden]').forEach(function(el){
+                if(el.querySelector('header,footer,main,nav')){
+                  el.innerHTML='';
+                  el.setAttribute('aria-hidden','true');
+                }
+              });
+              cleaned=true;
+            }
+            var mo=new MutationObserver(function(){cleanup()});
+            mo.observe(document.body,{childList:true,subtree:true});
+            document.addEventListener('DOMContentLoaded',function(){cleanup();mo.disconnect()});
+          })();
         `}} />
       </body>
     </html>
