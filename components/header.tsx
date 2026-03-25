@@ -176,10 +176,10 @@ function Header() {
             )}
 
             <div className="flex items-center justify-center gap-6 mt-6 pt-6 border-t border-gray-800">
-              <Link href="https://www.instagram.com/harnosandshf/" target="_blank" rel="noopener noreferrer">
+              <Link href="https://www.instagram.com/harnosandshf/" target="_blank" rel="noopener noreferrer" aria-label="Följ Härnösands HF på Instagram">
                 <Instagram className="h-6 w-6 text-gray-400 hover:text-white transition-colors" />
               </Link>
-              <Link href="https://www.facebook.com/harnosandshf/" target="_blank" rel="noopener noreferrer">
+              <Link href="https://www.facebook.com/harnosandshf/" target="_blank" rel="noopener noreferrer" aria-label="Följ Härnösands HF på Facebook">
                 <Facebook className="h-6 w-6 text-gray-400 hover:text-white transition-colors" />
               </Link>
             </div>

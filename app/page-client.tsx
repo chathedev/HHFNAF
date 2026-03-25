@@ -61,16 +61,8 @@ const API_BASE_URL =
 
 
 const getInitialVariant = (): SiteVariant => {
-  if (typeof document !== "undefined") {
-    const attr = document.documentElement.getAttribute("data-site-variant")
-    if (attr === "staging" || attr === "production" || attr === "development") {
-      return attr
-    }
-  }
-
-  return deriveSiteVariant(
-    typeof window !== "undefined" ? window.location.host : process.env.NEXT_PUBLIC_VERCEL_URL || undefined,
-  )
+  // Always return a stable default for SSR — client resolves on mount via useEffect
+  return "production"
 }
 
 const mapTimelineEvent = (event: any): MatchFeedEvent => ({
@@ -140,12 +132,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
   const [content] = useState<FullContent>(defaultContent)
   const [siteVariant, setSiteVariant] = useState<SiteVariant>(getInitialVariant)
-  const [themeVariant, setThemeVariant] = useState<ThemeVariant>(() => {
-    if (typeof window !== "undefined") {
-      return getThemeVariant(window.location.host)
-    }
-    return "orange"
-  })
+  const [themeVariant, setThemeVariant] = useState<ThemeVariant>("orange")
   const [showHeroContent, setShowHeroContent] = useState<boolean>(true)
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   const [timelineByMatchId, setTimelineByMatchId] = useState<Record<string, MatchFeedEvent[]>>({})
@@ -680,7 +667,12 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   }, [])
 
   const isPinkTheme = themeVariant === "pink"
-  const heroImages = typeof window !== "undefined" ? getHeroImages(window.location.host) : getHeroImages()
+  const [heroImages, setHeroImages] = useState(() => getHeroImages())
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setHeroImages(getHeroImages(window.location.host))
+    }
+  }, [])
   const heroOverlayClass = isPinkTheme
     ? "from-pink-900/40 via-pink-800/20 to-rose-900/60"
     : "from-black/70 via-black/40 to-transparent"
@@ -1299,6 +1291,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                           href={partner.linkUrl || undefined}
                           target={partner.linkUrl ? "_blank" : undefined}
                           rel={partner.linkUrl ? "noopener noreferrer" : undefined}
+                          aria-label={partner.alt}
                           className={`group relative flex flex-col items-center justify-center rounded-2xl border bg-white p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${
                             isDiamant
                               ? "border-amber-200 shadow-sm hover:border-amber-300"

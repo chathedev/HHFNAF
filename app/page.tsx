@@ -33,9 +33,5 @@ export default async function HomePage() {
     maxDays: 3,
   })
 
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-50" />}>
-      <HomePageClient initialData={stripHeavyMatchData(initialData)} />
-    </Suspense>
-  )
+  return <HomePageClient initialData={stripHeavyMatchData(initialData)} />
 }
