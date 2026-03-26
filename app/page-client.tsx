@@ -693,7 +693,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                 fill
                 quality={75}
                 priority={true}
-                className="z-0 transition-all duration-700 object-cover saturate-125 contrast-110 brightness-105 hue-rotate-15 block sm:hidden"
+                className="z-0 object-cover block sm:hidden will-change-auto"
                 sizes="100vw"
                 style={{
                   objectPosition: 'center center'
@@ -716,10 +716,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
               fill
               quality={75}
               priority={true}
-              className={`z-0 transition-all duration-700 object-cover ${isPinkTheme
-                ? "saturate-125 contrast-110 brightness-105 hue-rotate-15 hidden sm:block"
-                : "block"
-                }`}
+              className={`z-0 object-cover ${isPinkTheme ? "hidden sm:block" : "block"}`}
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 100vw"
               style={{
                 objectPosition: 'center center'
@@ -744,7 +741,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                 "data-field-path": "home.hero.imageUrl",
               })}
             />
-            <div className={`absolute inset-0 bg-gradient-to-t ${heroOverlayClass} z-10 ${isPinkTheme ? "backdrop-blur-[0.5px]" : ""
+            <div className={`absolute inset-0 bg-gradient-to-t ${heroOverlayClass} z-10 ${isPinkTheme ? "" : ""
               }`} />
             {isPinkTheme && (
               <>
@@ -759,8 +756,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                 }`}
             >
               <h1
-                className={`text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold mb-3 sm:mb-4 md:mb-6 leading-tight tracking-tight animate-fade-in-up text-shadow-outline ${isPinkTheme ? "drop-shadow-2xl filter drop-shadow-[0_0_20px_rgba(236,72,153,0.3)]" : ""
-                  }`}
+                className={`text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold mb-3 sm:mb-4 md:mb-6 leading-tight tracking-tight text-shadow-outline`}
                 {...(isEditorMode && {
                   "data-editable": "true",
                   "data-field-path": "home.hero.title",
@@ -787,7 +783,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                   className={`${isPinkTheme
                     ? "bg-pink-500 hover:bg-pink-600 focus:ring-pink-300 shadow-pink-500/25"
                     : "bg-orange-500 hover:bg-orange-600 focus:ring-orange-300"
-                    } text-white px-6 sm:px-10 py-3 sm:py-4 rounded-md text-base sm:text-lg font-semibold shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-4 w-full sm:w-auto`}
+                    } text-white px-6 sm:px-10 py-3 sm:py-4 rounded-md text-base sm:text-lg font-semibold shadow-lg transition-transform duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-4 w-full sm:w-auto`}
                 >
                   <Link href={content.hero.button1Link}>
                     <span
@@ -806,7 +802,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                   className={`${isPinkTheme
                     ? "bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-300 shadow-emerald-500/25"
                     : "bg-green-700 hover:bg-green-800 focus:ring-green-300"
-                    } text-white px-6 sm:px-10 py-3 sm:py-4 rounded-md text-base sm:text-lg font-semibold shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-4 w-full sm:w-auto`}
+                    } text-white px-6 sm:px-10 py-3 sm:py-4 rounded-md text-base sm:text-lg font-semibold shadow-lg transition-transform duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-4 w-full sm:w-auto`}
                 >
                   <Link href={content.hero.button2Link}>
                     <span
@@ -827,7 +823,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Följ oss på Facebook"
-                  className="group flex items-center space-x-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 transition-all duration-300 hover:scale-105"
+                  className="group flex items-center space-x-2 bg-white/15 hover:bg-white/25 rounded-full px-4 py-2 transition-transform duration-300 hover:scale-105"
                 >
                   <Facebook className="w-5 h-5" />
                   <span className="font-medium hidden sm:block">Facebook</span>
@@ -837,7 +833,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Följ oss på Instagram"
-                  className="group flex items-center space-x-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 transition-all duration-300 hover:scale-105"
+                  className="group flex items-center space-x-2 bg-white/15 hover:bg-white/25 rounded-full px-4 py-2 transition-transform duration-300 hover:scale-105"
                 >
                   <Instagram className="w-5 h-5" />
                   <span className="font-medium hidden sm:block">Instagram</span>
@@ -1288,7 +1284,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                           target={partner.linkUrl ? "_blank" : undefined}
                           rel={partner.linkUrl ? "noopener noreferrer" : undefined}
                           aria-label={partner.alt}
-                          className={`group/card relative flex flex-col items-center justify-center rounded-xl border bg-white p-3 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${
+                          className={`group/card relative flex flex-col items-center justify-center rounded-xl border bg-white p-3 transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md ${
                             isDiamant
                               ? "border-amber-200 hover:border-amber-300"
                               : isPlatina

@@ -15,18 +15,18 @@ function Header() {
   const { shopVisible } = useShopStatus()
 
   useEffect(() => {
+    let ticking = false
     const handleScroll = () => {
-      if (window.scrollY > 50) {
-        setScrolled(true)
-      } else {
-        setScrolled(false)
-      }
+      if (ticking) return
+      ticking = true
+      requestAnimationFrame(() => {
+        setScrolled(window.scrollY > 50)
+        ticking = false
+      })
     }
 
-    window.addEventListener("scroll", handleScroll)
-    return () => {
-      window.removeEventListener("scroll", handleScroll)
-    }
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
   const visiblePaths = ["/", "/lag", "/matcher", "/kontakt", "/kop-biljett", "/shop"]
@@ -47,13 +47,13 @@ function Header() {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 w-full z-50 text-white shadow-lg transition-all duration-300
+        className={`fixed top-0 left-0 w-full z-50 text-white shadow-lg transition-[background-color] duration-300
           ${
             pathname === "/"
               ? scrolled
-                ? "bg-black/90 backdrop-blur-md"
-                : "bg-transparent backdrop-blur-none"
-              : "bg-black/90 backdrop-blur-md"
+                ? "bg-black/95"
+                : "bg-transparent"
+              : "bg-black/95"
           }
         `}
       >
@@ -97,7 +97,7 @@ function Header() {
               >
                 {link.name}
                 <span
-                  className={`absolute bottom-0 left-0 h-[3px] bg-orange-500 transition-all duration-300 ease-out
+                  className={`absolute bottom-0 left-0 h-[3px] bg-orange-500 transition-[width] duration-300 ease-out
                     ${pathname === link.href ? "w-full" : "w-0 group-hover:w-full"}
                   `}
                 />
@@ -131,11 +131,11 @@ function Header() {
       </header>
 
       <div
-        className={`fixed top-20 left-0 w-full z-40 md:hidden transition-all duration-300 ease-in-out ${
+        className={`fixed top-20 left-0 w-full z-40 md:hidden transition-[opacity,transform] duration-300 ease-in-out ${
           isMenuOpen ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 -translate-y-4 pointer-events-none"
         }`}
       >
-        <div className="bg-black/95 backdrop-blur-md border-t border-gray-800 shadow-xl">
+        <div className="bg-black/95 border-t border-gray-800 shadow-xl">
           <div className="container mx-auto px-4 py-6">
             <nav className="flex flex-col gap-1">
               {navLinks.map((link) => (
