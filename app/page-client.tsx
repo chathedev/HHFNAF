@@ -876,35 +876,19 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
                 {/* Quick action cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-slate-200 border border-slate-200 mb-10 sm:mb-14">
-                  <Link
-                    href="/matcher"
-                    className="group flex items-center gap-3 bg-white p-4 transition hover:bg-slate-50"
-                  >
+                  <Link href="/matcher" aria-label="Matcher" className="group flex items-center gap-3 bg-white p-4 transition hover:bg-slate-50">
                     <Calendar className="h-4 w-4 text-slate-400 shrink-0" />
                     <span className="text-sm font-medium text-slate-700">Matcher</span>
                   </Link>
-                  <Link
-                    href={TICKET_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-center gap-3 bg-white p-4 transition hover:bg-slate-50"
-                  >
+                  <Link href={TICKET_URL} target="_blank" rel="noopener noreferrer" aria-label="Biljetter" className="group flex items-center gap-3 bg-white p-4 transition hover:bg-slate-50">
                     <Ticket className="h-4 w-4 text-slate-400 shrink-0" />
                     <span className="text-sm font-medium text-slate-700">Biljetter</span>
                   </Link>
-                  <Link
-                    href="/lag"
-                    className="group flex items-center gap-3 bg-white p-4 transition hover:bg-slate-50"
-                  >
+                  <Link href="/lag" aria-label="Lag" className="group flex items-center gap-3 bg-white p-4 transition hover:bg-slate-50">
                     <Users className="h-4 w-4 text-slate-400 shrink-0" />
                     <span className="text-sm font-medium text-slate-700">Lag</span>
                   </Link>
-                  <Link
-                    href={shopVisible ? SHOP_URL : "/shop"}
-                    target={shopVisible ? "_blank" : undefined}
-                    rel={shopVisible ? "noopener noreferrer" : undefined}
-                    className="group flex items-center gap-3 bg-white p-4 transition hover:bg-slate-50"
-                  >
+                  <Link href={shopVisible ? SHOP_URL : "/shop"} target={shopVisible ? "_blank" : undefined} rel={shopVisible ? "noopener noreferrer" : undefined} aria-label="Butik" className="group flex items-center gap-3 bg-white p-4 transition hover:bg-slate-50">
                     <ShoppingBag className="h-4 w-4 text-slate-400 shrink-0" />
                     <span className="text-sm font-medium text-slate-700">Butik</span>
                   </Link>
