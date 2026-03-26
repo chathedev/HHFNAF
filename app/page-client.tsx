@@ -1257,28 +1257,42 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
           {/* Partners Section */}
           <section className="py-16">
-            <div className="container mx-auto px-4">
+            <div className="container mx-auto px-4 max-w-5xl">
               <h2 className="text-4xl font-bold text-center mb-2 text-orange-500">
                 Partners
               </h2>
-              <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">
-                Vi är stolta över att samarbeta med lokala företag och organisationer som stödjer vår verksamhet och
-                hjälper oss att utveckla handbollen i Härnösand.
+              <p className="text-center text-gray-600 mb-10 max-w-2xl mx-auto">
+                Lokala företag som stödjer vår verksamhet och handbollen i Härnösand.
               </p>
 
-              {/* Partners by tier */}
-              {tierOrder.map((tierName) => {
+              {/* Partners by tier — top tier expanded, rest collapsible */}
+              <div className="space-y-4">
+              {tierOrder.map((tierName, tierIndex) => {
                 const tierPartners = partnersByTier[tierName]
                 if (!tierPartners || tierPartners.length === 0) return null
                 const isDiamant = tierName === "Diamantpartner"
                 const isPlatina = tierName === "Platinapartner"
                 const isTopTier = isDiamant || isPlatina
+
                 return (
-                  <div key={tierName} className="mb-10">
-                    <h3 className={`text-2xl font-bold text-center mb-6 ${isPinkTheme ? "text-emerald-600" : "text-green-600"}`}>
-                      {tierName}
-                    </h3>
-                    <div className={`grid gap-4 ${
+                  <details key={tierName} open={tierIndex === 0} className="group">
+                    <summary className={`flex items-center justify-between cursor-pointer select-none rounded-xl px-5 py-3.5 transition-colors ${
+                      isDiamant
+                        ? "bg-amber-50 hover:bg-amber-100"
+                        : isPlatina
+                          ? "bg-slate-50 hover:bg-slate-100"
+                          : "bg-gray-50 hover:bg-gray-100"
+                    }`}>
+                      <div className="flex items-center gap-2.5">
+                        {isDiamant && <Star className="w-4 h-4 text-amber-400 fill-amber-400" />}
+                        <h3 className={`text-base font-semibold ${
+                          isDiamant ? "text-amber-700" : isPlatina ? "text-slate-700" : "text-gray-600"
+                        }`}>{tierName}</h3>
+                        <span className="text-xs text-gray-400">{tierPartners.length}</span>
+                      </div>
+                      <svg className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                    </summary>
+                    <div className={`grid gap-3 pt-4 pb-2 ${
                       isTopTier
                         ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
                         : "grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6"
@@ -1290,34 +1304,32 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                           target={partner.linkUrl ? "_blank" : undefined}
                           rel={partner.linkUrl ? "noopener noreferrer" : undefined}
                           aria-label={partner.alt}
-                          className={`group relative flex flex-col items-center justify-center rounded-2xl border bg-white p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${
+                          className={`group/card relative flex flex-col items-center justify-center rounded-xl border bg-white p-3 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${
                             isDiamant
-                              ? "border-amber-200 shadow-sm hover:border-amber-300"
+                              ? "border-amber-200 hover:border-amber-300"
                               : isPlatina
-                                ? "border-slate-200 shadow-sm hover:border-slate-300"
+                                ? "border-slate-200 hover:border-slate-300"
                                 : "border-gray-100 hover:border-gray-200"
                           }`}
-                          style={{ minHeight: isTopTier ? "140px" : "110px" }}
+                          style={{ minHeight: isTopTier ? "120px" : "90px" }}
                         >
-                          {isDiamant && (
-                            <Star className="absolute top-2 right-2 w-4 h-4 text-amber-400 fill-amber-400" />
-                          )}
-                          <div className={`relative w-full ${isTopTier ? "h-16" : "h-12"} mb-2`}>
+                          <div className={`relative w-full ${isTopTier ? "h-14" : "h-10"} mb-1.5`}>
                             <Image
                               src={partner.src || "/placeholder.svg"}
                               alt={partner.alt}
                               fill
-                              className="object-contain transition-transform duration-300 group-hover:scale-105"
+                              className="object-contain transition-transform duration-300 group-hover/card:scale-105"
                               loading="lazy"
                             />
                           </div>
-                          <p className="text-xs font-medium text-gray-700 text-center mt-auto">{partner.alt}</p>
+                          <p className="text-[11px] font-medium text-gray-500 text-center mt-auto leading-tight">{partner.alt}</p>
                         </a>
                       ))}
                     </div>
-                  </div>
+                  </details>
                 )
               })}
+              </div>
 
               <section className={`${isPinkTheme ? "bg-gradient-to-r from-rose-600 to-pink-700" : "bg-green-700"} text-white p-10 rounded-2xl shadow-sm text-center mt-16`}>
                 <h2 className="text-4xl font-bold mb-4">Vill du stödja Härnösands HF?</h2>
