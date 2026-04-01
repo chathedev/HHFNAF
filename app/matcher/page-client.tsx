@@ -339,7 +339,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     statusFilter === "finished"
       ? oldLoading || !hasOldPayload
       : statusFilter === "current"
-        ? liveLoading || oldLoading || !hasLivePayload || !hasOldPayload
+        ? liveLoading || !hasLivePayload
         : liveLoading || !hasLivePayload
   const activeError =
     statusFilter === "finished"
@@ -534,8 +534,10 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     live.sort(compareMatchesByDateAscStable)
     upcoming.sort(compareMatchesByDateAscStable)
     finished.sort((a, b) => {
-      const endA = getMatchEndTime(a)?.getTime() ?? (a.date.getTime() + 90 * 60 * 1000)
-      const endB = getMatchEndTime(b)?.getTime() ?? (b.date.getTime() + 90 * 60 * 1000)
+      const tsA = typeof a.startTimestamp === "number" ? a.startTimestamp : new Date(a.date).getTime()
+      const tsB = typeof b.startTimestamp === "number" ? b.startTimestamp : new Date(b.date).getTime()
+      const endA = getMatchEndTime(a)?.getTime() ?? (tsA + 90 * 60 * 1000)
+      const endB = getMatchEndTime(b)?.getTime() ?? (tsB + 90 * 60 * 1000)
       if (endA !== endB) {
         return endB - endA
       }

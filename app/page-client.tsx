@@ -643,7 +643,10 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     const now = Date.now()
     const SIX_HOURS = 6 * 60 * 60 * 1000
     const finishedFallback = recentResults.length === 0
-      ? (groupedFeed?.finished ?? []).filter((m) => now - m.date.getTime() < SIX_HOURS).slice(0, 3)
+      ? (groupedFeed?.finished ?? []).filter((m) => {
+          const ts = typeof m.startTimestamp === "number" ? m.startTimestamp : new Date(m.date).getTime()
+          return Number.isFinite(ts) && now - ts < SIX_HOURS
+        }).slice(0, 3)
       : []
     const resultItems = recentResults.length > 0 ? recentResults.slice(0, 3) : finishedFallback
     const remainingSlots = Math.max(15 - liveItems.length - resultItems.length, 0)
