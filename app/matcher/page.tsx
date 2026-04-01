@@ -7,7 +7,7 @@ export const revalidate = 60
 export default async function MatcherPage() {
   const initialData = await getInitialMatchWindow({
     minMatches: 16,
-    maxDays: 14,
+    maxDays: 21,
   })
 
   return <MatcherPageClient initialData={initialData} />

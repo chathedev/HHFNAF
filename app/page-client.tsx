@@ -637,7 +637,15 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const homeMatchFlow = useMemo(() => {
     const seen = new Set<string>()
     const liveItems = (groupedFeed?.live ?? []).slice(0, 5)
-    const resultItems = recentResults.slice(0, 3)
+    // Use recentResults from API, but fall back to recently finished matches
+    // from the grouped feed when the API returns no recent results (e.g. when
+    // a match result hasn't been published yet).
+    const now = Date.now()
+    const SIX_HOURS = 6 * 60 * 60 * 1000
+    const finishedFallback = recentResults.length === 0
+      ? (groupedFeed?.finished ?? []).filter((m) => now - m.date.getTime() < SIX_HOURS).slice(0, 3)
+      : []
+    const resultItems = recentResults.length > 0 ? recentResults.slice(0, 3) : finishedFallback
     const remainingSlots = Math.max(15 - liveItems.length - resultItems.length, 0)
     const upcomingItems = (groupedFeed?.upcoming ?? []).slice(0, remainingSlots)
 
@@ -1043,9 +1051,17 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                     })()}
                   </div>
                 ) : (
-                  <p className="py-10 text-center text-sm text-slate-400">
-                    Inga matcher att visa just nu.
-                  </p>
+                  <div className="py-10 text-center">
+                    <p className="text-sm text-slate-400">
+                      Inga matcher att visa just nu.
+                    </p>
+                    <Link
+                      href="/matcher"
+                      className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 transition"
+                    >
+                      Se alla matcher <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
                 )}
 
                 {homeMatchFlow.items.length > 0 && (
