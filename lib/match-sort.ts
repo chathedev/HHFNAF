@@ -24,8 +24,15 @@ const compareMatchIdentity = (a: NormalizedMatch, b: NormalizedMatch) => {
   return comparisons.find((value) => value !== 0) ?? 0
 }
 
+const getMatchTimestamp = (m: NormalizedMatch) =>
+  typeof m.startTimestamp === "number"
+    ? m.startTimestamp
+    : m.date instanceof Date
+      ? m.date.getTime()
+      : new Date(m.date).getTime()
+
 export const compareMatchesByDateAscStable = (a: NormalizedMatch, b: NormalizedMatch) => {
-  const timeDiff = a.date.getTime() - b.date.getTime()
+  const timeDiff = getMatchTimestamp(a) - getMatchTimestamp(b)
   if (timeDiff !== 0) {
     return timeDiff
   }
@@ -34,7 +41,7 @@ export const compareMatchesByDateAscStable = (a: NormalizedMatch, b: NormalizedM
 }
 
 export const compareMatchesByDateDescStable = (a: NormalizedMatch, b: NormalizedMatch) => {
-  const timeDiff = b.date.getTime() - a.date.getTime()
+  const timeDiff = getMatchTimestamp(b) - getMatchTimestamp(a)
   if (timeDiff !== 0) {
     return timeDiff
   }

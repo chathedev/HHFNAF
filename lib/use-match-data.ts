@@ -443,13 +443,13 @@ const toDate = (dateString?: string | null, timeString?: string | null) => {
 }
 
 // Enhanced helper to determine when finished matches should stop being displayed
-const getMatchEndTime = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matchStatus?: string; result?: string }) => {
+const getMatchEndTime = (match: { date: Date; startTimestamp?: number; matchFeed?: MatchFeedEvent[]; matchStatus?: string; result?: string }) => {
   // Only calculate end time for finished matches
   if (match.matchStatus !== "finished") {
     return null
   }
 
-  const matchStart = match.date.getTime()
+  const matchStart = typeof match.startTimestamp === "number" ? match.startTimestamp : (match.date instanceof Date ? match.date.getTime() : new Date(match.date).getTime())
   const timeline = match.matchFeed ?? []
 
   // PRIORITY 1: Look for actual match end events with time played
