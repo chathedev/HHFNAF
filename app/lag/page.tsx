@@ -13,8 +13,6 @@ import { Button } from "@/components/ui/button"
 import { CLUB_TEAM_METADATA, extendTeamDisplayName } from "@/lib/team-display"
 import { Card } from "@/components/ui/card"
 
-type RawTeam = (typeof lagContent)["teamCategories"][number]["teams"][number]
-
 const PLACEHOLDER_HERO = "/placeholder.jpg"
 
 const slugify = (value: string) =>
@@ -71,18 +69,24 @@ const teams = CLUB_TEAM_METADATA.map((meta) => {
   }
 })
 
-const categoryStats = lagContent.teamCategories.map((category) => ({
-  name: category.name,
-  count:
-    typeof category.count === "number"
-      ? category.count
-      : Array.isArray(category.teams)
-        ? category.teams.length
-        : 0,
-  description: category.description,
-}))
+const CATEGORY_ORDER = ["Dam", "Herr", "Övrigt"]
 
-const totalTeams = categoryStats.reduce((sum, category) => sum + category.count, 0)
+const categoryStats = CATEGORY_ORDER
+  .map((cat) => {
+    const count = teams.filter((t) => t.category === cat).length
+    return { name: cat, count }
+  })
+  .filter((s) => s.count > 0)
+
+const totalTeams = teams.length
+
+const teamsByCategory = CATEGORY_ORDER
+  .map((cat) => ({
+    category: cat,
+    description: cat === "Dam" ? "Damlag och flicklag" : cat === "Herr" ? "Herrlag och pojklag" : "Övriga lag och verksamheter",
+    items: teams.filter((t) => t.category === cat),
+  }))
+  .filter((g) => g.items.length > 0)
 
 export default function LagPage() {
   return (
@@ -108,7 +112,7 @@ export default function LagPage() {
                 >
                   <p className="text-4xl font-black text-emerald-700">{stat.count}</p>
                   <p className="mt-2 text-base font-semibold text-gray-900">{stat.name}</p>
-                  {stat.description && <p className="mt-1 text-sm text-gray-500">{stat.description}</p>}
+                  <p className="mt-1 text-sm text-gray-500">{stat.count} lag i kategorin</p>
                 </Card>
               ))}
               <Card className="flex h-full flex-col items-center justify-center rounded-2xl border border-orange-100 bg-gradient-to-br from-white via-white to-orange-50 p-6 text-center shadow-sm">
@@ -120,81 +124,61 @@ export default function LagPage() {
           </section>
 
           <section className="mt-12 space-y-8">
-            {lagContent.teamCategories.map((category) => {
-              const categoryTeams = teams.filter((team) => team.category === category.name)
-              if (categoryTeams.length === 0) {
-                return null
-              }
-
-              return (
-                <div key={category.name} className="space-y-4">
-                  <div className="flex flex-col justify-between gap-3 text-center md:flex-row md:items-center md:text-left">
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.45em] text-emerald-600">
-                        {category.name}
-                      </p>
-                      <h2 className="mt-1 text-xl font-semibold text-gray-900 md:text-2xl">
-                        Lag i {category.name.toLowerCase()}
-                      </h2>
-                    </div>
-                    {category.description && (
-                      <p className="max-w-sm text-xs text-gray-500 md:text-right">{category.description}</p>
-                    )}
+            {teamsByCategory.map(({ category, description, items }) => (
+              <div key={category} className="space-y-4">
+                <div className="flex flex-col justify-between gap-3 text-center md:flex-row md:items-center md:text-left">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.45em] text-emerald-600">
+                      {category}
+                    </p>
+                    <h2 className="mt-1 text-xl font-semibold text-gray-900 md:text-2xl">
+                      {category === "Övrigt" ? "Övriga lag" : `Lag i ${category.toLowerCase()}`}
+                    </h2>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-                    {categoryTeams.map((team) => (
-                      <Card
-                        key={team.id}
-                        className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-emerald-300 hover:shadow-lg"
-                      >
-                        <div className="relative h-32 w-full overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
+                  {description && (
+                    <p className="max-w-sm text-xs text-gray-500 md:text-right">{description}</p>
+                  )}
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+                  {items.map((team) => (
+                    <Link key={team.id} href={`/lag/${team.id}`} className="block group">
+                      <Card className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition group-hover:-translate-y-1 group-hover:border-emerald-300 group-hover:shadow-lg h-full">
+                        <div className="relative h-36 w-full overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
                           <div
                             className="h-full w-full transition group-hover:scale-[1.02]"
                             style={{
                               backgroundImage: `url(${team.heroImage})`,
-                              backgroundSize: "contain",
-                              backgroundPosition: "center",
+                              backgroundSize: "cover",
+                              backgroundPosition: "center top",
                               backgroundRepeat: "no-repeat",
                             }}
                             aria-hidden
                           />
-                          <Link
-                            href={`/lag/${team.id}`}
-                            className="pointer-events-none absolute inset-0 flex items-center justify-center bg-emerald-800/85 opacity-0 transition group-hover:pointer-events-auto group-hover:opacity-100"
-                          >
+                          <div className="absolute inset-0 flex items-center justify-center bg-emerald-800/85 opacity-0 transition group-hover:opacity-100">
                             <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.35em] text-emerald-700 shadow">
-                              Läs mer →
+                              Visa lag →
                             </span>
-                          </Link>
+                          </div>
                         </div>
-                        <div className="px-4 py-4 space-y-3">
+                        <div className="px-4 py-4 space-y-2">
                           <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-emerald-600">
                             {team.category}
                           </p>
                           <h3 className="text-sm font-semibold tracking-tight text-gray-900">
                             {extendTeamDisplayName(team.displayName ?? team.name)}
                           </h3>
-                          {team.link ? (
-                            <Link
-                              href={team.link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex w-full items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-emerald-700"
-                            >
+                          {team.link && (
+                            <span className="inline-flex w-full items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white">
                               Till laget.se
-                            </Link>
-                          ) : (
-                            <span className="inline-flex w-full items-center justify-center rounded-full border border-dashed border-gray-300 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-gray-400">
-                              Länk kommer snart
                             </span>
                           )}
                         </div>
                       </Card>
-                    ))}
-                  </div>
+                    </Link>
+                  ))}
                 </div>
-              )
-            })}
+              </div>
+            ))}
           </section>
 
           <section className="mt-16">
