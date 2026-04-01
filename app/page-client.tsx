@@ -141,14 +141,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const [penaltiesByMatchId, setPenaltiesByMatchId] = useState<Record<string, MatchPenalty[]>>({})
   const [stableScoreByMatchId, setStableScoreByMatchId] = useState<Record<string, string>>({})
   const timelineFetchInFlightRef = useRef<Record<string, Promise<void>>>({})
-  const [isInitialHomeMatchFetchDone, setIsInitialHomeMatchFetchDone] = useState(() => {
-    // Only consider done if SSR actually delivered useful matches
-    const ssrUpcoming = initialData?.groupedFeed?.upcoming?.length ?? 0
-    const ssrLive = initialData?.groupedFeed?.live?.length ?? 0
-    const ssrRecent = initialData?.recentResults?.length ?? 0
-    return (ssrUpcoming + ssrLive + ssrRecent) > 0
-  })
-  const hasStartedInitialHomeMatchFetchRef = useRef(false)
   const { shopVisible } = useShopStatus()
   const {
     matches: currentMatches,
@@ -158,7 +150,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     error: matchErrorMessage,
     hasPayload: hasMatchPayload,
     hasClientData: hasClientMatchData,
-    refresh: refreshHomeMatches,
     isRefreshing: matchRefreshing,
   } = useMatchData({
     dataType: "liveUpcoming",
@@ -183,32 +174,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       return changed ? next : prev
     })
   }, [currentMatches, recentResults])
-
-  useEffect(() => {
-    if (hasStartedInitialHomeMatchFetchRef.current) {
-      return
-    }
-    // If SSR already delivered displayable matches, mark done immediately
-    // but still let the broadcast channel refresh in the background.
-    if (isInitialHomeMatchFetchDone) {
-      hasStartedInitialHomeMatchFetchRef.current = true
-      return
-    }
-    // If the hook already has data from the broadcast channel, mark done.
-    if (hasMatchPayload && hasClientMatchData) {
-      setIsInitialHomeMatchFetchDone(true)
-      return
-    }
-    // Otherwise kick off an immediate client-side fetch.
-    hasStartedInitialHomeMatchFetchRef.current = true
-    refreshHomeMatches(true)
-      .catch(() => {
-        // Error state from useMatchData decides visibility.
-      })
-      .finally(() => {
-        setIsInitialHomeMatchFetchDone(true)
-      })
-  }, [hasMatchPayload, hasClientMatchData, isInitialHomeMatchFetchDone, refreshHomeMatches])
 
   // Track previous scores to highlight live updates
   const partnersForDisplay = Array.isArray(content.partners) ? content.partners.filter((p) => p.visibleInCarousel) : []
@@ -675,7 +640,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   }, [groupedFeed, recentResults])
 
   const showInitialMatchLoader =
-    !isInitialHomeMatchFetchDone || (!matchError && homeMatchFlow.items.length === 0 && (matchLoading || !hasMatchPayload))
+    !matchError && homeMatchFlow.items.length === 0 && (matchLoading || !hasMatchPayload)
 
   useEffect(() => {
     if (typeof window === "undefined") {
