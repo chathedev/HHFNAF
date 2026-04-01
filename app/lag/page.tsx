@@ -104,21 +104,18 @@ export default function LagPage() {
           </div>
 
           <section className="mt-12 flex justify-center">
-            <div className="grid w-full max-w-4xl gap-4 sm:grid-cols-3">
-              {categoryStats.map((stat) => (
-                <Card
-                  key={stat.name}
-                  className="flex h-full flex-col items-center justify-center rounded-2xl border border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50 p-6 text-center shadow-sm"
-                >
-                  <p className="text-4xl font-black text-emerald-700">{stat.count}</p>
-                  <p className="mt-2 text-base font-semibold text-gray-900">{stat.name}</p>
-                  <p className="mt-1 text-sm text-gray-500">{stat.count} lag i kategorin</p>
-                </Card>
-              ))}
-              <Card className="flex h-full flex-col items-center justify-center rounded-2xl border border-orange-100 bg-gradient-to-br from-white via-white to-orange-50 p-6 text-center shadow-sm">
-                <p className="text-4xl font-black text-orange-500">{totalTeams}</p>
-                <p className="mt-2 text-base font-semibold text-gray-900">Totalt antal lag</p>
-                <p className="mt-1 text-sm text-gray-500">Alla lag i föreningen</p>
+            <div className="grid w-full max-w-3xl gap-4 grid-cols-3">
+              <Card className="flex h-full flex-col items-center justify-center rounded-2xl border border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50 p-6 text-center shadow-sm">
+                <p className="text-4xl font-black text-emerald-700">{totalTeams}</p>
+                <p className="mt-2 text-base font-semibold text-gray-900">Lag totalt</p>
+              </Card>
+              <Card className="flex h-full flex-col items-center justify-center rounded-2xl border border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50 p-6 text-center shadow-sm">
+                <p className="text-4xl font-black text-emerald-700">{teams.filter((t) => t.category === "Dam").length}</p>
+                <p className="mt-2 text-base font-semibold text-gray-900">Dam / Flick</p>
+              </Card>
+              <Card className="flex h-full flex-col items-center justify-center rounded-2xl border border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50 p-6 text-center shadow-sm">
+                <p className="text-4xl font-black text-emerald-700">{teams.filter((t) => t.category === "Herr").length}</p>
+                <p className="mt-2 text-base font-semibold text-gray-900">Herr / Pojk</p>
               </Card>
             </div>
           </section>
