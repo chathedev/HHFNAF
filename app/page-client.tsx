@@ -150,12 +150,16 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     error: matchErrorMessage,
     hasPayload: hasMatchPayload,
     hasClientData: hasClientMatchData,
+    refresh: refreshHomeMatches,
     isRefreshing: matchRefreshing,
   } = useMatchData({
     dataType: "liveUpcoming",
     initialData,
+    followInitialWindow: true,
+    refreshIntervalMs: 30_000,
   })
   const matchError = Boolean(matchErrorMessage)
+  const hasTriggeredFallbackRef = useRef(false)
 
   useEffect(() => {
     const matches = [...currentMatches, ...recentResults]
@@ -174,6 +178,21 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       return changed ? next : prev
     })
   }, [currentMatches, recentResults])
+
+  // If SSR returned empty data, trigger one client-side fetch as fallback
+  useEffect(() => {
+    if (hasTriggeredFallbackRef.current) return
+    if (hasMatchPayload && !matchLoading) {
+      // Data arrived (from SSR or initial direct fetch) — check if empty
+      const total = (groupedFeed?.live?.length ?? 0) + (groupedFeed?.upcoming?.length ?? 0) + recentResults.length
+      if (total === 0) {
+        hasTriggeredFallbackRef.current = true
+        refreshHomeMatches(true).catch(() => {})
+      } else {
+        hasTriggeredFallbackRef.current = true
+      }
+    }
+  }, [hasMatchPayload, matchLoading, groupedFeed, recentResults, refreshHomeMatches])
 
   // Track previous scores to highlight live updates
   const partnersForDisplay = Array.isArray(content.partners) ? content.partners.filter((p) => p.visibleInCarousel) : []
