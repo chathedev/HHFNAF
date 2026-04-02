@@ -46,6 +46,8 @@ import { MatchCardCTA } from "@/components/match-card-cta"
 import { InstagramFeed } from "@/components/instagram-feed"
 import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
 import { SHOP_URL, useShopStatus } from "@/components/shop-status-provider"
+import { useFinal4Data } from "@/lib/use-final4-data"
+import { Final4MatchRow } from "@/components/final4-match-card"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
 type MatchTopScorer = {
   team: string
@@ -126,7 +128,7 @@ const dedupeTimelineEvents = (events: MatchFeedEvent[]) => {
 
 const isZeroScore = (score: string) => /^0\s*[-–—]\s*0$/.test(score.trim())
 
-export function HomePageClient({ initialData }: { initialData?: EnhancedMatchData }) {
+export function HomePageClient({ initialData, isFinal4 = false }: { initialData?: EnhancedMatchData; isFinal4?: boolean }) {
   const searchParams = useSearchParams()
   const isEditorMode = searchParams?.get("editor") === "true"
 
