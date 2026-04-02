@@ -12,152 +12,125 @@ import { deriveSiteVariant, getThemeVariant } from "@/lib/site-variant"
 const inter = Inter({ subsets: ["latin"], display: "swap" })
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["400", "500", "600"], display: "swap" })
 
-export const metadata: Metadata = {
-  metadataBase: new URL("https://www.harnosandshf.se"),
-  title: {
-    default: "Härnösands HF – Officiell hemsida för handboll i Härnösand",
-    template: "%s | Härnösands HF – Officiell hemsida för handboll i Härnösand",
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  let host: string
+  try {
+    const requestHeaders = await headers()
+    host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") || "www.harnosandshf.se"
+  } catch {
+    host = "www.harnosandshf.se"
+  }
+
+  const isFinal4 = deriveSiteVariant(host) === "final4"
+
+  if (isFinal4) {
+    return {
+      metadataBase: new URL("https://final4.harnosandshf.se"),
+      title: "Final4 Norr 2026 — Härnösands HF",
+      description: "Final4 Norr handbollturnering 11–12 april 2026 i Härnösand. F14, P14, F16, P16 — alla matcher och live-resultat.",
+      keywords: ["Final4 Norr", "handboll", "Härnösand", "F14", "P14", "F16", "P16", "turnering", "Härnösands HF"],
+      openGraph: {
+        title: "Final4 Norr 2026",
+        description: "Final4 Norr — 11–12 april 2026 i Härnösand. Alla matcher, live-resultat och lag.",
+        url: "https://final4.harnosandshf.se",
+        siteName: "Final4 Norr — Härnösands HF",
+        images: [
+          {
+            url: "/final4-hero.webp",
+            width: 1200,
+            height: 630,
+            alt: "Final4 Norr 2026",
+          },
+        ],
+        locale: "sv_SE",
+        type: "website",
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: "Final4 Norr 2026",
+        description: "Final4 Norr — 11–12 april 2026 i Härnösand. Alla matcher och live-resultat.",
+        images: ["/final4-hero.webp"],
+      },
+      robots: { index: true, follow: true },
+      icons: [
+        { rel: "icon", url: "/logo.png", sizes: "any" },
+        { rel: "apple-touch-icon", url: "/apple-touch-icon.png" },
+      ],
+      alternates: { canonical: "https://final4.harnosandshf.se" },
+    }
+  }
+
+  return {
+    metadataBase: new URL("https://www.harnosandshf.se"),
+    title: {
+      default: "Härnösands HF – Officiell hemsida för handboll i Härnösand",
+      template: "%s | Härnösands HF – Officiell hemsida för handboll i Härnösand",
+    },
     description:
       "Härnösands HF – Officiell hemsida för handboll i Härnösand. Matcher, lag, ungdomsverksamhet och kontakt.",
-  keywords: [
-    "Härnösands HF",
-    "Härnösands Handbollsförening",
-    "HHF",
-    "Härnösands",
-    "Härnösand handboll",
-    "handboll Härnösand",
-    "handbollsklubb Härnösand",
-    "sport Härnösand",
-    "idrottsförening Härnösand",
-    "Västernorrland handboll",
-    "Ångermanland handboll",
-    "Norrland handboll",
-    "Öbackahallen",
-    "A-lag handboll",
-    "herrhandboll",
-    "damhandboll",
-    "ungdomshandboll",
-    "juniorhandboll",
-    "P10 handboll",
-    "P11 handboll",
-    "P12 handboll",
-    "P13 handboll",
-    "P14 handboll",
-    "P15 handboll",
-    "P16 handboll",
-    "F10 handboll",
-    "F11 handboll",
-    "F12 handboll",
-    "F13 handboll",
-    "F14 handboll",
-    "F15 handboll",
-    "F16 handboll",
-    "handbollsmatcher",
-    "handbollsträning",
-    "handbollslag",
-    "handbollsturnering",
-    "handbollscup",
-    "matcher Härnösand",
-    "träningar Härnösand",
-    "handbollsevenemang",
-    "handbollsresultat",
-    "idrottsförening",
-    "idrottsklubb",
-    "ungdomsidrott",
-    "lagsport",
-    "bollsport",
-    "hallidrott",
-    "Svenska handbollsförbundet",
-    "handbollsförbundet",
-    "svensk handboll",
-    "elithandboll",
-    "gemenskap",
-    "passion",
-    "stolthet",
-    "laget före allt",
-    "tillsammans",
-    "handbollsfamilj",
-    "ungdomsverksamhet",
-    "träning barn",
-    "handboll för alla",
-    "inkluderande idrott",
-    "handbollsserie",
-    "handbollsliga",
-    "division handboll",
-    "slutspel handboll",
-    "playoff handboll",
-    "cupmatcher",
-    "tävlingshandboll",
-    "elitserie handboll",
-    "regionala serier",
-    "handbollshall",
-    "idrottshall Härnösand",
-    "träningslokal",
-    "hemmamatcher",
-    "hemmaplan",
-  ],
-  authors: [{ name: "Härnösands HF", url: "https://www.harnosandshf.se" }],
-  creator: "Härnösands HF",
-  publisher: "Härnösands HF",
-  openGraph: {
-    title: "Härnösands HF – Officiell hemsida för handboll i Härnösand",
-    description:
-      "Härnösands Handbollsförening (HHF) – Härnösands främsta handbollsklubb med stolthet, gemenskap och passion för sporten. A-lag, ungdomslag, träningar och matcher.",
-    url: "https://www.harnosandshf.se",
-    siteName: "Härnösands HF",
-    images: [
-      {
-        url: "/opengraph-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Härnösands HF - Laget Före Allt - Handbollsklubb Härnösand",
-      },
+    keywords: [
+      "Härnösands HF", "Härnösands Handbollsförening", "HHF", "Härnösands",
+      "Härnösand handboll", "handboll Härnösand", "handbollsklubb Härnösand",
+      "sport Härnösand", "idrottsförening Härnösand", "Västernorrland handboll",
+      "Ångermanland handboll", "Norrland handboll", "Öbackahallen",
+      "A-lag handboll", "herrhandboll", "damhandboll", "ungdomshandboll",
+      "juniorhandboll", "handbollsmatcher", "handbollsturnering",
+      "handbollscup", "matcher Härnösand", "handbollsresultat",
+      "svensk handboll", "elithandboll", "laget före allt",
     ],
-    locale: "sv_SE",
-    type: "website",
-    countryName: "Sweden",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Härnösands HF – Officiell hemsida för handboll i Härnösand",
-    description:
-      "Härnösands Handbollsförening (HHF) – Härnösands främsta handbollsklubb med stolthet, gemenskap och passion för sporten. A-lag, ungdomslag, träningar och matcher.",
-    images: ["/opengraph-image.png"],
-    creator: "@HarnosandsHF",
-    site: "@HarnosandsHF",
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
+    authors: [{ name: "Härnösands HF", url: "https://www.harnosandshf.se" }],
+    creator: "Härnösands HF",
+    publisher: "Härnösands HF",
+    openGraph: {
+      title: "Härnösands HF – Officiell hemsida för handboll i Härnösand",
+      description:
+        "Härnösands Handbollsförening (HHF) – Härnösands främsta handbollsklubb med stolthet, gemenskap och passion för sporten. A-lag, ungdomslag, träningar och matcher.",
+      url: "https://www.harnosandshf.se",
+      siteName: "Härnösands HF",
+      images: [
+        {
+          url: "/opengraph-image.png",
+          width: 1200,
+          height: 630,
+          alt: "Härnösands HF - Laget Före Allt - Handbollsklubb Härnösand",
+        },
+      ],
+      locale: "sv_SE",
+      type: "website",
+      countryName: "Sweden",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "Härnösands HF – Officiell hemsida för handboll i Härnösand",
+      description:
+        "Härnösands Handbollsförening (HHF) – Härnösands främsta handbollsklubb med stolthet, gemenskap och passion för sporten. A-lag, ungdomslag, träningar och matcher.",
+      images: ["/opengraph-image.png"],
+      creator: "@HarnosandsHF",
+      site: "@HarnosandsHF",
+    },
+    robots: {
       index: true,
       follow: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
+      googleBot: {
+        index: true, follow: true,
+        "max-video-preview": -1, "max-image-preview": "large", "max-snippet": -1,
+      },
     },
-  },
-  icons: [
-    { rel: "icon", url: "/logo.png", sizes: "any" },
-    { rel: "apple-touch-icon", url: "/apple-touch-icon.png" },
-  ],
-  manifest: "/manifest.json",
-  alternates: {
-    canonical: "https://www.harnosandshf.se",
-  },
-  category: "Sports",
-  classification: "Handbollsklubb",
-  other: {
-    "geo.region": "SE-Y",
-    "geo.placename": "Härnösand",
-    "geo.position": "62.6327;17.9378",
-    ICBM: "62.6327, 17.9378",
-    rating: "general",
-    distribution: "global",
-    "revisit-after": "1 days",
-  },
-  generator: "v0.dev",
+    icons: [
+      { rel: "icon", url: "/logo.png", sizes: "any" },
+      { rel: "apple-touch-icon", url: "/apple-touch-icon.png" },
+    ],
+    manifest: "/manifest.json",
+    alternates: { canonical: "https://www.harnosandshf.se" },
+    category: "Sports",
+    classification: "Handbollsklubb",
+    other: {
+      "geo.region": "SE-Y", "geo.placename": "Härnösand",
+      "geo.position": "62.6327;17.9378", ICBM: "62.6327, 17.9378",
+      rating: "general", distribution: "global", "revisit-after": "1 days",
+    },
+    generator: "v0.dev",
+  }
 }
 
 export default async function RootLayout({
@@ -191,15 +164,6 @@ export default async function RootLayout({
         <meta name="format-detection" content="telephone=no" />
         <link rel="preconnect" href="https://api.harnosandshf.se" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://api.harnosandshf.se" />
-        {isFinal4 && (
-          <>
-            <meta property="og:title" content="Final4 Norr 2026 — Handboll" />
-            <meta property="og:description" content="Final4 Norr — 6-12 april 2026. Alla matcher, live-resultat och lag." />
-            <meta property="og:image" content="https://final4.harnosandshf.se/final4-hero.webp" />
-            <meta property="og:url" content="https://final4.harnosandshf.se" />
-            <title>Final4 Norr 2026 — Handboll</title>
-          </>
-        )}
       </head>
       <body className={`${inter.className} ${spaceGrotesk.className} bg-white ${themeVariant === "pink" ? "hhf-staging" : ""}`}>
         {isFinal4 ? (
