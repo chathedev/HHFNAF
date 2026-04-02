@@ -20,6 +20,7 @@ export async function proxy(request: NextRequest) {
       pathname.startsWith("/final4") ||
       pathname.startsWith("/_next") ||
       pathname.startsWith("/api") ||
+      pathname.startsWith("/opengraph-image") ||
       /\.(webp|png|jpg|svg|ico|css|js|woff2?|json|txt|xml)$/.test(pathname)
     ) {
       return NextResponse.next()
