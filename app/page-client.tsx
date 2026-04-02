@@ -1032,7 +1032,7 @@ export function HomePageClient({ initialData, isFinal4 = false }: { initialData?
           )}
 
           {/* ===================== SHOP & QUICK ACTIONS HUB ===================== */}
-          <section className={`relative z-30 -mt-10 sm:-mt-16 ${isFinal4 ? "hidden" : ""}`}>
+          <section className="relative z-30 -mt-10 sm:-mt-16">
             <div className="container mx-auto px-4 sm:px-6">
               <div className="max-w-5xl mx-auto">
                 {/* Shop hero banner */}

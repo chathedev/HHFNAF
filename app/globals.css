@@ -656,12 +656,13 @@ body.hhf-staging .bg-gradient-to-br.from-emerald-50.to-green-50 {
   }
 }
 
-/* ─── Final4: hide ticket/shop elements server-side via data attribute ─── */
-[data-site-variant="final4"] a[href*="clubmate.se"],
-[data-site-variant="final4"] a[href*="clubmate.se"] + *,
-[data-site-variant="final4"] li:has(> a[href*="clubmate.se"]),
-[data-site-variant="final4"] a[href*="shop.harnosandshf.se"],
-[data-site-variant="final4"] li:has(> a[href*="shop.harnosandshf.se"]) { display: none !important; }
+/* ─── Final4: hide ticket elements, keep shop ─── */
+[data-site-variant="final4"] a[href*="clubmate.se"] { display: none !important; }
+[data-site-variant="final4"] li:has(> a[href*="clubmate.se"]) { display: none !important; }
+/* Quick action grid: 3 cols when Biljetter is hidden */
+[data-site-variant="final4"] .grid.grid-cols-2.sm\:grid-cols-4 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* Header nav: hide Köp biljett link (same clubmate href) */
+[data-site-variant="final4"] nav a[href*="clubmate.se"] { display: none !important; }
 
 /* ─── Final4 theme: swap green→blue, orange→amber ─── */
 .final4-theme .bg-green-600 { background-color: #2563eb !important; }
