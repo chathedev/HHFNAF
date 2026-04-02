@@ -153,38 +153,44 @@ export function Final4PageClient() {
     <div className="min-h-screen bg-[#060e1a] text-white">
       <Final4Header />
 
-      {/* Hero */}
-      <section className="relative h-[50vh] min-h-[380px] max-h-[550px] overflow-hidden">
-        <Image
-          src="/final4-hero.webp"
-          alt="Final4 Norr 2026"
-          fill
-          className="object-cover object-top"
-          priority
-          quality={90}
-          sizes="100vw"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#060e1a] via-[#060e1a]/70 to-[#060e1a]/20" />
+      {/* Hero — image only */}
+      <section className="relative w-full overflow-hidden">
+        <div className="relative w-full aspect-[21/9] sm:aspect-[3/1] max-h-[420px]">
+          <Image
+            src="/final4-hero.webp"
+            alt="Final4 Norr 2026"
+            fill
+            className="object-cover object-center"
+            priority
+            quality={95}
+            sizes="100vw"
+          />
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#060e1a] to-transparent" />
+        </div>
+      </section>
 
-        <div className="relative h-full flex flex-col items-center justify-end pb-10 px-4 text-center">
-          <div className="animate-fade-in-up">
-            <p className="text-xs sm:text-sm text-blue-300/80 uppercase tracking-[0.3em] font-medium mb-2">Handbollturnering</p>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-1">
+      {/* Title bar */}
+      <section className="container mx-auto px-4 max-w-5xl -mt-6 relative z-10 mb-2">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
               <span className="bg-gradient-to-r from-blue-400 via-blue-300 to-cyan-400 bg-clip-text text-transparent">FINAL4</span>{" "}
               <span className="bg-gradient-to-r from-amber-300 to-amber-500 bg-clip-text text-transparent">NORR</span>
             </h1>
-            <p className="text-gray-400 text-base sm:text-lg font-medium">
+            <p className="text-sm text-gray-500 mt-0.5">
               11 – 12 april 2026 &middot; Härnösand
             </p>
+          </div>
+          <div className="flex items-center gap-2">
             {active && (
-              <div className="inline-flex items-center gap-2 rounded-full bg-red-600/90 px-4 py-1.5 text-xs font-bold uppercase tracking-widest mt-4 shadow-lg shadow-red-500/20">
+              <div className="inline-flex items-center gap-2 rounded-full bg-red-600/90 px-3 py-1 text-xs font-bold uppercase tracking-widest shadow-lg shadow-red-500/20">
                 <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
-                Turneringen pågår
+                Live
               </div>
             )}
             {over && (
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-xs font-semibold mt-4">
-                Turneringen avslutad — se resultaten nedan
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-gray-400">
+                Avslutad
               </div>
             )}
           </div>
