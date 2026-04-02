@@ -10,13 +10,15 @@ export const deriveSiteVariant = (host?: string | null): SiteVariant => {
   const normalizedHost = normalizeHost(host)
   const envOverride = process.env.NEXT_PUBLIC_SITE_VARIANT?.toLowerCase()
 
-  if (envOverride === "staging") return "staging"
-  if (envOverride === "production") return "production"
-  if (envOverride === "final4") return "final4"
-
+  // Final4 host check MUST come before env override — the env is "production"
+  // globally but the Final4 subdomain should always resolve to "final4"
   if (normalizedHost && FINAL4_HOSTS.includes(normalizedHost)) {
     return "final4"
   }
+
+  if (envOverride === "staging") return "staging"
+  if (envOverride === "production") return "production"
+  if (envOverride === "final4") return "final4"
 
   if (normalizedHost && STAGING_HOSTS.includes(normalizedHost)) {
     return "staging"
