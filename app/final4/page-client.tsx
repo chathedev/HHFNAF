@@ -1,126 +1,52 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import Image from "next/image"
-import { Trophy, MapPin, Clock, Loader2, ExternalLink, ChevronDown } from "lucide-react"
+import Link from "next/link"
+import { ArrowRight, Loader2 } from "lucide-react"
 import { useFinal4Data, type Final4Match } from "@/lib/use-final4-data"
-import { Final4MatchCard } from "@/components/final4-match-card"
+import { Final4MatchRow } from "@/components/final4-match-card"
 import { Final4Header } from "@/components/final4-header"
 import { isFinal4Active, isFinal4Over } from "@/lib/final4-config"
 
-const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string; accent: string }> = {
-  F14: { bg: "from-pink-950/30 to-transparent", text: "text-pink-300", border: "border-pink-500/20", accent: "bg-pink-500" },
-  P14: { bg: "from-cyan-950/30 to-transparent", text: "text-cyan-300", border: "border-cyan-500/20", accent: "bg-cyan-500" },
-  F16: { bg: "from-purple-950/30 to-transparent", text: "text-purple-300", border: "border-purple-500/20", accent: "bg-purple-500" },
-  P16: { bg: "from-emerald-950/30 to-transparent", text: "text-emerald-300", border: "border-emerald-500/20", accent: "bg-emerald-500" },
-}
-
 const CATEGORY_ORDER = ["F14", "P14", "F16", "P16"]
 
+const CATEGORY_LABELS: Record<string, string> = {
+  F14: "Flickor 14",
+  P14: "Pojkar 14",
+  F16: "Flickor 16",
+  P16: "Pojkar 16",
+}
+
 function CategorySection({ category, matches }: { category: string; matches: Final4Match[] }) {
-  const colors = CATEGORY_COLORS[category] || CATEGORY_COLORS.F14
-  const [expanded, setExpanded] = useState(true)
-  const liveCount = matches.filter((m) => m.matchStatus === "live").length
   const semifinals = matches.filter((m) => m.round.toLowerCase().includes("semifinal"))
   const bronzeMatch = matches.find((m) => m.round.toLowerCase().includes("brons"))
   const finalMatch = matches.find((m) => m.round.toLowerCase() === "final")
+  const liveCount = matches.filter((m) => m.matchStatus === "live").length
+  const orderedMatches = [...semifinals, ...(bronzeMatch ? [bronzeMatch] : []), ...(finalMatch ? [finalMatch] : [])]
 
   return (
-    <div className={`rounded-2xl border ${colors.border} bg-gradient-to-b ${colors.bg} overflow-hidden`}>
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/[0.02] transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          <div className={`h-8 w-1 rounded-full ${colors.accent}`} />
-          <div className="text-left">
-            <h3 className={`text-lg font-bold ${colors.text}`}>
-              Final4 Norr {category}
-            </h3>
-            <p className="text-xs text-gray-500">{matches.length} matcher</p>
-          </div>
-          {liveCount > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase animate-pulse">
-              <span className="h-1.5 w-1.5 rounded-full bg-white" />
-              {liveCount} Live
-            </span>
-          )}
-        </div>
-        <ChevronDown className={`h-5 w-5 text-gray-500 transition-transform ${expanded ? "rotate-180" : ""}`} />
-      </button>
-
-      {expanded && (
-        <div className="px-5 pb-5 space-y-4">
-          {/* Semifinals */}
-          {semifinals.length > 0 && (
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 font-medium">Semifinaler</p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {semifinals.map((m) => (
-                  <Final4MatchCard key={m.matchId} match={m} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Bronze + Final */}
-          <div className="grid gap-3 sm:grid-cols-2">
-            {bronzeMatch && (
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 font-medium">Bronsmatch</p>
-                <Final4MatchCard match={bronzeMatch} />
-              </div>
-            )}
-            {finalMatch && (
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 font-medium">Final</p>
-                <Final4MatchCard match={finalMatch} />
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function TournamentInfo() {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      {[
-        { icon: Trophy, label: "Åldersklasser", value: "F14, P14, F16, P16" },
-        { icon: MapPin, label: "Plats", value: "Öbacka SC & Änget Sportcenter" },
-        { icon: Clock, label: "Datum", value: "11–12 april 2026" },
-      ].map((item) => (
-        <div key={item.label} className="flex items-center gap-3 rounded-xl bg-white/[0.03] border border-white/[0.06] px-4 py-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10">
-            <item.icon className="h-4.5 w-4.5 text-blue-400" />
-          </div>
-          <div>
-            <div className="text-[11px] text-gray-500 uppercase tracking-wider">{item.label}</div>
-            <div className="text-sm font-medium text-white">{item.value}</div>
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function LiveBanner({ matches }: { matches: Final4Match[] }) {
-  const liveMatches = matches.filter((m) => m.matchStatus === "live")
-  if (liveMatches.length === 0) return null
-
-  return (
-    <div className="rounded-xl border border-red-500/30 bg-gradient-to-r from-red-950/40 via-red-950/20 to-transparent p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />
-        <h3 className="text-base font-bold text-red-400">Live nu — {liveMatches.length} {liveMatches.length === 1 ? "match" : "matcher"}</h3>
+    <div>
+      <div className="flex items-center gap-3 mb-3">
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-900">
+          {CATEGORY_LABELS[category] || category}
+        </span>
+        {liveCount > 0 && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest bg-slate-900 text-white">
+            <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+            {liveCount} Live
+          </span>
+        )}
+        <span className="text-[10px] text-slate-400">{matches.length} matcher</span>
+        <div className="flex-1 h-px bg-slate-200" />
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {liveMatches.map((m) => (
-          <Final4MatchCard key={m.matchId} match={m} />
+      <ul className="space-y-0">
+        {orderedMatches.map((m) => (
+          <li key={m.matchId}>
+            <Final4MatchRow match={m} />
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   )
 }
@@ -149,146 +75,191 @@ export function Final4PageClient() {
     return Array.from(set).sort((a, b) => a.localeCompare(b, "sv"))
   }, [data])
 
+  const liveMatches = data?.matches.filter((m) => m.matchStatus === "live") ?? []
+
   return (
-    <div className="min-h-screen bg-[#060e1a] text-white">
+    <div className="bg-white min-h-screen">
       <Final4Header />
 
-      {/* Hero — image only */}
-      <section className="relative w-full overflow-hidden">
-        <div className="relative w-full aspect-[21/9] sm:aspect-[3/1] max-h-[420px]">
-          <Image
-            src="/final4-hero.webp"
-            alt="Final4 Norr 2026"
-            fill
-            className="object-cover object-center"
-            priority
-            quality={95}
-            sizes="100vw"
-          />
-          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#060e1a] to-transparent" />
+      {/* Hero — full-width image */}
+      <section className="relative w-full h-screen flex items-center justify-center overflow-hidden">
+        <Image
+          src="/final4-hero.webp"
+          alt="Final4 Norr 2026"
+          fill
+          className="z-0 object-cover object-center"
+          priority
+          quality={85}
+          sizes="100vw"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent z-10" />
+
+        <div className="relative z-20 text-white text-center px-4 sm:px-6 max-w-5xl mx-auto">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold mb-4 leading-tight tracking-tight text-shadow-outline">
+            FINAL4 <span className="text-amber-400">NORR</span>
+          </h1>
+          <p className="text-base sm:text-lg md:text-xl mb-6 max-w-2xl mx-auto text-shadow-md leading-relaxed">
+            Handbollturnering i Härnösand &middot; 11–12 april 2026
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <a
+              href="#matcher"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-md text-base font-semibold shadow-lg transition-transform duration-300 hover:scale-105 hover:shadow-xl inline-flex items-center justify-center gap-2"
+            >
+              Se matcherna
+              <ArrowRight className="h-5 w-5" />
+            </a>
+          </div>
+          {active && (
+            <div className="mt-6 inline-flex items-center gap-2 bg-white/15 rounded-full px-4 py-2">
+              <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+              <span className="text-sm font-semibold">Turneringen pågår</span>
+            </div>
+          )}
+          {over && (
+            <div className="mt-6 inline-flex items-center gap-2 bg-white/15 rounded-full px-4 py-2">
+              <span className="text-sm font-medium">Turneringen avslutad</span>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Title bar */}
-      <section className="container mx-auto px-4 max-w-5xl -mt-6 relative z-10 mb-2">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-              <span className="bg-gradient-to-r from-blue-400 via-blue-300 to-cyan-400 bg-clip-text text-transparent">FINAL4</span>{" "}
-              <span className="bg-gradient-to-r from-amber-300 to-amber-500 bg-clip-text text-transparent">NORR</span>
-            </h1>
-            <p className="text-sm text-gray-500 mt-0.5">
-              11 – 12 april 2026 &middot; Härnösand
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {active && (
-              <div className="inline-flex items-center gap-2 rounded-full bg-red-600/90 px-3 py-1 text-xs font-bold uppercase tracking-widest shadow-lg shadow-red-500/20">
-                <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
-                Live
-              </div>
-            )}
-            {over && (
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-gray-400">
-                Avslutad
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
+      <main>
+        {/* Match section */}
+        <section id="matcher" className="py-12 sm:py-16">
+          <div className="container mx-auto px-4 sm:px-6">
+            <div className="max-w-3xl mx-auto">
+              <h2 className="text-2xl sm:text-3xl font-bold text-blue-700 mb-2">Matcher</h2>
+              <p className="text-slate-500 text-sm mb-8">
+                F14, P14, F16, P16 &middot; 16 matcher totalt &middot; Semifinaler, bronsmatcher & finaler
+              </p>
 
-      {/* Content */}
-      <main className="container mx-auto px-4 py-8 max-w-5xl space-y-8">
-        {loading && (
-          <div className="flex flex-col items-center justify-center py-24 gap-3">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
-            <p className="text-sm text-gray-500">Laddar matchdata...</p>
+              {loading && (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-7 w-7 animate-spin text-blue-500" />
+                </div>
+              )}
+
+              {error && (
+                <div className="py-12 text-center">
+                  <p className="text-slate-400 mb-2">Kunde inte ladda matchdata</p>
+                  <p className="text-xs text-slate-300">{error}</p>
+                </div>
+              )}
+
+              {data && data.matches.length > 0 && (
+                <div className="space-y-10">
+                  {/* Live banner */}
+                  {liveMatches.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-900">
+                          <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                          Live
+                        </span>
+                        <div className="flex-1 h-px bg-slate-200" />
+                      </div>
+                      <ul className="space-y-0">
+                        {liveMatches.map((m) => (
+                          <li key={m.matchId}>
+                            <Final4MatchRow match={m} />
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Categories */}
+                  {CATEGORY_ORDER.map((cat) => {
+                    const matches = matchesByCategory[cat]
+                    if (!matches || matches.length === 0) return null
+                    return <CategorySection key={cat} category={cat} matches={matches} />
+                  })}
+
+                  {active && (
+                    <p className="text-xs text-slate-400 flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                      Uppdateras automatiskt
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {data && data.matches.length === 0 && (
+                <div className="py-16 text-center">
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">Matchprogrammet kommer snart</h3>
+                  <p className="text-sm text-slate-400">
+                    Matcher för Final4 Norr publiceras inom kort.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
+        </section>
+
+        {/* Teams section */}
+        {teams.length > 0 && (
+          <section id="lag" className="py-12 bg-slate-50">
+            <div className="container mx-auto px-4 sm:px-6">
+              <div className="max-w-3xl mx-auto">
+                <h2 className="text-2xl sm:text-3xl font-bold text-blue-700 mb-6">Deltagande lag</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {teams.map((team) => (
+                    <div
+                      key={team}
+                      className="rounded-md bg-white border border-slate-200 px-3 py-2.5 text-sm text-slate-700 truncate"
+                    >
+                      {team}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
         )}
 
-        {error && (
-          <div className="text-center py-16 rounded-xl border border-red-500/20 bg-red-950/10">
-            <p className="text-gray-400 mb-2">Kunde inte ladda matchdata</p>
-            <p className="text-sm text-gray-600">{error}</p>
+        {/* Info section */}
+        <section className="py-12">
+          <div className="container mx-auto px-4 sm:px-6">
+            <div className="max-w-3xl mx-auto grid sm:grid-cols-3 gap-6">
+              {[
+                { label: "Klasser", value: "F14, P14, F16, P16" },
+                { label: "Datum", value: "11–12 april 2026" },
+                { label: "Plats", value: "Öbacka SC & Änget Sportcenter, Härnösand" },
+              ].map((item) => (
+                <div key={item.label} className="text-center">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">{item.label}</p>
+                  <p className="text-sm font-medium text-slate-900">{item.value}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        )}
-
-        {data && data.matches.length > 0 && (
-          <>
-            {/* Tournament info */}
-            <TournamentInfo />
-
-            {/* Live banner */}
-            <LiveBanner matches={data.matches} />
-
-            {/* Real-time indicator */}
-            {active && (
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-                Uppdateras automatiskt var 30:e sekund
-              </div>
-            )}
-
-            {/* Categories */}
-            <section id="matcher" className="space-y-4">
-              {CATEGORY_ORDER.map((cat) => {
-                const matches = matchesByCategory[cat]
-                if (!matches || matches.length === 0) return null
-                return <CategorySection key={cat} category={cat} matches={matches} />
-              })}
-            </section>
-
-            {/* Teams */}
-            <section id="lag">
-              <h2 className="text-xl font-bold text-white mb-4">Deltagande lag</h2>
-              <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-                {teams.map((team) => (
-                  <div
-                    key={team}
-                    className="rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2.5 text-sm text-gray-300 truncate"
-                  >
-                    {team}
-                  </div>
-                ))}
-              </div>
-            </section>
-          </>
-        )}
-
-        {data && data.matches.length === 0 && (
-          <div className="text-center py-20">
-            <Trophy className="h-14 w-14 text-amber-400/30 mx-auto mb-5" />
-            <h2 className="text-2xl font-bold text-white mb-3">Matchprogrammet kommer snart</h2>
-            <p className="text-gray-500 max-w-md mx-auto">
-              Matcher för Final4 Norr publiceras inom kort. Kom tillbaka nära turneringsdatum.
-            </p>
-          </div>
-        )}
+        </section>
 
         {/* Footer */}
-        <footer className="border-t border-white/[0.06] pt-8 pb-6 text-center space-y-3">
-          <p className="text-sm text-gray-600">
-            <span className="text-blue-400 font-semibold">Final4 Norr</span> — arrangeras av Härnösands HF
-          </p>
-          <div className="flex items-center justify-center gap-4">
-            <a
-              href="https://www.harnosandshf.se"
-              className="inline-flex items-center gap-1.5 text-sm text-blue-400/70 hover:text-blue-300 transition-colors"
-            >
-              <ExternalLink className="h-3 w-3" />
-              harnosandshf.se
-            </a>
-            {data?.tournament.profixioUrl && (
-              <a
-                href={data.tournament.profixioUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-300 transition-colors"
+        <footer className="border-t border-slate-200 py-8">
+          <div className="container mx-auto px-4 text-center">
+            <p className="text-sm text-slate-500 mb-3">
+              <span className="font-bold text-blue-700">Final4 Norr</span> — arrangeras av Härnösands HF
+            </p>
+            <div className="flex items-center justify-center gap-4">
+              <Link
+                href="https://www.harnosandshf.se"
+                className="text-sm font-medium text-slate-500 hover:text-slate-900 transition"
               >
-                <ExternalLink className="h-3 w-3" />
-                Profixio
-              </a>
-            )}
+                harnosandshf.se
+              </Link>
+              {data?.tournament.profixioUrl && (
+                <a
+                  href={data.tournament.profixioUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-slate-400 hover:text-slate-600 transition"
+                >
+                  Profixio
+                </a>
+              )}
+            </div>
           </div>
         </footer>
       </main>

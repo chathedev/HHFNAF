@@ -201,7 +201,7 @@ export default async function RootLayout({
           </>
         )}
       </head>
-      <body className={`${inter.className} ${spaceGrotesk.className} ${isFinal4 ? "bg-[#060e1a]" : "bg-white"} ${themeVariant === "pink" ? "hhf-staging" : ""}`}>
+      <body className={`${inter.className} ${spaceGrotesk.className} bg-white ${themeVariant === "pink" ? "hhf-staging" : ""}`}>
         {isFinal4 ? (
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
             "@context": "https://schema.org",
