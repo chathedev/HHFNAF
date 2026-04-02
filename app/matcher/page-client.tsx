@@ -12,6 +12,7 @@ import {
   shouldShowProfixioTechnicalIssue,
 } from "@/lib/match-card-utils"
 import { getMatchEndTime, useMatchData, forceMatchDataPoll, type NormalizedMatch } from "@/lib/use-match-data"
+import { useFinal4Data, type Final4Match } from "@/lib/use-final4-data"
 import { MatchCardCTA } from "@/components/match-card-cta"
 import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
 import { normalizeMatchKey } from "@/lib/matches"
@@ -96,6 +97,35 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
 const API_BASE_URL =
   (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
   "https://api.harnosandshf.se"
+
+function final4ToNormalized(m: Final4Match): NormalizedMatch {
+  return {
+    id: String(m.matchId),
+    apiMatchId: String(m.matchId),
+    homeTeam: m.homeName,
+    awayTeam: m.awayName,
+    opponent: `${m.awayName} (${m.category} ${m.round})`,
+    normalizedTeam: m.homeName,
+    date: new Date(m.date),
+    displayDate: new Date(m.date).toLocaleDateString("sv-SE", { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/Stockholm" }),
+    time: m.time || undefined,
+    venue: m.venue || undefined,
+    series: m.categoryLabel || m.series || undefined,
+    result: m.result || undefined,
+    playUrl: m.playUrl || undefined,
+    infoUrl: m.detailUrl || undefined,
+    teamType: m.category,
+    matchStatus: m.matchStatus,
+    matchFeed: [],
+    provider: "profixio" as const,
+    hasStream: Boolean(m.playUrl),
+    statusLabel: m.matchStatus === "live" ? "LIVE" : m.matchStatus === "finished" ? "SLUT" : "KOMMANDE",
+    resultState: m.result ? "available" as const : "not_started" as const,
+    homeScore: m.homeScore ?? undefined,
+    awayScore: m.awayScore ?? undefined,
+    timelineAvailable: Boolean(m.detailUrl),
+  }
+}
 
 const mapTimelineEvent = (event: any): MatchFeedEvent => ({
   time: event?.time ?? "",
