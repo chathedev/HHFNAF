@@ -128,16 +128,53 @@ const dedupeTimelineEvents = (events: MatchFeedEvent[]) => {
 
 const isZeroScore = (score: string) => /^0\s*[-–—]\s*0$/.test(score.trim())
 
-function Final4MatchSection() {
-  const { data, loading, error } = useFinal4Data()
-  const liveMatches = data?.matches.filter((m) => m.matchStatus === "live") ?? []
+function final4ToNormalized(m: import("@/lib/use-final4-data").Final4Match): NormalizedMatch {
+  const isTBD = (n: string) => n.startsWith("Winner ") || n.startsWith("Loser ") || n === "TBD"
+  return {
+    id: String(m.matchId),
+    apiMatchId: String(m.matchId),
+    homeTeam: m.homeName,
+    awayTeam: m.awayName,
+    opponent: `${m.awayName} (${m.category} ${m.round})`,
+    normalizedTeam: m.homeName,
+    date: new Date(m.date),
+    displayDate: new Date(m.date).toLocaleDateString("sv-SE", { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/Stockholm" }),
+    time: m.time || undefined,
+    venue: m.venue || undefined,
+    series: m.categoryLabel || m.series || undefined,
+    result: m.result || undefined,
+    playUrl: m.playUrl || undefined,
+    infoUrl: m.detailUrl || undefined,
+    teamType: m.category,
+    matchStatus: m.matchStatus,
+    matchFeed: [],
+    provider: "profixio" as const,
+    hasStream: Boolean(m.playUrl),
+    statusLabel: m.matchStatus === "live" ? "LIVE" : m.matchStatus === "finished" ? "SLUT" : "KOMMANDE",
+    resultState: m.result ? "available" as const : "not_started" as const,
+    homeScore: m.homeScore ?? undefined,
+    awayScore: m.awayScore ?? undefined,
+    timelineAvailable: Boolean(m.detailUrl) && !isTBD(m.homeName),
+  }
+}
 
-  // Group by date
-  const matchesByDate = useMemo(() => {
+function Final4MatchSection({ openMatchModal, fetchMatchTimeline }: {
+  openMatchModal: (match: NormalizedMatch) => void
+  fetchMatchTimeline: (match: NormalizedMatch) => Promise<void>
+}) {
+  const { data, loading, error } = useFinal4Data()
+
+  const normalizedMatches = useMemo(() => {
     if (!data) return []
-    const map = new Map<string, typeof data.matches>()
-    for (const m of data.matches) {
-      const dateKey = new Date(m.date).toISOString().slice(0, 10)
+    return data.matches.map(final4ToNormalized)
+  }, [data])
+
+  const liveMatches = normalizedMatches.filter((m) => m.matchStatus === "live")
+
+  const matchesByDate = useMemo(() => {
+    const map = new Map<string, NormalizedMatch[]>()
+    for (const m of normalizedMatches) {
+      const dateKey = m.date.toISOString().slice(0, 10)
       if (!map.has(dateKey)) map.set(dateKey, [])
       map.get(dateKey)!.push(m)
     }
@@ -145,11 +182,71 @@ function Final4MatchSection() {
       matches.sort((a, b) => (a.time || "").localeCompare(b.time || ""))
     }
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b))
-  }, [data])
+  }, [normalizedMatches])
 
   const formatDateHeading = (dateStr: string) => {
     const date = new Date(dateStr)
     return date.toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Stockholm" })
+  }
+
+  const renderRow = (match: NormalizedMatch) => {
+    const canOpen = match.timelineAvailable
+    const isLive = match.matchStatus === "live"
+    const isFinished = match.matchStatus === "finished"
+    const scoreValue = match.result || null
+    const rawCategory = match.teamType || ""
+    const rawSeries = match.series || ""
+    // Extract round from opponent field
+    const roundMatch = match.opponent.match(/\((.*?)\)/)
+    const roundInfo = roundMatch ? roundMatch[1] : ""
+
+    const statusBadge = (() => {
+      if (isLive) return { label: "LIVE", tone: "bg-slate-900 text-white" }
+      if (isFinished) return { label: "SLUT", tone: "bg-slate-100 text-slate-500" }
+      return { label: "KOMMANDE", tone: "bg-white text-slate-500 border border-slate-200" }
+    })()
+
+    return (
+      <li key={match.id}>
+        <article
+          className={`flex flex-col gap-3 border-b border-slate-200 px-0 py-3.5 transition ${canOpen ? "cursor-pointer hover:bg-slate-50" : ""}`}
+          onMouseEnter={() => { if (canOpen) fetchMatchTimeline(match).catch(() => undefined) }}
+          onClick={(event) => {
+            if (!canOpen) return
+            if ((event.target as HTMLElement).closest("a,button")) return
+            openMatchModal(match)
+          }}
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest ${statusBadge.tone}`}>
+              {statusBadge.label}
+            </span>
+            <span className="text-[11px] font-medium text-slate-400">{rawCategory}</span>
+            {roundInfo && <span className="text-[11px] text-slate-300">{roundInfo}</span>}
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-slate-950 break-words sm:text-[15px]">
+                {match.homeTeam} vs {match.awayTeam}
+              </p>
+              <p className="mt-1 text-xs leading-5 text-slate-500 break-words">
+                {match.displayDate}{match.time ? ` • ${match.time}` : ""}{match.venue ? ` • ${match.venue}` : ""}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2 sm:w-auto">
+              {scoreValue && (
+                <span className={`text-lg font-black tabular-nums ${isLive ? "text-red-600" : "text-slate-900"}`} data-score-value="true">
+                  {scoreValue}
+                </span>
+              )}
+              {canOpen && (
+                <span className="text-xs font-medium text-blue-600">Detaljer</span>
+              )}
+            </div>
+          </div>
+        </article>
+      </li>
+    )
   }
 
   return (
@@ -162,9 +259,8 @@ function Final4MatchSection() {
             </div>
           ) : error ? (
             <p className="py-6 text-center text-sm text-slate-400">Matcherna kunde inte läsas in just nu.</p>
-          ) : data && data.matches.length > 0 ? (
+          ) : normalizedMatches.length > 0 ? (
             <div>
-              {/* Live now */}
               {liveMatches.length > 0 && (
                 <div className="mb-8">
                   <div className="flex items-center gap-3 mb-3">
@@ -174,15 +270,9 @@ function Final4MatchSection() {
                     </span>
                     <div className="flex-1 h-px bg-slate-200" />
                   </div>
-                  <ul>
-                    {liveMatches.map((m) => (
-                      <li key={m.matchId}><Final4MatchRow match={m} /></li>
-                    ))}
-                  </ul>
+                  <ul>{liveMatches.map(renderRow)}</ul>
                 </div>
               )}
-
-              {/* Matches by date */}
               {matchesByDate.map(([dateKey, matches]) => (
                 <div key={dateKey} className="mb-8">
                   <div className="flex items-center gap-3 mb-3">
@@ -191,11 +281,7 @@ function Final4MatchSection() {
                     </span>
                     <div className="flex-1 h-px bg-slate-200" />
                   </div>
-                  <ul>
-                    {matches.map((m) => (
-                      <li key={m.matchId}><Final4MatchRow match={m} /></li>
-                    ))}
-                  </ul>
+                  <ul>{matches.map(renderRow)}</ul>
                 </div>
               ))}
             </div>
@@ -998,7 +1084,7 @@ export function HomePageClient({ initialData, isFinal4 = false }: { initialData?
 
           {/* ===================== MATCHES ===================== */}
           {isFinal4 ? (
-            <Final4MatchSection />
+            <Final4MatchSection openMatchModal={openMatchModal} fetchMatchTimeline={fetchMatchTimeline} />
           ) : (
           <section className="pt-10 pb-14 sm:pt-14 sm:pb-16">
             <div className="container mx-auto px-4 sm:px-6">
