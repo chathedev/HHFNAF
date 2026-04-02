@@ -15,6 +15,9 @@ export interface Final4Match {
   awayScore: number | null
   matchStatus: "live" | "upcoming" | "finished"
   result: string | null
+  round: string
+  category: string
+  categoryLabel: string
   venue: string | null
   series: string | null
   detailUrl: string | null
@@ -22,12 +25,23 @@ export interface Final4Match {
   infoUrl: string | null
 }
 
+export interface Final4Category {
+  id: string
+  label: string
+  shortLabel: string
+  matchCount: number
+}
+
 export interface Final4Data {
   matches: Final4Match[]
+  categories: Final4Category[]
   tournament: {
     name: string
+    leagueId: string
     startDate: string
     endDate: string
+    venue: string
+    profixioUrl: string
   }
   lastUpdated: string
 }
