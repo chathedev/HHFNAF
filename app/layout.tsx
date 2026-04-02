@@ -181,7 +181,7 @@ export default async function RootLayout({
   const siteVariant = deriveSiteVariant(host)
   const themeVariant = getThemeVariant(host)
   const isFinal4 = siteVariant === "final4"
-  const themeColor = isFinal4 ? "#1e3a5f" : themeVariant === "pink" ? "#db2777" : "#15803d"
+  const themeColor = isFinal4 ? "#1d4ed8" : themeVariant === "pink" ? "#db2777" : "#15803d"
 
   return (
     <html lang="sv" suppressHydrationWarning data-site-variant={siteVariant}>

@@ -17,12 +17,12 @@ export default async function NotFound() {
 
   if (isFinal4) {
     return (
-      <div className="min-h-screen bg-[#060e1a] flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-amber-50 flex items-center justify-center px-4">
         <div className="max-w-md w-full text-center">
           <div className="mb-8">
-            <h1 className="text-9xl font-bold text-blue-500 mb-4 drop-shadow-lg">404</h1>
-            <h2 className="text-3xl font-bold text-white mb-4">Sidan hittades inte</h2>
-            <p className="text-gray-400 mb-8 leading-relaxed">
+            <h1 className="text-9xl font-bold text-blue-600 mb-4 drop-shadow-lg">404</h1>
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">Sidan hittades inte</h2>
+            <p className="text-gray-600 mb-8 leading-relaxed">
               Denna sida finns inte under Final4 Norr.
             </p>
           </div>
@@ -38,7 +38,7 @@ export default async function NotFound() {
             <Button
               asChild
               variant="outline"
-              className="w-full border-gray-600 text-gray-300 hover:bg-white/5 bg-transparent"
+              className="w-full border-blue-600 text-blue-600 hover:bg-blue-50 bg-transparent"
             >
               <Link href="https://www.harnosandshf.se">
                 <Home className="w-4 h-4 mr-2" />
@@ -49,10 +49,10 @@ export default async function NotFound() {
 
           <div className="mt-8 text-sm text-gray-500">
             <p className="font-semibold">
-              <span className="text-blue-400">FINAL4</span>{" "}
-              <span className="text-amber-400">NORR</span>
+              <span className="text-blue-700">FINAL4</span>{" "}
+              <span className="text-amber-600">NORR</span>
             </p>
-            <p className="mt-1 text-gray-600">6 – 12 april 2026</p>
+            <p className="mt-1">11 – 12 april 2026</p>
           </div>
         </div>
       </div>
