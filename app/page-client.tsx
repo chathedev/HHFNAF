@@ -128,6 +128,86 @@ const dedupeTimelineEvents = (events: MatchFeedEvent[]) => {
 
 const isZeroScore = (score: string) => /^0\s*[-–—]\s*0$/.test(score.trim())
 
+function Final4MatchSection() {
+  const { data, loading, error } = useFinal4Data()
+  const liveMatches = data?.matches.filter((m) => m.matchStatus === "live") ?? []
+
+  // Group by date
+  const matchesByDate = useMemo(() => {
+    if (!data) return []
+    const map = new Map<string, typeof data.matches>()
+    for (const m of data.matches) {
+      const dateKey = new Date(m.date).toISOString().slice(0, 10)
+      if (!map.has(dateKey)) map.set(dateKey, [])
+      map.get(dateKey)!.push(m)
+    }
+    for (const matches of map.values()) {
+      matches.sort((a, b) => (a.time || "").localeCompare(b.time || ""))
+    }
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b))
+  }, [data])
+
+  const formatDateHeading = (dateStr: string) => {
+    const date = new Date(dateStr)
+    return date.toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Stockholm" })
+  }
+
+  return (
+    <section className="pt-10 pb-14 sm:pt-14 sm:pb-16">
+      <div className="container mx-auto px-4 sm:px-6">
+        <div className="max-w-4xl mx-auto">
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+            </div>
+          ) : error ? (
+            <p className="py-6 text-center text-sm text-slate-400">Matcherna kunde inte läsas in just nu.</p>
+          ) : data && data.matches.length > 0 ? (
+            <div>
+              {/* Live now */}
+              {liveMatches.length > 0 && (
+                <div className="mb-8">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-900">
+                      <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                      Live
+                    </span>
+                    <div className="flex-1 h-px bg-slate-200" />
+                  </div>
+                  <ul>
+                    {liveMatches.map((m) => (
+                      <li key={m.matchId}><Final4MatchRow match={m} /></li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Matches by date */}
+              {matchesByDate.map(([dateKey, matches]) => (
+                <div key={dateKey} className="mb-8">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-900 capitalize">
+                      {formatDateHeading(dateKey)}
+                    </span>
+                    <div className="flex-1 h-px bg-slate-200" />
+                  </div>
+                  <ul>
+                    {matches.map((m) => (
+                      <li key={m.matchId}><Final4MatchRow match={m} /></li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="py-10 text-center text-sm text-slate-400">Matchprogrammet publiceras inom kort.</p>
+          )}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export function HomePageClient({ initialData, isFinal4 = false }: { initialData?: EnhancedMatchData; isFinal4?: boolean }) {
   const searchParams = useSearchParams()
   const isEditorMode = searchParams?.get("editor") === "true"
@@ -687,10 +767,24 @@ export function HomePageClient({ initialData, isFinal4 = false }: { initialData?
 
   return (
     <ErrorBoundary>
-      <div>
+      <div className={isFinal4 ? "final4-theme" : ""}>
         <Header />
         <main>
           {/* Hero Section */}
+          {isFinal4 ? (
+            <section className="relative w-full h-[70vh] sm:h-screen overflow-hidden">
+              <Image
+                src="/final4-hero.webp"
+                alt="Final4 Norr 2026"
+                fill
+                className="z-0 object-cover object-center"
+                priority
+                quality={90}
+                sizes="100vw"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent z-10" />
+            </section>
+          ) : (
           <section className={`relative w-full h-screen flex items-center justify-center overflow-hidden ${isPinkTheme ? "bg-gradient-to-br from-pink-50 via-pink-100 to-rose-200" : ""
             }`}>
             {/* Mobile Image */}
@@ -849,9 +943,10 @@ export function HomePageClient({ initialData, isFinal4 = false }: { initialData?
               </div>
             </div>
           </section>
+          )}
 
           {/* ===================== SHOP & QUICK ACTIONS HUB ===================== */}
-          <section className="relative z-30 -mt-10 sm:-mt-16">
+          <section className={`relative z-30 -mt-10 sm:-mt-16 ${isFinal4 ? "hidden" : ""}`}>
             <div className="container mx-auto px-4 sm:px-6">
               <div className="max-w-5xl mx-auto">
                 {/* Shop hero banner */}
@@ -902,6 +997,9 @@ export function HomePageClient({ initialData, isFinal4 = false }: { initialData?
           </section>
 
           {/* ===================== MATCHES ===================== */}
+          {isFinal4 ? (
+            <Final4MatchSection />
+          ) : (
           <section className="pt-10 pb-14 sm:pt-14 sm:pb-16">
             <div className="container mx-auto px-4 sm:px-6">
               <div className="max-w-4xl mx-auto">
@@ -1094,6 +1192,7 @@ export function HomePageClient({ initialData, isFinal4 = false }: { initialData?
               </div>
             </div>
           </section>
+          )}
 
           {/* Instagram Feed Section */}
           <InstagramFeed />

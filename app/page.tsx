@@ -41,15 +41,12 @@ export default async function HomePage() {
     host = "localhost"
   }
 
-  if (isFinal4Variant(host)) {
-    const { default: Final4Page } = await import("./final4/page")
-    return <Final4Page />
-  }
+  const isFinal4 = isFinal4Variant(host)
 
-  const initialData = await getInitialMatchWindow({
+  const initialData = isFinal4 ? undefined : await getInitialMatchWindow({
     minMatches: 6,
     maxDays: 21,
   })
 
-  return <HomePageClient initialData={stripHeavyMatchData(initialData)} />
+  return <HomePageClient initialData={stripHeavyMatchData(initialData)} isFinal4={isFinal4} />
 }
