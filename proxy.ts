@@ -14,21 +14,8 @@ export async function proxy(request: NextRequest) {
   ).toLowerCase().split(":")[0]
 
   if (FINAL4_HOSTS.includes(host)) {
-    // Allow root, static assets, API, _next, and static files
-    if (
-      pathname === "/" ||
-      pathname.startsWith("/final4") ||
-      pathname.startsWith("/_next") ||
-      pathname.startsWith("/api") ||
-      pathname.startsWith("/opengraph-image") ||
-      /\.(webp|png|jpg|svg|ico|css|js|woff2?|json|txt|xml)$/.test(pathname)
-    ) {
-      return NextResponse.next()
-    }
-    // Redirect everything else to Final4 homepage
-    const url = request.nextUrl.clone()
-    url.pathname = "/"
-    return NextResponse.redirect(url)
+    // Let everything through — same site as www, just different content on /
+    return NextResponse.next()
   }
 
   // ─── Regular site routing ───
