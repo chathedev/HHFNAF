@@ -1,7 +1,8 @@
-export type SiteVariant = "production" | "staging" | "development"
+export type SiteVariant = "production" | "staging" | "development" | "final4"
 
 const STAGING_HOSTS = ["hhf.wby.se"]
 const PRODUCTION_HOSTS = ["harnosandshf.se", "www.harnosandshf.se"]
+const FINAL4_HOSTS = ["final4.harnosandshf.se"]
 
 const normalizeHost = (host?: string | null) => host?.toLowerCase().split(":")[0] ?? ""
 
@@ -11,6 +12,11 @@ export const deriveSiteVariant = (host?: string | null): SiteVariant => {
 
   if (envOverride === "staging") return "staging"
   if (envOverride === "production") return "production"
+  if (envOverride === "final4") return "final4"
+
+  if (normalizedHost && FINAL4_HOSTS.includes(normalizedHost)) {
+    return "final4"
+  }
 
   if (normalizedHost && STAGING_HOSTS.includes(normalizedHost)) {
     return "staging"
@@ -29,7 +35,7 @@ export const deriveSiteVariant = (host?: string | null): SiteVariant => {
 
 export const isStagingVariant = (host?: string | null) => deriveSiteVariant(host) === "staging"
 
-export type ThemeVariant = "pink" | "orange"
+export type ThemeVariant = "pink" | "orange" | "final4"
 
 const MEMORIAL_THEME_END_DATE = new Date("2026-01-18T22:00:00Z")
 
@@ -48,6 +54,7 @@ export const isMemorialThemeActive = (): boolean => {
  * flag is enabled until 2026-01-18 23:00 CET / 22:00 UTC. Staging and other
  * variants always stay on the standard orange/green look.
  */
+const isFinal4Host = (host?: string | null) => FINAL4_HOSTS.includes(normalizeHost(host))
 const isStagingHost = (host?: string | null) => STAGING_HOSTS.includes(normalizeHost(host))
 const isProductionHost = (host?: string | null) => PRODUCTION_HOSTS.includes(normalizeHost(host))
 
@@ -56,6 +63,10 @@ const isProductionEnvironment = () =>
 
 export const getThemeVariant = (host?: string | null): ThemeVariant => {
   const siteVariant = deriveSiteVariant(host)
+
+  if (isFinal4Host(host) || siteVariant === "final4") {
+    return "final4"
+  }
 
   if (isStagingHost(host) || siteVariant === "staging") {
     return "orange"
@@ -83,17 +94,24 @@ export type HeroImages = {
 export const getHeroImages = (host?: string | null): HeroImages => {
   const themeVariant = getThemeVariant(host)
 
+  if (themeVariant === "final4") {
+    return {
+      mobile: "/final4-hero.webp",
+      desktop: "/final4-hero.webp"
+    }
+  }
+
   if (themeVariant === "pink") {
-    // Pink theme gets memorial images
     return {
       mobile: "/c38715eb-2128-43e0-b80b-48cc95620ffa.webp",
       desktop: "/7ea5a4bb-f938-43ea-b514-783a8fa1b236.webp"
     }
-  } else {
-    // Orange theme gets default hero
-    return {
-      mobile: "/heropic.webp",
-      desktop: "/heropic.webp"
-    }
+  }
+
+  return {
+    mobile: "/heropic.webp",
+    desktop: "/heropic.webp"
   }
 }
+
+export const isFinal4Variant = (host?: string | null) => deriveSiteVariant(host) === "final4"
