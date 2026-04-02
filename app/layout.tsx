@@ -180,7 +180,8 @@ export default async function RootLayout({
 
   const siteVariant = deriveSiteVariant(host)
   const themeVariant = getThemeVariant(host)
-  const themeColor = themeVariant === "pink" ? "#db2777" : "#15803d"
+  const isFinal4 = siteVariant === "final4"
+  const themeColor = isFinal4 ? "#1e3a5f" : themeVariant === "pink" ? "#db2777" : "#15803d"
 
   return (
     <html lang="sv" suppressHydrationWarning data-site-variant={siteVariant}>
@@ -190,8 +191,17 @@ export default async function RootLayout({
         <meta name="format-detection" content="telephone=no" />
         <link rel="preconnect" href="https://api.harnosandshf.se" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://api.harnosandshf.se" />
+        {isFinal4 && (
+          <>
+            <meta property="og:title" content="Final4 Norr 2026 — Handboll" />
+            <meta property="og:description" content="Final4 Norr — 6-12 april 2026. Alla matcher, live-resultat och lag." />
+            <meta property="og:image" content="https://final4.harnosandshf.se/final4-hero.webp" />
+            <meta property="og:url" content="https://final4.harnosandshf.se" />
+            <title>Final4 Norr 2026 — Handboll</title>
+          </>
+        )}
       </head>
-      <body className={`${inter.className} ${spaceGrotesk.className} bg-white ${themeVariant === "pink" ? "hhf-staging" : ""}`}>
+      <body className={`${inter.className} ${spaceGrotesk.className} ${isFinal4 ? "bg-[#060e1a]" : "bg-white"} ${themeVariant === "pink" ? "hhf-staging" : ""}`}>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "SportsOrganization",

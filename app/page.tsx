@@ -1,5 +1,7 @@
+import { headers } from "next/headers"
 import { HomePageClient } from "./page-client"
 import { getInitialMatchWindow } from "@/lib/get-initial-match-window"
+import { isFinal4Variant } from "@/lib/site-variant"
 import type { EnhancedMatchData, NormalizedMatch } from "@/lib/use-match-data"
 
 // Revalidate data every 60 seconds
@@ -27,6 +29,23 @@ function stripHeavyMatchData(data: EnhancedMatchData | undefined): EnhancedMatch
 }
 
 export default async function HomePage() {
+  // Check if this is the Final4 subdomain
+  let host: string
+  try {
+    const requestHeaders = await headers()
+    host =
+      requestHeaders.get("x-forwarded-host") ||
+      requestHeaders.get("host") ||
+      "localhost"
+  } catch {
+    host = "localhost"
+  }
+
+  if (isFinal4Variant(host)) {
+    const { default: Final4Page } = await import("./final4/page")
+    return <Final4Page />
+  }
+
   const initialData = await getInitialMatchWindow({
     minMatches: 6,
     maxDays: 21,
