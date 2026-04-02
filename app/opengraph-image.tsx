@@ -1,4 +1,7 @@
 import { ImageResponse } from "next/og"
+import { headers } from "next/headers"
+import { readFile } from "fs/promises"
+import { join } from "path"
 
 // Image metadata
 export const size = {
@@ -10,6 +13,23 @@ export const contentType = "image/png"
 
 // Image generation
 export default async function Image() {
+  // Serve Final4 hero image directly on the Final4 subdomain
+  let host = ""
+  try {
+    const h = await headers()
+    host = (h.get("x-forwarded-host") || h.get("host") || "").toLowerCase().split(":")[0]
+  } catch {}
+
+  if (host === "final4.harnosandshf.se") {
+    try {
+      const heroPath = join(process.cwd(), "public", "final4-hero.webp")
+      const imageData = await readFile(heroPath)
+      return new Response(imageData, {
+        headers: { "Content-Type": "image/webp", "Cache-Control": "public, max-age=86400" },
+      })
+    } catch {}
+  }
+
   return new ImageResponse(
     <div
       style={{
