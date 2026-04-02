@@ -12,7 +12,8 @@ function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const pathname = usePathname()
-  const { shopVisible } = useShopStatus()
+  const { shopVisible: shopVisibleRaw } = useShopStatus()
+  const shopVisible = shopVisibleRaw && !isFinal4
 
   useEffect(() => {
     let ticking = false
@@ -35,12 +36,14 @@ function Header() {
     return null
   }
 
+  const isFinal4 = typeof window !== "undefined" && window.location.hostname === "final4.harnosandshf.se"
+
   const navLinks = [
     { name: "Hem", href: "/" },
     { name: "Lag", href: "/lag" },
     { name: "Matcher", href: "/matcher" },
     { name: "Tabeller", href: "/tabeller" },
-    { name: "Köp biljett", href: "https://clubs.clubmate.se/harnosandshf/overview/" },
+    ...(!isFinal4 ? [{ name: "Köp biljett", href: "https://clubs.clubmate.se/harnosandshf/overview/" }] : []),
     { name: "Kontakt", href: "/kontakt" },
   ]
 

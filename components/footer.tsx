@@ -5,7 +5,9 @@ import { ShoppingBag } from "lucide-react"
 import { SHOP_URL, useShopStatus } from "@/components/shop-status-provider"
 
 export default function Footer() {
-  const { shopVisible } = useShopStatus()
+  const { shopVisible: shopVisibleRaw } = useShopStatus()
+  const isFinal4 = typeof window !== "undefined" && window.location.hostname === "final4.harnosandshf.se"
+  const shopVisible = shopVisibleRaw && !isFinal4
 
   return (
     <footer className="bg-slate-950 text-white">
@@ -47,14 +49,16 @@ export default function Footer() {
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-white/40">Navigation</p>
             <ul className="mt-3 space-y-2">
-              <li>
-                <a
-                  href="https://clubs.clubmate.se/harnosandshf/overview/"
-                  className="text-sm text-white/70 transition hover:text-white"
-                >
-                  Köp biljett
-                </a>
-              </li>
+              {!isFinal4 && (
+                <li>
+                  <a
+                    href="https://clubs.clubmate.se/harnosandshf/overview/"
+                    className="text-sm text-white/70 transition hover:text-white"
+                  >
+                    Köp biljett
+                  </a>
+                </li>
+              )}
               {shopVisible && (
                 <li>
                   <a
