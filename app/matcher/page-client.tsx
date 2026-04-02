@@ -329,7 +329,7 @@ function StandingsSection({ selectedTeam }: { selectedTeam: string }) {
   )
 }
 
-export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatchData }) {
+export function MatcherPageClient({ initialData, isFinal4 = false }: { initialData?: EnhancedMatchData; isFinal4?: boolean }) {
   const [selectedTeam, setSelectedTeam] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("current")
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
@@ -343,25 +343,42 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   const [hasAttemptedLiveFetch, setHasAttemptedLiveFetch] = useState(false)
   const [hasAttemptedOldFetch, setHasAttemptedOldFetch] = useState(false)
 
+  // Final4: fetch from dedicated endpoint and convert to NormalizedMatch
+  const { data: final4Data, loading: final4Loading } = useFinal4Data()
+  const final4Matches = useMemo(() => {
+    if (!isFinal4 || !final4Data) return []
+    return final4Data.matches.map(final4ToNormalized)
+  }, [isFinal4, final4Data])
+
   const {
-    matches: liveUpcomingMatches,
-    loading: liveLoading,
+    matches: liveUpcomingMatches_raw,
+    loading: liveLoading_raw,
     error: liveError,
-    hasPayload: hasLivePayload,
+    hasPayload: hasLivePayload_raw,
     hasClientData: hasClientMatchData,
   } = useMatchData({
     dataType: "liveUpcoming",
     initialData,
+    enabled: !isFinal4,
   })
 
   const {
-    matches: oldMatches,
-    loading: oldLoading,
+    matches: oldMatches_raw,
+    loading: oldLoading_raw,
     error: oldError,
-    hasPayload: hasOldPayload,
+    hasPayload: hasOldPayload_raw,
   } = useMatchData({
     dataType: "old",
+    enabled: !isFinal4,
   })
+
+  // Override with Final4 data when on Final4 subdomain
+  const liveUpcomingMatches = isFinal4 ? final4Matches : liveUpcomingMatches_raw
+  const oldMatches = isFinal4 ? [] as NormalizedMatch[] : oldMatches_raw
+  const liveLoading = isFinal4 ? final4Loading : liveLoading_raw
+  const oldLoading = isFinal4 ? false : oldLoading_raw
+  const hasLivePayload = isFinal4 ? Boolean(final4Data) : hasLivePayload_raw
+  const hasOldPayload = isFinal4 ? true : hasOldPayload_raw
 
   const hasCurrentPayload =
     statusFilter === "finished" ? hasOldPayload : hasLivePayload && (statusFilter !== "current" || hasOldPayload)
