@@ -1,8 +1,64 @@
 import Link from "next/link"
-import { Home, Mail } from "lucide-react"
+import { headers } from "next/headers"
+import { Home, Mail, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { isFinal4Variant } from "@/lib/site-variant"
 
-export default function NotFound() {
+export default async function NotFound() {
+  let host: string
+  try {
+    const requestHeaders = await headers()
+    host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") || "localhost"
+  } catch {
+    host = "localhost"
+  }
+
+  const isFinal4 = isFinal4Variant(host)
+
+  if (isFinal4) {
+    return (
+      <div className="min-h-screen bg-[#060e1a] flex items-center justify-center px-4">
+        <div className="max-w-md w-full text-center">
+          <div className="mb-8">
+            <h1 className="text-9xl font-bold text-blue-500 mb-4 drop-shadow-lg">404</h1>
+            <h2 className="text-3xl font-bold text-white mb-4">Sidan hittades inte</h2>
+            <p className="text-gray-400 mb-8 leading-relaxed">
+              Denna sida finns inte under Final4 Norr.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <Button asChild className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+              <Link href="/">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Tillbaka till Final4 Norr
+              </Link>
+            </Button>
+
+            <Button
+              asChild
+              variant="outline"
+              className="w-full border-gray-600 text-gray-300 hover:bg-white/5 bg-transparent"
+            >
+              <Link href="https://www.harnosandshf.se">
+                <Home className="w-4 h-4 mr-2" />
+                Gå till harnosandshf.se
+              </Link>
+            </Button>
+          </div>
+
+          <div className="mt-8 text-sm text-gray-500">
+            <p className="font-semibold">
+              <span className="text-blue-400">FINAL4</span>{" "}
+              <span className="text-amber-400">NORR</span>
+            </p>
+            <p className="mt-1 text-gray-600">6 – 12 april 2026</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-orange-50 flex items-center justify-center px-4">
       <div className="max-w-md w-full text-center">

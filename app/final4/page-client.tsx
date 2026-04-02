@@ -5,6 +5,7 @@ import Image from "next/image"
 import { Trophy, MapPin, Calendar, ExternalLink, Loader2 } from "lucide-react"
 import { useFinal4Data, type Final4Match } from "@/lib/use-final4-data"
 import { Final4MatchCard } from "@/components/final4-match-card"
+import { Final4Header } from "@/components/final4-header"
 import { isFinal4Active, isFinal4Over } from "@/lib/final4-config"
 
 function StatusBadgeInline({ status }: { status: Final4Match["matchStatus"] }) {
@@ -157,6 +158,8 @@ export function Final4PageClient() {
 
   return (
     <div className="min-h-screen bg-[#060e1a] text-white">
+      <Final4Header />
+
       {/* Hero */}
       <section className="relative h-[55vh] min-h-[400px] max-h-[600px] overflow-hidden">
         <Image
