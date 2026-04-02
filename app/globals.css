@@ -656,6 +656,11 @@ body.hhf-staging .bg-gradient-to-br.from-emerald-50.to-green-50 {
   }
 }
 
+/* ─── Final4 theme: hide shop/ticket elements via CSS (no flash) ─── */
+[data-site-variant="final4"] .final4-hide { display: none !important; }
+[data-site-variant="final4"] a[href*="clubmate.se"] { display: none !important; }
+[data-site-variant="final4"] a[href*="shop.harnosandshf.se"] { display: none !important; }
+
 /* ─── Final4 theme: swap green→blue, orange→amber ─── */
 .final4-theme .bg-green-600 { background-color: #2563eb !important; }
 .final4-theme .bg-green-700 { background-color: #1d4ed8 !important; }

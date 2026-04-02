@@ -6,7 +6,7 @@ import { SHOP_URL, useShopStatus } from "@/components/shop-status-provider"
 
 export default function Footer() {
   const { shopVisible: shopVisibleRaw } = useShopStatus()
-  const isFinal4 = typeof window !== "undefined" && window.location.hostname === "final4.harnosandshf.se"
+  const isFinal4 = typeof document !== "undefined" && document.documentElement.getAttribute("data-site-variant") === "final4"
   const shopVisible = shopVisibleRaw && !isFinal4
 
   return (
