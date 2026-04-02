@@ -240,7 +240,7 @@ function Final4MatchSection({ openMatchModal, fetchMatchTimeline }: {
                 </span>
               )}
               {canOpen && (
-                <span className="text-xs font-medium text-blue-600">Detaljer</span>
+                <span className="text-xs font-medium text-green-700">Detaljer</span>
               )}
             </div>
           </div>
@@ -255,7 +255,7 @@ function Final4MatchSection({ openMatchModal, fetchMatchTimeline }: {
         <div className="max-w-4xl mx-auto">
           {loading ? (
             <div className="flex items-center justify-center py-16">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-green-600 border-t-transparent" />
             </div>
           ) : error ? (
             <p className="py-6 text-center text-sm text-slate-400">Matcherna kunde inte läsas in just nu.</p>
@@ -853,7 +853,7 @@ export function HomePageClient({ initialData, isFinal4 = false }: { initialData?
 
   return (
     <ErrorBoundary>
-      <div className={isFinal4 ? "final4-theme" : ""}>
+      <div>
         <Header />
         <main>
           {/* Hero Section */}

@@ -68,7 +68,7 @@ export function Final4MatchRow({ match }: { match: Final4Match }) {
               href={match.detailUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs font-medium text-blue-600 hover:text-blue-800 underline-offset-2 hover:underline"
+              className="text-xs font-medium text-green-700 hover:text-green-900 underline-offset-2 hover:underline"
               onClick={(e) => e.stopPropagation()}
             >
               Detaljer
