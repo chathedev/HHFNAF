@@ -23,10 +23,14 @@ export interface LotteryTicket {
 }
 
 export interface BuyResult {
-  client_secret: string
-  payment_intent_id: string
+  test_mode?: boolean
+  client_secret?: string
+  payment_intent_id?: string
   amount_ore: number
   ticket_count: number
+  tickets?: { id: number; ticket_number: string }[]
+  pot_share_ore?: number
+  match_name?: string
 }
 
 export interface ConfirmResult {
