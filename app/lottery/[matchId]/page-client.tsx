@@ -6,6 +6,7 @@ import { Header } from "@/components/header"
 import Footer from "@/components/footer"
 import {
   fetchMatch,
+  fetchMatchByExternalId,
   buyTickets,
   confirmPayment,
   fetchMyTickets,
@@ -20,8 +21,9 @@ function formatSEK(ore: number) {
 
 type Step = "form" | "processing" | "confirming" | "done"
 
-export function LotteryMatchClient({ matchId }: { matchId: number }) {
+export function LotteryMatchClient({ matchId: matchIdParam }: { matchId: string }) {
   const [match, setMatch] = useState<LotteryMatch | null>(null)
+  const [resolvedId, setResolvedId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -36,12 +38,37 @@ export function LotteryMatchClient({ matchId }: { matchId: number }) {
   const [tickets, setTickets] = useState<{ id: number; ticket_number: string }[]>([])
   const [myTickets, setMyTickets] = useState<LotteryTicket[]>([])
 
-  const loadMatch = useCallback(() => {
-    fetchMatch(matchId)
-      .then(setMatch)
-      .catch(() => setError("Kunde inte ladda matchdata"))
-      .finally(() => setLoading(false))
-  }, [matchId])
+  // Resolve internal lottery ID: try external ID first, then internal
+  const loadMatch = useCallback(async () => {
+    try {
+      // If we already resolved, use it directly
+      if (resolvedId) {
+        const m = await fetchMatch(resolvedId)
+        setMatch(m)
+        return
+      }
+      // Try external ID lookup first (Profixio match ID)
+      const byExternal = await fetchMatchByExternalId(matchIdParam)
+      if (byExternal) {
+        setResolvedId(byExternal.id)
+        setMatch(byExternal)
+        return
+      }
+      // Fall back to internal lottery ID
+      const numId = Number(matchIdParam)
+      if (!isNaN(numId)) {
+        const m = await fetchMatch(numId)
+        setResolvedId(m.id)
+        setMatch(m)
+        return
+      }
+      setError("Kunde inte hitta lottningen")
+    } catch {
+      setError("Kunde inte ladda matchdata")
+    } finally {
+      setLoading(false)
+    }
+  }, [matchIdParam, resolvedId])
 
   useEffect(() => {
     loadMatch()
@@ -63,13 +90,13 @@ export function LotteryMatchClient({ matchId }: { matchId: number }) {
   }, [])
 
   useEffect(() => {
-    if (email && matchId) {
-      fetchMyTickets(matchId, email).then(setMyTickets).catch(() => {})
+    if (email && resolvedId) {
+      fetchMyTickets(resolvedId, email).then(setMyTickets).catch(() => {})
     }
-  }, [email, matchId, step])
+  }, [email, resolvedId, step])
 
   async function handleBuy() {
-    if (!name.trim() || !email.trim()) {
+    if (!resolvedId || !name.trim() || !email.trim()) {
       setError("Fyll i namn och e-post")
       return
     }
@@ -80,11 +107,11 @@ export function LotteryMatchClient({ matchId }: { matchId: number }) {
     localStorage.setItem("lottery_user", JSON.stringify({ name, email, phone }))
 
     try {
-      const result = await buyTickets(matchId, name.trim(), email.trim(), ticketCount, phone.trim() || undefined)
+      const result = await buyTickets(resolvedId, name.trim(), email.trim(), ticketCount, phone.trim() || undefined)
 
       // For now without Stripe.js Swish flow (test mode), confirm directly
       setStep("confirming")
-      const confirmation = await confirmPayment(matchId, result.payment_intent_id)
+      const confirmation = await confirmPayment(resolvedId, result.payment_intent_id)
       setTickets(confirmation.tickets)
       loadMatch()
       setStep("done")
@@ -114,8 +141,8 @@ export function LotteryMatchClient({ matchId }: { matchId: number }) {
         <main className="flex-1 flex items-center justify-center py-16">
           <div className="text-center">
             <h2 className="text-lg font-semibold text-slate-700">Matchen hittades inte</h2>
-            <Link href="/lottery" className="text-blue-600 text-sm hover:underline mt-2 inline-block">
-              Tillbaka till lottningar
+            <Link href="/" className="text-blue-600 text-sm hover:underline mt-2 inline-block">
+              Tillbaka
             </Link>
           </div>
         </main>
@@ -133,11 +160,11 @@ export function LotteryMatchClient({ matchId }: { matchId: number }) {
       <main className="flex-1 py-6 sm:py-10">
         <div className="container mx-auto px-4 sm:px-6 max-w-lg">
           <Link
-            href="/lottery"
+            href="/"
             className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-blue-600 mb-4"
           >
             <ArrowLeft className="h-4 w-4" />
-            Alla lottningar
+            Tillbaka
           </Link>
 
           {/* Match info card */}

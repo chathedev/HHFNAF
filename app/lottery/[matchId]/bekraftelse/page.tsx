@@ -66,7 +66,7 @@ export default function ConfirmationPage({ params }: { params: Promise<{ matchId
               </div>
               <p className="text-xs text-slate-400 mb-4">En bekräftelse skickas till din e-post</p>
               <Link
-                href="/lottery"
+                href="/"
                 className="inline-block py-2.5 px-6 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Tillbaka till lottningar
@@ -80,7 +80,7 @@ export default function ConfirmationPage({ params }: { params: Promise<{ matchId
               <h1 className="text-xl font-bold text-slate-900 mb-1">Något gick fel</h1>
               <p className="text-sm text-slate-500 mb-4">{errorMsg}</p>
               <Link
-                href="/lottery"
+                href="/"
                 className="inline-block py-2.5 px-6 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Tillbaka
