@@ -2,6 +2,7 @@ import { headers } from "next/headers"
 import { HomePageClient } from "./page-client"
 import { getInitialMatchWindow } from "@/lib/get-initial-match-window"
 import { isFinal4Variant } from "@/lib/site-variant"
+import { fetchFinal4Data } from "@/lib/use-final4-data"
 import type { EnhancedMatchData, NormalizedMatch } from "@/lib/use-match-data"
 
 // Revalidate data every 60 seconds
@@ -48,5 +49,7 @@ export default async function HomePage() {
     maxDays: 21,
   })
 
-  return <HomePageClient initialData={stripHeavyMatchData(initialData)} isFinal4={isFinal4} />
+  const final4InitialData = isFinal4 ? await fetchFinal4Data() : undefined
+
+  return <HomePageClient initialData={stripHeavyMatchData(initialData)} isFinal4={isFinal4} final4InitialData={final4InitialData ?? undefined} />
 }

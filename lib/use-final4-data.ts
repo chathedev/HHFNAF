@@ -46,9 +46,20 @@ export interface Final4Data {
   lastUpdated: string
 }
 
-export function useFinal4Data() {
-  const [data, setData] = useState<Final4Data | null>(null)
-  const [loading, setLoading] = useState(true)
+/** Server-side fetch for SSR initial data */
+export async function fetchFinal4Data(): Promise<Final4Data | null> {
+  try {
+    const res = await fetch(`${API_BASE}/matcher/final4`, { cache: "no-store" })
+    if (!res.ok) return null
+    return res.json()
+  } catch {
+    return null
+  }
+}
+
+export function useFinal4Data(initialData?: Final4Data | null) {
+  const [data, setData] = useState<Final4Data | null>(initialData ?? null)
+  const [loading, setLoading] = useState(!initialData)
   const [error, setError] = useState<string | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -67,13 +78,13 @@ export function useFinal4Data() {
   }, [])
 
   useEffect(() => {
-    fetchData()
+    if (!initialData) fetchData()
     const pollInterval = isFinal4Active() ? 30_000 : 5 * 60_000
     intervalRef.current = setInterval(fetchData, pollInterval)
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
     }
-  }, [fetchData])
+  }, [fetchData, initialData])
 
   return { data, loading, error, refetch: fetchData }
 }

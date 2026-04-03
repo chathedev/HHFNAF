@@ -46,7 +46,7 @@ import { MatchCardCTA } from "@/components/match-card-cta"
 import { InstagramFeed } from "@/components/instagram-feed"
 import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
 import { SHOP_URL, useShopStatus } from "@/components/shop-status-provider"
-import { useFinal4Data } from "@/lib/use-final4-data"
+import { useFinal4Data, type Final4Data } from "@/lib/use-final4-data"
 import { Final4MatchRow } from "@/components/final4-match-card"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
 type MatchTopScorer = {
@@ -158,11 +158,12 @@ function final4ToNormalized(m: import("@/lib/use-final4-data").Final4Match): Nor
   }
 }
 
-function Final4MatchSection({ openMatchModal, fetchMatchTimeline }: {
+function Final4MatchSection({ openMatchModal, fetchMatchTimeline, final4InitialData }: {
   openMatchModal: (match: NormalizedMatch) => void
   fetchMatchTimeline: (match: NormalizedMatch) => Promise<void>
+  final4InitialData?: Final4Data
 }) {
-  const { data, loading, error } = useFinal4Data()
+  const { data, loading, error } = useFinal4Data(final4InitialData)
 
   const normalizedMatches = useMemo(() => {
     if (!data) return []
@@ -294,7 +295,7 @@ function Final4MatchSection({ openMatchModal, fetchMatchTimeline }: {
   )
 }
 
-export function HomePageClient({ initialData, isFinal4 = false }: { initialData?: EnhancedMatchData; isFinal4?: boolean }) {
+export function HomePageClient({ initialData, isFinal4 = false, final4InitialData }: { initialData?: EnhancedMatchData; isFinal4?: boolean; final4InitialData?: Final4Data }) {
   const searchParams = useSearchParams()
   const isEditorMode = searchParams?.get("editor") === "true"
 
@@ -1084,7 +1085,7 @@ export function HomePageClient({ initialData, isFinal4 = false }: { initialData?
 
           {/* ===================== MATCHES ===================== */}
           {isFinal4 ? (
-            <Final4MatchSection openMatchModal={openMatchModal} fetchMatchTimeline={fetchMatchTimeline} />
+            <Final4MatchSection openMatchModal={openMatchModal} fetchMatchTimeline={fetchMatchTimeline} final4InitialData={final4InitialData} />
           ) : (
           <section className="pt-10 pb-14 sm:pt-14 sm:pb-16">
             <div className="container mx-auto px-4 sm:px-6">

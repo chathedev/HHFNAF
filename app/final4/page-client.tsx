@@ -3,7 +3,7 @@
 import { useMemo } from "react"
 import Image from "next/image"
 import { Loader2 } from "lucide-react"
-import { useFinal4Data, type Final4Match } from "@/lib/use-final4-data"
+import { useFinal4Data, type Final4Match, type Final4Data } from "@/lib/use-final4-data"
 import { Final4MatchRow } from "@/components/final4-match-card"
 import { Header } from "@/components/header"
 import Footer from "@/components/footer"
