@@ -19,8 +19,8 @@ function formatDateHeading(dateStr: string) {
   })
 }
 
-export function Final4PageClient() {
-  const { data, loading, error } = useFinal4Data()
+export function Final4PageClient({ initialData }: { initialData?: Final4Data }) {
+  const { data, loading, error } = useFinal4Data(initialData)
   const active = isFinal4Active()
 
   // Group matches by date, then sort by time within each date

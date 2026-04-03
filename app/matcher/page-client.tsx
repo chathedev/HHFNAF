@@ -329,7 +329,7 @@ function StandingsSection({ selectedTeam }: { selectedTeam: string }) {
   )
 }
 
-export function MatcherPageClient({ initialData, isFinal4 = false }: { initialData?: EnhancedMatchData; isFinal4?: boolean }) {
+export function MatcherPageClient({ initialData, isFinal4 = false, final4InitialData }: { initialData?: EnhancedMatchData; isFinal4?: boolean; final4InitialData?: import("@/lib/use-final4-data").Final4Data }) {
   const [selectedTeam, setSelectedTeam] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("current")
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
@@ -344,7 +344,7 @@ export function MatcherPageClient({ initialData, isFinal4 = false }: { initialDa
   const [hasAttemptedOldFetch, setHasAttemptedOldFetch] = useState(false)
 
   // Final4: fetch from dedicated endpoint and convert to NormalizedMatch
-  const { data: final4Data, loading: final4Loading } = useFinal4Data()
+  const { data: final4Data, loading: final4Loading } = useFinal4Data(final4InitialData)
   const final4Matches = useMemo(() => {
     if (!isFinal4 || !final4Data) return []
     return final4Data.matches.map(final4ToNormalized)
