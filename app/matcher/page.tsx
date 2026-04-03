@@ -2,7 +2,7 @@ import { headers } from "next/headers"
 import { MatcherPageClient } from "./page-client"
 import { getInitialMatchWindow } from "@/lib/get-initial-match-window"
 import { isFinal4Variant } from "@/lib/site-variant"
-import { fetchFinal4Data } from "@/lib/use-final4-data"
+import { fetchFinal4Data } from "@/lib/final4-data"
 
 // Revalidate data every 60 seconds
 export const revalidate = 60

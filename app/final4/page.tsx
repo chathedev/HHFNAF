@@ -1,5 +1,5 @@
 import { Final4PageClient } from "./page-client"
-import { fetchFinal4Data } from "@/lib/use-final4-data"
+import { fetchFinal4Data } from "@/lib/final4-data"
 
 export const revalidate = 60
 
