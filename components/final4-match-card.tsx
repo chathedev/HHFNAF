@@ -1,5 +1,7 @@
 "use client"
 
+import Link from "next/link"
+import { Ticket } from "lucide-react"
 import type { Final4Match } from "@/lib/use-final4-data"
 
 function isTBD(name: string) {
@@ -13,7 +15,7 @@ function TeamName({ name }: { name: string }) {
   return <>{name}</>
 }
 
-export function Final4MatchRow({ match }: { match: Final4Match }) {
+export function Final4MatchRow({ match, showLottery = false }: { match: Final4Match; showLottery?: boolean }) {
   const isLive = match.matchStatus === "live"
   const isFinished = match.matchStatus === "finished"
   const hasScore = match.homeScore != null && match.awayScore != null
@@ -62,6 +64,16 @@ export function Final4MatchRow({ match }: { match: Final4Match }) {
             >
               {match.homeScore}–{match.awayScore}
             </span>
+          )}
+          {showLottery && !isFinished && (
+            <Link
+              href={`/lottery/${match.matchId}`}
+              className="inline-flex items-center gap-1.5 rounded-full bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Ticket className="h-3.5 w-3.5" />
+              Köp Lott
+            </Link>
           )}
           {match.detailUrl && (
             <a

@@ -1,7 +1,5 @@
-import { LotteryIndexClient } from "./page-client"
-
-export const dynamic = "force-dynamic"
+import { redirect } from "next/navigation"
 
 export default function LotteryPage() {
-  return <LotteryIndexClient />
+  redirect("/")
 }

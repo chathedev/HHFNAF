@@ -95,7 +95,7 @@ export function Final4PageClient({ initialData }: { initialData?: Final4Data }) 
                       </div>
                       <ul>
                         {liveMatches.map((m) => (
-                          <li key={m.matchId}><Final4MatchRow match={m} /></li>
+                          <li key={m.matchId}><Final4MatchRow match={m} showLottery /></li>
                         ))}
                       </ul>
                     </div>
@@ -112,7 +112,7 @@ export function Final4PageClient({ initialData }: { initialData?: Final4Data }) 
                       </div>
                       <ul>
                         {matches.map((m) => (
-                          <li key={m.matchId}><Final4MatchRow match={m} /></li>
+                          <li key={m.matchId}><Final4MatchRow match={m} showLottery /></li>
                         ))}
                       </ul>
                     </div>

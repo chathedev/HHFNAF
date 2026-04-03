@@ -18,6 +18,7 @@ import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPe
 import { normalizeMatchKey } from "@/lib/matches"
 import { extendTeamDisplayName, createTeamMatchKeySet } from "@/lib/team-display"
 import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
+import { Ticket } from "lucide-react"
 import { resolvePreferredTimeline } from "@/lib/match-timeline"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
 type MatchTopScorer = {
@@ -678,8 +679,18 @@ export function MatcherPageClient({ initialData, isFinal4 = false, final4Initial
                 </span>
               )}
             </div>
-            <div className="w-full xl:w-auto">
+            <div className="w-full xl:w-auto flex flex-wrap items-center gap-2">
               <MatchCardCTA match={match} status={status} />
+              {isFinal4 && status !== "finished" && (
+                <Link
+                  href={`/lottery/${match.id}`}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Ticket className="h-3.5 w-3.5" />
+                  Köp Lott
+                </Link>
+              )}
             </div>
           </div>
         </div>
