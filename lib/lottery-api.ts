@@ -4,6 +4,9 @@ const API_BASE =
 export interface LotteryMatch {
   id: number
   match_name: string
+  external_match_id?: string
+  category?: string
+  round?: string
   ticket_price_ore: number
   status: "upcoming" | "live" | "ended"
   pot_share_ore: number
@@ -50,6 +53,19 @@ export async function fetchMatches(status?: string): Promise<LotteryMatch[]> {
 export async function fetchMatch(id: number): Promise<LotteryMatch> {
   const res = await fetch(`${API_BASE}/matches/${id}`)
   if (!res.ok) throw new Error("Match not found")
+  return res.json()
+}
+
+export async function fetchMatchByExternalId(externalId: string | number): Promise<LotteryMatch | null> {
+  const res = await fetch(`${API_BASE}/by-match/${externalId}`)
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error("Failed to fetch match")
+  return res.json()
+}
+
+export async function syncMatches(): Promise<{ created: number; existing: number; total: number }> {
+  const res = await fetch(`${API_BASE}/sync`, { method: "POST" })
+  if (!res.ok) throw new Error("Sync failed")
   return res.json()
 }
 
@@ -105,6 +121,15 @@ export async function adminFetchMatches(secret: string) {
     headers: { "x-admin-secret": secret },
   })
   if (!res.ok) throw new Error("Unauthorized")
+  return res.json()
+}
+
+export async function adminSyncMatches(secret: string) {
+  const res = await fetch(`${API_BASE}/admin/sync`, {
+    method: "POST",
+    headers: { "x-admin-secret": secret },
+  })
+  if (!res.ok) throw new Error("Sync failed")
   return res.json()
 }
 
