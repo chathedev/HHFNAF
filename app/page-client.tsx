@@ -240,16 +240,6 @@ function Final4MatchSection({ openMatchModal, fetchMatchTimeline, final4InitialD
                   {scoreValue}
                 </span>
               )}
-              {!isFinished && (
-                <Link
-                  href={`/lottery/${match.id}`}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 transition-colors"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Ticket className="h-3.5 w-3.5" />
-                  Köp Lott
-                </Link>
-              )}
               {canOpen && (
                 <span className="text-xs font-medium text-green-700">Detaljer</span>
               )}
