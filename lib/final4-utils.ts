@@ -40,20 +40,12 @@ export const getFinal4DerivedStatus = (match: Final4Match, nowMs = Date.now()): 
     return "upcoming"
   }
 
-  if (rawStatus === "live") {
-    return "live"
+  if (rawStatus === "finished") {
+    return "finished"
   }
 
-  if (rawStatus === "finished") {
-    if (hasRealScore) {
-      return "finished"
-    }
-
-    if (startTs !== null && nowMs <= startTs + MATCH_DURATION_MS) {
-      return "live"
-    }
-
-    return "upcoming"
+  if (rawStatus === "live") {
+    return "live"
   }
 
   if (hasRealScore && startTs !== null && nowMs >= startTs + MATCH_DURATION_MS) {
