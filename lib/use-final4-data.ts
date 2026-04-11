@@ -9,7 +9,7 @@ export { fetchFinal4Data } from "./final4-data"
 import type { Final4Data } from "./final4-data"
 
 const API_BASE = process.env.NEXT_PUBLIC_MATCH_API_BASE || "https://api.harnosandshf.se"
-const FINAL4_ACTIVE_POLL_INTERVAL_MS = 5_000
+const FINAL4_ACTIVE_POLL_INTERVAL_MS = 3_000
 const FINAL4_IDLE_POLL_INTERVAL_MS = 5 * 60_000
 const final4RefreshListeners = new Set<() => Promise<void> | void>()
 

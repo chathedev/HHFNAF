@@ -46,10 +46,6 @@ export const getFinal4DerivedStatus = (match: Final4Match, nowMs = Date.now()): 
     return "finished"
   }
 
-  if (hasResult && isPastStart) {
-    return "finished"
-  }
-
   if (rawStatus === "live") {
     return "live"
   }
