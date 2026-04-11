@@ -35,12 +35,18 @@ export const getFinal4DerivedStatus = (match: Final4Match, nowMs = Date.now()): 
   const hasScore = homeScore !== null && awayScore !== null
   const hasRealScore = hasScore && !(homeScore === 0 && awayScore === 0)
   const rawStatus = match.matchStatus
+  const hasResult = parseScore(match.result) !== null
+  const isPastStart = startTs !== null && nowMs >= startTs
 
   if (startTs !== null && nowMs < startTs) {
     return "upcoming"
   }
 
   if (rawStatus === "finished") {
+    return "finished"
+  }
+
+  if (hasResult && isPastStart) {
     return "finished"
   }
 
