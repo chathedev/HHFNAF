@@ -20,6 +20,7 @@ import { extendTeamDisplayName, createTeamMatchKeySet } from "@/lib/team-display
 import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
 import { Ticket } from "lucide-react"
 import { resolvePreferredTimeline } from "@/lib/match-timeline"
+import { getFinal4DerivedStatus, getFinal4DisplayScore, getFinal4VenueLabel, isFinal4TimelineAvailable } from "@/lib/final4-utils"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
 type MatchTopScorer = {
   team: string
@@ -100,6 +101,9 @@ const API_BASE_URL =
   "https://api.harnosandshf.se"
 
 function final4ToNormalized(m: Final4Match): NormalizedMatch {
+  const derivedStatus = getFinal4DerivedStatus(m)
+  const displayScore = getFinal4DisplayScore(m)
+  const venueLabel = getFinal4VenueLabel(m.venue)
   return {
     id: String(m.matchId),
     apiMatchId: String(m.matchId),
@@ -110,21 +114,21 @@ function final4ToNormalized(m: Final4Match): NormalizedMatch {
     date: new Date(m.date),
     displayDate: new Date(m.date).toLocaleDateString("sv-SE", { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/Stockholm" }),
     time: m.time || undefined,
-    venue: m.venue || undefined,
+    venue: venueLabel,
     series: m.categoryLabel || m.series || undefined,
-    result: m.result || undefined,
+    result: displayScore || undefined,
     playUrl: m.playUrl || undefined,
     infoUrl: m.detailUrl || undefined,
     teamType: m.category,
-    matchStatus: m.matchStatus,
+    matchStatus: derivedStatus,
     matchFeed: [],
     provider: "profixio" as const,
     hasStream: Boolean(m.playUrl),
-    statusLabel: m.matchStatus === "live" ? "LIVE" : m.matchStatus === "finished" ? "SLUT" : "KOMMANDE",
-    resultState: m.result ? "available" as const : "not_started" as const,
-    homeScore: m.homeScore ?? undefined,
-    awayScore: m.awayScore ?? undefined,
-    timelineAvailable: Boolean(m.detailUrl),
+    statusLabel: derivedStatus === "live" ? "LIVE" : derivedStatus === "finished" ? "SLUT" : "KOMMANDE",
+    resultState: displayScore ? "available" as const : derivedStatus === "upcoming" ? "not_started" as const : "pending" as const,
+    homeScore: displayScore ? m.homeScore ?? undefined : undefined,
+    awayScore: displayScore ? m.awayScore ?? undefined : undefined,
+    timelineAvailable: isFinal4TimelineAvailable(m),
   }
 }
 

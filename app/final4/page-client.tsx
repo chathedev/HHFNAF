@@ -8,6 +8,7 @@ import { Final4MatchRow } from "@/components/final4-match-card"
 import { Header } from "@/components/header"
 import Footer from "@/components/footer"
 import { isFinal4Active } from "@/lib/final4-config"
+import { getFinal4DerivedStatus } from "@/lib/final4-utils"
 
 function formatDateHeading(dateStr: string) {
   const date = new Date(dateStr)
@@ -39,7 +40,7 @@ export function Final4PageClient({ initialData }: { initialData?: Final4Data }) 
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b))
   }, [data])
 
-  const liveMatches = data?.matches.filter((m) => m.matchStatus === "live") ?? []
+  const liveMatches = data?.matches.filter((m) => getFinal4DerivedStatus(m) === "live") ?? []
 
   return (
     <div>

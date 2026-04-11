@@ -48,6 +48,7 @@ import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPe
 import { SHOP_URL, useShopStatus } from "@/components/shop-status-provider"
 import { useFinal4Data, type Final4Data } from "@/lib/use-final4-data"
 import { Final4MatchRow } from "@/components/final4-match-card"
+import { getFinal4DerivedStatus, getFinal4DisplayScore, getFinal4VenueLabel, isFinal4TimelineAvailable } from "@/lib/final4-utils"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
 type MatchTopScorer = {
   team: string
@@ -130,6 +131,9 @@ const isZeroScore = (score: string) => /^0\s*[-–—]\s*0$/.test(score.trim())
 
 function final4ToNormalized(m: import("@/lib/use-final4-data").Final4Match): NormalizedMatch {
   const isTBD = (n: string) => n.startsWith("Winner ") || n.startsWith("Loser ") || n === "TBD"
+  const derivedStatus = getFinal4DerivedStatus(m)
+  const displayScore = getFinal4DisplayScore(m)
+  const venueLabel = getFinal4VenueLabel(m.venue)
   return {
     id: String(m.matchId),
     apiMatchId: String(m.matchId),
@@ -140,21 +144,21 @@ function final4ToNormalized(m: import("@/lib/use-final4-data").Final4Match): Nor
     date: new Date(m.date),
     displayDate: new Date(m.date).toLocaleDateString("sv-SE", { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/Stockholm" }),
     time: m.time || undefined,
-    venue: m.venue || undefined,
+    venue: venueLabel,
     series: m.categoryLabel || m.series || undefined,
-    result: m.result || undefined,
+    result: displayScore || undefined,
     playUrl: m.playUrl || undefined,
     infoUrl: m.detailUrl || undefined,
     teamType: m.category,
-    matchStatus: m.matchStatus,
+    matchStatus: derivedStatus,
     matchFeed: [],
     provider: "profixio" as const,
     hasStream: Boolean(m.playUrl),
-    statusLabel: m.matchStatus === "live" ? "LIVE" : m.matchStatus === "finished" ? "SLUT" : "KOMMANDE",
-    resultState: m.result ? "available" as const : "not_started" as const,
-    homeScore: m.homeScore ?? undefined,
-    awayScore: m.awayScore ?? undefined,
-    timelineAvailable: Boolean(m.detailUrl) && !isTBD(m.homeName),
+    statusLabel: derivedStatus === "live" ? "LIVE" : derivedStatus === "finished" ? "SLUT" : "KOMMANDE",
+    resultState: displayScore ? "available" as const : derivedStatus === "upcoming" ? "not_started" as const : "pending" as const,
+    homeScore: displayScore ? m.homeScore ?? undefined : undefined,
+    awayScore: displayScore ? m.awayScore ?? undefined : undefined,
+    timelineAvailable: isFinal4TimelineAvailable(m) && !isTBD(m.homeName),
   }
 }
 
@@ -304,6 +308,7 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
   const [themeVariant, setThemeVariant] = useState<ThemeVariant>("orange")
   const [showHeroContent, setShowHeroContent] = useState<boolean>(true)
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
+  const [selectedMatchSnapshot, setSelectedMatchSnapshot] = useState<NormalizedMatch | null>(null)
   const [timelineByMatchId, setTimelineByMatchId] = useState<Record<string, MatchFeedEvent[]>>({})
   const [topScorersByMatchId, setTopScorersByMatchId] = useState<Record<string, MatchTopScorer[]>>({})
   const [clockStateByMatchId, setClockStateByMatchId] = useState<Record<string, MatchClockState>>({})
@@ -407,8 +412,8 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
   }, [currentMatches, recentResults])
 
   const selectedMatch = useMemo(
-    () => allHomeMatches.find((match) => match.id === selectedMatchId) ?? null,
-    [allHomeMatches, selectedMatchId],
+    () => allHomeMatches.find((match) => match.id === selectedMatchId) ?? (selectedMatchSnapshot?.id === selectedMatchId ? selectedMatchSnapshot : null),
+    [allHomeMatches, selectedMatchId, selectedMatchSnapshot],
   )
 
   const fetchMatchTimeline = useCallback(async (match: NormalizedMatch, force = false) => {
@@ -462,6 +467,7 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
   const openMatchModal = useCallback(
     (match: NormalizedMatch) => {
       setSelectedMatchId(match.id)
+      setSelectedMatchSnapshot(match)
       fetchMatchTimeline(match).catch((error) => {
         console.warn("Failed to hydrate match timeline", error)
       })
@@ -1608,7 +1614,10 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
         {selectedMatch && (
           <MatchFeedModal
             isOpen={true}
-            onClose={() => setSelectedMatchId(null)}
+            onClose={() => {
+              setSelectedMatchId(null)
+              setSelectedMatchSnapshot(null)
+            }}
             matchFeed={getMergedTimeline(selectedMatch)}
             homeTeam={selectedMatch.homeTeam}
             awayTeam={selectedMatch.awayTeam}

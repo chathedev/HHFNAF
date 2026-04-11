@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { Ticket } from "lucide-react"
 import type { Final4Match } from "@/lib/use-final4-data"
+import { getFinal4DerivedStatus, getFinal4DisplayScore, getFinal4VenueLabel, isFinal4TimelineAvailable } from "@/lib/final4-utils"
 
 function isTBD(name: string) {
   return name.startsWith("Winner ") || name.startsWith("Loser ") || name === "TBD"
@@ -16,9 +17,12 @@ function TeamName({ name }: { name: string }) {
 }
 
 export function Final4MatchRow({ match, showLottery = false }: { match: Final4Match; showLottery?: boolean }) {
-  const isLive = match.matchStatus === "live"
-  const isFinished = match.matchStatus === "finished"
-  const hasScore = match.homeScore != null && match.awayScore != null
+  const status = getFinal4DerivedStatus(match)
+  const isLive = status === "live"
+  const isFinished = status === "finished"
+  const displayScore = getFinal4DisplayScore(match)
+  const venueLabel = getFinal4VenueLabel(match.venue)
+  const canOpenTimeline = isFinal4TimelineAvailable(match)
 
   const statusBadge = (() => {
     if (isLive) return { label: "LIVE", tone: "bg-slate-900 text-white" }
@@ -52,17 +56,17 @@ export function Final4MatchRow({ match, showLottery = false }: { match: Final4Ma
           </p>
           <p className="mt-1 text-xs leading-5 text-slate-500 break-words">
             {match.time && <>{match.time} &middot; </>}
-            {match.venue}
+            {venueLabel}
           </p>
         </div>
 
         <div className="flex shrink-0 items-center gap-2 sm:w-auto">
-          {hasScore && (
+          {displayScore && (
             <span
               className={`text-lg font-black tabular-nums ${isLive ? "text-red-600" : "text-slate-900"}`}
               data-score-value="true"
             >
-              {match.homeScore}–{match.awayScore}
+              {displayScore}
             </span>
           )}
           {showLottery && !isFinished && (
@@ -75,7 +79,7 @@ export function Final4MatchRow({ match, showLottery = false }: { match: Final4Ma
               Köp Lott
             </Link>
           )}
-          {match.detailUrl && (
+          {canOpenTimeline && match.detailUrl && (
             <a
               href={match.detailUrl}
               target="_blank"
