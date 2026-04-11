@@ -29,6 +29,7 @@ export function Final4PageClient({ initialData }: { initialData?: Final4Data }) 
     if (!data) return []
     const map = new Map<string, Final4Match[]>()
     for (const m of data.matches) {
+      if (getFinal4DerivedStatus(m) === "live") continue
       const dateKey = new Date(m.date).toISOString().slice(0, 10)
       if (!map.has(dateKey)) map.set(dateKey, [])
       map.get(dateKey)!.push(m)

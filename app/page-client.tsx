@@ -179,6 +179,7 @@ function Final4MatchSection({ openMatchModal, fetchMatchTimeline, final4InitialD
   const matchesByDate = useMemo(() => {
     const map = new Map<string, NormalizedMatch[]>()
     for (const m of normalizedMatches) {
+      if (m.matchStatus === "live") continue
       const dateKey = m.date.toISOString().slice(0, 10)
       if (!map.has(dateKey)) map.set(dateKey, [])
       map.get(dateKey)!.push(m)

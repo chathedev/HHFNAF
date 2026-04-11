@@ -86,12 +86,75 @@ const API_BASE_URL =
   (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
   "https://api.harnosandshf.se"
 
-const harnosandPattern = /(härnösand|harnosand|\bhhf\b)/i
-
-const isHarnosandTeam = (name?: string) => harnosandPattern.test(name ?? "")
 const isZeroScore = (value?: string) => {
   const normalized = (value || "").replace(/\s/g, "").replace("–", "-")
   return normalized === "0-0"
+}
+
+const normalizeTeamIdentity = (value?: string) =>
+  (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+
+const stripTeamOrdinal = (value: string) => value.replace(/\b\d+\b/g, "").replace(/\s+/g, " ").trim()
+
+const getTeamMatchStrength = (candidate?: string, reference?: string) => {
+  const candidateName = normalizeTeamIdentity(candidate)
+  const referenceName = normalizeTeamIdentity(reference)
+  if (!candidateName || !referenceName) return 0
+  if (candidateName === referenceName) return 4
+
+  const candidateBase = stripTeamOrdinal(candidateName)
+  const referenceBase = stripTeamOrdinal(referenceName)
+  if (candidateBase && candidateBase === referenceBase) {
+    const candidateHasOrdinal = candidateBase !== candidateName
+    const referenceHasOrdinal = referenceBase !== referenceName
+    if (candidateHasOrdinal === referenceHasOrdinal) return 3
+    return 0
+  }
+
+  if (candidateName.includes(referenceName) || referenceName.includes(candidateName)) {
+    return 1
+  }
+
+  return 0
+}
+
+const resolveTeamSide = (teamName: string | undefined, homeTeam: string, awayTeam: string): "home" | "away" | null => {
+  const homeStrength = getTeamMatchStrength(teamName, homeTeam)
+  const awayStrength = getTeamMatchStrength(teamName, awayTeam)
+  if (homeStrength === 0 && awayStrength === 0) return null
+  if (homeStrength === awayStrength) return null
+  return homeStrength > awayStrength ? "home" : "away"
+}
+
+const inferSideFromGoalFlag = (event: MatchFeedEvent): "home" | "away" | null => {
+  if (typeof event.isHomeGoal !== "boolean") return null
+  return event.isHomeGoal ? "home" : "away"
+}
+
+const getResolvedEventSide = (event: MatchFeedEvent, homeTeam: string, awayTeam: string): "home" | "away" | "center" => {
+  if (isLifecycleEvent(event)) return "center"
+
+  const text = getEventCombinedText(event)
+  if (text.includes("timeout")) {
+    const timeoutSide = resolveTeamSide(event.team, homeTeam, awayTeam)
+    return timeoutSide ?? "center"
+  }
+
+  const scoringSide = resolveTeamSide(event.scoringTeam, homeTeam, awayTeam)
+  if (scoringSide) return scoringSide
+
+  const teamSide = resolveTeamSide(event.team, homeTeam, awayTeam)
+  if (teamSide) return teamSide
+
+  const goalFlagSide = inferSideFromGoalFlag(event)
+  if (goalFlagSide) return goalFlagSide
+
+  return "center"
 }
 
 const parseEventTimeToSeconds = (value?: string) => {
@@ -549,24 +612,8 @@ const getRowStyle = (event: MatchFeedEvent, homeTeam: string, awayTeam: string) 
   const type = (event.type || "").toLowerCase()
   const isGoal = type.includes("mål") || type.includes("goal")
   const isPenalty = type.includes("utvisning") || type.includes("varning")
-  const isHomeGoalByFlag = typeof event.isHomeGoal === "boolean" ? event.isHomeGoal : null
-
-  const teamTone = (() => {
-    if (isHarnosandTeam(event.scoringTeam) || isHarnosandTeam(event.team)) {
-      return "home"
-    }
-    if (event.scoringTeam || event.team) {
-      return "away"
-    }
-
-    // Fallback when backend only gives isHomeGoal without team strings.
-    if (isGoal && isHomeGoalByFlag !== null) {
-      if (isHarnosandTeam(homeTeam)) return isHomeGoalByFlag ? "home" : "away"
-      if (isHarnosandTeam(awayTeam)) return isHomeGoalByFlag ? "away" : "home"
-    }
-
-    return "away"
-  })()
+  const eventSide = getResolvedEventSide(event, homeTeam, awayTeam)
+  const teamTone = eventSide === "center" ? "neutral" : eventSide
 
   if (isPenalty) {
     return {
@@ -574,7 +621,7 @@ const getRowStyle = (event: MatchFeedEvent, homeTeam: string, awayTeam: string) 
       dot: "bg-amber-500",
       teamClass: "text-amber-700",
       kindLabel: "UTVISNING",
-      side: teamTone as "home" | "away",
+      side: teamTone === "neutral" ? "home" as const : teamTone,
     }
   }
 
@@ -591,10 +638,10 @@ const getRowStyle = (event: MatchFeedEvent, homeTeam: string, awayTeam: string) 
   if (isGoal && teamTone !== "home") {
     return {
       tone: "border-slate-200 bg-white",
-      dot: "bg-slate-400",
+      dot: teamTone === "away" ? "bg-slate-400" : "bg-slate-300",
       teamClass: "text-slate-500",
       kindLabel: "MÅL",
-      side: "away" as const,
+      side: teamTone === "away" ? "away" as const : "home" as const,
     }
   }
 
@@ -603,25 +650,12 @@ const getRowStyle = (event: MatchFeedEvent, homeTeam: string, awayTeam: string) 
     dot: "bg-slate-300",
     teamClass: "text-slate-500",
     kindLabel: "HÄNDELSE",
-    side: teamTone as "home" | "away",
+    side: teamTone === "away" ? "away" as const : "home" as const,
   }
 }
 
 const getEventSide = (event: MatchFeedEvent, homeTeam: string, awayTeam: string): "home" | "away" | "center" => {
-  if (isLifecycleEvent(event)) return "center"
-
-  const text = getEventCombinedText(event)
-  if (text.includes("timeout")) return "center"
-
-  if (isHarnosandTeam(event.scoringTeam) || isHarnosandTeam(event.team)) return "home"
-  if (event.scoringTeam || event.team) return "away"
-
-  if (typeof event.isHomeGoal === "boolean") {
-    if (isHarnosandTeam(homeTeam)) return event.isHomeGoal ? "home" : "away"
-    if (isHarnosandTeam(awayTeam)) return event.isHomeGoal ? "away" : "home"
-  }
-
-  return "center"
+  return getResolvedEventSide(event, homeTeam, awayTeam)
 }
 
 export function MatchFeedModal({
@@ -1106,6 +1140,13 @@ export function MatchFeedModal({
               )}
               {!showTimelineSkeleton && displayedFeed.length === 0 && (
                 <p className="py-20 text-center text-sm text-slate-400">{emptyTimelineMessage}</p>
+              )}
+              {!showTimelineSkeleton && displayedFeed.length > 0 && (
+                <div className="grid grid-cols-[1fr_28px_1fr] items-center border-b border-slate-100 bg-white px-2 py-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400 sm:px-4">
+                  <p className="truncate pr-3 text-right">{homeTeam}</p>
+                  <p className="text-center text-slate-300">Tid</p>
+                  <p className="truncate pl-3 text-left">{awayTeam}</p>
+                </div>
               )}
               {periodKeys.map((period) => (
                 <section key={period}>
