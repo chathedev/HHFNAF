@@ -316,6 +316,7 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
   const [penaltiesByMatchId, setPenaltiesByMatchId] = useState<Record<string, MatchPenalty[]>>({})
   const [stableScoreByMatchId, setStableScoreByMatchId] = useState<Record<string, string>>({})
   const timelineFetchInFlightRef = useRef<Record<string, Promise<void>>>({})
+  const timelineFetchedAtRef = useRef<Record<string, number>>({})
   const { shopVisible } = useShopStatus()
   const {
     matches: currentMatches,
@@ -417,7 +418,9 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
   )
 
   const fetchMatchTimeline = useCallback(async (match: NormalizedMatch, force = false) => {
-    if (!force && Object.prototype.hasOwnProperty.call(timelineByMatchId, match.id)) {
+    const lastFetchedAt = timelineFetchedAtRef.current[match.id] ?? 0
+    const shouldRefresh = force || match.matchStatus === "live" || Date.now() - lastFetchedAt > 5000
+    if (!shouldRefresh && Object.prototype.hasOwnProperty.call(timelineByMatchId, match.id)) {
       return
     }
     const inFlight = timelineFetchInFlightRef.current[match.id]
@@ -460,6 +463,7 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
 
       const normalized = dedupeTimelineEvents(rawTimeline.map((event: any) => mapTimelineEvent(event)))
       setTimelineByMatchId((prev) => ({ ...prev, [match.id]: normalized }))
+      timelineFetchedAtRef.current[match.id] = Date.now()
       if (payload?.clockState) {
         setClockStateByMatchId((prev) => ({ ...prev, [match.id]: payload.clockState as MatchClockState }))
       }
@@ -484,7 +488,7 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
     (match: NormalizedMatch) => {
       setSelectedMatchId(match.id)
       setSelectedMatchSnapshot(match)
-      fetchMatchTimeline(match).catch((error) => {
+      fetchMatchTimeline(match, true).catch((error) => {
         console.warn("Failed to hydrate match timeline", error)
       })
     },
@@ -501,6 +505,17 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
     },
     [timelineByMatchId],
   )
+
+  useEffect(() => {
+    if (!selectedMatch) return
+    if (selectedMatch.matchStatus !== "live") return
+
+    const interval = window.setInterval(() => {
+      fetchMatchTimeline(selectedMatch, true).catch(() => undefined)
+    }, 3000)
+
+    return () => window.clearInterval(interval)
+  }, [selectedMatch, fetchMatchTimeline])
 
   const renderHomeMatchCard = (match: NormalizedMatch) => {
     const status = getMatchStatus(match)
