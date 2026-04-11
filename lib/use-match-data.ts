@@ -1633,8 +1633,7 @@ const createMatchDataChannel = () => {
   }
 
   const forcePoll = () => {
-    pollFull()
-    pollEvents()
+    return Promise.all([pollFull(), pollEvents()])
   }
 
   return {
@@ -1652,7 +1651,7 @@ const matchDataChannel = createMatchDataChannel()
 
 /** Force an immediate poll of all match data channels (cards + page). */
 export const forceMatchDataPoll = () => {
-  matchDataChannel.forcePoll()
+  return matchDataChannel.forcePoll()
 }
 
 export const getMatchData = async (

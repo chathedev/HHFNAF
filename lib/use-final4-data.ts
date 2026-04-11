@@ -104,7 +104,10 @@ export function useFinal4Data(initialData?: Final4Data | null) {
   useEffect(() => {
     if (!initialData) fetchData()
     const pollInterval = isFinal4Active() ? FINAL4_ACTIVE_POLL_INTERVAL_MS : FINAL4_IDLE_POLL_INTERVAL_MS
-    intervalRef.current = setInterval(fetchData, pollInterval)
+    intervalRef.current = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return
+      fetchData().catch(() => undefined)
+    }, pollInterval)
 
     const handleVisibilityRefresh = () => {
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return

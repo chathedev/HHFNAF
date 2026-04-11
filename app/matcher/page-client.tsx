@@ -1018,7 +1018,7 @@ export function MatcherPageClient({ initialData, isFinal4 = false, final4Initial
             if (isFinal4) {
               await forceFinal4Poll().catch(() => undefined)
             } else {
-              forceMatchDataPoll()
+              await forceMatchDataPoll().catch(() => undefined)
             }
             await fetchMatchTimeline(selectedMatch, true).catch(() => undefined)
           }}
