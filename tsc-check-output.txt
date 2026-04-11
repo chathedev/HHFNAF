@@ -1,0 +1,46 @@
+app/matcher/page-client.tsx(13,8): error TS2307: Cannot find module '@/lib/match-card-utils' or its corresponding type declarations.
+app/matcher/page-client.tsx(14,89): error TS2307: Cannot find module '@/lib/use-match-data' or its corresponding type declarations.
+app/matcher/page-client.tsx(15,66): error TS2307: Cannot find module '@/lib/use-final4-data' or its corresponding type declarations.
+app/matcher/page-client.tsx(16,30): error TS2307: Cannot find module '@/components/match-card-cta' or its corresponding type declarations.
+app/matcher/page-client.tsx(17,94): error TS2307: Cannot find module '@/components/match-feed-modal' or its corresponding type declarations.
+app/matcher/page-client.tsx(18,35): error TS2307: Cannot find module '@/lib/matches' or its corresponding type declarations.
+app/matcher/page-client.tsx(19,62): error TS2307: Cannot find module '@/lib/team-display' or its corresponding type declarations.
+app/matcher/page-client.tsx(20,79): error TS2307: Cannot find module '@/lib/match-sort' or its corresponding type declarations.
+app/matcher/page-client.tsx(22,42): error TS2307: Cannot find module '@/lib/match-timeline' or its corresponding type declarations.
+app/matcher/page-client.tsx(23,111): error TS2307: Cannot find module '@/lib/final4-utils' or its corresponding type declarations.
+app/matcher/page-client.tsx(24,40): error TS2307: Cannot find module '@/lib/use-match-data' or its corresponding type declarations.
+app/matcher/page-client.tsx(70,48): error TS7006: Parameter 'key' implicitly has an 'any' type.
+app/matcher/page-client.tsx(337,171): error TS2307: Cannot find module '@/lib/use-final4-data' or its corresponding type declarations.
+app/matcher/page-client.tsx(430,39): error TS7006: Parameter 'match' implicitly has an 'any' type.
+app/matcher/page-client.tsx(435,39): error TS7006: Parameter 'match' implicitly has an 'any' type.
+app/matcher/page-client.tsx(533,64): error TS7006: Parameter 'event' implicitly has an 'any' type.
+app/page-client.tsx(7,24): error TS2307: Cannot find module '@/components/ui/button' or its corresponding type declarations.
+app/page-client.tsx(8,22): error TS2307: Cannot find module '@/components/ui/card' or its corresponding type declarations.
+app/page-client.tsx(9,78): error TS2307: Cannot find module '@/components/ui/accordion' or its corresponding type declarations.
+app/page-client.tsx(26,24): error TS2307: Cannot find module '@/components/header' or its corresponding type declarations.
+app/page-client.tsx(27,20): error TS2307: Cannot find module '@/components/footer' or its corresponding type declarations.
+app/page-client.tsx(28,31): error TS2307: Cannot find module '@/components/error-boundary' or its corresponding type declarations.
+app/page-client.tsx(29,32): error TS2307: Cannot find module '@/lib/default-content' or its corresponding type declarations.
+app/page-client.tsx(30,43): error TS2307: Cannot find module '@/lib/content-types' or its corresponding type declarations.
+app/page-client.tsx(31,104): error TS2307: Cannot find module '@/lib/site-variant' or its corresponding type declarations.
+app/page-client.tsx(32,39): error TS2307: Cannot find module '@/lib/team-display' or its corresponding type declarations.
+app/page-client.tsx(33,39): error TS2307: Cannot find module '@/lib/matches' or its corresponding type declarations.
+app/page-client.tsx(34,42): error TS2307: Cannot find module '@/lib/match-timeline' or its corresponding type declarations.
+app/page-client.tsx(43,8): error TS2307: Cannot find module '@/lib/match-card-utils' or its corresponding type declarations.
+app/page-client.tsx(44,72): error TS2307: Cannot find module '@/lib/use-match-data' or its corresponding type declarations.
+app/page-client.tsx(45,30): error TS2307: Cannot find module '@/components/match-card-cta' or its corresponding type declarations.
+app/page-client.tsx(46,31): error TS2307: Cannot find module '@/components/instagram-feed' or its corresponding type declarations.
+app/page-client.tsx(47,94): error TS2307: Cannot find module '@/components/match-feed-modal' or its corresponding type declarations.
+app/page-client.tsx(48,41): error TS2307: Cannot find module '@/components/shop-status-provider' or its corresponding type declarations.
+app/page-client.tsx(49,65): error TS2307: Cannot find module '@/lib/use-final4-data' or its corresponding type declarations.
+app/page-client.tsx(50,32): error TS2307: Cannot find module '@/components/final4-match-card' or its corresponding type declarations.
+app/page-client.tsx(51,111): error TS2307: Cannot find module '@/lib/final4-utils' or its corresponding type declarations.
+app/page-client.tsx(52,40): error TS2307: Cannot find module '@/lib/use-match-data' or its corresponding type declarations.
+app/page-client.tsx(132,39): error TS2307: Cannot find module '@/lib/use-final4-data' or its corresponding type declarations.
+app/page-client.tsx(177,49): error TS7006: Parameter 'm' implicitly has an 'any' type.
+app/page-client.tsx(187,27): error TS2802: Type 'MapIterator<NormalizedMatch[]>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+app/page-client.tsx(188,21): error TS7006: Parameter 'a' implicitly has an 'any' type.
+app/page-client.tsx(188,24): error TS7006: Parameter 'b' implicitly has an 'any' type.
+app/page-client.tsx(373,89): error TS7006: Parameter 'p' implicitly has an 'any' type.
+app/page-client.tsx(504,64): error TS7006: Parameter 'event' implicitly has an 'any' type.
+app/page-client.tsx(844,47): error TS7006: Parameter 'm' implicitly has an 'any' type.
