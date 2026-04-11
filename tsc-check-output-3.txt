@@ -1,0 +1,35 @@
+app/matcher/page-client.tsx(13,8): error TS2307: Cannot find module '@/lib/match-card-utils' or its corresponding type declarations.
+app/matcher/page-client.tsx(14,89): error TS2307: Cannot find module '@/lib/use-match-data' or its corresponding type declarations.
+app/matcher/page-client.tsx(15,66): error TS2307: Cannot find module '@/lib/use-final4-data' or its corresponding type declarations.
+app/matcher/page-client.tsx(16,30): error TS2307: Cannot find module '@/components/match-card-cta' or its corresponding type declarations.
+app/matcher/page-client.tsx(17,94): error TS2307: Cannot find module '@/components/match-feed-modal' or its corresponding type declarations.
+app/matcher/page-client.tsx(18,35): error TS2307: Cannot find module '@/lib/matches' or its corresponding type declarations.
+app/matcher/page-client.tsx(19,62): error TS2307: Cannot find module '@/lib/team-display' or its corresponding type declarations.
+app/matcher/page-client.tsx(20,79): error TS2307: Cannot find module '@/lib/match-sort' or its corresponding type declarations.
+app/matcher/page-client.tsx(22,42): error TS2307: Cannot find module '@/lib/match-timeline' or its corresponding type declarations.
+app/matcher/page-client.tsx(23,111): error TS2307: Cannot find module '@/lib/final4-utils' or its corresponding type declarations.
+app/matcher/page-client.tsx(24,40): error TS2307: Cannot find module '@/lib/use-match-data' or its corresponding type declarations.
+app/matcher/page-client.tsx(72,48): error TS7006: Parameter 'key' implicitly has an 'any' type.
+app/matcher/page-client.tsx(102,11): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+app/matcher/page-client.tsx(102,38): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+app/matcher/page-client.tsx(339,171): error TS2307: Cannot find module '@/lib/use-final4-data' or its corresponding type declarations.
+app/matcher/page-client.tsx(432,39): error TS7006: Parameter 'match' implicitly has an 'any' type.
+app/matcher/page-client.tsx(437,39): error TS7006: Parameter 'match' implicitly has an 'any' type.
+app/matcher/page-client.tsx(535,64): error TS7006: Parameter 'event' implicitly has an 'any' type.
+lib/match-card-utils.ts(64,14): error TS2451: Cannot redeclare block-scoped variable 'getSimplifiedMatchStatus'.
+lib/match-card-utils.ts(138,14): error TS2451: Cannot redeclare block-scoped variable 'getSimplifiedMatchStatus'.
+lib/use-match-data.ts(252,11): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+lib/use-match-data.ts(252,38): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+lib/use-match-data.ts(632,60): error TS2345: Argument of type 'string | null | undefined' is not assignable to parameter of type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+lib/use-match-data.ts(1199,5): error TS2322: Type '"live" | "finished" | "upcoming" | "halftime" | undefined' is not assignable to type '"live" | "finished" | "upcoming" | null | undefined'.
+  Type '"halftime"' is not assignable to type '"live" | "finished" | "upcoming" | null | undefined'.
+lib/use-match-data.ts(1339,11): error TS2322: Type '{ id?: string | number; matchId?: string | number; home?: string | undefined; away?: string | undefined; date?: string | undefined; time?: string; homeImg?: string | null; awayImg?: string | null; ... 32 more ...; arena?: string | null; }' is not assignable to type 'ApiMatch'.
+  Types of property 'home' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+lib/use-match-data.ts(2033,13): error TS2345: Argument of type '() => (() => boolean) | undefined' is not assignable to parameter of type 'EffectCallback'.
+  Type '(() => boolean) | undefined' is not assignable to type 'void | Destructor'.
+    Type '() => boolean' is not assignable to type 'void | Destructor'.
+      Type '() => boolean' is not assignable to type 'Destructor'.
+        Type 'boolean' is not assignable to type 'void | { [UNDEFINED_VOID_ONLY]: never; }'.

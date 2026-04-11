@@ -527,6 +527,16 @@ const getMatchEndTime = (match: { date: Date; startTimestamp?: number; matchFeed
   return new Date(matchStart + 90 * 60 * 1000)
 }
 
+const parseFinalScore = (result?: string) => {
+  const value = (result || "").trim()
+  const parsed = value.match(/(\d+)\s*[-–]\s*(\d+)/)
+  if (!parsed) return null
+  const home = Number.parseInt(parsed[1], 10)
+  const away = Number.parseInt(parsed[2], 10)
+  if (!Number.isFinite(home) || !Number.isFinite(away)) return null
+  return { home, away }
+}
+
 // ENHANCED: Helper to check if a finished match should still be displayed (for home/matcher pages - only > 0-0)
 const shouldShowFinishedMatch = (match: { date: Date; matchFeed?: MatchFeedEvent[]; matchStatus?: string; result?: string }, retentionHours: number) => {
   if (match.matchStatus !== "finished") {
@@ -618,6 +628,10 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
 
   // Start with backend status, but ALWAYS check timeline for halftime override
   let derivedStatus: NormalizedMatch["matchStatus"] | undefined = normalizeStatusValue(match.matchStatus)
+
+  if (match.resultState === "available" && parseFinalScore(match.result)) {
+    derivedStatus = "finished"
+  }
 
   // ALWAYS analyze timeline for halftime detection (override backend status if needed)
   {
