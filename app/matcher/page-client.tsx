@@ -461,16 +461,32 @@ export function MatcherPageClient({ initialData, isFinal4 = false, final4Initial
     }
 
     const request = (async () => {
-      const response = await fetch(`${API_BASE_URL}/matcher/match/${encodeURIComponent(apiMatchId)}?includeEvents=1`, {
-        cache: "no-store",
-        headers: { Accept: "application/json" },
-      })
-      if (!response.ok) {
-        throw new Error(`Could not load timeline (${response.status})`)
+      const fetchTimelinePayload = async (url: string) => {
+        const response = await fetch(url, {
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        })
+        if (!response.ok) {
+          return null
+        }
+        return response.json()
       }
 
-      const payload = await response.json()
-      const rawTimeline = resolvePreferredTimeline(payload, match.matchFeed ?? [])
+      const isFinal4Match = match.infoUrl?.includes("/leagueid27943/") ?? false
+      let payload = await fetchTimelinePayload(`${API_BASE_URL}/matcher/match/${encodeURIComponent(apiMatchId)}?includeEvents=1`)
+      let rawTimeline = resolvePreferredTimeline(payload ?? {}, match.matchFeed ?? [])
+
+      if (isFinal4Match && (!payload?.match || rawTimeline.length === 0)) {
+        const final4Payload = await fetchTimelinePayload(`${API_BASE_URL}/matcher/final4/match/${encodeURIComponent(apiMatchId)}`)
+        if (final4Payload) {
+          payload = final4Payload
+          rawTimeline = resolvePreferredTimeline(final4Payload, match.matchFeed ?? [])
+        }
+      }
+
+      if (!payload) {
+        throw new Error("Could not load timeline")
+      }
 
       const normalized = dedupeTimelineEvents(rawTimeline.map((event: any) => mapTimelineEvent(event)))
       setTimelineByMatchId((prev) => ({ ...prev, [match.id]: normalized }))

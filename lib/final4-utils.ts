@@ -24,7 +24,7 @@ export const getFinal4MatchStartTimestamp = (match: Pick<Final4Match, "date" | "
 export const getFinal4VenueLabel = (venue?: string | null) => {
   const mapped = mapVenueIdToName(venue)
   if (!mapped) return undefined
-  const trimmed = mapped.trim().replace(/\s+Härnösand$/i, ", Härnösand")
+  const trimmed = mapped.trim().replace(/(?:\s*,\s*|\s+)Härnösand$/i, ", Härnösand")
   return /^\d{1,4}$/.test(trimmed) ? undefined : trimmed
 }
 
