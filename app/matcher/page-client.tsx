@@ -12,7 +12,7 @@ import {
   shouldShowProfixioTechnicalIssue,
 } from "@/lib/match-card-utils"
 import { getMatchEndTime, useMatchData, forceMatchDataPoll, type NormalizedMatch } from "@/lib/use-match-data"
-import { useFinal4Data, type Final4Match } from "@/lib/use-final4-data"
+import { forceFinal4Poll, useFinal4Data, type Final4Match } from "@/lib/use-final4-data"
 import { MatchCardCTA } from "@/components/match-card-cta"
 import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
 import { normalizeMatchKey } from "@/lib/matches"
@@ -1015,7 +1015,11 @@ export function MatcherPageClient({ initialData, isFinal4 = false, final4Initial
           penalties={penaltiesByMatchId[selectedMatch.id] ?? []}
           topScorers={topScorersByMatchId[selectedMatch.id] ?? []}
           onRefresh={async () => {
-            forceMatchDataPoll()
+            if (isFinal4) {
+              await forceFinal4Poll().catch(() => undefined)
+            } else {
+              forceMatchDataPoll()
+            }
             await fetchMatchTimeline(selectedMatch, true).catch(() => undefined)
           }}
         />

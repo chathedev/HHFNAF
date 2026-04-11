@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { matchStateManager } from "./match-state-manager"
 import { mapVenueIdToName } from "./venue-mapper"
 import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "./match-sort"
@@ -1939,22 +1939,24 @@ export const useMatchData = (options?: {
   const applyPayload = useCallback(
     (payload: MatchChannelPayload) => {
       const selectedMatches = selectMatchesFromPayload(payload)
-      setMatches(selectedMatches)
-      setRecentResults(payload.recentResults)
-      setGroupedFeed(payload.groupedFeed)
-      setSources(payload.sources)
-      setWindow(payload.window)
       selectedMatches.forEach((match) => {
         matchStateManager.queueUpdate(match.id, {
           ...match,
           lastUpdated: Date.now(),
         })
       })
-      setHasData(true)
-      setError(null)
-      setLoading(false)
-      setHasPayload(true)
-      setHasClientData(true)
+      startTransition(() => {
+        setMatches(selectedMatches)
+        setRecentResults(payload.recentResults)
+        setGroupedFeed(payload.groupedFeed)
+        setSources(payload.sources)
+        setWindow(payload.window)
+        setHasData(true)
+        setError(null)
+        setLoading(false)
+        setHasPayload(true)
+        setHasClientData(true)
+      })
       return selectedMatches
     },
     [selectMatchesFromPayload],
@@ -1963,28 +1965,30 @@ export const useMatchData = (options?: {
   const applyEnhancedPayload = useCallback(
     (payload: EnhancedMatchData) => {
       const selectedMatches = paramsLimit !== undefined ? payload.matches.slice(0, paramsLimit) : payload.matches
-      setMatches(selectedMatches)
-      setRecentResults(payload.recentResults ?? [])
-      setGroupedFeed(
-        payload.groupedFeed ?? {
-          live: [],
-          upcoming: [],
-          finished: [],
-        },
-      )
-      setSources(payload.sources)
-      setWindow(payload.window)
       selectedMatches.forEach((match) => {
         matchStateManager.queueUpdate(match.id, {
           ...match,
           lastUpdated: Date.now(),
         })
       })
-      setHasData(selectedMatches.length > 0 || (payload.recentResults?.length ?? 0) > 0)
-      setError(null)
-      setLoading(false)
-      setHasPayload(true)
-      setHasClientData(true)
+      startTransition(() => {
+        setMatches(selectedMatches)
+        setRecentResults(payload.recentResults ?? [])
+        setGroupedFeed(
+          payload.groupedFeed ?? {
+            live: [],
+            upcoming: [],
+            finished: [],
+          },
+        )
+        setSources(payload.sources)
+        setWindow(payload.window)
+        setHasData(selectedMatches.length > 0 || (payload.recentResults?.length ?? 0) > 0)
+        setError(null)
+        setLoading(false)
+        setHasPayload(true)
+        setHasClientData(true)
+      })
       return selectedMatches
     },
     [paramsLimit],

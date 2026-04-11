@@ -46,7 +46,7 @@ import { MatchCardCTA } from "@/components/match-card-cta"
 import { InstagramFeed } from "@/components/instagram-feed"
 import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
 import { SHOP_URL, useShopStatus } from "@/components/shop-status-provider"
-import { useFinal4Data, type Final4Data } from "@/lib/use-final4-data"
+import { forceFinal4Poll, useFinal4Data, type Final4Data } from "@/lib/use-final4-data"
 import { Final4MatchRow } from "@/components/final4-match-card"
 import { getFinal4DerivedStatus, getFinal4DisplayScore, getFinal4VenueLabel, isFinal4TimelineAvailable } from "@/lib/final4-utils"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
@@ -331,7 +331,6 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
     dataType: "liveUpcoming",
     initialData,
     followInitialWindow: true,
-    refreshIntervalMs: 30_000,
   })
   const matchError = Boolean(matchErrorMessage)
   const hasTriggeredFallbackRef = useRef(false)
@@ -1646,7 +1645,11 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
             penalties={penaltiesByMatchId[selectedMatch.id] ?? []}
             topScorers={topScorersByMatchId[selectedMatch.id] ?? []}
             onRefresh={async () => {
-              forceMatchDataPoll()
+              if (isFinal4) {
+                await forceFinal4Poll().catch(() => undefined)
+              } else {
+                forceMatchDataPoll()
+              }
               await fetchMatchTimeline(selectedMatch, true).catch(() => undefined)
             }}
           />

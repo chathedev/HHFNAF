@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useEffect, useMemo, useRef, useState } from "react"
+import { memo, startTransition, useEffect, useMemo, useRef, useState } from "react"
 import { X } from "lucide-react"
 import type { NormalizedMatch } from "@/lib/use-match-data"
 import { preferRicherTimeline, resolvePreferredTimeline } from "@/lib/match-timeline"
@@ -726,10 +726,12 @@ export function MatchFeedModal({
       if (!response.ok) return
       const payload = await response.json()
       const normalized = enrichTimelineWithMatchDetails(payload, matchFeed)
-      setDetailTimeline(normalized)
-      setDetailClockState((payload?.clockState as MatchClockState) ?? null)
-      setDetailPenalties(Array.isArray(payload?.penalties) ? payload.penalties : [])
-      setClockTick(0)
+      startTransition(() => {
+        setDetailTimeline(normalized)
+        setDetailClockState((payload?.clockState as MatchClockState) ?? null)
+        setDetailPenalties(Array.isArray(payload?.penalties) ? payload.penalties : [])
+        setClockTick(0)
+      })
     } finally {
       setIsTimelineLoading(false)
     }
