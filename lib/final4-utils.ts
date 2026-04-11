@@ -29,6 +29,9 @@ export const getFinal4VenueLabel = (venue?: string | null) => {
 }
 
 export const getFinal4DerivedStatus = (match: Final4Match, nowMs = Date.now()): Final4DisplayStatus => {
+  // Derive display status for Final4 matches.
+  // Primary: Use API's matchStatus ("live", "finished", "upcoming").
+  // Fallbacks: Time-based for cases where API status might be delayed or missing.
   const startTs = getFinal4MatchStartTimestamp(match)
   const homeScore = typeof match.homeScore === "number" ? match.homeScore : null
   const awayScore = typeof match.awayScore === "number" ? match.awayScore : null
