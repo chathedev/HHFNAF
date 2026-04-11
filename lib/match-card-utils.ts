@@ -124,6 +124,31 @@ const parseScore = (result?: string) => {
   return { home, away }
 }
 
+const hasFinalScore = (match: NormalizedMatch) => {
+  return parseScore(match.result) !== null
+}
+
+const shouldTreatAsFinished = (match: NormalizedMatch) => {
+  if (match.resultState === "available" && hasFinalScore(match)) {
+    return true
+  }
+  return false
+}
+
+export const getSimplifiedMatchStatus = (match: NormalizedMatch): "live" | "finished" | "upcoming" => {
+  const normalized = normalizeStatusValue(match.matchStatus)
+  if (normalized === "finished") {
+    return "finished"
+  }
+  if (shouldTreatAsFinished(match)) {
+    return "finished"
+  }
+  if (normalized === "live" || normalized === "halftime") {
+    return "live"
+  }
+  return "upcoming"
+}
+
 const hasTimelineSignal = (match: NormalizedMatch) => {
   const feed = match.matchFeed ?? []
   return feed.some((event) => {

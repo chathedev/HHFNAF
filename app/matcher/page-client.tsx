@@ -32,8 +32,10 @@ type MatchTopScorer = {
 type StatusFilter = "current" | "live" | "upcoming" | "finished"
 
 const getMatchStatus = (match: NormalizedMatch): StatusFilter => {
-  // TRUST BACKEND COMPLETELY - it knows the real match status
-  return match.matchStatus === "halftime" ? "live" : (match.matchStatus ?? "upcoming")
+  const simplifiedStatus = getSimplifiedMatchStatus(match)
+  if (simplifiedStatus === "live") return "live"
+  if (simplifiedStatus === "finished") return "finished"
+  return "upcoming"
 }
 
 const TEAM_OPTION_VALUES = [
