@@ -523,7 +523,7 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
     const scheduleLabel = buildMatchScheduleLabel(match)
     const matchupLabel = getMatchupLabel(match)
     const showProfixioWarning = shouldShowProfixioTechnicalIssue(match)
-    const showFinishedZeroZeroIssue = shouldShowFinishedZeroZeroIssue(match)
+    const showFinishedZeroZeroIssue = hasClientMatchData && shouldShowFinishedZeroZeroIssue(match)
     const teamTypeRaw = match.teamType?.trim() || ""
     const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
     const liveScore = typeof match.result === "string" ? match.result.trim() : ""
