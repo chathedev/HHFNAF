@@ -24,30 +24,48 @@ export function Final4PageClient({ initialData }: { initialData?: Final4Data }) 
   const { data, loading, error } = useFinal4Data(initialData)
   const active = isFinal4Active()
 
-  // Group matches by date, then sort by time within each date
-  const matchesByDate = useMemo(() => {
-    if (!data) return []
-    const map = new Map<string, Final4Match[]>()
+  const { liveMatches, upcomingByDate, finishedByDate } = useMemo(() => {
+    if (!data) return { liveMatches: [], upcomingByDate: [], finishedByDate: [] }
+
+    const live: Final4Match[] = []
+    const upcoming: Final4Match[] = []
+    const finished: Final4Match[] = []
+
     for (const m of data.matches) {
-      if (getFinal4DerivedStatus(m) === "live") continue
-      const dateKey = new Date(m.date).toISOString().slice(0, 10)
-      if (!map.has(dateKey)) map.set(dateKey, [])
-      map.get(dateKey)!.push(m)
+      const status = getFinal4DerivedStatus(m)
+      if (status === "live") live.push(m)
+      else if (status === "finished") finished.push(m)
+      else upcoming.push(m)
     }
-    // Sort each day by time
-    for (const matches of map.values()) {
-      matches.sort((a, b) => (a.time || "").localeCompare(b.time || ""))
+
+    const groupByDate = (matches: Final4Match[]) => {
+      const map = new Map<string, Final4Match[]>()
+      for (const m of matches) {
+        const dateKey = new Date(m.date).toISOString().slice(0, 10)
+        if (!map.has(dateKey)) map.set(dateKey, [])
+        map.get(dateKey)!.push(m)
+      }
+      for (const arr of map.values()) {
+        arr.sort((a, b) => (a.time || "").localeCompare(b.time || ""))
+      }
+      return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b))
     }
-    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b))
+
+    return {
+      liveMatches: live,
+      upcomingByDate: groupByDate(upcoming),
+      finishedByDate: groupByDate(finished),
+    }
   }, [data])
 
-  const liveMatches = data?.matches.filter((m) => getFinal4DerivedStatus(m) === "live") ?? []
+  const hasUpcoming = upcomingByDate.some(([, m]) => m.length > 0)
+  const hasFinished = finishedByDate.some(([, m]) => m.length > 0)
 
   return (
     <div>
       <Header />
       <main>
-        {/* Hero — image only, full impact */}
+        {/* Hero */}
         <section className="relative w-full h-[70vh] sm:h-screen overflow-hidden">
           <Image
             src="/final4-hero.webp"
@@ -84,14 +102,14 @@ export function Final4PageClient({ initialData }: { initialData?: Final4Data }) 
               )}
 
               {data && data.matches.length > 0 && (
-                <div className="space-y-8">
-                  {/* Live now */}
+                <div className="space-y-10">
+                  {/* ── LIVE NOW ── */}
                   {liveMatches.length > 0 && (
                     <div>
                       <div className="flex items-center gap-3 mb-3">
                         <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-900">
                           <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                          Live
+                          Pågår nu
                         </span>
                         <div className="flex-1 h-px bg-slate-200" />
                       </div>
@@ -103,22 +121,56 @@ export function Final4PageClient({ initialData }: { initialData?: Final4Data }) 
                     </div>
                   )}
 
-                  {/* All matches by date */}
-                  {matchesByDate.map(([dateKey, matches]) => (
-                    <div key={dateKey}>
-                      <div className="flex items-center gap-3 mb-3">
-                        <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-900 capitalize">
-                          {formatDateHeading(dateKey)}
-                        </span>
-                        <div className="flex-1 h-px bg-slate-200" />
-                      </div>
-                      <ul>
-                        {matches.map((m) => (
-                          <li key={m.matchId}><Final4MatchRow match={m} /></li>
-                        ))}
-                      </ul>
+                  {/* ── UPCOMING ── */}
+                  {hasUpcoming && (
+                    <div>
+                      {upcomingByDate.map(([dateKey, matches]) => (
+                        <div key={dateKey} className="mb-6 last:mb-0">
+                          <div className="flex items-center gap-3 mb-3">
+                            <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-900 capitalize">
+                              {formatDateHeading(dateKey)}
+                            </span>
+                            <div className="flex-1 h-px bg-slate-200" />
+                          </div>
+                          <ul>
+                            {matches.map((m) => (
+                              <li key={m.matchId}><Final4MatchRow match={m} /></li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
+
+                  {/* ── FINISHED (collapsed, secondary) ── */}
+                  {hasFinished && (
+                    <details className="group">
+                      <summary className="flex items-center gap-3 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden mb-3">
+                        <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+                          Avslutade matcher
+                        </span>
+                        <div className="flex-1 h-px bg-slate-100" />
+                        <span className="text-[10px] text-slate-400 group-open:rotate-180 transition-transform">&#9660;</span>
+                      </summary>
+                      <div className="space-y-6">
+                        {finishedByDate.map(([dateKey, matches]) => (
+                          <div key={dateKey}>
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className="text-[10px] font-medium uppercase tracking-widest text-slate-300 capitalize">
+                                {formatDateHeading(dateKey)}
+                              </span>
+                              <div className="flex-1 h-px bg-slate-100" />
+                            </div>
+                            <ul className="opacity-80">
+                              {matches.map((m) => (
+                                <li key={m.matchId}><Final4MatchRow match={m} /></li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  )}
 
                   {active && (
                     <p className="text-xs text-slate-400 flex items-center gap-1.5">
