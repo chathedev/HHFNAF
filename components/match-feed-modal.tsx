@@ -687,13 +687,10 @@ export function MatchFeedModal({
   const modalRefreshIntervalMs = matchData?.provider === "procup" ? 5_000 : 3_000
   const effectiveClockState = detailClockState ?? clockState ?? null
   const effectivePenalties = detailPenalties.length > 0 ? detailPenalties : penalties
-  const shouldWaitForDetailedTimeline =
-    isTimelineLoading && !detailTimeline && Boolean(matchData?.apiMatchId) && isLowFidelityTimeline(matchFeed)
-  const timelineSource = shouldWaitForDetailedTimeline
-    ? []
-    : detailTimeline
-      ? preferRicherTimeline(detailTimeline, matchFeed)
-      : matchFeed
+  // Show best available timeline immediately — never block on detail fetch
+  const timelineSource = detailTimeline
+    ? preferRicherTimeline(detailTimeline, matchFeed)
+    : matchFeed
   const hasClockData = Boolean(
     effectiveClockState &&
       (typeof effectiveClockState.currentSeconds === "number" || Boolean(effectiveClockState.clock)),
