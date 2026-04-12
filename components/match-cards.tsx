@@ -161,12 +161,15 @@ export default function MatchCards() {
             return kickoffTime >= now - lookBackMs
           })
           .sort((a, b) => {
-            // Live matches first, then by date
-            const aLive = a.match.matchStatus === "live" ? 0 : 1
-            const bLive = b.match.matchStatus === "live" ? 0 : 1
-            if (aLive !== bLive) return aLive - bLive
+            // Priority: live (0) > upcoming (1) > finished (2)
+            const statusOrder = (s?: string) => s === "live" ? 0 : s === "finished" ? 2 : 1
+            const aOrder = statusOrder(a.match.matchStatus)
+            const bOrder = statusOrder(b.match.matchStatus)
+            if (aOrder !== bOrder) return aOrder - bOrder
             const aTime = a.kickoff ? a.kickoff.getTime() : Infinity
             const bTime = b.kickoff ? b.kickoff.getTime() : Infinity
+            // Finished matches: most recent first; others: soonest first
+            if (aOrder === 2) return bTime - aTime
             return aTime - bTime
           })
           .map(({ match }) => match)
