@@ -715,10 +715,13 @@ export function MatchFeedModal({
     const apiMatchId = matchData?.apiMatchId
     if (!apiMatchId) return
     setIsTimelineLoading(true)
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 8_000)
     try {
       const response = await fetch(`${API_BASE_URL}/matcher/match/${encodeURIComponent(apiMatchId)}?includeEvents=1`, {
         cache: "no-store",
         headers: { Accept: "application/json" },
+        signal: controller.signal,
       })
       if (!response.ok) return
       const payload = await response.json()
@@ -730,6 +733,7 @@ export function MatchFeedModal({
         setClockTick(0)
       })
     } finally {
+      clearTimeout(timeoutId)
       setIsTimelineLoading(false)
     }
   }
