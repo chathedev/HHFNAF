@@ -1,4 +1,4 @@
-import type { Final4Match } from "./final4-data"
+import type { Final4Match, Final4FeedEvent } from "./final4-data"
 import { mapVenueIdToName } from "./venue-mapper"
 
 export type Final4DisplayStatus = "live" | "finished" | "upcoming"
@@ -28,66 +28,62 @@ export const getFinal4VenueLabel = (venue?: string | null) => {
   return /^\d{1,4}$/.test(trimmed) ? undefined : trimmed
 }
 
+/** Check if matchFeed timeline contains end-of-match signals */
+const feedIndicatesFinished = (feed?: Final4FeedEvent[] | null): boolean => {
+  if (!feed || feed.length === 0) return false
+  const FINISH = ["matchen är slut", "matchslut", "slutsignal", "fulltid", "game over", "end of game", "slut", "avslutad", "finished", "ended"]
+  const HALF = ["halvlek", "halftime", "half time", "paus", "halvtid"]
+  return feed.some((e) => {
+    const text = `${(e.type || "").toLowerCase()} ${(e.description || "").toLowerCase()}`
+    const hasFinish = FINISH.some((p) => text.includes(p))
+    if (!hasFinish) return false
+    const isHalf = HALF.some((p) => text.includes(p))
+    return !isHalf
+  })
+}
+
 export const getFinal4DerivedStatus = (match: Final4Match, nowMs = Date.now()): Final4DisplayStatus => {
-  // Derive display status for Final4 matches.
-  // Primary: Use API's matchStatus ("live", "finished", "upcoming").
-  // Fallbacks: Time-based for cases where API status might be delayed or missing.
   const startTs = getFinal4MatchStartTimestamp(match)
   const homeScore = typeof match.homeScore === "number" ? match.homeScore : null
   const awayScore = typeof match.awayScore === "number" ? match.awayScore : null
   const hasScore = homeScore !== null && awayScore !== null
   const hasRealScore = hasScore && !(homeScore === 0 && awayScore === 0)
   const rawStatus = match.matchStatus
-  const hasResult = parseScore(match.result) !== null
-  const isPastStart = startTs !== null && nowMs >= startTs
 
   // API says finished — trust it
-  if (rawStatus === "finished") {
-    return "finished"
-  }
+  if (rawStatus === "finished") return "finished"
+
+  // Timeline says finished (Matchslut, 60:00 end events) — trust it even if API is delayed
+  if (feedIndicatesFinished(match.matchFeed)) return "finished"
 
   // API says live — trust it
-  if (rawStatus === "live") {
-    return "live"
-  }
+  if (rawStatus === "live") return "live"
 
-  // Has a real score but API hasn't flagged live/finished — match started early
+  // Has a real score but API hasn't flagged live/finished
   if (hasRealScore) {
     return startTs !== null && nowMs >= startTs + MATCH_DURATION_MS ? "finished" : "live"
   }
 
-  // No score, before scheduled start — upcoming
-  if (startTs !== null && nowMs < startTs) {
-    return "upcoming"
-  }
+  // No score, before scheduled start
+  if (startTs !== null && nowMs < startTs) return "upcoming"
 
-  // Past scheduled start, within match duration — live
-  if (startTs !== null && nowMs >= startTs && nowMs <= startTs + MATCH_DURATION_MS) {
-    return "live"
-  }
+  // Past scheduled start, within match duration
+  if (startTs !== null && nowMs >= startTs && nowMs <= startTs + MATCH_DURATION_MS) return "live"
 
   return "upcoming"
 }
 
 export const getFinal4DisplayScore = (match: Final4Match, nowMs = Date.now()) => {
   const status = getFinal4DerivedStatus(match, nowMs)
-  if (status === "upcoming") {
-    return null
-  }
+  if (status === "upcoming") return null
 
   const numericScore =
     typeof match.homeScore === "number" && typeof match.awayScore === "number"
       ? { home: match.homeScore, away: match.awayScore }
       : parseScore(match.result)
 
-  if (!numericScore) {
-    return null
-  }
-
-  if (numericScore.home === 0 && numericScore.away === 0) {
-    return null
-  }
-
+  if (!numericScore) return null
+  if (numericScore.home === 0 && numericScore.away === 0) return null
   return `${numericScore.home}-${numericScore.away}`
 }
 
