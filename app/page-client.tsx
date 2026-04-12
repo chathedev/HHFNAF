@@ -529,8 +529,8 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
     const liveScore = typeof match.result === "string" ? match.result.trim() : ""
     const stableScore = liveScore || stableScoreByMatchId[match.id] || ""
     const hasStarted = match.date.getTime() <= Date.now() + 60_000
-    // Suppress stale SSR 0-0 for live matches until first client poll confirms the score
-    const isUnconfirmedZero = !hasClientMatchData && status === "live" && isZeroScore(stableScore)
+    // Suppress stale SSR 0-0 until first client poll confirms the score
+    const isUnconfirmedZero = !hasClientMatchData && (status === "live" || status === "finished") && isZeroScore(stableScore)
     const scoreValue = stableScore && !isUnconfirmedZero && (status !== "upcoming" || hasStarted) ? stableScore : null
     const showLivePendingScore = status === "live" && (match.resultState === "live_pending" || isUnconfirmedZero) && !scoreValue
     const hasStream =
@@ -724,7 +724,7 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
     const liveScore = typeof match.result === "string" ? match.result.trim() : ""
     const stableScore = liveScore || stableScoreByMatchId[match.id] || ""
     const hasStarted = match.date.getTime() <= Date.now() + 60_000
-    const isUnconfirmedZero = !hasClientMatchData && status === "live" && isZeroScore(stableScore)
+    const isUnconfirmedZero = !hasClientMatchData && (status === "live" || status === "finished") && isZeroScore(stableScore)
     const scoreValue = stableScore && !isUnconfirmedZero && (status !== "upcoming" || hasStarted) ? stableScore : null
     const showLivePendingScore = status === "live" && (match.resultState === "live_pending" || isUnconfirmedZero) && !scoreValue
 

@@ -642,7 +642,7 @@ export function MatcherPageClient({ initialData, isFinal4 = false, final4Initial
     const teamTypeRaw = match.teamType?.trim() || ""
     const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
     const cleanedResult = match.result?.trim()
-    const isUnconfirmedZero = !hasClientMatchData && status === "live" && cleanedResult != null && /^0\s*[-–—]\s*0$/.test(cleanedResult)
+    const isUnconfirmedZero = !hasClientMatchData && (status === "live" || status === "finished") && cleanedResult != null && /^0\s*[-–—]\s*0$/.test(cleanedResult)
     const scoreValue =
       status === "upcoming" || match.resultState === "not_started" || match.resultState === "live_pending" || isUnconfirmedZero
         ? null
