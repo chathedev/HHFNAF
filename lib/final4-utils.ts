@@ -41,22 +41,27 @@ export const getFinal4DerivedStatus = (match: Final4Match, nowMs = Date.now()): 
   const hasResult = parseScore(match.result) !== null
   const isPastStart = startTs !== null && nowMs >= startTs
 
-  if (startTs !== null && nowMs < startTs) {
-    return "upcoming"
-  }
-
+  // API says finished — trust it
   if (rawStatus === "finished") {
     return "finished"
   }
 
+  // API says live — trust it
   if (rawStatus === "live") {
     return "live"
   }
 
-  if (hasRealScore && startTs !== null && nowMs >= startTs + MATCH_DURATION_MS) {
-    return "finished"
+  // Has a real score but API hasn't flagged live/finished — match started early
+  if (hasRealScore) {
+    return startTs !== null && nowMs >= startTs + MATCH_DURATION_MS ? "finished" : "live"
   }
 
+  // No score, before scheduled start — upcoming
+  if (startTs !== null && nowMs < startTs) {
+    return "upcoming"
+  }
+
+  // Past scheduled start, within match duration — live
   if (startTs !== null && nowMs >= startTs && nowMs <= startTs + MATCH_DURATION_MS) {
     return "live"
   }
@@ -87,15 +92,6 @@ export const getFinal4DisplayScore = (match: Final4Match, nowMs = Date.now()) =>
 }
 
 export const isFinal4TimelineAvailable = (match: Final4Match, nowMs = Date.now()) => {
-  const home = match.homeName || ""
-  const away = match.awayName || ""
-  const hasPlaceholder = [home, away].some(
-    (name) => name.startsWith("Winner ") || name.startsWith("Loser ") || name === "TBD",
-  )
-
-  if (hasPlaceholder || !match.detailUrl) {
-    return false
-  }
-
-  return getFinal4DerivedStatus(match, nowMs) !== "upcoming"
+  const status = getFinal4DerivedStatus(match, nowMs)
+  return status !== "upcoming"
 }
