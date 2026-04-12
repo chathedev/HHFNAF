@@ -48,7 +48,8 @@ const hasFinal4PayloadChanged = (previous: Final4Data | null, next: Final4Data) 
       prev.series !== curr.series ||
       prev.detailUrl !== curr.detailUrl ||
       prev.playUrl !== curr.playUrl ||
-      prev.infoUrl !== curr.infoUrl
+      prev.infoUrl !== curr.infoUrl ||
+      (prev.matchFeed?.length ?? 0) !== (curr.matchFeed?.length ?? 0)
     ) {
       return true
     }

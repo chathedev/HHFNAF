@@ -1,5 +1,19 @@
 const API_BASE = process.env.NEXT_PUBLIC_MATCH_API_BASE || "https://api.harnosandshf.se"
 
+export interface Final4FeedEvent {
+  time?: string
+  type?: string
+  team?: string
+  player?: string
+  playerNumber?: string
+  description?: string
+  homeScore?: number
+  awayScore?: number
+  period?: number
+  score?: string
+  isHomeGoal?: boolean
+}
+
 export interface Final4Match {
   matchId: number
   date: string
@@ -18,6 +32,8 @@ export interface Final4Match {
   detailUrl: string | null
   playUrl: string | null
   infoUrl: string | null
+  matchFeed?: Final4FeedEvent[] | null
+  scoreTimeline?: Array<{ time: string; home: number; away: number }> | null
 }
 
 export interface Final4Category {
