@@ -1145,7 +1145,7 @@ export function MatchFeedModal({
                 <p className="py-20 text-center text-sm text-slate-400">{emptyTimelineMessage}</p>
               )}
               {!showTimelineSkeleton && displayedFeed.length > 0 && (
-                <div className="grid grid-cols-[1fr_28px_1fr] items-center border-b border-slate-100 bg-white px-2 py-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400 sm:px-4">
+                <div className="grid grid-cols-[1fr_52px_1fr] items-center border-b border-slate-100 bg-white px-2 py-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400 sm:px-4">
                   <p className="truncate pr-3 text-right">{homeTeam}</p>
                   <p className="text-center text-slate-300">Tid</p>
                   <p className="truncate pl-3 text-left">{awayTeam}</p>
@@ -1186,7 +1186,7 @@ export function MatchFeedModal({
 
                         return (
                           <li key={`${event.eventId ?? "idx"}-${index}`} className="relative">
-                            <div className="grid grid-cols-[1fr_28px_1fr] items-start">
+                            <div className="grid grid-cols-[1fr_52px_1fr] items-start">
                               {/* Left column (home team) */}
                               <div className="flex justify-end pr-3 py-2">
                                 {side === "home" && (
@@ -1211,11 +1211,11 @@ export function MatchFeedModal({
                               </div>
 
                               {/* Center: dot + time */}
-                              <div className="flex flex-col items-center z-10 py-2">
+                              <div className="flex flex-col items-center justify-start z-10 py-2 px-1">
                                 <span className={`shrink-0 ${
                                   isGoal ? "h-3 w-3" : isSuspension ? "h-2.5 w-2.5" : "h-2 w-2"
                                 } ${isGoal ? (side === "home" ? "bg-slate-900" : "bg-slate-400") : isSuspension ? "bg-amber-500" : style.dot}`} />
-                                <p className="mt-0.5 text-[11px] font-semibold tabular-nums text-slate-300 leading-tight">{event.time || ""}</p>
+                                <p className="mt-1 whitespace-nowrap text-center text-[11px] font-semibold tabular-nums text-slate-400 leading-none">{event.time || ""}</p>
                               </div>
 
                               {/* Right column (away team) */}

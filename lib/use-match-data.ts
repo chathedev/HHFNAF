@@ -998,6 +998,8 @@ const resolveRecentResultsPayload = (payload: any): ApiMatch[] => {
 
 const FULL_POLL_INTERVAL_MS = 10_000
 const EVENT_POLL_INTERVAL_MS = 5_000
+const LIVE_FULL_POLL_INTERVAL_MS = 6_000
+const LIVE_EVENT_POLL_INTERVAL_MS = 2_000
 const LAST_EVENT_ID_STORAGE_KEY = "matcher_last_event_id"
 const CHANNEL_ENDPOINT = getDataEndpoint()
 type MatchChannelPayload = {
@@ -1452,6 +1454,7 @@ const createMatchDataChannel = () => {
     updatePayload()
     updateConnectionState({ hasData: currentMatches.length > 0 || oldMatches.length > 0 })
     scheduleSubscriberNotification()
+    applyPollIntervals()
   }
 
   const handleDelta = (payload: any) => {
@@ -1494,6 +1497,7 @@ const createMatchDataChannel = () => {
     updatePayload()
     updateConnectionState({ hasData: currentMatches.length > 0 || oldMatches.length > 0 })
     scheduleSubscriberNotification()
+    applyPollIntervals()
   }
 
   const handleMissedEvents = (payload: any) => {
@@ -1529,6 +1533,7 @@ const createMatchDataChannel = () => {
     updatePayload()
     updateConnectionState({ hasData: currentMatches.length > 0 || oldMatches.length > 0 })
     scheduleSubscriberNotification()
+    applyPollIntervals()
   }
 
   const pollFull = async () => {
@@ -1578,6 +1583,38 @@ const createMatchDataChannel = () => {
     }
   }
 
+  let activeFullIntervalMs: number | null = null
+  let activeEventIntervalMs: number | null = null
+
+  const hasLiveMatches = () => currentMatches.some((match) => isLiveMatch(match))
+
+  const applyPollIntervals = () => {
+    if (!isPolling) {
+      return
+    }
+    const live = hasLiveMatches()
+    const nextFull = live ? LIVE_FULL_POLL_INTERVAL_MS : FULL_POLL_INTERVAL_MS
+    const nextEvent = live ? LIVE_EVENT_POLL_INTERVAL_MS : EVENT_POLL_INTERVAL_MS
+    if (nextFull !== activeFullIntervalMs) {
+      if (fullPollTimer) {
+        globalThis.clearInterval(fullPollTimer)
+      }
+      fullPollTimer = globalThis.setInterval(() => {
+        pollFull()
+      }, nextFull)
+      activeFullIntervalMs = nextFull
+    }
+    if (nextEvent !== activeEventIntervalMs) {
+      if (eventPollTimer) {
+        globalThis.clearInterval(eventPollTimer)
+      }
+      eventPollTimer = globalThis.setInterval(() => {
+        pollEvents()
+      }, nextEvent)
+      activeEventIntervalMs = nextEvent
+    }
+  }
+
   const startPolling = () => {
     if (!isBrowser || isPolling) {
       return
@@ -1585,12 +1622,7 @@ const createMatchDataChannel = () => {
     isPolling = true
     pollFull()
     pollEvents()
-    fullPollTimer = globalThis.setInterval(() => {
-      pollFull()
-    }, FULL_POLL_INTERVAL_MS)
-    eventPollTimer = globalThis.setInterval(() => {
-      pollEvents()
-    }, EVENT_POLL_INTERVAL_MS)
+    applyPollIntervals()
     if (isBrowser && typeof document !== "undefined") {
       document.addEventListener("visibilitychange", pollFull)
     }
@@ -1609,6 +1641,8 @@ const createMatchDataChannel = () => {
       globalThis.clearInterval(eventPollTimer)
       eventPollTimer = null
     }
+    activeFullIntervalMs = null
+    activeEventIntervalMs = null
     if (isBrowser && typeof document !== "undefined") {
       document.removeEventListener("visibilitychange", pollFull)
     }

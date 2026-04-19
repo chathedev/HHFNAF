@@ -1135,10 +1135,10 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
                   </p>
                 ) : homeMatchFlow.items.length > 0 ? (
                   <div className="space-y-6">
-                    {/* Promoted A-lag ticket matches */}
+                    {/* Promoted A-lag ticket matches - LIVE first, upcoming shown after live section */}
                     {(() => {
                       const ticketMatches = homeMatchFlow.items.filter(
-                        (m) => getMatchStatus(m) !== "finished" && canShowTicketForMatch(m)
+                        (m) => getMatchStatus(m) === "live" && canShowTicketForMatch(m)
                       )
                       if (ticketMatches.length === 0) return null
                       return (
