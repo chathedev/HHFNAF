@@ -1232,6 +1232,75 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
                       )
                     })()}
 
+                    {/* Promoted A-lag ticket matches - UPCOMING (shown after live so live always appears first) */}
+                    {(() => {
+                      const ticketMatches = homeMatchFlow.items.filter(
+                        (m) => getMatchStatus(m) === "upcoming" && canShowTicketForMatch(m)
+                      )
+                      if (ticketMatches.length === 0) return null
+                      return (
+                        <div className="space-y-3">
+                          {ticketMatches.map((match) => {
+                            const status = getMatchStatus(match)
+                            const canOpen = canOpenMatchTimeline(match)
+                            const scheduleLabel = buildMatchScheduleLabel(match)
+                            const matchupLabel = getMatchupLabel(match)
+                            const teamTypeRaw = match.teamType?.trim() || ""
+                            const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
+                            const liveScore = typeof match.result === "string" ? match.result.trim() : ""
+                            const stableScore = liveScore || stableScoreByMatchId[match.id] || ""
+                            const hasStarted = match.date.getTime() <= Date.now() + 60_000
+                            const scoreValue = stableScore && (status !== "upcoming" || hasStarted) ? stableScore : null
+
+                            return (
+                              <article
+                                key={`promoted-upcoming-${match.id}`}
+                                className={`group relative border border-slate-900 bg-slate-950 p-5 sm:p-6 text-white transition ${
+                                  canOpen ? "cursor-pointer hover:bg-slate-900" : ""
+                                }`}
+                                onMouseEnter={() => { if (canOpen) fetchMatchTimeline(match).catch(() => undefined) }}
+                                onClick={(event) => {
+                                  if (!canOpen) return
+                                  if ((event.target as HTMLElement).closest("a,button")) return
+                                  openMatchModal(match)
+                                }}
+                              >
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                                      <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white/60">
+                                        {match.statusLabel ?? "KOMMANDE"}
+                                      </span>
+                                      <span className="text-[11px] font-medium text-white/40">{teamTypeLabel}</span>
+                                    </div>
+                                    <h3 className="text-base sm:text-lg font-bold leading-snug break-words">{matchupLabel}</h3>
+                                    {scheduleLabel && <p className="mt-1 text-xs text-white/40 break-words">{scheduleLabel}</p>}
+                                  </div>
+                                  <div className="flex flex-col items-end gap-3 shrink-0">
+                                    {scoreValue && (
+                                      <span className="text-3xl font-black tabular-nums text-white" data-score-value="true">
+                                        {scoreValue}
+                                      </span>
+                                    )}
+                                    <Link
+                                      href={TICKET_URL}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="inline-flex items-center gap-1.5 border border-white/20 px-4 py-2 text-xs font-semibold text-white transition hover:bg-white hover:text-slate-900"
+                                    >
+                                      <Ticket className="h-3.5 w-3.5" />
+                                      Köp biljett
+                                    </Link>
+                                  </div>
+                                </div>
+                              </article>
+                            )
+                          })}
+                        </div>
+                      )
+                    })()}
+
                     {/* UPCOMING matches (non-promoted) */}
                     {(() => {
                       const upcomingMatches = homeMatchFlow.items.filter(
