@@ -22,6 +22,7 @@ import {
   Ticket,
   Zap,
   Calendar,
+  BarChart3,
 } from "lucide-react"
 import { Header } from "@/components/header"
 import Footer from "@/components/footer"
@@ -1105,11 +1106,35 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
                   </div>
                 </Link>
 
+                {/* Stats page promo */}
+                <Link
+                  href="/stats"
+                  className="group mb-4 flex items-center justify-between gap-4 rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 p-4 transition hover:border-emerald-400 hover:shadow-sm"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white">
+                      <BarChart3 className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white">Ny</span>
+                        <p className="font-bold text-slate-900">Spelarstatistik för alla lag</p>
+                      </div>
+                      <p className="text-xs text-slate-600">Topp målskyttar, utvisningar, 7-meter och hela truppen — per lag.</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-emerald-700 transition group-hover:translate-x-1" />
+                </Link>
+
                 {/* Quick action cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-slate-200 border border-slate-200 mb-10 sm:mb-14">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-px bg-slate-200 border border-slate-200 mb-10 sm:mb-14">
                   <Link href="/matcher" aria-label="Matcher" className="group flex items-center gap-3 bg-white p-4 transition hover:bg-slate-50">
                     <Calendar className="h-4 w-4 text-slate-400 shrink-0" />
                     <span className="text-sm font-medium text-slate-700">Matcher</span>
+                  </Link>
+                  <Link href="/stats" aria-label="Statistik" className="group flex items-center gap-3 bg-white p-4 transition hover:bg-slate-50">
+                    <BarChart3 className="h-4 w-4 text-slate-400 shrink-0" />
+                    <span className="text-sm font-medium text-slate-700">Statistik</span>
                   </Link>
                   <Link href={TICKET_URL} target="_blank" rel="noopener noreferrer" aria-label="Biljetter" className="group flex items-center gap-3 bg-white p-4 transition hover:bg-slate-50">
                     <Ticket className="h-4 w-4 text-slate-400 shrink-0" />
