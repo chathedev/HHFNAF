@@ -79,6 +79,8 @@ type MatchFeedModalProps = {
     player: string
     playerNumber?: string
     goals: number
+    goalTimes?: string[]
+    sevenMeterGoals?: number
   }>
 }
 
@@ -940,35 +942,33 @@ export function MatchFeedModal({
   const showPenaltyTimers = activePenalties.length > 0
   const showClockAndTimers = matchStatus !== "finished" && !isNoLiveUpdatesIssue && (showTimeoutTimer || showPenaltyTimers)
 
+  type ScorerRow = { player: string; playerNumber?: string; goals: number; goalTimes?: string[]; sevenMeterGoals?: number }
+
   const calculatedTopScorersByTeam = useMemo(() => {
     const goalEvents = displayedFeed.filter((event) => (event.type || "").toLowerCase().includes("mål") && event.player)
-    const grouped = goalEvents.reduce<Record<string, Record<string, { player: string; playerNumber?: string; goals: number }>>>(
-      (acc, event) => {
-        const team = event.team || "Okänt lag"
-        const scorerKey = `${event.player}|${event.playerNumber || ""}`
-        if (!acc[team]) acc[team] = {}
-        if (!acc[team][scorerKey]) {
-          acc[team][scorerKey] = {
-            player: event.player || "Okänd",
-            playerNumber: event.playerNumber,
-            goals: 0,
-          }
+    const grouped = goalEvents.reduce<Record<string, Record<string, ScorerRow>>>((acc, event) => {
+      const team = event.team || "Okänt lag"
+      const scorerKey = `${event.player}|${event.playerNumber || ""}`
+      if (!acc[team]) acc[team] = {}
+      if (!acc[team][scorerKey]) {
+        acc[team][scorerKey] = {
+          player: event.player || "Okänd",
+          playerNumber: event.playerNumber,
+          goals: 0,
+          goalTimes: [],
         }
-        acc[team][scorerKey].goals += 1
-        return acc
-      },
-      {},
-    )
+      }
+      acc[team][scorerKey].goals += 1
+      if (event.time) {
+        acc[team][scorerKey].goalTimes = [...(acc[team][scorerKey].goalTimes ?? []), event.time]
+      }
+      return acc
+    }, {})
 
-    return Object.entries(grouped).reduce<Record<string, Array<{ player: string; playerNumber?: string; goals: number }>>>(
-      (acc, [team, scorers]) => {
-        acc[team] = Object.values(scorers)
-          .sort((a, b) => b.goals - a.goals)
-          .slice(0, 3)
-        return acc
-      },
-      {},
-    )
+    return Object.entries(grouped).reduce<Record<string, ScorerRow[]>>((acc, [team, scorers]) => {
+      acc[team] = Object.values(scorers).sort((a, b) => b.goals - a.goals)
+      return acc
+    }, {})
   }, [displayedFeed])
 
   const topScorersByTeam = useMemo(() => {
@@ -976,25 +976,43 @@ export function MatchFeedModal({
       return calculatedTopScorersByTeam
     }
 
-    const grouped = topScorers.reduce<Record<string, Array<{ player: string; playerNumber?: string; goals: number }>>>(
-      (acc, scorer) => {
-        if (!acc[scorer.team]) {
-          acc[scorer.team] = []
-        }
-        acc[scorer.team].push({
-          player: scorer.player,
-          playerNumber: scorer.playerNumber,
-          goals: scorer.goals,
-        })
-        return acc
-      },
-      {},
-    )
+    const grouped = topScorers.reduce<Record<string, ScorerRow[]>>((acc, scorer) => {
+      if (!acc[scorer.team]) acc[scorer.team] = []
+      acc[scorer.team].push({
+        player: scorer.player,
+        playerNumber: scorer.playerNumber,
+        goals: scorer.goals,
+        goalTimes: Array.isArray(scorer.goalTimes) ? [...scorer.goalTimes] : undefined,
+        sevenMeterGoals: scorer.sevenMeterGoals,
+      })
+      return acc
+    }, {})
     Object.keys(grouped).forEach((team) => {
-      grouped[team] = grouped[team].sort((a, b) => b.goals - a.goals).slice(0, 3)
+      grouped[team] = grouped[team].sort((a, b) => b.goals - a.goals)
     })
     return grouped
   }, [topScorers, calculatedTopScorersByTeam])
+
+  const totalGoalsByTeam = useMemo(() => {
+    const totals: Record<string, number> = {}
+    Object.entries(topScorersByTeam).forEach(([team, scorers]) => {
+      totals[team] = scorers.reduce((sum, s) => sum + s.goals, 0)
+    })
+    return totals
+  }, [topScorersByTeam])
+
+  const suspensionsCount = useMemo(
+    () =>
+      displayedFeed.filter((event) => {
+        const t = (event.type || "").toLowerCase()
+        return t.includes("utvisning") || t.includes("varning")
+      }).length,
+    [displayedFeed],
+  )
+  const timeoutsCount = useMemo(
+    () => displayedFeed.filter((event) => (event.type || "").toLowerCase().includes("timeout")).length,
+    [displayedFeed],
+  )
 
   const refreshNow = async () => {
     if (refreshInFlightRef.current) return
@@ -1142,14 +1160,66 @@ export function MatchFeedModal({
                 </div>
               )}
               {!showTimelineSkeleton && displayedFeed.length === 0 && (
-                <p className="py-20 text-center text-sm text-slate-400">{emptyTimelineMessage}</p>
+                <div className="flex flex-col items-center gap-4 px-5 py-16 text-center">
+                  <p className="text-sm text-slate-500">{emptyTimelineMessage}</p>
+                  {(matchData?.displayDate || matchData?.date || matchData?.time || matchData?.venue || matchData?.series) && (
+                    <dl className="mt-2 grid w-full max-w-sm grid-cols-1 gap-2 text-left text-sm">
+                      {(matchData?.displayDate || matchData?.time) && (
+                        <div className="flex items-center justify-between border-b border-slate-100 py-1.5">
+                          <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">Datum</dt>
+                          <dd className="text-slate-700">
+                            {[matchData?.displayDate, matchData?.time].filter(Boolean).join(" · ")}
+                          </dd>
+                        </div>
+                      )}
+                      {matchData?.venue && (
+                        <div className="flex items-center justify-between border-b border-slate-100 py-1.5">
+                          <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">Arena</dt>
+                          <dd className="text-slate-700">{matchData.venue}</dd>
+                        </div>
+                      )}
+                      {matchData?.series && (
+                        <div className="flex items-center justify-between border-b border-slate-100 py-1.5">
+                          <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">Serie</dt>
+                          <dd className="text-slate-700">{matchData.series}</dd>
+                        </div>
+                      )}
+                    </dl>
+                  )}
+                </div>
               )}
               {!showTimelineSkeleton && displayedFeed.length > 0 && (
-                <div className="grid grid-cols-[1fr_52px_1fr] items-center border-b border-slate-100 bg-white px-2 py-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400 sm:px-4">
-                  <p className="truncate pr-3 text-right">{homeTeam}</p>
-                  <p className="text-center text-slate-300">Tid</p>
-                  <p className="truncate pl-3 text-left">{awayTeam}</p>
-                </div>
+                <>
+                  {matchStatus === "finished" && (suspensionsCount > 0 || timeoutsCount > 0 || Object.keys(totalGoalsByTeam).length > 0) && (
+                    <div className="flex flex-wrap items-center justify-center gap-3 border-b border-slate-100 bg-slate-50/60 px-3 py-2 text-[11px] font-semibold uppercase tracking-widest text-slate-500 sm:gap-5">
+                      {Object.keys(totalGoalsByTeam).length > 0 && (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="text-slate-400">Mål</span>
+                          <span className="tabular-nums text-slate-700">
+                            {Object.values(totalGoalsByTeam).reduce((a, b) => a + b, 0)}
+                          </span>
+                        </span>
+                      )}
+                      {suspensionsCount > 0 && (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="text-slate-400">Utvisningar</span>
+                          <span className="tabular-nums text-slate-700">{suspensionsCount}</span>
+                        </span>
+                      )}
+                      {timeoutsCount > 0 && (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="text-slate-400">Timeouts</span>
+                          <span className="tabular-nums text-slate-700">{timeoutsCount}</span>
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-[1fr_52px_1fr] items-center border-b border-slate-100 bg-white px-2 py-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400 sm:px-4">
+                    <p className="truncate pr-3 text-right">{homeTeam}</p>
+                    <p className="text-center text-slate-300">Tid</p>
+                    <p className="truncate pl-3 text-left">{awayTeam}</p>
+                  </div>
+                </>
               )}
               {periodKeys.map((period) => (
                 <section key={period}>

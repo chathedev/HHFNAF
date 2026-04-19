@@ -55,6 +55,8 @@ type MatchTopScorer = {
   player: string
   playerNumber?: string
   goals: number
+  goalTimes?: string[]
+  sevenMeterGoals?: number
 }
 
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
@@ -107,6 +109,12 @@ const extractTopScorers = (payload: any): MatchTopScorer[] => {
       player: String(scorer?.name),
       playerNumber: scorer?.number ? String(scorer.number) : undefined,
       goals: Number(scorer?.goals) || 0,
+      goalTimes: Array.isArray(scorer?.goalTimes)
+        ? scorer.goalTimes.filter((t: unknown) => typeof t === "string" && t.trim().length > 0)
+        : undefined,
+      sevenMeterGoals: Number.isFinite(Number(scorer?.sevenMeterGoals))
+        ? Number(scorer.sevenMeterGoals)
+        : undefined,
     }))
 }
 

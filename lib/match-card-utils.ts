@@ -76,7 +76,13 @@ export const getSimplifiedMatchStatus = (match: NormalizedMatch): "live" | "fini
 }
 
 export const canOpenMatchTimeline = (match: NormalizedMatch) => {
-  return match.timelineAvailable === true
+  if (match.timelineAvailable === true) return true
+  // Also allow opening the match modal for any live/finished match, so old
+  // matches without a published Profixio timeline still surface the score,
+  // top scorers, and metadata in the richer modal layout.
+  if (match.matchStatus === "live" || match.matchStatus === "halftime") return true
+  if (match.matchStatus === "finished") return true
+  return false
 }
 
 export const getMatchProviderBadge = (match: NormalizedMatch) => {
