@@ -1326,22 +1326,72 @@ export function MatchFeedModal({
               {Object.keys(topScorersByTeam).length === 0 && (
                 <p className="py-10 text-center text-sm text-slate-400">Inga registrerade målskyttar än.</p>
               )}
-              {Object.entries(topScorersByTeam).map(([team, scorers]) => (
-                <section key={team} className="mb-8 last:mb-0">
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">{team}</p>
-                  <ul>
-                    {scorers.map((scorer, index) => (
-                      <li key={`${team}-${scorer.player}-${index}`} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
-                        <p className="text-base text-slate-900">
-                          {scorer.playerNumber && <span className="font-bold text-slate-700 mr-2">{scorer.playerNumber}</span>}
-                          {scorer.player}
+              {Object.entries(topScorersByTeam).map(([team, scorers]) => {
+                const teamTotal = scorers.reduce((sum, s) => sum + s.goals, 0)
+                const rankMedal = (idx: number) => (idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : null)
+                return (
+                  <section key={team} className="mb-8 last:mb-0">
+                    <div className="mb-3 flex items-baseline justify-between">
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{team}</p>
+                      {teamTotal > 0 && (
+                        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+                          Totalt <span className="tabular-nums text-slate-700">{teamTotal}</span> mål
                         </p>
-                        <p className="text-base font-black tabular-nums text-slate-900">{scorer.goals} mål</p>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ))}
+                      )}
+                    </div>
+                    <ul>
+                      {scorers.map((scorer, index) => {
+                        const medal = rankMedal(index)
+                        const times = Array.isArray(scorer.goalTimes) ? scorer.goalTimes.filter(Boolean) : []
+                        return (
+                          <li
+                            key={`${team}-${scorer.player}-${index}`}
+                            className={`py-3 border-b border-slate-50 last:border-0 ${index < 3 ? "" : "opacity-80"}`}
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex min-w-0 items-center gap-2">
+                                {medal ? (
+                                  <span className="text-lg leading-none" aria-hidden>{medal}</span>
+                                ) : (
+                                  <span className="w-5 text-center text-[11px] font-semibold tabular-nums text-slate-400">
+                                    {index + 1}
+                                  </span>
+                                )}
+                                <p className="truncate text-base text-slate-900">
+                                  {scorer.playerNumber && (
+                                    <span className="mr-2 font-bold text-slate-700">#{scorer.playerNumber}</span>
+                                  )}
+                                  {scorer.player}
+                                </p>
+                              </div>
+                              <p className="shrink-0 text-base font-black tabular-nums text-slate-900">
+                                {scorer.goals} <span className="text-xs font-semibold text-slate-400">mål</span>
+                              </p>
+                            </div>
+                            {times.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1.5 pl-7">
+                                {times.map((t, tIdx) => (
+                                  <span
+                                    key={`${team}-${scorer.player}-time-${tIdx}`}
+                                    className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-emerald-700"
+                                  >
+                                    {t}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {typeof scorer.sevenMeterGoals === "number" && scorer.sevenMeterGoals > 0 && (
+                              <p className="mt-1 pl-7 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                                varav <span className="tabular-nums text-slate-600">{scorer.sevenMeterGoals}</span> 7-m
+                              </p>
+                            )}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </section>
+                )
+              })}
             </div>
           )}
         </div>
