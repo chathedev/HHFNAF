@@ -849,15 +849,28 @@ export function MatcherPageClient({ initialData, isFinal4 = false, final4Initial
           <div className="border-b border-slate-200 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(248,250,252,0.96),rgba(236,253,245,0.82))] px-5 py-6 sm:px-8 sm:py-7">
             <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
               <div className="max-w-3xl">
-                <Link
-                  href="/"
-                  className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700 transition hover:text-emerald-900"
-                >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  Till startsidan
-                </Link>
+                <div className="flex flex-wrap items-center gap-4">
+                  <Link
+                    href="/"
+                    className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700 transition hover:text-emerald-900"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Till startsidan
+                  </Link>
+                  <Link
+                    href="/stats"
+                    className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-white shadow-sm transition hover:bg-emerald-700"
+                  >
+                    <span>NY</span>
+                    <span className="h-1 w-1 rounded-full bg-white/70" />
+                    <span>Spelarstatistik</span>
+                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                </div>
                 <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.35em] text-emerald-600">Matchcenter</p>
                 <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">Matcher i ett lugnare flöde.</h1>
                 <p className="mt-3 max-w-2xl text-sm text-slate-600 sm:text-base">
