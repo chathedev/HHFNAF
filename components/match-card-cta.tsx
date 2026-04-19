@@ -1,18 +1,13 @@
 "use client"
 
 import { getMatchWatchLabel } from "@/lib/match-card-utils"
+import { canShowTicketForMatch } from "@/lib/matches"
 import type { NormalizedMatch } from "@/lib/use-match-data"
 
 const TICKET_LINK = "https://clubs.clubmate.se/harnosandshf/overview/"
-const TICKET_TEAM_KEYWORDS = ["a-lag herrar", "a-lag dam", "herr", "dam"]
 
 export function MatchCardCTA({ match, status }: { match: NormalizedMatch; status: string }) {
-  const normalizedTeamType = match.teamType?.toLowerCase() ?? ""
-  const isTicketTeam = TICKET_TEAM_KEYWORDS.some((keyword) => normalizedTeamType.includes(keyword))
-  const venueLower = match.venue?.toLowerCase() ?? ""
-  const isAtTicketVenue = venueLower.includes("öbacka") || venueLower.includes("änget")
-  const isHomeMatch = match.isHome !== false
-  const showTicketCTA = isTicketTeam && isAtTicketVenue && isHomeMatch && status !== "finished"
+  const showTicketCTA = canShowTicketForMatch(match) && status !== "finished"
 
   const playUrl = (match.playUrl ?? "").trim()
   const hasPlayLink =

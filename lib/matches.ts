@@ -22,6 +22,20 @@ export type UpcomingMatch = {
 export const MATCH_TYPES_WITH_TICKETS = ["a-lag", "dam/utv"]
 export const TICKET_VENUES = ["öbacka sc", "änget sportcenter"]
 
+/** Matches excluded from ticket CTA (no ticketing available on Clubmate) */
+const TICKET_EXCLUDED_MATCHES: Array<{ opponent: string; date: string }> = [
+  { opponent: "gimonäs", date: "2026-04-19" },
+]
+
+const isTicketExcludedMatch = (match: { opponent?: string | null; date?: Date | null }) => {
+  if (!match.opponent || !match.date) return false
+  const normalizedOpponent = normalizeMatchKey(match.opponent)
+  const dateStr = `${match.date.getFullYear()}-${String(match.date.getMonth() + 1).padStart(2, "0")}-${String(match.date.getDate()).padStart(2, "0")}`
+  return TICKET_EXCLUDED_MATCHES.some(
+    (ex) => normalizedOpponent.includes(normalizeMatchKey(ex.opponent)) && dateStr === ex.date,
+  )
+}
+
 const HARNOSAND_CLUB_NAME = "härnösands hf"
 
 export const normalizeMatchKey = (value?: string | null) =>
@@ -60,8 +74,13 @@ export const canShowTicketForMatch = (match: {
   teamType?: string | null
   isHome?: boolean | null
   venue?: string | null
+  opponent?: string | null
+  date?: Date | null
 }) => {
   if (match.isHome === false) {
+    return false
+  }
+  if (isTicketExcludedMatch(match)) {
     return false
   }
   return isTicketEligibleTeamType(match.teamType) && isTicketEligibleVenue(match.venue)
