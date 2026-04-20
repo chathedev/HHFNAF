@@ -111,7 +111,7 @@ export const getHeroImages = (host?: string | null): HeroImages => {
   }
 
   return {
-    mobile: "/heropic.webp",
+    mobile: "/heropic-mobile.webp",
     desktop: "/heropic.webp"
   }
 }
