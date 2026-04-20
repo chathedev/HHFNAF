@@ -951,7 +951,7 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
               className="z-0 object-cover hidden sm:block"
               sizes="(max-width: 1024px) 100vw, 100vw"
               style={{
-                objectPosition: 'center center'
+                objectPosition: 'center top'
               }}
               onLoad={() => {
                 if (isPinkTheme && !showHeroContent) {
