@@ -895,7 +895,7 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
   }, [])
   const heroOverlayClass = isPinkTheme
     ? "from-pink-900/40 via-pink-800/20 to-rose-900/60"
-    : "from-black/70 via-black/40 to-transparent"
+    : "from-black/80 via-black/55 to-black/45"
 
   return (
     <ErrorBoundary>
@@ -920,38 +920,36 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
           <section className={`relative w-full h-screen flex items-center justify-center overflow-hidden ${isPinkTheme ? "bg-gradient-to-br from-pink-50 via-pink-100 to-rose-200" : ""
             }`}>
             {/* Mobile Image */}
-            {isPinkTheme && (
-              <Image
-                src={heroImages.mobile}
-                alt="Härnösands HF Memorial - Laget Före Allt"
-                fill
-                quality={75}
-                priority={true}
-                className="z-0 object-cover block sm:hidden will-change-auto"
-                sizes="100vw"
-                style={{
-                  objectPosition: 'center center'
-                }}
-                onLoad={() => {
-                  if (!showHeroContent) {
-                    setTimeout(() => setShowHeroContent(true), 1000)
-                  }
-                }}
-                onError={(e) => {
-                  console.error('Mobile hero image failed to load:', heroImages.mobile)
-                }}
-              />
-            )}
+            <Image
+              src={heroImages.mobile}
+              alt={isPinkTheme ? "Härnösands HF Memorial - Laget Före Allt" : "Härnösands HF herrlag och damlag 2025"}
+              fill
+              quality={78}
+              priority={true}
+              className="z-0 object-cover block sm:hidden will-change-auto"
+              sizes="100vw"
+              style={{
+                objectPosition: 'center center'
+              }}
+              onLoad={() => {
+                if (!showHeroContent) {
+                  setTimeout(() => setShowHeroContent(true), 500)
+                }
+              }}
+              onError={(e) => {
+                console.error('Mobile hero image failed to load:', heroImages.mobile)
+              }}
+            />
 
             {/* Desktop Image */}
             <Image
               src={heroImages.desktop}
               alt={isPinkTheme ? "Härnösands HF Memorial - Laget Före Allt" : "Härnösands HF herrlag och damlag 2025"}
               fill
-              quality={75}
+              quality={78}
               priority={true}
-              className={`z-0 object-cover ${isPinkTheme ? "hidden sm:block" : "block"}`}
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 100vw"
+              className="z-0 object-cover hidden sm:block"
+              sizes="(max-width: 1024px) 100vw, 100vw"
               style={{
                 objectPosition: 'center center'
               }}
@@ -977,6 +975,15 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
             />
             <div className={`absolute inset-0 bg-gradient-to-t ${heroOverlayClass} z-10 ${isPinkTheme ? "" : ""
               }`} />
+            {!isPinkTheme && (
+              <div
+                className="absolute inset-0 z-[11] pointer-events-none"
+                style={{
+                  background:
+                    'radial-gradient(ellipse 60% 45% at 50% 50%, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.35) 45%, rgba(0,0,0,0) 75%)'
+                }}
+              />
+            )}
             {isPinkTheme && (
               <>
                 <div className="absolute inset-0 z-5 bg-gradient-to-br from-pink-500/8 via-rose-400/5 to-pink-900/15 pointer-events-none" />
