@@ -134,178 +134,7 @@ const dedupeTimelineEvents = (events: MatchFeedEvent[]) => {
 
 const isZeroScore = (score: string) => /^0\s*[-–—]\s*0$/.test(score.trim())
 
-function final4ToNormalized(m: import("@/lib/use-final4-data").Final4Match): NormalizedMatch {
-  const isTBD = (n: string) => n.startsWith("Winner ") || n.startsWith("Loser ") || n === "TBD"
-  const derivedStatus = getFinal4DerivedStatus(m)
-  const displayScore = getFinal4DisplayScore(m)
-  const venueLabel = getFinal4VenueLabel(m.venue)
-  return {
-    id: String(m.matchId),
-    apiMatchId: String(m.matchId),
-    homeTeam: m.homeName,
-    awayTeam: m.awayName,
-    opponent: `${m.awayName} (${m.category} ${m.round})`,
-    normalizedTeam: m.homeName,
-    date: new Date(m.date),
-    displayDate: new Date(m.date).toLocaleDateString("sv-SE", { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/Stockholm" }),
-    time: m.time || undefined,
-    venue: venueLabel,
-    series: m.categoryLabel || m.series || undefined,
-    result: displayScore || undefined,
-    playUrl: m.playUrl || undefined,
-    infoUrl: m.detailUrl || undefined,
-    teamType: m.category,
-    matchStatus: derivedStatus,
-    matchFeed: [],
-    provider: "profixio" as const,
-    hasStream: Boolean(m.playUrl),
-    statusLabel: derivedStatus === "live" ? "LIVE" : derivedStatus === "finished" ? "SLUT" : "KOMMANDE",
-    resultState: displayScore ? "available" as const : derivedStatus === "upcoming" ? "not_started" as const : "pending" as const,
-    homeScore: displayScore ? m.homeScore ?? undefined : undefined,
-    awayScore: displayScore ? m.awayScore ?? undefined : undefined,
-    timelineAvailable: isFinal4TimelineAvailable(m) && !isTBD(m.homeName),
-  }
-}
-
-function Final4MatchSection({ openMatchModal, fetchMatchTimeline, final4InitialData }: {
-  openMatchModal: (match: NormalizedMatch) => void
-  fetchMatchTimeline: (match: NormalizedMatch) => Promise<void>
-  final4InitialData?: Final4Data
-}) {
-  const { data, loading, error } = useFinal4Data(final4InitialData)
-
-  const normalizedMatches = useMemo(() => {
-    if (!data) return []
-    return data.matches.map(final4ToNormalized)
-  }, [data])
-
-  const liveMatches = normalizedMatches.filter((m) => m.matchStatus === "live")
-
-  const matchesByDate = useMemo(() => {
-    const map = new Map<string, NormalizedMatch[]>()
-    for (const m of normalizedMatches) {
-      if (m.matchStatus === "live") continue
-      const dateKey = m.date.toISOString().slice(0, 10)
-      if (!map.has(dateKey)) map.set(dateKey, [])
-      map.get(dateKey)!.push(m)
-    }
-    for (const matches of map.values()) {
-      matches.sort((a, b) => (a.time || "").localeCompare(b.time || ""))
-    }
-    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b))
-  }, [normalizedMatches])
-
-  const formatDateHeading = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Stockholm" })
-  }
-
-  const renderRow = (match: NormalizedMatch) => {
-    const canOpen = match.timelineAvailable
-    const isLive = match.matchStatus === "live"
-    const isFinished = match.matchStatus === "finished"
-    const scoreValue = match.result || null
-    const rawCategory = match.teamType || ""
-    const rawSeries = match.series || ""
-    // Extract round from opponent field
-    const roundMatch = match.opponent.match(/\((.*?)\)/)
-    const roundInfo = roundMatch ? roundMatch[1] : ""
-
-    const statusBadge = (() => {
-      if (isLive) return { label: "LIVE", tone: "bg-slate-900 text-white" }
-      if (isFinished) return { label: "SLUT", tone: "bg-slate-100 text-slate-500" }
-      return { label: "KOMMANDE", tone: "bg-white text-slate-500 border border-slate-200" }
-    })()
-
-    return (
-      <li key={match.id}>
-        <article
-          className={`flex flex-col gap-3 border-b border-slate-200 px-0 py-3.5 transition ${canOpen ? "cursor-pointer hover:bg-slate-50" : ""}`}
-          onMouseEnter={() => { if (canOpen) fetchMatchTimeline(match).catch(() => undefined) }}
-          onClick={(event) => {
-            if (!canOpen) return
-            if ((event.target as HTMLElement).closest("a,button")) return
-            openMatchModal(match)
-          }}
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest ${statusBadge.tone}`}>
-              {statusBadge.label}
-            </span>
-            <span className="text-[11px] font-medium text-slate-400">{rawCategory}</span>
-            {roundInfo && <span className="text-[11px] text-slate-300">{roundInfo}</span>}
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-slate-950 break-words sm:text-[15px]">
-                {match.homeTeam} vs {match.awayTeam}
-              </p>
-              <p className="mt-1 text-xs leading-5 text-slate-500 break-words">
-                {match.displayDate}{match.time ? ` • ${match.time}` : ""}{match.venue ? ` • ${match.venue}` : ""}
-              </p>
-            </div>
-            <div className="flex shrink-0 items-center gap-2 sm:w-auto">
-              {scoreValue && (
-                <span className={`text-lg font-black tabular-nums ${isLive ? "text-red-600" : "text-slate-900"}`} data-score-value="true">
-                  {scoreValue}
-                </span>
-              )}
-              {canOpen && (
-                <span className="text-xs font-medium text-green-700">Detaljer</span>
-              )}
-            </div>
-          </div>
-        </article>
-      </li>
-    )
-  }
-
-  return (
-    <section className="pt-10 pb-14 sm:pt-14 sm:pb-16">
-      <div className="container mx-auto px-4 sm:px-6">
-        <div className="max-w-4xl mx-auto">
-          {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-green-600 border-t-transparent" />
-            </div>
-          ) : error ? (
-            <p className="py-6 text-center text-sm text-slate-400">Matcherna kunde inte läsas in just nu.</p>
-          ) : normalizedMatches.length > 0 ? (
-            <div>
-              {liveMatches.length > 0 && (
-                <div className="mb-8">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-900">
-                      <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                      Live
-                    </span>
-                    <div className="flex-1 h-px bg-slate-200" />
-                  </div>
-                  <ul>{liveMatches.map(renderRow)}</ul>
-                </div>
-              )}
-              {matchesByDate.map(([dateKey, matches]) => (
-                <div key={dateKey} className="mb-8">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-900 capitalize">
-                      {formatDateHeading(dateKey)}
-                    </span>
-                    <div className="flex-1 h-px bg-slate-200" />
-                  </div>
-                  <ul>{matches.map(renderRow)}</ul>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="py-10 text-center text-sm text-slate-400">Matchprogrammet publiceras inom kort.</p>
-          )}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-export function HomePageClient({ initialData, isFinal4 = false, final4InitialData }: { initialData?: EnhancedMatchData; isFinal4?: boolean; final4InitialData?: Final4Data }) {
+export function HomePageClient({ initialData }: { initialData?: EnhancedMatchData }) {
   const searchParams = useSearchParams()
   const isEditorMode = searchParams?.get("editor") === "true"
 
@@ -450,17 +279,8 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
         return response.json()
       }
 
-      const isFinal4Match = match.infoUrl?.includes("/leagueid27943/") ?? false
-      let payload = await fetchTimelinePayload(`${API_BASE_URL}/matcher/match/${encodeURIComponent(apiMatchId)}?includeEvents=1`)
-      let rawTimeline = resolvePreferredTimeline(payload ?? {}, match.matchFeed ?? [])
-
-      if (isFinal4Match && (!payload?.match || rawTimeline.length === 0)) {
-        const final4Payload = await fetchTimelinePayload(`${API_BASE_URL}/matcher/final4/match/${encodeURIComponent(apiMatchId)}`)
-        if (final4Payload) {
-          payload = final4Payload
-          rawTimeline = resolvePreferredTimeline(final4Payload, match.matchFeed ?? [])
-        }
-      }
+      const payload = await fetchTimelinePayload(`${API_BASE_URL}/matcher/match/${encodeURIComponent(apiMatchId)}?includeEvents=1`)
+      const rawTimeline = resolvePreferredTimeline(payload ?? {}, match.matchFeed ?? [])
 
       if (!payload) {
         throw new Error("Could not load timeline")
@@ -900,20 +720,6 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
         <Header />
         <main>
           {/* Hero Section */}
-          {isFinal4 ? (
-            <section className="relative w-full h-[70vh] sm:h-screen overflow-hidden">
-              <Image
-                src="/final4-hero.webp"
-                alt="Final4 Norr 2026"
-                fill
-                className="z-0 object-cover object-center"
-                priority
-                quality={90}
-                sizes="100vw"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent z-10" />
-            </section>
-          ) : (
           <section className={`relative w-full h-screen flex items-center justify-center overflow-hidden ${isPinkTheme ? "bg-gradient-to-br from-pink-50 via-pink-100 to-rose-200" : ""
             }`}>
             {/* Mobile Image */}
@@ -1079,7 +885,6 @@ export function HomePageClient({ initialData, isFinal4 = false, final4InitialDat
               </div>
             </div>
           </section>
-          )}
 
           {/* ===================== SHOP & QUICK ACTIONS HUB ===================== */}
           <section className="relative z-30 -mt-10 sm:-mt-16">
