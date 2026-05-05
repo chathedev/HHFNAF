@@ -12,7 +12,6 @@ import {
   shouldShowProfixioTechnicalIssue,
 } from "@/lib/match-card-utils"
 import { getMatchEndTime, useMatchData, forceMatchDataPoll, type NormalizedMatch } from "@/lib/use-match-data"
-import { forceFinal4Poll, useFinal4Data, type Final4Match } from "@/lib/use-final4-data"
 import { MatchCardCTA } from "@/components/match-card-cta"
 import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
 import { normalizeMatchKey } from "@/lib/matches"
@@ -20,7 +19,6 @@ import { extendTeamDisplayName, createTeamMatchKeySet } from "@/lib/team-display
 import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
 import { Ticket } from "lucide-react"
 import { resolvePreferredTimeline } from "@/lib/match-timeline"
-import { getFinal4DerivedStatus, getFinal4DisplayScore, getFinal4VenueLabel, isFinal4TimelineAvailable } from "@/lib/final4-utils"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
 type MatchTopScorer = {
   team: string
@@ -103,38 +101,6 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
 const API_BASE_URL =
   (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
   "https://api.harnosandshf.se"
-
-function final4ToNormalized(m: Final4Match): NormalizedMatch {
-  const derivedStatus = getFinal4DerivedStatus(m)
-  const displayScore = getFinal4DisplayScore(m)
-  const venueLabel = getFinal4VenueLabel(m.venue)
-  return {
-    id: String(m.matchId),
-    apiMatchId: String(m.matchId),
-    homeTeam: m.homeName,
-    awayTeam: m.awayName,
-    opponent: `${m.awayName} (${m.category} ${m.round})`,
-    normalizedTeam: m.homeName,
-    date: new Date(m.date),
-    displayDate: new Date(m.date).toLocaleDateString("sv-SE", { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/Stockholm" }),
-    time: m.time || undefined,
-    venue: venueLabel,
-    series: m.categoryLabel || m.series || undefined,
-    result: displayScore || undefined,
-    playUrl: m.playUrl || undefined,
-    infoUrl: m.detailUrl || undefined,
-    teamType: m.category,
-    matchStatus: derivedStatus,
-    matchFeed: [],
-    provider: "profixio" as const,
-    hasStream: Boolean(m.playUrl),
-    statusLabel: derivedStatus === "live" ? "LIVE" : derivedStatus === "finished" ? "SLUT" : "KOMMANDE",
-    resultState: displayScore ? "available" as const : derivedStatus === "upcoming" ? "not_started" as const : "pending" as const,
-    homeScore: displayScore ? m.homeScore ?? undefined : undefined,
-    awayScore: displayScore ? m.awayScore ?? undefined : undefined,
-    timelineAvailable: isFinal4TimelineAvailable(m),
-  }
-}
 
 const mapTimelineEvent = (event: any): MatchFeedEvent => ({
   time: event?.time ?? "",
@@ -344,7 +310,7 @@ function StandingsSection({ selectedTeam }: { selectedTeam: string }) {
   )
 }
 
-export function MatcherPageClient({ initialData, isFinal4 = false, final4InitialData }: { initialData?: EnhancedMatchData; isFinal4?: boolean; final4InitialData?: import("@/lib/use-final4-data").Final4Data }) {
+export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatchData }) {
   const [selectedTeam, setSelectedTeam] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("current")
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
@@ -359,42 +325,25 @@ export function MatcherPageClient({ initialData, isFinal4 = false, final4Initial
   const [hasAttemptedLiveFetch, setHasAttemptedLiveFetch] = useState(false)
   const [hasAttemptedOldFetch, setHasAttemptedOldFetch] = useState(false)
 
-  // Final4: fetch from dedicated endpoint and convert to NormalizedMatch
-  const { data: final4Data, loading: final4Loading } = useFinal4Data(final4InitialData)
-  const final4Matches = useMemo(() => {
-    if (!isFinal4 || !final4Data) return []
-    return final4Data.matches.map(final4ToNormalized)
-  }, [isFinal4, final4Data])
-
   const {
-    matches: liveUpcomingMatches_raw,
-    loading: liveLoading_raw,
+    matches: liveUpcomingMatches,
+    loading: liveLoading,
     error: liveError,
-    hasPayload: hasLivePayload_raw,
+    hasPayload: hasLivePayload,
     hasClientData: hasClientMatchData,
   } = useMatchData({
     dataType: "liveUpcoming",
     initialData,
-    enabled: !isFinal4,
   })
 
   const {
-    matches: oldMatches_raw,
-    loading: oldLoading_raw,
+    matches: oldMatches,
+    loading: oldLoading,
     error: oldError,
-    hasPayload: hasOldPayload_raw,
+    hasPayload: hasOldPayload,
   } = useMatchData({
     dataType: "old",
-    enabled: !isFinal4,
   })
-
-  // Override with Final4 data when on Final4 subdomain
-  const liveUpcomingMatches = isFinal4 ? final4Matches : liveUpcomingMatches_raw
-  const oldMatches = isFinal4 ? [] as NormalizedMatch[] : oldMatches_raw
-  const liveLoading = isFinal4 ? final4Loading : liveLoading_raw
-  const oldLoading = isFinal4 ? false : oldLoading_raw
-  const hasLivePayload = isFinal4 ? Boolean(final4Data) : hasLivePayload_raw
-  const hasOldPayload = isFinal4 ? true : hasOldPayload_raw
 
   const hasCurrentPayload =
     statusFilter === "finished" ? hasOldPayload : hasLivePayload && (statusFilter !== "current" || hasOldPayload)
@@ -485,17 +434,8 @@ export function MatcherPageClient({ initialData, isFinal4 = false, final4Initial
         return response.json()
       }
 
-      const isFinal4Match = match.infoUrl?.includes("/leagueid27943/") ?? false
-      let payload = await fetchTimelinePayload(`${API_BASE_URL}/matcher/match/${encodeURIComponent(apiMatchId)}?includeEvents=1`)
-      let rawTimeline = resolvePreferredTimeline(payload ?? {}, match.matchFeed ?? [])
-
-      if (isFinal4Match && (!payload?.match || rawTimeline.length === 0)) {
-        const final4Payload = await fetchTimelinePayload(`${API_BASE_URL}/matcher/final4/match/${encodeURIComponent(apiMatchId)}`)
-        if (final4Payload) {
-          payload = final4Payload
-          rawTimeline = resolvePreferredTimeline(final4Payload, match.matchFeed ?? [])
-        }
-      }
+      const payload = await fetchTimelinePayload(`${API_BASE_URL}/matcher/match/${encodeURIComponent(apiMatchId)}?includeEvents=1`)
+      const rawTimeline = resolvePreferredTimeline(payload ?? {}, match.matchFeed ?? [])
 
       if (!payload) {
         throw new Error("Could not load timeline")
@@ -1040,11 +980,7 @@ export function MatcherPageClient({ initialData, isFinal4 = false, final4Initial
           penalties={penaltiesByMatchId[selectedMatch.id] ?? []}
           topScorers={topScorersByMatchId[selectedMatch.id] ?? []}
           onRefresh={async () => {
-            if (isFinal4) {
-              await forceFinal4Poll().catch(() => undefined)
-            } else {
-              await forceMatchDataPoll().catch(() => undefined)
-            }
+            await forceMatchDataPoll().catch(() => undefined)
             await fetchMatchTimeline(selectedMatch, true).catch(() => undefined)
           }}
         />
