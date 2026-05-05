@@ -938,9 +938,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
           </section>
 
           {/* ===================== MATCHES ===================== */}
-          {isFinal4 ? (
-            <Final4MatchSection openMatchModal={openMatchModal} fetchMatchTimeline={fetchMatchTimeline} final4InitialData={final4InitialData} />
-          ) : (
           <section className="pt-10 pb-14 sm:pt-14 sm:pb-16">
             <div className="container mx-auto px-4 sm:px-6">
               <div className="max-w-4xl mx-auto">
@@ -1202,7 +1199,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
               </div>
             </div>
           </section>
-          )}
 
           {/* Instagram Feed Section */}
           <InstagramFeed />
@@ -1546,11 +1542,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
             penalties={penaltiesByMatchId[selectedMatch.id] ?? []}
             topScorers={topScorersByMatchId[selectedMatch.id] ?? []}
             onRefresh={async () => {
-              if (isFinal4) {
-                await forceFinal4Poll().catch(() => undefined)
-              } else {
-                await forceMatchDataPoll().catch(() => undefined)
-              }
+              await forceMatchDataPoll().catch(() => undefined)
               await fetchMatchTimeline(selectedMatch, true).catch(() => undefined)
             }}
           />
