@@ -1,12 +1,10 @@
 # HHFNAF project notes
 
-- On the `final4` subdomain, public lottery views are not in active use. Treat lottery there as development-only until explicitly re-enabled.
-- Do not show lottery CTAs or lottery entry points on Final 4 match cards or Final 4 public-facing match listings.
 - Run checks and validation for this HHF project only. Do not mix this project with Tivly work.
 
 ## Deploy to production
 
-After any code change to the frontend or backend, always build and deploy — don't leave it to the user. Changes are live on `harnosandshf.se` / `final4.harnosandshf.se` only after these steps run.
+After any code change to the frontend or backend, always build and deploy — don't leave it to the user. Changes are live on `harnosandshf.se` only after these steps run.
 
 **Frontend (HHFNAF, Next.js → PM2 `harnosandshf-www`):**
 ```bash
