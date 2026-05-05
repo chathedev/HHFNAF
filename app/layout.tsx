@@ -13,53 +13,6 @@ const inter = Inter({ subsets: ["latin"], display: "swap" })
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["400", "500", "600"], display: "swap" })
 
 export async function generateMetadata(): Promise<Metadata> {
-  let host: string
-  try {
-    const requestHeaders = await headers()
-    host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") || "www.harnosandshf.se"
-  } catch {
-    host = "www.harnosandshf.se"
-  }
-
-  const isFinal4 = deriveSiteVariant(host) === "final4"
-
-  if (isFinal4) {
-    return {
-      metadataBase: new URL("https://final4.harnosandshf.se"),
-      title: "Final4 Norr 2026 — Härnösands HF",
-      description: "Final4 Norr handbollturnering 11–12 april 2026 i Härnösand. F14, P14, F16, P16 — alla matcher och live-resultat.",
-      keywords: ["Final4 Norr", "handboll", "Härnösand", "F14", "P14", "F16", "P16", "turnering", "Härnösands HF"],
-      openGraph: {
-        title: "Final4 Norr 2026",
-        description: "Final4 Norr — 11–12 april 2026 i Härnösand. Alla matcher, live-resultat och lag.",
-        url: "https://final4.harnosandshf.se",
-        siteName: "Final4 Norr — Härnösands HF",
-        images: [
-          {
-            url: "/final4-hero.webp",
-            width: 1200,
-            height: 630,
-            alt: "Final4 Norr 2026",
-          },
-        ],
-        locale: "sv_SE",
-        type: "website",
-      },
-      twitter: {
-        card: "summary_large_image",
-        title: "Final4 Norr 2026",
-        description: "Final4 Norr — 11–12 april 2026 i Härnösand. Alla matcher och live-resultat.",
-        images: ["/final4-hero.webp"],
-      },
-      robots: { index: true, follow: true },
-      icons: [
-        { rel: "icon", url: "/logo.png", sizes: "any" },
-        { rel: "apple-touch-icon", url: "/apple-touch-icon.png" },
-      ],
-      alternates: { canonical: "https://final4.harnosandshf.se" },
-    }
-  }
-
   return {
     metadataBase: new URL("https://www.harnosandshf.se"),
     title: {
@@ -153,8 +106,7 @@ export default async function RootLayout({
 
   const siteVariant = deriveSiteVariant(host)
   const themeVariant = getThemeVariant(host)
-  const isFinal4 = siteVariant === "final4"
-  const themeColor = isFinal4 ? "#1d4ed8" : themeVariant === "pink" ? "#db2777" : "#15803d"
+  const themeColor = themeVariant === "pink" ? "#db2777" : "#15803d"
 
   return (
     <html lang="sv" suppressHydrationWarning data-site-variant={siteVariant}>
@@ -166,61 +118,43 @@ export default async function RootLayout({
         <link rel="dns-prefetch" href="https://api.harnosandshf.se" />
       </head>
       <body className={`${inter.className} ${spaceGrotesk.className} bg-white ${themeVariant === "pink" ? "hhf-staging" : ""}`}>
-        {isFinal4 ? (
-          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "SportsEvent",
-            name: "Final4 Norr 2026",
-            description: "Final4 Norr — Handbollturnering 6-12 april 2026",
-            startDate: "2026-04-06",
-            endDate: "2026-04-12",
-            location: { "@type": "Place", name: "Härnösand", address: { "@type": "PostalAddress", addressLocality: "Härnösand", addressCountry: "SE" } },
-            organizer: { "@type": "SportsOrganization", name: "Härnösands HF", url: "https://www.harnosandshf.se" },
-            sport: "Handball",
-            url: "https://final4.harnosandshf.se",
-            inLanguage: "sv-SE",
-          }) }} />
-        ) : (
-          <>
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "SportsOrganization",
-              name: "Härnösands HF",
-              alternateName: ["HHF", "Härnösands Handbollsförening"],
-              description: "Härnösands Handbollsförening - Härnösands främsta handbollsklubb med A-lag, ungdomslag och träningar för alla åldrar",
-              url: "https://www.harnosandshf.se",
-              logo: "https://www.harnosandshf.se/logo.png",
-              image: "https://www.harnosandshf.se/opengraph-image.png",
-              sport: "Handball",
-              slogan: "Laget Före Allt",
-              foundingDate: "1970",
-              address: { "@type": "PostalAddress", addressLocality: "Härnösand", addressRegion: "Västernorrlands län", addressCountry: "SE", postalCode: "871 30" },
-              geo: { "@type": "GeoCoordinates", latitude: 62.6327, longitude: 17.9378 },
-              sameAs: ["https://www.facebook.com/harnosandshf", "https://www.instagram.com/harnosandshf"],
-              memberOf: { "@type": "Organization", name: "Svenska Handbollsförbundet", url: "https://www.handboll.se" },
-              location: { "@type": "Place", name: "Öbackahallen" },
-              contactPoint: { "@type": "ContactPoint", email: "kontakt@harnosandshf.se", contactType: "customer service" },
-            }) }} />
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "SportsTeam",
-              name: "Härnösands HF",
-              sport: "Handboll",
-              url: "https://www.harnosandshf.se",
-              foundingDate: "1970",
-              location: { "@type": "Place", name: "Härnösand, Sverige" },
-              memberOf: { "@type": "SportsOrganization", name: "Svenska Handbollsförbundet" },
-            }) }} />
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "WebSite",
-              name: "Härnösands HF",
-              url: "https://www.harnosandshf.se",
-              description: "Officiell webbplats för Härnösands Handbollsförening",
-              inLanguage: "sv-SE",
-            }) }} />
-          </>
-        )}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SportsOrganization",
+          name: "Härnösands HF",
+          alternateName: ["HHF", "Härnösands Handbollsförening"],
+          description: "Härnösands Handbollsförening - Härnösands främsta handbollsklubb med A-lag, ungdomslag och träningar för alla åldrar",
+          url: "https://www.harnosandshf.se",
+          logo: "https://www.harnosandshf.se/logo.png",
+          image: "https://www.harnosandshf.se/opengraph-image.png",
+          sport: "Handball",
+          slogan: "Laget Före Allt",
+          foundingDate: "1970",
+          address: { "@type": "PostalAddress", addressLocality: "Härnösand", addressRegion: "Västernorrlands län", addressCountry: "SE", postalCode: "871 30" },
+          geo: { "@type": "GeoCoordinates", latitude: 62.6327, longitude: 17.9378 },
+          sameAs: ["https://www.facebook.com/harnosandshf", "https://www.instagram.com/harnosandshf"],
+          memberOf: { "@type": "Organization", name: "Svenska Handbollsförbundet", url: "https://www.handboll.se" },
+          location: { "@type": "Place", name: "Öbackahallen" },
+          contactPoint: { "@type": "ContactPoint", email: "kontakt@harnosandshf.se", contactType: "customer service" },
+        }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SportsTeam",
+          name: "Härnösands HF",
+          sport: "Handboll",
+          url: "https://www.harnosandshf.se",
+          foundingDate: "1970",
+          location: { "@type": "Place", name: "Härnösand, Sverige" },
+          memberOf: { "@type": "SportsOrganization", name: "Svenska Handbollsförbundet" },
+        }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "Härnösands HF",
+          url: "https://www.harnosandshf.se",
+          description: "Officiell webbplats för Härnösands Handbollsförening",
+          inLanguage: "sv-SE",
+        }) }} />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ShopStatusProvider>
             <ScrollToTop />
