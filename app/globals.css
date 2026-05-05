@@ -656,22 +656,12 @@ body.hhf-staging .bg-gradient-to-br.from-emerald-50.to-green-50 {
   }
 }
 
-/* ─── Final4: hide ticket elements, keep shop ─── */
-[data-site-variant="final4"] a[href*="clubmate.se"] { display: none !important; }
-[data-site-variant="final4"] li:has(> a[href*="clubmate.se"]) { display: none !important; }
-/* Quick action grid: 3 cols when Biljetter is hidden */
-[data-site-variant="final4"] .grid.grid-cols-2.sm\:grid-cols-4 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-/* Header nav: hide Köp biljett link (same clubmate href) */
-[data-site-variant="final4"] nav a[href*="clubmate.se"] { display: none !important; }
-
-/* Final4 uses the same green/orange HHF colors — no overrides needed */
-
-/* Final4 score pulse */
+/* Score pulse */
 .score-pulse {
   animation: score-update 0.4s ease-out;
 }
 
-/* Final4 fade-in-up animation */
+/* Fade-in-up animation */
 .animate-fade-in-up {
   animation: fadeInUp 0.8s ease-out both;
 }

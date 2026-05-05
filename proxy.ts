@@ -1,22 +1,8 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-const FINAL4_HOSTS = ["final4.harnosandshf.se"]
-
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
-
-  // ─── Final4 subdomain: only allow root + static assets ───
-  const host = (
-    request.headers.get("x-forwarded-host") ||
-    request.headers.get("host") ||
-    ""
-  ).toLowerCase().split(":")[0]
-
-  if (FINAL4_HOSTS.includes(host)) {
-    // Let everything through — same site as www, just different content on /
-    return NextResponse.next()
-  }
 
   // ─── Regular site routing ───
   // Allow API routes, static assets, and public pages to pass through
