@@ -12,6 +12,7 @@ import {
   shouldShowProfixioTechnicalIssue,
 } from "@/lib/match-card-utils"
 import { getMatchEndTime, useMatchData, forceMatchDataPoll, type NormalizedMatch } from "@/lib/use-match-data"
+import { AnimatedScore } from "@/components/animated-score"
 import { MatchCardCTA } from "@/components/match-card-cta"
 import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
 import { normalizeMatchKey } from "@/lib/matches"
@@ -711,9 +712,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                 {statusBadge.label}
               </span>
               {scoreValue && (
-                <span className="text-lg font-black text-slate-950 sm:text-2xl" data-score-value="true">
-                  {scoreValue}
-                </span>
+                <AnimatedScore value={scoreValue} className="text-lg font-black text-slate-950 sm:text-2xl" />
               )}
             </div>
             <div className="w-full xl:w-auto flex flex-wrap items-center gap-2">

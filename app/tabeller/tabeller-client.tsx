@@ -41,6 +41,8 @@ function classifySeries(series: string): string {
 }
 
 export function TabellerClient({ initialData }: { initialData: StandingsData }) {
+  const [data, setData] = useState<StandingsData>(initialData)
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null)
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [expandedSeries, setExpandedSeries] = useState<Set<string>>(() => {
     // Expand all by default
@@ -48,12 +50,45 @@ export function TabellerClient({ initialData }: { initialData: StandingsData }) 
   })
   const [searchQuery, setSearchQuery] = useState("")
 
+  // Tables refresh in the background so a page left open on matchday stays current.
+  useEffect(() => {
+    let cancelled = false
+    const load = () => {
+      fetch(`${API_BASE_URL}/matcher/standings?meta=1`, { cache: "no-store" })
+        .then((res) => (res.ok ? res.json() : Promise.reject("Failed")))
+        .then((payload) => {
+          if (cancelled) return
+          const tables = payload && typeof payload === "object" && "standings" in payload ? payload.standings : payload
+          if (payload && typeof payload === "object" && "updatedAt" in payload) {
+            setUpdatedAt(payload.updatedAt ?? null)
+          }
+          if (tables && typeof tables === "object" && Object.keys(tables).length > 0) {
+            setData(tables as StandingsData)
+          }
+        })
+        .catch(() => {
+          // Keep showing the last-known tables.
+        })
+    }
+    // Refresh immediately too: the server-rendered payload can be stale, and
+    // it may have been empty if the API had just restarted.
+    load()
+    const timer = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return
+      load()
+    }, STANDINGS_REFRESH_MS)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+    }
+  }, [])
+
   const seriesList = useMemo(() => {
-    return Object.entries(initialData)
+    return Object.entries(data)
       .filter(([, teams]) => Array.isArray(teams) && teams.length > 0)
       .map(([series, teams]) => ({ series, teams: teams as StandingsTeam[], category: classifySeries(series) }))
       .sort((a, b) => b.teams.length - a.teams.length)
-  }, [initialData])
+  }, [data])
 
   const filteredSeries = useMemo(() => {
     return seriesList.filter((s) => {
@@ -101,7 +136,12 @@ export function TabellerClient({ initialData }: { initialData: StandingsData }) 
         <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-emerald-600">Härnösands HF</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">Serietabeller</h1>
         <p className="mt-2 text-sm text-slate-600 sm:text-base max-w-2xl">
-          Ställningar för alla serier vi deltar i. Hämtas direkt från Profixio — 2 poäng för vinst, 1 för oavgjort.
+          Ställningar för alla serier vi deltar i. Officiella tabeller direkt från Profixio.
+          {updatedAt && (
+            <span className="ml-2 text-xs text-slate-400">
+              Uppdaterad {new Date(updatedAt).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}
+            </span>
+          )}
         </p>
       </div>
 
