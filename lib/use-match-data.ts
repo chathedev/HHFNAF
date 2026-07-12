@@ -1027,6 +1027,22 @@ const PERSISTED_ENTRY_MAX_AGE_MS = 12 * 60 * 60 * 1000
 const PERSIST_MIN_INTERVAL_MS = 30_000
 const PERSISTED_OLD_MATCH_CAP = 150
 
+// JSON.stringify turns each NormalizedMatch.date (a Date) into an ISO string,
+// so on load we must revive it — otherwise downstream code that calls
+// match.date.toISOString() throws and crashes the whole page. Matches whose
+// date can't be parsed are dropped rather than kept as time-bombs.
+const reviveMatchDates = (matches: unknown): NormalizedMatch[] => {
+  if (!Array.isArray(matches)) return []
+  const revived: NormalizedMatch[] = []
+  for (const match of matches) {
+    if (!match || typeof match !== "object") continue
+    const date = new Date((match as { date?: unknown }).date as string)
+    if (Number.isNaN(date.getTime())) continue
+    revived.push({ ...(match as NormalizedMatch), date })
+  }
+  return revived
+}
+
 const loadPersistedEntry = (): SharedMatchCacheEntry | null => {
   if (typeof window === "undefined") return null
   try {
@@ -1036,7 +1052,18 @@ const loadPersistedEntry = (): SharedMatchCacheEntry | null => {
     if (!parsed || typeof parsed.timestamp !== "number") return null
     if (Date.now() - parsed.timestamp > PERSISTED_ENTRY_MAX_AGE_MS) return null
     if (!Array.isArray(parsed.current) || !Array.isArray(parsed.old)) return null
-    return parsed as SharedMatchCacheEntry
+    const groupedFeed = parsed.groupedFeed ?? {}
+    return {
+      ...parsed,
+      current: reviveMatchDates(parsed.current),
+      old: reviveMatchDates(parsed.old),
+      recentResults: reviveMatchDates(parsed.recentResults),
+      groupedFeed: {
+        live: reviveMatchDates(groupedFeed.live),
+        upcoming: reviveMatchDates(groupedFeed.upcoming),
+        finished: reviveMatchDates(groupedFeed.finished),
+      },
+    } as SharedMatchCacheEntry
   } catch {
     return null
   }
