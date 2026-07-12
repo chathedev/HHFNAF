@@ -1496,6 +1496,7 @@ const createMatchDataChannel = () => {
     updatePayload()
     updateConnectionState({ hasData: currentMatches.length > 0 || oldMatches.length > 0 })
     scheduleSubscriberNotification()
+    persistLatestEntry()
   }
 
   const handleDelta = (payload: any) => {
@@ -1538,6 +1539,7 @@ const createMatchDataChannel = () => {
     updatePayload()
     updateConnectionState({ hasData: currentMatches.length > 0 || oldMatches.length > 0 })
     scheduleSubscriberNotification()
+    persistLatestEntry()
   }
 
   const handleMissedEvents = (payload: any) => {
