@@ -559,8 +559,21 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   }, [selectedTeam])
 
   const matchesForFilter = useMemo(() => {
+    // The live endpoint also returns finished matches, but includes unpublished
+    // ones ("Inte publicerat"). The /data/old source is the clean, published,
+    // correctly-ordered authority for results. So from the live source we keep
+    // only live/upcoming plus finished matches that actually have a published
+    // result — otherwise unpublished archive matches flicker into "Resultat"
+    // and the list shows a different order on each load.
+    const liveSourceFiltered = liveUpcomingMatches.filter((match) => {
+      if (getMatchStatus(match) !== "finished") return true
+      const result = typeof match.result === "string" ? match.result.trim().toLowerCase() : ""
+      return result !== "" && result !== "inte publicerat"
+    })
+
+    // oldMatches first so its (always-published) copy wins any dedup tie.
     const seenIds = new Set<string>()
-    const mergedMatches = [...liveUpcomingMatches, ...oldMatches].filter((match) => {
+    const mergedMatches = [...oldMatches, ...liveSourceFiltered].filter((match) => {
       if (seenIds.has(match.id)) {
         return false
       }
