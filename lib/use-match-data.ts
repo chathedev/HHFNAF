@@ -1578,21 +1578,138 @@ const createMatchDataChannel = () => {
     }
   }
 
+  // --- WebSocket push channel (primary). Polling stays as fallback. ---
+  // The backend pushes `snapshot` on connect, then `delta`/`missed_events`;
+  // those map 1:1 onto the handlers above. While the socket is open the fast
+  // poll timers no-op; a slow safety full-poll still runs to refresh fields
+  // deltas don't carry (recentResults, sources) and to self-heal silently.
+  const WS_RECONNECT_MIN_MS = 1_000
+  const WS_RECONNECT_MAX_MS = 15_000
+  const SAFETY_POLL_EVERY_N_TICKS = 6 // 6 × 10s = one full poll per minute while WS is healthy
+  let ws: WebSocket | null = null
+  let wsWanted = false
+  let wsReconnectDelay = WS_RECONNECT_MIN_MS
+  let wsReconnectTimer: ReturnType<typeof setTimeout> | null = null
+  let fullPollTick = 0
+
+  const wsIsOpen = () => ws !== null && ws.readyState === WebSocket.OPEN
+
+  const buildWsUrl = () => {
+    const base = API_BASE_URL.replace(/^http/i, "ws")
+    const since = Number(lastEventId) > 0 ? `?sinceEventId=${Number(lastEventId)}` : ""
+    return `${base}/matcher/ws${since}`
+  }
+
+  const connectWebSocket = () => {
+    if (!isBrowser || !wsWanted || wsIsOpen() || typeof WebSocket === "undefined") {
+      return
+    }
+    try {
+      ws = new WebSocket(buildWsUrl())
+    } catch {
+      scheduleWsReconnect()
+      return
+    }
+    ws.onopen = () => {
+      wsReconnectDelay = WS_RECONNECT_MIN_MS
+      updateConnectionState({ isConnected: true })
+    }
+    ws.onmessage = (message) => {
+      let payload: any
+      try {
+        payload = JSON.parse(message.data)
+      } catch {
+        return
+      }
+      if (payload?.type === "snapshot") {
+        handleSnapshot(payload)
+      } else if (payload?.type === "delta") {
+        handleDelta(payload)
+      } else if (payload?.type === "missed_events") {
+        handleMissedEvents(payload)
+      }
+    }
+    ws.onclose = () => {
+      ws = null
+      if (wsWanted) {
+        scheduleWsReconnect()
+        // While the socket is down the fast poll timers take over again;
+        // kick one immediately so a drop mid-match doesn't freeze scores.
+        pollFull()
+      }
+    }
+    ws.onerror = () => {
+      try {
+        ws?.close()
+      } catch {
+        // closing an already-broken socket can throw; reconnect handles it
+      }
+    }
+  }
+
+  const scheduleWsReconnect = () => {
+    if (!wsWanted || wsReconnectTimer) {
+      return
+    }
+    wsReconnectTimer = globalThis.setTimeout(() => {
+      wsReconnectTimer = null
+      connectWebSocket()
+    }, wsReconnectDelay)
+    wsReconnectDelay = Math.min(wsReconnectDelay * 2, WS_RECONNECT_MAX_MS)
+  }
+
+  const disconnectWebSocket = () => {
+    wsWanted = false
+    if (wsReconnectTimer) {
+      globalThis.clearTimeout(wsReconnectTimer)
+      wsReconnectTimer = null
+    }
+    if (ws) {
+      const socket = ws
+      ws = null
+      try {
+        socket.close()
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  const handleVisibilityChange = () => {
+    if (typeof document === "undefined" || document.visibilityState !== "visible") {
+      return
+    }
+    // Coming back to the tab: make sure the socket is alive and data is fresh.
+    if (!wsIsOpen()) {
+      connectWebSocket()
+      pollFull()
+    }
+  }
+
   const startPolling = () => {
     if (!isBrowser || isPolling) {
       return
     }
     isPolling = true
+    wsWanted = true
     pollFull()
     pollEvents()
+    connectWebSocket()
     fullPollTimer = globalThis.setInterval(() => {
+      fullPollTick += 1
+      if (wsIsOpen() && fullPollTick % SAFETY_POLL_EVERY_N_TICKS !== 0) {
+        return
+      }
       pollFull()
     }, FULL_POLL_INTERVAL_MS)
     eventPollTimer = globalThis.setInterval(() => {
+      if (wsIsOpen()) {
+        return
+      }
       pollEvents()
     }, EVENT_POLL_INTERVAL_MS)
     if (isBrowser && typeof document !== "undefined") {
-      document.addEventListener("visibilitychange", pollFull)
+      document.addEventListener("visibilitychange", handleVisibilityChange)
     }
   }
 
@@ -1601,6 +1718,7 @@ const createMatchDataChannel = () => {
       return
     }
     isPolling = false
+    disconnectWebSocket()
     if (fullPollTimer) {
       globalThis.clearInterval(fullPollTimer)
       fullPollTimer = null
@@ -1610,7 +1728,7 @@ const createMatchDataChannel = () => {
       eventPollTimer = null
     }
     if (isBrowser && typeof document !== "undefined") {
-      document.removeEventListener("visibilitychange", pollFull)
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
     }
   }
 

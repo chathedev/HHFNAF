@@ -180,67 +180,119 @@ type StandingsSeries = {
   teams: StandingsTeam[]
 }
 
+const STANDINGS_REFRESH_MS = 90_000
+
 function StandingsSection({ selectedTeam }: { selectedTeam: string }) {
   const [standings, setStandings] = useState<StandingsSeries[]>([])
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [expandedSeries, setExpandedSeries] = useState<string | null>(null)
 
   useEffect(() => {
-    const url = selectedTeam && selectedTeam !== "all"
-      ? `${API_BASE_URL}/matcher/standings?team=${encodeURIComponent(selectedTeam)}`
-      : `${API_BASE_URL}/matcher/standings`
+    let cancelled = false
 
-    setLoading(true)
-    fetch(url, { cache: "no-store" })
-      .then((res) => res.ok ? res.json() : Promise.reject("Failed"))
-      .then((data) => {
-        // API returns { seriesName: [{team, M, W, D, L, GF, GA, GD, P}, ...] }
-        const parsed: StandingsSeries[] = Object.entries(data)
-          .filter(([, teams]) => Array.isArray(teams) && (teams as any[]).length > 0)
-          .map(([series, teams]) => ({
-            series,
-            teams: (teams as any[]).map((t) => ({
-              team: t.team ?? "",
-              played: t.M ?? 0,
-              wins: t.W ?? 0,
-              draws: t.D ?? 0,
-              losses: t.L ?? 0,
-              goalsFor: t.GF ?? 0,
-              goalsAgainst: t.GA ?? 0,
-              goalDifference: t.GD ?? 0,
-              points: t.P ?? 0,
-            })),
-          }))
-          .sort((a, b) => b.teams.length - a.teams.length)
-        setStandings(parsed)
-        if (parsed.length > 0) {
-          setExpandedSeries(parsed[0].series)
-        }
-      })
-      .catch(() => setStandings([]))
-      .finally(() => setLoading(false))
+    const load = (silent: boolean) => {
+      const params = new URLSearchParams({ meta: "1" })
+      if (selectedTeam && selectedTeam !== "all") {
+        params.set("team", selectedTeam)
+      }
+      if (!silent) setLoading(true)
+      fetch(`${API_BASE_URL}/matcher/standings?${params}`, { cache: "no-store" })
+        .then((res) => (res.ok ? res.json() : Promise.reject("Failed")))
+        .then((data) => {
+          if (cancelled) return
+          // With meta=1: { updatedAt, standings: { seriesName: [...] } }.
+          // Fall back to the bare { seriesName: [...] } shape.
+          const tables = data && typeof data === "object" && "standings" in data ? data.standings : data
+          if (data && typeof data === "object" && "updatedAt" in data) {
+            setUpdatedAt(data.updatedAt ?? null)
+          }
+          const parsed: StandingsSeries[] = Object.entries(tables ?? {})
+            .filter(([, teams]) => Array.isArray(teams) && (teams as any[]).length > 0)
+            .map(([series, teams]) => ({
+              series,
+              teams: (teams as any[]).map((t) => ({
+                team: t.team ?? "",
+                played: t.M ?? 0,
+                wins: t.W ?? 0,
+                draws: t.D ?? 0,
+                losses: t.L ?? 0,
+                goalsFor: t.GF ?? 0,
+                goalsAgainst: t.GA ?? 0,
+                goalDifference: t.GD ?? 0,
+                points: t.P ?? 0,
+              })),
+            }))
+            .sort((a, b) => b.teams.length - a.teams.length)
+          setStandings(parsed)
+          setExpandedSeries((prev) => prev ?? (parsed.length > 0 ? parsed[0].series : null))
+        })
+        .catch(() => {
+          // Keep last-known tables on silent refresh failures.
+          if (!silent && !cancelled) setStandings([])
+        })
+        .finally(() => {
+          if (!silent && !cancelled) setLoading(false)
+        })
+    }
+
+    load(false)
+    const timer = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return
+      load(true)
+    }, STANDINGS_REFRESH_MS)
+
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+    }
   }, [selectedTeam])
+
+  const updatedLabel = updatedAt
+    ? new Date(updatedAt).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })
+    : null
 
   if (loading) {
     return (
       <section className="mt-8">
-        <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-600" />
-          <p className="mt-3 text-sm text-slate-500">Hämtar tabeller...</p>
+        <div className="rounded-2xl border border-slate-200 bg-white px-6 py-8">
+          <div className="h-4 w-24 animate-pulse rounded bg-slate-100" />
+          <div className="mt-3 h-6 w-48 animate-pulse rounded bg-slate-100" />
+          <div className="mt-5 space-y-2.5">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="h-9 animate-pulse rounded-lg bg-slate-50" style={{ animationDelay: `${i * 120}ms` }} />
+            ))}
+          </div>
         </div>
       </section>
     )
   }
 
-  if (standings.length === 0) return null
+  if (standings.length === 0) {
+    return (
+      <section id="tabeller" className="mt-8 scroll-mt-8">
+        <div className="rounded-[26px] border border-slate-200 bg-white px-6 py-10 text-center">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">Tabeller</p>
+          <p className="mt-2 text-sm text-slate-500">Serietabellerna uppdateras just nu — titta tillbaka om en liten stund.</p>
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section id="tabeller" className="mt-8 scroll-mt-8">
       <div className="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.04)]">
         <div className="border-b border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,0.95),rgba(255,255,255,0.95))] px-5 py-5 sm:px-6">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">Tabeller</p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-950">Serieställning</h2>
-          <p className="mt-1 text-sm text-slate-500">Beräknad från matchresultat. 2p för vinst, 1p för oavgjort.</p>
+          <div className="flex items-baseline justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">Tabeller</p>
+              <h2 className="mt-1 text-xl font-semibold text-slate-950">Serieställning</h2>
+              <p className="mt-1 text-sm text-slate-500">Officiella serietabeller från Profixio.</p>
+            </div>
+            {updatedLabel && (
+              <span className="shrink-0 text-xs text-slate-400">Uppdaterad {updatedLabel}</span>
+            )}
+          </div>
         </div>
 
         <div className="divide-y divide-slate-100 p-4 sm:p-5">

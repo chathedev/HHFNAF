@@ -1,6 +1,9 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "") || "https://api.harnosandshf.se"
+const STANDINGS_REFRESH_MS = 90_000
 
 type StandingsTeam = {
   team: string
