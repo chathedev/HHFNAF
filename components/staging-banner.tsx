@@ -4,7 +4,7 @@ type StagingBannerProps = {
 }
 
 export function StagingBanner({
-  title = "Testmiljö – Temporärt bytt tema",
+  title = "Testmiljö · Temporärt bytt tema",
   message = "Detta är staging (hhf.wby.se). Orange accent t.o.m 2026-01-18 23:00. Harnosandshf.se visar rosa tema under samma period.",
 }: StagingBannerProps) {
   return (

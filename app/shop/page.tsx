@@ -71,7 +71,7 @@ export default function ShopPage() {
           <div className="grid gap-px bg-slate-200 sm:grid-cols-3">
             {[
               { title: "Supporterplagg", text: "Hoodies, t-shirts och accessoarer som gör HHF synligt utanför hallen." },
-              { title: "Endast upphämtning", text: "Beställ online och hämta lokalt. Ingen leverans — enkelt och tydligt." },
+              { title: "Endast upphämtning", text: "Beställ online och hämta lokalt. Ingen leverans, enkelt och tydligt." },
               { title: "Stöd föreningen", text: "Varje köp hjälper HHF bygga starkare verksamhet runt lagen." },
             ].map((item) => (
               <div key={item.title} className="bg-white p-6">

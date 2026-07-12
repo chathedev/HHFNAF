@@ -17,11 +17,11 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: new URL("https://www.harnosandshf.se"),
     title: {
-      default: "Härnösands HF – Officiell hemsida för handboll i Härnösand",
-      template: "%s | Härnösands HF – Officiell hemsida för handboll i Härnösand",
+      default: "Härnösands HF | Officiell hemsida för handboll i Härnösand",
+      template: "%s | Härnösands HF | Officiell hemsida för handboll i Härnösand",
     },
     description:
-      "Härnösands HF – Officiell hemsida för handboll i Härnösand. Matcher, lag, ungdomsverksamhet och kontakt.",
+      "Härnösands HF | Officiell hemsida för handboll i Härnösand. Matcher, lag, ungdomsverksamhet och kontakt.",
     keywords: [
       "Härnösands HF", "Härnösands Handbollsförening", "HHF", "Härnösands",
       "Härnösand handboll", "handboll Härnösand", "handbollsklubb Härnösand",
@@ -36,7 +36,7 @@ export async function generateMetadata(): Promise<Metadata> {
     creator: "Härnösands HF",
     publisher: "Härnösands HF",
     openGraph: {
-      title: "Härnösands HF – Officiell hemsida för handboll i Härnösand",
+      title: "Härnösands HF | Officiell hemsida för handboll i Härnösand",
       description:
         "Härnösands Handbollsförening (HHF) – Härnösands främsta handbollsklubb med stolthet, gemenskap och passion för sporten. A-lag, ungdomslag, träningar och matcher.",
       url: "https://www.harnosandshf.se",
@@ -55,7 +55,7 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     twitter: {
       card: "summary_large_image",
-      title: "Härnösands HF – Officiell hemsida för handboll i Härnösand",
+      title: "Härnösands HF | Officiell hemsida för handboll i Härnösand",
       description:
         "Härnösands Handbollsförening (HHF) – Härnösands främsta handbollsklubb med stolthet, gemenskap och passion för sporten. A-lag, ungdomslag, träningar och matcher.",
       images: ["/opengraph-image.png"],

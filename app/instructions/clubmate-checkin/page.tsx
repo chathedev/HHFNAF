@@ -64,7 +64,7 @@ export default function ClubmateCheckinPage() {
                         <li>Klicka på Evenemang och välj matchen.</li>
                         <li>Öppna Sälj → Kassa (eller Sälj) och välj biljettkategori samt antal.</li>
                         <li>Klicka på Ta betalt och låt besökaren betala i sin Swish-app.</li>
-                        <li>När betalningen är klar checkas biljetten in automatiskt – scanna inte biljetten manuellt, även om det inte står uttryckligen i listan.</li>
+                        <li>När betalningen är klar checkas biljetten in automatiskt. Scanna inte biljetten manuellt, även om det inte står uttryckligen i listan.</li>
                       </ul>
                     </div>
                     <p className="text-sm text-gray-600">
@@ -86,7 +86,7 @@ export default function ClubmateCheckinPage() {
                     </p>
                     <ul className="space-y-2">
                       <li>Alla lottköp kopplas automatiskt till rätt match och är inte återbetalningsbara.</li>
-                      <li>Dragningen sker automatiskt 1 timme och 15 minuter efter matchstart – vinnare får besked direkt och kan hämta ut sin vinst.</li>
+                      <li>Dragningen sker automatiskt 1 timme och 15 minuter efter matchstart. Vinnare får besked direkt och kan hämta ut sin vinst.</li>
                       <li>Sekretariatet kan ropa ut vinnande nummer om man vill, men det är helt valfritt.</li>
                       <li>All hantering sker i systemet, så inga manuella listor behövs.</li>
                     </ul>

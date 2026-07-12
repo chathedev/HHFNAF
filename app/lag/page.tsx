@@ -209,7 +209,7 @@ export default function LagPage() {
                   </AccordionTrigger>
                   <AccordionContent className="text-sm text-gray-600">
                     Absolut! Vi erbjuder kostnadsfria provträningar. Kom som du är med träningskläder och
-                    inomhusskor — handbollar finns att låna.
+                    inomhusskor. Handbollar finns att låna.
                     <Link href="/kontakt" className="ml-1 text-orange-500 hover:underline">Kontakta oss för att boka.</Link>
                   </AccordionContent>
                 </AccordionItem>
@@ -219,7 +219,7 @@ export default function LagPage() {
                   </AccordionTrigger>
                   <AccordionContent className="text-sm text-gray-600">
                     Medlemsavgiften varierar beroende på åldersgrupp. Kontakta oss för aktuella avgifter.
-                    Vi vill att alla ska kunna spela handboll — hör av dig om du har frågor om ekonomiskt stöd.
+                    Vi vill att alla ska kunna spela handboll, hör av dig om du har frågor om ekonomiskt stöd.
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
