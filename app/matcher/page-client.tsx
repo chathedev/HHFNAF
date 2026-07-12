@@ -274,7 +274,7 @@ function StandingsSection({ selectedTeam }: { selectedTeam: string }) {
       <section id="tabeller" className="mt-8 scroll-mt-8">
         <div className="rounded-[26px] border border-slate-200 bg-white px-6 py-10 text-center">
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">Tabeller</p>
-          <p className="mt-2 text-sm text-slate-500">Serietabellerna uppdateras just nu — titta tillbaka om en liten stund.</p>
+          <p className="mt-2 text-sm text-slate-500">Serietabellerna uppdateras just nu. Titta tillbaka om en liten stund.</p>
         </div>
       </section>
     )
@@ -890,7 +890,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                 </div>
                 <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-4xl">Matcher</h1>
                 <p className="mt-2 max-w-xl text-sm text-slate-500">
-                  Live, kommande och resultat – uppdateras automatiskt.
+                  Live, kommande och resultat. Uppdateras automatiskt.
                 </p>
               </div>
 

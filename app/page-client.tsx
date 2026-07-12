@@ -905,7 +905,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                         Mössor och supporterprylar
                       </h2>
                       <p className="mt-1 text-sm text-slate-500">
-                        Stöd klubben — handla direkt.
+                        Stöd klubben. Handla direkt.
                       </p>
                     </div>
                     <span className="inline-flex items-center gap-1.5 border border-slate-900 px-4 py-2 text-xs font-semibold text-slate-900 transition group-hover:bg-slate-900 group-hover:text-white shrink-0">
@@ -1483,7 +1483,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                       Vad är Härnösands HF?
                     </AccordionTrigger>
                     <AccordionContent className="text-gray-600 text-sm leading-relaxed">
-                      Härnösands HF är en handbollsförening i Härnösand som erbjuder handboll för alla åldrar — från de
+                      Härnösands HF är en handbollsförening i Härnösand som erbjuder handboll för alla åldrar, från de
                       allra yngsta till seniorlag. Vi har lag inom både dam- och herrverksamhet samt barn- och ungdomsverksamhet.
                     </AccordionContent>
                   </AccordionItem>
@@ -1493,7 +1493,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                     </AccordionTrigger>
                     <AccordionContent className="text-gray-600 text-sm leading-relaxed">
                       Kontakta oss så hjälper vi dig hitta rätt lag! Vi erbjuder kostnadsfria provträningar. Du behöver bara
-                      bekväma träningskläder och inomhusskor — handbollar finns att låna.
+                      bekväma träningskläder och inomhusskor. Handbollar finns att låna.
                       <Link href="/kontakt" className="text-orange-500 hover:underline ml-1">Kontakta oss här.</Link>
                     </AccordionContent>
                   </AccordionItem>

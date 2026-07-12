@@ -1145,7 +1145,7 @@ export function MatchFeedModal({
                 {activePenalties.map((item, index) => (
                   <div key={`${item.team || "team"}-${item.player || "player"}-${index}`} className="flex items-center justify-between gap-3 py-1">
                     <p className="min-w-0 truncate text-sm text-slate-500">
-                      {item.player || "Spelare"}{item.playerNumber ? ` #${item.playerNumber}` : ""} <span className="text-slate-300">—</span> {item.team || "Lag"}
+                      {item.player || "Spelare"}{item.playerNumber ? ` #${item.playerNumber}` : ""} <span className="text-slate-300">·</span> {item.team || "Lag"}
                     </p>
                     <span className="font-mono text-sm font-black tabular-nums text-slate-900">
                       {formatSecondsAsClock(item.remaining)}
@@ -1164,7 +1164,7 @@ export function MatchFeedModal({
               type="button"
               onClick={() => setActiveTab("timeline")}
               className={`py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
-                activeTab === "timeline" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-300 hover:text-slate-500"
+                activeTab === "timeline" ? "border-emerald-600 text-emerald-700" : "border-transparent text-slate-300 hover:text-slate-500"
               }`}
             >
               Tidslinje
@@ -1173,7 +1173,7 @@ export function MatchFeedModal({
               type="button"
               onClick={() => setActiveTab("scorers")}
               className={`py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
-                activeTab === "scorers" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-300 hover:text-slate-500"
+                activeTab === "scorers" ? "border-emerald-600 text-emerald-700" : "border-transparent text-slate-300 hover:text-slate-500"
               }`}
             >
               Målskyttar
@@ -1259,13 +1259,13 @@ export function MatchFeedModal({
               {periodKeys.map((period) => (
                 <section key={period}>
                   {/* Period header */}
-                  <div className="sticky top-0 z-10 bg-slate-50/90 backdrop-blur-sm border-y border-slate-100 py-1.5">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 text-center">{getPeriodLabel(period)}</p>
+                  <div className="sticky top-0 z-10 bg-emerald-50/90 backdrop-blur-sm border-y border-emerald-100/70 py-1.5">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700/70 text-center">{getPeriodLabel(period)}</p>
                   </div>
                   {/* Two-column timeline */}
                   <div className="relative px-2 sm:px-4">
                     {/* Center vertical line */}
-                    <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-slate-200 -translate-x-1/2" />
+                    <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-emerald-100 -translate-x-1/2" />
                     <ul>
                       {groupedByPeriod[period].map((event, index) => {
                         const style = getRowStyle(event, homeTeam, awayTeam)
