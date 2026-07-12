@@ -41,7 +41,6 @@ export default function ShopPage() {
                     <SwishMark className="h-4 w-auto text-emerald-400" />
                     Swish
                   </span>
-                  <span>Kort</span>
                   <span>Endast upphämtning</span>
                 </div>
               </div>
@@ -91,10 +90,8 @@ export default function ShopPage() {
               <div className="flex items-center gap-2">
                 <SwishMark className="h-5 w-auto text-emerald-600" />
                 <span className="text-sm font-bold text-slate-900">Swish</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-1.5 py-0.5">Snabbast</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-1.5 py-0.5">Snabbt & säkert</span>
               </div>
-              <span className="text-sm text-slate-300">|</span>
-              <span className="text-sm text-slate-400">Kort</span>
             </div>
 
             {shopVisible && (
