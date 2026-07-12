@@ -776,10 +776,17 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     const nextLive = groupedMatches.live[0] ?? null
     const latestFinished = groupedMatches.finished[0] ?? null
 
+    const cleanScore = (m: NormalizedMatch | null) => {
+      const raw = typeof m?.result === "string" ? m.result.trim() : ""
+      return raw && raw.toLowerCase() !== "inte publicerat" ? raw : ""
+    }
+    const liveScore = cleanScore(nextLive)
+    const finishedScore = cleanScore(latestFinished)
+
     return [
       {
         label: "Live nu",
-        value: groupedMatches.live.length.toString(),
+        value: liveScore || groupedMatches.live.length.toString(),
         text: nextLive ? getMatchupLabel(nextLive) : "Ingen match pågår just nu.",
         tone: "border-rose-200 bg-rose-50/70 text-rose-700",
       },
@@ -791,7 +798,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
       },
       {
         label: "Senaste resultat",
-        value: groupedMatches.finished.length.toString(),
+        value: finishedScore || "–",
         text: latestFinished ? getMatchupLabel(latestFinished) : "Inga färska resultat just nu.",
         tone: "border-slate-200 bg-slate-100/90 text-slate-700",
       },
