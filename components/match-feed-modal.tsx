@@ -852,9 +852,6 @@ export function MatchFeedModal({
       .map(({ event }) => event)
   }, [timelineSource])
 
-  const sortedFeedKey = useMemo(() => sortedFeed.map(buildTimelineIdentityKey).join("||"), [sortedFeed])
-  const displayedFeedKey = useMemo(() => displayedFeed.map(buildTimelineIdentityKey).join("||"), [displayedFeed])
-
   useEffect(() => {
     if (!isOpen) {
       setDisplayedFeed([])
@@ -862,7 +859,14 @@ export function MatchFeedModal({
       return
     }
 
-    if (sortedFeedKey === displayedFeedKey) {
+    // Element-wise early-exit comparison instead of building O(n) join keys
+    // on every update — same exactness, no string allocation.
+    const feedsAreIdentical =
+      sortedFeed.length === displayedFeed.length &&
+      sortedFeed.every(
+        (event, index) => buildTimelineIdentityKey(event) === buildTimelineIdentityKey(displayedFeed[index]),
+      )
+    if (feedsAreIdentical) {
       return
     }
 
@@ -879,7 +883,7 @@ export function MatchFeedModal({
     })
 
     return () => cancelAnimationFrame(frame)
-  }, [isOpen, sortedFeed, sortedFeedKey, displayedFeedKey, displayedFeed.length])
+  }, [isOpen, sortedFeed, displayedFeed])
 
   const latestScore = useMemo(() => {
     const eventWithScore = displayedFeed.find(
