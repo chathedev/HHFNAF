@@ -125,6 +125,10 @@ const getTeamMatchStrength = (candidate?: string, reference?: string) => {
   return 0
 }
 
+// Is this our club? Used to highlight the Härnösands HF side in the header.
+const isHHFName = (name: string | undefined): boolean =>
+  /h[äa]rn[öo]sand/i.test(name ?? "")
+
 const resolveTeamSide = (teamName: string | undefined, homeTeam: string, awayTeam: string): "home" | "away" | null => {
   const homeStrength = getTeamMatchStrength(teamName, homeTeam)
   const awayStrength = getTeamMatchStrength(teamName, awayTeam)
@@ -1071,30 +1075,57 @@ export function MatchFeedModal({
         ref={modalRef}
         className="flex h-[96dvh] w-full max-w-xl flex-col overflow-hidden bg-white sm:h-[90vh] sm:border sm:border-slate-200"
       >
-        {/* Header */}
-        <header className="sticky top-0 z-20 bg-slate-950 text-white px-5 py-4 sm:px-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 min-w-0">
-              {(matchStatus === "live" || matchStatus === "halftime") && (
-                <span className="bg-white text-slate-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest shrink-0">LIVE</span>
-              )}
-              {matchStatus === "finished" && <span className="text-xs font-semibold uppercase tracking-wider text-white/40 shrink-0">SLUT</span>}
-              {matchStatus === "upcoming" && <span className="text-xs font-semibold uppercase tracking-wider text-white/40 shrink-0">KOMMANDE</span>}
-              <p className="text-4xl font-black tabular-nums sm:text-5xl leading-none">{scoreboard}</p>
+        {/* Header — HHF branded */}
+        <header className="sticky top-0 z-20 bg-gradient-to-br from-emerald-950 via-emerald-900 to-emerald-950 text-white px-5 py-4 sm:px-6">
+          {/* Top row: crest + series/context, close */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <img src="/logo.png" alt="Härnösands HF" className="h-6 w-6 shrink-0 object-contain" />
+              <span className="truncate text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-300/80">
+                {matchData?.series || "Matchcenter"}
+              </span>
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="p-2 text-white/60 transition hover:text-white shrink-0"
-              aria-label="Stäng modal"
+              className="-mr-1 rounded-full p-1.5 text-emerald-100/70 transition hover:bg-white/10 hover:text-white shrink-0"
+              aria-label="Stäng"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
-          {/* Team columns below score */}
-          <div className="mt-3 flex items-center justify-between">
-            <p className="text-sm font-bold uppercase tracking-wide text-white/80 truncate flex-1 text-left">{homeTeam}</p>
-            <p className="text-sm font-bold uppercase tracking-wide text-white/80 truncate flex-1 text-right">{awayTeam}</p>
+
+          {/* Scoreboard: HOME · score · AWAY, HHF side highlighted */}
+          <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+            <p
+              className={`min-w-0 truncate text-right text-sm font-bold uppercase tracking-wide ${
+                isHHFName(homeTeam) ? "text-emerald-300" : "text-white/70"
+              }`}
+            >
+              {homeTeam}
+            </p>
+            <div className="flex flex-col items-center">
+              <p className="text-4xl font-black leading-none tabular-nums sm:text-5xl">{scoreboard}</p>
+              <span className="mt-1.5 inline-flex items-center gap-1.5">
+                {(matchStatus === "live" || matchStatus === "halftime") ? (
+                  <>
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-red-300">Live</span>
+                  </>
+                ) : (
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-emerald-300/60">
+                    {matchStatus === "finished" ? "Slut" : "Kommande"}
+                  </span>
+                )}
+              </span>
+            </div>
+            <p
+              className={`min-w-0 truncate text-left text-sm font-bold uppercase tracking-wide ${
+                isHHFName(awayTeam) ? "text-emerald-300" : "text-white/70"
+              }`}
+            >
+              {awayTeam}
+            </p>
           </div>
         </header>
 
