@@ -703,14 +703,14 @@ export function MatchFeedModal({
   const timeoutSecondsLeft = Math.max(0, timeoutBaseSecondsLeft - (clockReason === "timeout" ? clockTick : 0))
   const activePenalties = useMemo(() => {
     const currentPeriod = effectiveClockState?.period
-    return effectivePenalties
-      .filter((item) => item.active)
-      .filter((item) => (typeof currentPeriod === "number" ? item.period === currentPeriod : true))
-      .map((item) => ({
-        ...item,
-        remaining: Math.max(0, (item.remainingSeconds ?? 0) - (clockRunning ? clockTick : 0)),
-      }))
-      .filter((item) => item.remaining > 0)
+    const result: Array<(typeof effectivePenalties)[number] & { remaining: number }> = []
+    for (const item of effectivePenalties) {
+      if (!item.active) continue
+      if (typeof currentPeriod === "number" && item.period !== currentPeriod) continue
+      const remaining = Math.max(0, (item.remainingSeconds ?? 0) - (clockRunning ? clockTick : 0))
+      if (remaining > 0) result.push({ ...item, remaining })
+    }
+    return result
   }, [effectivePenalties, effectiveClockState?.period, clockRunning, clockTick])
 
   const fetchDetailData = async () => {
