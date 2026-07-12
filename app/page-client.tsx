@@ -686,8 +686,12 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     }
   }, [groupedFeed, recentResults])
 
+  // Only show the skeleton while we have NO answer at all. SSR already fetches
+  // the match window and passes it as initialData, so hasMatchPayload is true
+  // from first paint — an empty-but-loaded payload means "no matches", which we
+  // should show instantly instead of skeletons that resolve to the same thing.
   const showInitialMatchLoader =
-    !matchError && homeMatchFlow.items.length === 0 && (matchLoading || !hasMatchPayload)
+    !matchError && homeMatchFlow.items.length === 0 && !hasMatchPayload
 
   useEffect(() => {
     if (typeof window === "undefined") {
