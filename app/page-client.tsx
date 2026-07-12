@@ -42,6 +42,7 @@ import {
   shouldShowProfixioTechnicalIssue,
 } from "@/lib/match-card-utils"
 import { useMatchData, forceMatchDataPoll, type NormalizedMatch } from "@/lib/use-match-data"
+import { AnimatedScore } from "@/components/animated-score"
 import { MatchCardCTA } from "@/components/match-card-cta"
 import { InstagramFeed } from "@/components/instagram-feed"
 import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
@@ -417,10 +418,8 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
           </div>
 
           {scoreValue && (
-            <div className="py-2" data-score-value="true">
-              <span className={`text-3xl font-black tabular-nums tracking-tight ${status === "live" ? "text-slate-900" : "text-slate-900"}`}>
-                {scoreValue}
-              </span>
+            <div className="py-2">
+              <AnimatedScore value={scoreValue} className="text-3xl font-black tabular-nums tracking-tight text-slate-900" />
             </div>
           )}
 
@@ -609,9 +608,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
             <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
               {scoreValue ? (
-                <span className="text-lg font-black tabular-nums text-slate-900" data-score-value="true">
-                  {scoreValue}
-                </span>
+                <AnimatedScore value={scoreValue} className="text-lg font-black tabular-nums text-slate-900" />
               ) : null}
               {hasStream ? (
                 <a
@@ -1002,9 +999,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                                   </div>
                                   <div className="flex flex-col items-end gap-3 shrink-0">
                                     {scoreValue && (
-                                      <span className="text-3xl font-black tabular-nums text-white" data-score-value="true">
-                                        {scoreValue}
-                                      </span>
+                                      <AnimatedScore value={scoreValue} className="text-3xl font-black tabular-nums text-white" />
                                     )}
                                     <Link
                                       href={TICKET_URL}
@@ -1092,9 +1087,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                                   </div>
                                   <div className="flex flex-col items-end gap-3 shrink-0">
                                     {scoreValue && (
-                                      <span className="text-3xl font-black tabular-nums text-white" data-score-value="true">
-                                        {scoreValue}
-                                      </span>
+                                      <AnimatedScore value={scoreValue} className="text-3xl font-black tabular-nums text-white" />
                                     )}
                                     <Link
                                       href={TICKET_URL}

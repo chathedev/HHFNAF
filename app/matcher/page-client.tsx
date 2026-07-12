@@ -708,7 +708,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
 
           <div className="flex flex-col gap-3 xl:items-end">
             <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-              <span className={`inline-flex w-fit items-center justify-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${statusBadge.tone}`}>
+              <span className={`inline-flex w-fit items-center justify-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${statusBadge.tone} ${status === "live" ? "live-badge" : ""}`}>
                 {statusBadge.label}
               </span>
               {scoreValue && (
