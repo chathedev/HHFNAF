@@ -1019,6 +1019,29 @@ type ConnectionState = {
   hasData: boolean
 }
 
+// Last-known match data persisted to localStorage so a returning visitor
+// paints matches instantly (stale-while-revalidate: WS/poll replaces it
+// within a second or two).
+const PERSISTED_ENTRY_KEY = "matcher_channel_cache_v1"
+const PERSISTED_ENTRY_MAX_AGE_MS = 12 * 60 * 60 * 1000
+const PERSIST_MIN_INTERVAL_MS = 30_000
+const PERSISTED_OLD_MATCH_CAP = 150
+
+const loadPersistedEntry = (): SharedMatchCacheEntry | null => {
+  if (typeof window === "undefined") return null
+  try {
+    const raw = window.localStorage.getItem(PERSISTED_ENTRY_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed.timestamp !== "number") return null
+    if (Date.now() - parsed.timestamp > PERSISTED_ENTRY_MAX_AGE_MS) return null
+    if (!Array.isArray(parsed.current) || !Array.isArray(parsed.old)) return null
+    return parsed as SharedMatchCacheEntry
+  } catch {
+    return null
+  }
+}
+
 const createMatchDataChannel = () => {
   const isBrowser = typeof window !== "undefined"
   let fullPollTimer: ReturnType<typeof setInterval> | null = null
@@ -1026,7 +1049,28 @@ const createMatchDataChannel = () => {
   let isPolling = false
   let fullPollInFlight = false
   let eventPollInFlight = false
-  let latestEntry: SharedMatchCacheEntry | null = sharedMatchCache.get(CHANNEL_ENDPOINT) ?? null
+  let latestEntry: SharedMatchCacheEntry | null =
+    sharedMatchCache.get(CHANNEL_ENDPOINT) ?? loadPersistedEntry()
+  let lastPersistAt = 0
+
+  const persistLatestEntry = () => {
+    if (!isBrowser || !latestEntry) return
+    const now = Date.now()
+    if (now - lastPersistAt < PERSIST_MIN_INTERVAL_MS) return
+    lastPersistAt = now
+    try {
+      window.localStorage.setItem(
+        PERSISTED_ENTRY_KEY,
+        JSON.stringify({
+          ...latestEntry,
+          old: (latestEntry.old ?? []).slice(0, PERSISTED_OLD_MATCH_CAP),
+          timestamp: now,
+        }),
+      )
+    } catch {
+      // localStorage full or unavailable — instant paint is best-effort
+    }
+  }
   let lastEventId: string | number | null = null
   let lastUpdated: string | null = latestEntry?.lastUpdated ?? null
 
