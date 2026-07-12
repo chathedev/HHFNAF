@@ -805,32 +805,52 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     ]
   }, [groupedMatches])
 
-  const renderStatusPanel = (panel: (typeof statusPanels)[number]) => (
-    <section key={panel.key} className="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.04)]">
-      <div className="border-b border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,0.95),rgba(255,255,255,0.95))] px-4 py-4 sm:px-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
+  const renderStatusPanel = (panel: (typeof statusPanels)[number]) => {
+    // In the overview, an empty section collapses to a slim one-line row so
+    // off-season empties don't push real content down. When the user explicitly
+    // filters to that view, keep the full empty state with guidance.
+    if (panel.matches.length === 0 && statusFilter === "current") {
+      return (
+        <section
+          key={panel.key}
+          className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:px-5"
+        >
+          <div className="flex items-baseline gap-3">
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">{panel.label}</p>
-            <h2 className="mt-1 text-xl font-semibold text-slate-950">{panel.title}</h2>
-            <p className="mt-1 text-sm text-slate-500">{panel.description}</p>
+            <p className="text-sm text-slate-400">{panel.description}</p>
           </div>
-          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-            {panel.matches.length}
-          </span>
-        </div>
-      </div>
+          <span className="text-xs font-medium text-slate-400">Inga just nu</span>
+        </section>
+      )
+    }
 
-      <div className="space-y-3 p-4 sm:p-5">
-        {panel.matches.length > 0 ? (
-          <div className="space-y-3">{panel.matches.map(renderMatchCard)}</div>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-            Inga matcher i den här vyn just nu.
+    return (
+      <section key={panel.key} className="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.04)]">
+        <div className="border-b border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,0.95),rgba(255,255,255,0.95))] px-4 py-4 sm:px-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">{panel.label}</p>
+              <h2 className="mt-1 text-xl font-semibold text-slate-950">{panel.title}</h2>
+              <p className="mt-1 text-sm text-slate-500">{panel.description}</p>
+            </div>
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+              {panel.matches.length}
+            </span>
           </div>
-        )}
-      </div>
-    </section>
-  )
+        </div>
+
+        <div className="space-y-3 p-4 sm:p-5">
+          {panel.matches.length > 0 ? (
+            <div className="space-y-3">{panel.matches.map(renderMatchCard)}</div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+              Inga matcher i den här vyn just nu.
+            </div>
+          )}
+        </div>
+      </section>
+    )
+  }
   useEffect(() => {
     // Remove ?team filtering from URL, only set selectedTeam from dropdown
     // This disables auto-select from URL and fixes jumping back to 'Alla lag'
