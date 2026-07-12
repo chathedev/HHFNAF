@@ -805,8 +805,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     ]
   }, [groupedMatches])
 
-  const activeStatusLabel = STATUS_OPTIONS.find((option) => option.value === statusFilter)?.label ?? "Översikt"
-
   const renderStatusPanel = (panel: (typeof statusPanels)[number]) => (
     <section key={panel.key} className="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.04)]">
       <div className="border-b border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,0.95),rgba(255,255,255,0.95))] px-4 py-4 sm:px-5">
@@ -856,113 +854,82 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                   </svg>
                   Till startsidan
                 </Link>
-                <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.35em] text-emerald-600">Matchcenter</p>
-                <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">Matcher i ett lugnare flöde.</h1>
-                <p className="mt-3 max-w-2xl text-sm text-slate-600 sm:text-base">
-                  En tydligare matchsida för live, kommande och resultat. Filtrera lag, byt vy och öppna detaljläget där tidslinje finns.
+                <div className="mt-4 flex items-center gap-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-emerald-600">Matchcenter</p>
+                  <span className="h-px flex-1 bg-slate-200" />
+                </div>
+                <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-4xl">Matcher</h1>
+                <p className="mt-2 max-w-xl text-sm text-slate-500">
+                  Live, kommande och resultat – uppdateras automatiskt.
                 </p>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3 xl:min-w-[28rem]">
                 {focusCards.map((card) => (
-                  <div key={card.label} className={`rounded-2xl border px-4 py-4 ${card.tone}`}>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em]">{card.label}</p>
-                    <p className="mt-2 text-2xl font-black">{card.value}</p>
-                    <p className="mt-2 text-sm leading-5 opacity-90">{card.text}</p>
+                  <div key={card.label} className={`rounded-2xl border px-4 py-3 ${card.tone}`}>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em]">{card.label}</p>
+                    <p className="mt-1 text-xl font-black tabular-nums">{card.value}</p>
+                    <p className="mt-1 truncate text-xs leading-4 opacity-80" title={card.text}>{card.text}</p>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          <div className="grid gap-4 px-5 py-5 sm:px-8 sm:py-6 xl:grid-cols-[minmax(0,1.15fr)_22rem]">
-            <section className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-4 sm:p-5">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Filtrering</p>
-                  <h2 className="mt-1 text-xl font-semibold text-slate-950">Välj lag och vy</h2>
-                  <p className="mt-1 text-sm text-slate-500">Byt mellan hel översikt, live, kommande eller avslutade matcher.</p>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-white p-1.5">
-                  {STATUS_OPTIONS.map((option) => {
-                    const isActive = statusFilter === option.value
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        aria-pressed={isActive}
-                        onClick={() => setStatusFilter(option.value)}
-                        className={`rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition sm:text-sm ${
-                          isActive ? "bg-slate-950 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-                <div className="max-w-md">
-                  <label htmlFor="team-filter" className="block text-sm font-semibold text-slate-900">
-                    Lag
-                  </label>
-                  <select
-                    id="team-filter"
-                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 transition focus:border-emerald-400 focus:outline-none"
-                    value={selectedTeam}
-                    onChange={(e) => setSelectedTeam(e.target.value)}
+          {/* Toolbar: view toggle + team filter + result count, all on one line */}
+          <div className="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-slate-100/80 p-1">
+              {STATUS_OPTIONS.map((option) => {
+                const isActive = statusFilter === option.value
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => setStatusFilter(option.value)}
+                    className={`rounded-xl px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] transition sm:text-sm ${
+                      isActive ? "bg-slate-950 text-white shadow-sm" : "text-slate-600 hover:bg-white"
+                    }`}
                   >
-                    <option value="all">Alla lag</option>
-                    {teamOptions.map((team) => (
-                      <option key={team.value} value={team.value}>
-                        {team.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    {option.label}
+                  </button>
+                )
+              })}
+            </div>
 
-                <div className="grid gap-2 sm:grid-cols-3">
-                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Aktiv vy</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-950">{activeStatusLabel}</p>
-                  </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Totalt</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-950">{filteredMatches.length} matcher</p>
-                  </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Detaljläge</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-950">Endast där tidslinje finns</p>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section className="rounded-[24px] bg-slate-950 p-5 text-white">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/55">Så fungerar sidan</p>
-              <div className="mt-4 space-y-3">
-                <div className="rounded-2xl bg-white/5 px-4 py-3">
-                  <p className="text-sm font-semibold">Alltid uppdaterat</p>
-                  <p className="mt-1 text-sm text-white/70">Live, kommande och avslutade matcher uppdateras automatiskt.</p>
-                </div>
-                <div className="rounded-2xl bg-white/5 px-4 py-3">
-                  <p className="text-sm font-semibold">Resultat nära i tiden</p>
-                  <p className="mt-1 text-sm text-white/70">Färska resultat visas överst innan de glider över till historik.</p>
-                </div>
-                <div className="rounded-2xl bg-white/5 px-4 py-3">
-                  <p className="text-sm font-semibold">Tidslinje när den finns</p>
-                  <p className="mt-1 text-sm text-white/70">Matchdetalj öppnas när tidslinjedata finns tillgänglig.</p>
-                </div>
-              </div>
-            </section>
+            <div className="flex items-center gap-3">
+              <span className="hidden text-xs font-medium text-slate-400 sm:inline">
+                {filteredMatches.length} matcher
+              </span>
+              <select
+                id="team-filter"
+                aria-label="Filtrera lag"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-900 transition focus:border-emerald-400 focus:outline-none lg:w-auto"
+                value={selectedTeam}
+                onChange={(e) => setSelectedTeam(e.target.value)}
+              >
+                <option value="all">Alla lag</option>
+                {teamOptions.map((team) => (
+                  <option key={team.value} value={team.value}>
+                    {team.label}
+                  </option>
+                ))}
+              </select>
+              <Link
+                href="/tabeller"
+                className="hidden shrink-0 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3.5 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 sm:inline-flex"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 6h18M3 14h18M3 18h18" />
+                </svg>
+                Tabeller
+              </Link>
+            </div>
           </div>
         </section>
 
-        {/* Link to standings page */}
-        <div className="mt-6 flex justify-center">
+        {/* Tabeller link — mobile only (desktop has it in the toolbar) */}
+        <div className="mt-5 flex justify-center sm:hidden">
           <Link
             href="/tabeller"
             className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/70 px-5 py-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
@@ -970,7 +937,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 6h18M3 14h18M3 18h18" />
             </svg>
-            Se alla tabeller och serieställningar
+            Se alla tabeller
           </Link>
         </div>
 

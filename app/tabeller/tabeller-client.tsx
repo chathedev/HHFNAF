@@ -116,9 +116,12 @@ export function TabellerClient({ initialData }: { initialData: StandingsData }) 
   const collapseAll = () => setExpandedSeries(new Set())
 
   const totalSeries = filteredSeries.length
-  const hhfSeriesCount = filteredSeries.filter((s) =>
-    s.teams.some((t) => t.team.toLowerCase().includes("härnösand"))
-  ).length
+  // How many series HHF currently sits top-3 in — a real signal, not a
+  // restatement of the series count (every shown table already contains HHF).
+  const hhfTop3Count = filteredSeries.filter((s) => {
+    const idx = s.teams.findIndex((t) => t.team.toLowerCase().includes("härnösand"))
+    return idx >= 0 && idx < 3
+  }).length
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8">
@@ -152,8 +155,8 @@ export function TabellerClient({ initialData }: { initialData: StandingsData }) 
           <p className="mt-1 text-2xl font-black text-slate-950">{totalSeries}</p>
         </div>
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-emerald-600">HHF deltar i</p>
-          <p className="mt-1 text-2xl font-black text-emerald-700">{hhfSeriesCount}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-emerald-600">HHF topp 3</p>
+          <p className="mt-1 text-2xl font-black text-emerald-700">{hhfTop3Count}</p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 col-span-2 sm:col-span-1">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Poängsystem</p>
