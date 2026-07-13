@@ -715,7 +715,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
 
           {!isLoading && filteredMatches.length > 0 && statusFilter === "current" && (
             <>
-              {liveSection}
+              {liveSection ?? emptySlimRow("Live", "Matcher som just nu är igång.")}
               {upcomingSection ?? emptySlimRow("Kommande", "Det som står på tur i matchkalendern.")}
               {finishedSection ?? emptySlimRow("Resultat", "Senaste resultaten.")}
             </>

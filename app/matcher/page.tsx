@@ -1,3 +1,5 @@
+import { Header } from "@/components/header"
+import Footer from "@/components/footer"
 import { MatcherPageClient } from "./page-client"
 import { getInitialMatchWindow } from "@/lib/get-initial-match-window"
 
@@ -10,5 +12,11 @@ export default async function MatcherPage() {
     maxDays: 21,
   })
 
-  return <MatcherPageClient initialData={initialData} />
+  return (
+    <>
+      <Header />
+      <MatcherPageClient initialData={initialData} />
+      <Footer />
+    </>
+  )
 }
