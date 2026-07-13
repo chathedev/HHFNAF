@@ -1,26 +1,18 @@
 "use client"
 
-import { useMemo, useState, useEffect, useCallback, useRef } from "react"
+import { useMemo, useState, useEffect, useCallback, useRef, type ReactNode } from "react"
 import Link from "next/link"
 
-import {
-  buildMatchScheduleLabel,
-  canOpenMatchTimeline,
-  getMatchupLabel,
-  getSimplifiedMatchStatus,
-  shouldShowFinishedZeroZeroIssue,
-  shouldShowProfixioTechnicalIssue,
-} from "@/lib/match-card-utils"
+import { getSimplifiedMatchStatus } from "@/lib/match-card-utils"
 import { getMatchEndTime, useMatchData, forceMatchDataPoll, type NormalizedMatch } from "@/lib/use-match-data"
-import { AnimatedScore } from "@/components/animated-score"
-import { MatchCardCTA } from "@/components/match-card-cta"
+import { MatchCard } from "@/components/matcher/match-card"
 import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
 import { normalizeMatchKey } from "@/lib/matches"
 import { extendTeamDisplayName, createTeamMatchKeySet } from "@/lib/team-display"
 import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
-import { Ticket } from "lucide-react"
 import { resolvePreferredTimeline } from "@/lib/match-timeline"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
+
 type MatchTopScorer = {
   team: string
   player: string
@@ -94,14 +86,44 @@ const TEAM_OPTIONS = TEAM_OPTION_VALUES.map((value) => ({
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: "current", label: "Översikt" },
-  { value: "live", label: "Live nu" },
+  { value: "live", label: "Live" },
   { value: "upcoming", label: "Kommande" },
-  { value: "finished", label: "Avslutade" },
+  { value: "finished", label: "Resultat" },
 ]
+
+const FINISHED_PAGE_SIZE = 12
 
 const API_BASE_URL =
   (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
   "https://api.harnosandshf.se"
+
+const DAY_LABEL_FORMATTER = new Intl.DateTimeFormat("sv-SE", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+})
+
+type DayGroup = { key: string; label: string; matches: NormalizedMatch[] }
+
+const groupMatchesByDay = (matches: NormalizedMatch[]): DayGroup[] => {
+  const groups: DayGroup[] = []
+  let current: DayGroup | null = null
+  for (const match of matches) {
+    const date = match.date
+    const valid = date instanceof Date && !Number.isNaN(date.getTime())
+    const key = valid ? `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}` : "unknown"
+    if (!current || current.key !== key) {
+      current = {
+        key,
+        label: valid ? DAY_LABEL_FORMATTER.format(date) : match.displayDate || "Datum meddelas senare",
+        matches: [],
+      }
+      groups.push(current)
+    }
+    current.matches.push(match)
+  }
+  return groups
+}
 
 const mapTimelineEvent = (event: any): MatchFeedEvent => ({
   time: event?.time ?? "",
@@ -164,202 +186,51 @@ const dedupeTimelineEvents = (events: MatchFeedEvent[]) => {
   })
 }
 
-type StandingsTeam = {
-  team: string
-  played: number
-  wins: number
-  draws: number
-  losses: number
-  goalsFor: number
-  goalsAgainst: number
-  goalDifference: number
-  points: number
-}
-
-type StandingsSeries = {
-  series: string
-  teams: StandingsTeam[]
-}
-
-const STANDINGS_REFRESH_MS = 90_000
-
-function StandingsSection({ selectedTeam }: { selectedTeam: string }) {
-  const [standings, setStandings] = useState<StandingsSeries[]>([])
-  const [updatedAt, setUpdatedAt] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [expandedSeries, setExpandedSeries] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-
-    const load = (silent: boolean) => {
-      const params = new URLSearchParams({ meta: "1" })
-      if (selectedTeam && selectedTeam !== "all") {
-        params.set("team", selectedTeam)
-      }
-      if (!silent) setLoading(true)
-      fetch(`${API_BASE_URL}/matcher/standings?${params}`, { cache: "no-store" })
-        .then((res) => (res.ok ? res.json() : Promise.reject("Failed")))
-        .then((data) => {
-          if (cancelled) return
-          // With meta=1: { updatedAt, standings: { seriesName: [...] } }.
-          // Fall back to the bare { seriesName: [...] } shape.
-          const tables = data && typeof data === "object" && "standings" in data ? data.standings : data
-          if (data && typeof data === "object" && "updatedAt" in data) {
-            setUpdatedAt(data.updatedAt ?? null)
-          }
-          const parsed: StandingsSeries[] = Object.entries(tables ?? {})
-            .filter(([, teams]) => Array.isArray(teams) && (teams as any[]).length > 0)
-            .map(([series, teams]) => ({
-              series,
-              teams: (teams as any[]).map((t) => ({
-                team: t.team ?? "",
-                played: t.M ?? 0,
-                wins: t.W ?? 0,
-                draws: t.D ?? 0,
-                losses: t.L ?? 0,
-                goalsFor: t.GF ?? 0,
-                goalsAgainst: t.GA ?? 0,
-                goalDifference: t.GD ?? 0,
-                points: t.P ?? 0,
-              })),
-            }))
-            .sort((a, b) => b.teams.length - a.teams.length)
-          setStandings(parsed)
-          setExpandedSeries((prev) => prev ?? (parsed.length > 0 ? parsed[0].series : null))
-        })
-        .catch(() => {
-          // Keep last-known tables on silent refresh failures.
-          if (!silent && !cancelled) setStandings([])
-        })
-        .finally(() => {
-          if (!silent && !cancelled) setLoading(false)
-        })
-    }
-
-    load(false)
-    const timer = setInterval(() => {
-      if (typeof document !== "undefined" && document.visibilityState !== "visible") return
-      load(true)
-    }, STANDINGS_REFRESH_MS)
-
-    return () => {
-      cancelled = true
-      clearInterval(timer)
-    }
-  }, [selectedTeam])
-
-  const updatedLabel = updatedAt
-    ? new Date(updatedAt).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })
-    : null
-
-  if (loading) {
-    return (
-      <section className="mt-8">
-        <div className="rounded-2xl border border-slate-200 bg-white px-6 py-8">
-          <div className="h-4 w-24 animate-pulse rounded bg-slate-100" />
-          <div className="mt-3 h-6 w-48 animate-pulse rounded bg-slate-100" />
-          <div className="mt-5 space-y-2.5">
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="h-9 animate-pulse rounded-lg bg-slate-50" style={{ animationDelay: `${i * 120}ms` }} />
-            ))}
-          </div>
-        </div>
-      </section>
-    )
-  }
-
-  if (standings.length === 0) {
-    return (
-      <section id="tabeller" className="mt-8 scroll-mt-8">
-        <div className="rounded-[26px] border border-slate-200 bg-white px-6 py-10 text-center">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">Tabeller</p>
-          <p className="mt-2 text-sm text-slate-500">Serietabellerna uppdateras just nu. Titta tillbaka om en liten stund.</p>
-        </div>
-      </section>
-    )
-  }
-
+function SectionHeader({
+  label,
+  count,
+  live = false,
+  children,
+}: {
+  label: string
+  count?: number
+  live?: boolean
+  children?: ReactNode
+}) {
   return (
-    <section id="tabeller" className="mt-8 scroll-mt-8">
-      <div className="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.04)]">
-        <div className="border-b border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,0.95),rgba(255,255,255,0.95))] px-5 py-5 sm:px-6">
-          <div className="flex items-baseline justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">Tabeller</p>
-              <h2 className="mt-1 text-xl font-semibold text-slate-950">Serieställning</h2>
-              <p className="mt-1 text-sm text-slate-500">Officiella serietabeller från Profixio.</p>
-            </div>
-            {updatedLabel && (
-              <span className="shrink-0 text-xs text-slate-400">Uppdaterad {updatedLabel}</span>
-            )}
-          </div>
-        </div>
-
-        <div className="divide-y divide-slate-100 p-4 sm:p-5">
-          {standings.map((s) => {
-            const isExpanded = expandedSeries === s.series
-            return (
-              <div key={s.series} className="py-3 first:pt-0 last:pb-0">
-                <button
-                  onClick={() => setExpandedSeries(isExpanded ? null : s.series)}
-                  className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition hover:bg-slate-50"
-                >
-                  <span className="text-sm font-semibold text-slate-900">{s.series}</span>
-                  <span className="text-xs text-slate-400">{isExpanded ? "−" : "+"}</span>
-                </button>
-                {isExpanded && (
-                  <div className="mt-2 overflow-x-auto rounded-xl border border-slate-200">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                          <th className="px-3 py-2.5">#</th>
-                          <th className="px-3 py-2.5">Lag</th>
-                          <th className="px-3 py-2.5 text-center">M</th>
-                          <th className="px-3 py-2.5 text-center">V</th>
-                          <th className="px-3 py-2.5 text-center">O</th>
-                          <th className="px-3 py-2.5 text-center">F</th>
-                          <th className="px-3 py-2.5 text-center hidden sm:table-cell">GM</th>
-                          <th className="px-3 py-2.5 text-center hidden sm:table-cell">IM</th>
-                          <th className="px-3 py-2.5 text-center">+/−</th>
-                          <th className="px-3 py-2.5 text-center font-bold">P</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {s.teams.map((team, idx) => {
-                          const isHHF = team.team.toLowerCase().includes("härnösand") || team.team.toLowerCase().includes("harnosand")
-                          return (
-                            <tr key={team.team} className={`${isHHF ? "bg-emerald-50/60 font-medium" : ""} hover:bg-slate-50/80 transition`}>
-                              <td className="px-3 py-2.5 text-slate-400 text-xs">{idx + 1}</td>
-                              <td className="px-3 py-2.5 text-slate-900 whitespace-nowrap max-w-[180px] truncate">
-                                {isHHF && <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 align-middle" />}
-                                {team.team}
-                              </td>
-                              <td className="px-3 py-2.5 text-center text-slate-600">{team.played}</td>
-                              <td className="px-3 py-2.5 text-center text-slate-600">{team.wins}</td>
-                              <td className="px-3 py-2.5 text-center text-slate-600">{team.draws}</td>
-                              <td className="px-3 py-2.5 text-center text-slate-600">{team.losses}</td>
-                              <td className="px-3 py-2.5 text-center text-slate-600 hidden sm:table-cell">{team.goalsFor}</td>
-                              <td className="px-3 py-2.5 text-center text-slate-600 hidden sm:table-cell">{team.goalsAgainst}</td>
-                              <td className="px-3 py-2.5 text-center">
-                                <span className={`text-xs font-medium ${team.goalDifference > 0 ? "text-emerald-600" : team.goalDifference < 0 ? "text-rose-500" : "text-slate-400"}`}>
-                                  {team.goalDifference > 0 ? "+" : ""}{team.goalDifference}
-                                </span>
-                              </td>
-                              <td className="px-3 py-2.5 text-center font-bold text-slate-900">{team.points}</td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+    <div className="mb-3 flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2.5">
+        {live && <span className="h-2 w-2 animate-pulse rounded-full bg-rose-500" aria-hidden />}
+        <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-950">{label}</h2>
+        {typeof count === "number" && (
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold tabular-nums text-slate-500">
+            {count}
+          </span>
+        )}
       </div>
-    </section>
+      {children}
+    </div>
+  )
+}
+
+function DayGroupList({
+  groups,
+  renderMatch,
+}: {
+  groups: DayGroup[]
+  renderMatch: (match: NormalizedMatch, showDate: boolean) => ReactNode
+}) {
+  return (
+    <div className="space-y-5">
+      {groups.map((group) => (
+        <div key={group.key}>
+          <p className="mb-2 pl-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 first-letter:uppercase">
+            {group.label}
+          </p>
+          <div className="space-y-2.5">{group.matches.map((match) => renderMatch(match, false))}</div>
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -367,6 +238,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   const [selectedTeam, setSelectedTeam] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("current")
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
+  const [finishedLimit, setFinishedLimit] = useState(FINISHED_PAGE_SIZE)
   const [timelineByMatchId, setTimelineByMatchId] = useState<Record<string, MatchFeedEvent[]>>({})
   const [topScorersByMatchId, setTopScorersByMatchId] = useState<Record<string, MatchTopScorer[]>>({})
   const [clockStateByMatchId, setClockStateByMatchId] = useState<Record<string, MatchClockState>>({})
@@ -401,11 +273,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   const hasCurrentPayload =
     statusFilter === "finished" ? hasOldPayload : hasLivePayload && (statusFilter !== "current" || hasOldPayload)
   const isLoading =
-    statusFilter === "finished"
-      ? oldLoading || !hasOldPayload
-      : statusFilter === "current"
-        ? liveLoading || !hasLivePayload
-        : liveLoading || !hasLivePayload
+    statusFilter === "finished" ? oldLoading || !hasOldPayload : liveLoading || !hasLivePayload
   const activeError =
     statusFilter === "finished"
       ? oldError
@@ -438,20 +306,9 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     }
   }, [hasAttemptedOldFetch, hasResolvedOldData, hasOldPayload, oldLoading])
 
-  const liveMatchesCount = useMemo(
-    () => liveUpcomingMatches.filter((match) => getMatchStatus(match) === "live").length,
-    [liveUpcomingMatches],
-  )
-
-  const upcomingMatchesCount = useMemo(
-    () => liveUpcomingMatches.filter((match) => getMatchStatus(match) === "upcoming").length,
-    [liveUpcomingMatches],
-  )
-
-  const finishedMatchesCount = useMemo(
-    () => [...liveUpcomingMatches, ...oldMatches].filter((match) => getMatchStatus(match) === "finished").length,
-    [liveUpcomingMatches, oldMatches],
-  )
+  useEffect(() => {
+    setFinishedLimit(FINISHED_PAGE_SIZE)
+  }, [selectedTeam, statusFilter])
 
   const allMatches = useMemo(() => [...liveUpcomingMatches, ...oldMatches], [liveUpcomingMatches, oldMatches])
   const selectedMatch = useMemo(
@@ -462,7 +319,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   const fetchMatchTimeline = useCallback(async (match: NormalizedMatch, force = false) => {
     const lastFetchedAt = timelineFetchedAtRef.current[match.id] ?? 0
     const shouldRefresh = force || match.matchStatus === "live" || Date.now() - lastFetchedAt > 5000
-    if (!shouldRefresh && Object.prototype.hasOwnProperty.call(timelineByMatchId, match.id)) {
+    if (!shouldRefresh && lastFetchedAt > 0) {
       return
     }
     const inFlight = timelineFetchInFlightRef.current[match.id]
@@ -515,7 +372,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     } finally {
       delete timelineFetchInFlightRef.current[match.id]
     }
-  }, [timelineByMatchId])
+  }, [])
 
   const openMatchModal = useCallback(
     (match: NormalizedMatch) => {
@@ -523,6 +380,13 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
       fetchMatchTimeline(match, true).catch((error) => {
         console.warn("Failed to hydrate match timeline", error)
       })
+    },
+    [fetchMatchTimeline],
+  )
+
+  const prefetchMatchTimeline = useCallback(
+    (match: NormalizedMatch) => {
+      fetchMatchTimeline(match).catch(() => undefined)
     },
     [fetchMatchTimeline],
   )
@@ -548,8 +412,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
 
     return () => window.clearInterval(interval)
   }, [selectedMatch, fetchMatchTimeline])
-
-  const teamOptions = TEAM_OPTIONS
 
   const selectedTeamKeys = useMemo(() => {
     if (selectedTeam === "all") {
@@ -643,339 +505,170 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     return { live, upcoming, finished }
   }, [filteredMatches])
 
-  const renderMatchCard = (match: NormalizedMatch) => {
-    const status = getSimplifiedMatchStatus(match)
-    const canOpenTimeline = canOpenMatchTimeline(match)
-    const scheduleLabel = buildMatchScheduleLabel(match)
-    const matchupLabel = getMatchupLabel(match)
-    const showProfixioWarning = shouldShowProfixioTechnicalIssue(match)
-    const showFinishedZeroZeroIssue = hasClientMatchData && shouldShowFinishedZeroZeroIssue(match)
-    const teamTypeRaw = match.teamType?.trim() || ""
-    const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
-    const cleanedResult = match.result?.trim()
-    const isUnconfirmedZero = !hasClientMatchData && (status === "live" || status === "finished") && cleanedResult != null && /^0\s*[-–—]\s*0$/.test(cleanedResult)
-    const scoreValue =
-      status === "upcoming" || match.resultState === "not_started" || match.resultState === "live_pending" || isUnconfirmedZero
-        ? null
-        : cleanedResult && cleanedResult.length > 0
-          ? cleanedResult
-          : status === "finished"
-            ? "Resultat inväntas"
-            : null
-    const showLivePendingScore = status === "live" && (match.resultState === "live_pending" || isUnconfirmedZero)
+  const liveCount = groupedMatches.live.length
+  const visibleFinished = groupedMatches.finished.slice(0, finishedLimit)
+  const hiddenFinishedCount = groupedMatches.finished.length - visibleFinished.length
 
-    const statusBadge = (() => {
-      if (status === "live") {
-        return { label: match.statusLabel ?? "LIVE", tone: "bg-rose-50 text-rose-600" }
-      }
-      if (status === "finished") {
-        return { label: match.statusLabel ?? "SLUT", tone: "bg-gray-100 text-gray-600" }
-      }
-      return { label: match.statusLabel ?? "KOMMANDE", tone: "bg-blue-50 text-blue-600" }
-    })()
+  const upcomingGroups = useMemo(() => groupMatchesByDay(groupedMatches.upcoming), [groupedMatches.upcoming])
+  const finishedGroups = useMemo(() => groupMatchesByDay(visibleFinished), [visibleFinished])
 
-    return (
-      <article
+  const renderMatch = useCallback(
+    (match: NormalizedMatch, showDate: boolean) => (
+      <MatchCard
         key={match.id}
-        id={`match-card-${match.id}`}
-        className={`relative rounded-2xl border border-slate-200 bg-white p-4 transition-all duration-200 active:scale-[0.99] ${
-          canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:shadow-lg" : ""
-        }`}
-        onMouseEnter={() => {
-          if (canOpenTimeline) {
-            fetchMatchTimeline(match).catch(() => undefined)
-          }
-        }}
-        onTouchStart={() => {
-          if (canOpenTimeline) {
-            fetchMatchTimeline(match).catch(() => undefined)
-          }
-        }}
-        onClick={(event) => {
-          if (!canOpenTimeline) {
-            return
-          }
-          const target = event.target as HTMLElement
-          if (target.closest("a,button")) {
-            return
-          }
-          openMatchModal(match)
-        }}
+        match={match}
+        hasClientMatchData={hasClientMatchData}
+        showDate={showDate}
+        onOpen={openMatchModal}
+        onPrefetch={prefetchMatchTimeline}
+      />
+    ),
+    [hasClientMatchData, openMatchModal, prefetchMatchTimeline],
+  )
+
+  const emptySlimRow = (label: string, description: string) => (
+    <section className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:px-5">
+      <div className="flex min-w-0 items-baseline gap-3">
+        <p className="shrink-0 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">{label}</p>
+        <p className="truncate text-sm text-slate-400">{description}</p>
+      </div>
+      <span className="shrink-0 text-xs font-medium text-slate-400">Inga just nu</span>
+    </section>
+  )
+
+  const showMoreButton = hiddenFinishedCount > 0 && (
+    <div className="mt-4 flex justify-center">
+      <button
+        type="button"
+        onClick={() => setFinishedLimit((prev) => prev + FINISHED_PAGE_SIZE)}
+        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700"
       >
-        <div className="flex flex-col gap-4 xl:grid xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-700">{teamTypeLabel}</p>
-            </div>
-            <h3 className="mt-2 text-base font-semibold leading-tight text-slate-950 sm:text-lg">
-              {matchupLabel}
-            </h3>
-            {scheduleLabel && <p className="mt-1 text-sm leading-6 text-slate-500 break-words">{scheduleLabel}</p>}
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-              {match.series && <span className="rounded-full bg-slate-100 px-2.5 py-1">{match.series}</span>}
-            </div>
-          </div>
+        Visa fler resultat
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold tabular-nums text-slate-500">
+          {hiddenFinishedCount}
+        </span>
+      </button>
+    </div>
+  )
 
-          <div className="flex flex-col gap-3 xl:items-end">
-            <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-              <span className={`inline-flex w-fit items-center justify-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${statusBadge.tone} ${status === "live" ? "live-badge" : ""}`}>
-                {statusBadge.label}
-              </span>
-              {scoreValue && (
-                <AnimatedScore value={scoreValue} className="text-lg font-black text-slate-950 sm:text-2xl" />
-              )}
-            </div>
-            <div className="w-full xl:w-auto flex flex-wrap items-center gap-2">
-              <MatchCardCTA match={match} status={status} />
-            </div>
-          </div>
-        </div>
-        {showLivePendingScore && (
-          <p className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-medium text-sky-800">
-            Matchen är live men poängen har ännu inte publicerats.
-          </p>
-        )}
-        {showProfixioWarning && (
-          <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
-            Liveuppdateringen har tekniska problem för den här matchen just nu.
-          </p>
-        )}
-        {showFinishedZeroZeroIssue && (
-          <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
-            Misstänkt resultatfel: matchen är avslutad men står som 0–0. Kontrollera matchrapporten.
-          </p>
-        )}
-      </article>
-    )
-  }
-
-  const statusPanels = useMemo(() => {
-    const allPanels = [
-      {
-        key: "live" as const,
-        label: "Live",
-        title: "Pågår nu",
-        description: "Matcher som just nu är igång.",
-        matches: groupedMatches.live,
-      },
-      {
-        key: "upcoming" as const,
-        label: "Kommande",
-        title: "Närmast framåt",
-        description: "Det som står på tur i matchkalendern.",
-        matches: groupedMatches.upcoming,
-      },
-      {
-        key: "finished" as const,
-        label: "Resultat",
-        title: "Nyss klara",
-        description: "Senaste resultaten.",
-        matches: groupedMatches.finished,
-      },
-    ]
-
-    if (statusFilter === "current") {
-      return allPanels
-    }
-
-    return allPanels.filter((panel) => panel.key === statusFilter)
-  }, [groupedMatches, statusFilter])
-
-  const focusCards = useMemo(() => {
-    const nextUpcoming = groupedMatches.upcoming[0] ?? null
-    const nextLive = groupedMatches.live[0] ?? null
-    const latestFinished = groupedMatches.finished[0] ?? null
-
-    const cleanScore = (m: NormalizedMatch | null) => {
-      const raw = typeof m?.result === "string" ? m.result.trim() : ""
-      return raw && raw.toLowerCase() !== "inte publicerat" ? raw : ""
-    }
-    const liveScore = cleanScore(nextLive)
-    const finishedScore = cleanScore(latestFinished)
-
-    return [
-      {
-        label: "Live nu",
-        value: liveScore || groupedMatches.live.length.toString(),
-        text: nextLive ? getMatchupLabel(nextLive) : "Ingen match pågår just nu.",
-        tone: "border-rose-200 bg-rose-50/70 text-rose-700",
-      },
-      {
-        label: "Närmast framåt",
-        value: groupedMatches.upcoming.length.toString(),
-        text: nextUpcoming ? buildMatchScheduleLabel(nextUpcoming) : "Inget nytt schema just nu.",
-        tone: "border-sky-200 bg-sky-50/70 text-sky-700",
-      },
-      {
-        label: "Senaste resultat",
-        value: finishedScore || "–",
-        text: latestFinished ? getMatchupLabel(latestFinished) : "Inga färska resultat just nu.",
-        tone: "border-slate-200 bg-slate-100/90 text-slate-700",
-      },
-    ]
-  }, [groupedMatches])
-
-  const renderStatusPanel = (panel: (typeof statusPanels)[number]) => {
-    // In the overview, an empty section collapses to a slim one-line row so
-    // off-season empties don't push real content down. When the user explicitly
-    // filters to that view, keep the full empty state with guidance.
-    if (panel.matches.length === 0 && statusFilter === "current") {
-      return (
-        <section
-          key={panel.key}
-          className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:px-5"
-        >
-          <div className="flex items-baseline gap-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">{panel.label}</p>
-            <p className="text-sm text-slate-400">{panel.description}</p>
-          </div>
-          <span className="text-xs font-medium text-slate-400">Inga just nu</span>
-        </section>
-      )
-    }
-
-    return (
-      <section key={panel.key} className="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.04)]">
-        <div className="border-b border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,0.95),rgba(255,255,255,0.95))] px-4 py-4 sm:px-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">{panel.label}</p>
-              <h2 className="mt-1 text-xl font-semibold text-slate-950">{panel.title}</h2>
-              <p className="mt-1 text-sm text-slate-500">{panel.description}</p>
-            </div>
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-              {panel.matches.length}
-            </span>
-          </div>
-        </div>
-
-        <div className="space-y-3 p-4 sm:p-5">
-          {panel.matches.length > 0 ? (
-            <div className="space-y-3">{panel.matches.map(renderMatchCard)}</div>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-              Inga matcher i den här vyn just nu.
-            </div>
-          )}
-        </div>
+  const liveSection =
+    liveCount > 0 ? (
+      <section>
+        <SectionHeader label="Live nu" count={liveCount} live />
+        <div className="space-y-2.5">{groupedMatches.live.map((match) => renderMatch(match, true))}</div>
       </section>
-    )
-  }
-  useEffect(() => {
-    // Remove ?team filtering from URL, only set selectedTeam from dropdown
-    // This disables auto-select from URL and fixes jumping back to 'Alla lag'
-    // User can only select team from dropdown
-    // eslint-disable-next-line
-  }, [teamOptions])
+    ) : null
+
+  const upcomingSection =
+    groupedMatches.upcoming.length > 0 ? (
+      <section>
+        <SectionHeader label="Kommande matcher" count={groupedMatches.upcoming.length} />
+        <DayGroupList groups={upcomingGroups} renderMatch={renderMatch} />
+      </section>
+    ) : null
+
+  const finishedSection =
+    groupedMatches.finished.length > 0 ? (
+      <section>
+        <SectionHeader label="Senaste resultaten" count={groupedMatches.finished.length} />
+        <DayGroupList groups={finishedGroups} renderMatch={renderMatch} />
+        {showMoreButton}
+      </section>
+    ) : null
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_32%,#f8fafc_100%)] py-8 sm:py-10">
-      <div className="container mx-auto max-w-7xl px-4">
-        <section className="overflow-hidden rounded-[30px] border border-slate-200/80 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
-          <div className="border-b border-slate-200 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(248,250,252,0.96),rgba(236,253,245,0.82))] px-5 py-6 sm:px-8 sm:py-7">
-            <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-              <div className="max-w-3xl">
+    <main className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_36%,#f8fafc_100%)] pb-16">
+      <div className="h-24" />
+      <div className="container mx-auto max-w-4xl px-4">
+        <header className="pt-4 sm:pt-6">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-emerald-600">Matchcenter</p>
+              <h1 className="mt-1.5 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Matcher</h1>
+              <p className="mt-1.5 text-sm text-slate-500">Live, kommande matcher och resultat. Uppdateras automatiskt.</p>
+            </div>
+            {liveCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setStatusFilter("live")}
+                className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-600 transition hover:bg-rose-100"
+              >
+                <span className="h-2 w-2 animate-pulse rounded-full bg-rose-500" aria-hidden />
+                {liveCount === 1 ? "1 match live" : `${liveCount} matcher live`}
+              </button>
+            )}
+          </div>
+        </header>
+
+        <div className="sticky top-16 z-30 mt-5 sm:top-[72px]">
+          <div className="rounded-2xl border border-slate-200/90 bg-white/90 p-2.5 shadow-[0_8px_28px_rgba(15,23,42,0.06)] backdrop-blur-md">
+            <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
+              <div
+                role="tablist"
+                aria-label="Filtrera matchvy"
+                className="grid grid-cols-4 gap-1 rounded-xl bg-slate-100/80 p-1"
+              >
+                {STATUS_OPTIONS.map((option) => {
+                  const isActive = statusFilter === option.value
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      role="tab"
+                      aria-selected={isActive}
+                      onClick={() => setStatusFilter(option.value)}
+                      className={`relative rounded-lg px-2 py-1.5 text-xs font-semibold transition sm:px-3 sm:text-sm ${
+                        isActive ? "bg-slate-950 text-white shadow-sm" : "text-slate-600 hover:bg-white"
+                      }`}
+                    >
+                      {option.label}
+                      {option.value === "live" && liveCount > 0 && (
+                        <span
+                          className={`absolute -right-0.5 -top-0.5 h-2 w-2 animate-pulse rounded-full ${
+                            isActive ? "bg-rose-400" : "bg-rose-500"
+                          }`}
+                          aria-hidden
+                        />
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <select
+                  id="team-filter"
+                  aria-label="Filtrera lag"
+                  className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 transition focus:border-emerald-400 focus:outline-none lg:w-52 lg:flex-none"
+                  value={selectedTeam}
+                  onChange={(e) => setSelectedTeam(e.target.value)}
+                >
+                  <option value="all">Alla lag</option>
+                  {TEAM_OPTIONS.map((team) => (
+                    <option key={team.value} value={team.value}>
+                      {team.label}
+                    </option>
+                  ))}
+                </select>
                 <Link
-                  href="/"
-                  className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700 transition hover:text-emerald-900"
+                  href="/tabeller"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50/80 px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
                 >
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 6h18M3 14h18M3 18h18" />
                   </svg>
-                  Till startsidan
+                  Tabeller
                 </Link>
-                <div className="mt-4 flex items-center gap-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-emerald-600">Matchcenter</p>
-                  <span className="h-px flex-1 bg-slate-200" />
-                </div>
-                <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-4xl">Matcher</h1>
-                <p className="mt-2 max-w-xl text-sm text-slate-500">
-                  Live, kommande och resultat. Uppdateras automatiskt.
-                </p>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-3 xl:min-w-[28rem]">
-                {focusCards.map((card) => (
-                  <div key={card.label} className={`rounded-2xl border px-4 py-3 ${card.tone}`}>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em]">{card.label}</p>
-                    <p className="mt-1 text-xl font-black tabular-nums">{card.value}</p>
-                    <p className="mt-1 truncate text-xs leading-4 opacity-80" title={card.text}>{card.text}</p>
-                  </div>
-                ))}
               </div>
             </div>
           </div>
-
-          {/* Toolbar: view toggle + team filter + result count, all on one line */}
-          <div className="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-slate-100/80 p-1">
-              {STATUS_OPTIONS.map((option) => {
-                const isActive = statusFilter === option.value
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    aria-pressed={isActive}
-                    onClick={() => setStatusFilter(option.value)}
-                    className={`rounded-xl px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] transition sm:text-sm ${
-                      isActive ? "bg-slate-950 text-white shadow-sm" : "text-slate-600 hover:bg-white"
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                )
-              })}
-            </div>
-
-            <div className="flex items-center gap-3">
-              <span className="hidden text-xs font-medium text-slate-400 sm:inline">
-                {filteredMatches.length} matcher
-              </span>
-              <select
-                id="team-filter"
-                aria-label="Filtrera lag"
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-900 transition focus:border-emerald-400 focus:outline-none lg:w-auto"
-                value={selectedTeam}
-                onChange={(e) => setSelectedTeam(e.target.value)}
-              >
-                <option value="all">Alla lag</option>
-                {teamOptions.map((team) => (
-                  <option key={team.value} value={team.value}>
-                    {team.label}
-                  </option>
-                ))}
-              </select>
-              <Link
-                href="/tabeller"
-                className="hidden shrink-0 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3.5 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 sm:inline-flex"
-              >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 6h18M3 14h18M3 18h18" />
-                </svg>
-                Tabeller
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* Tabeller link — mobile only (desktop has it in the toolbar) */}
-        <div className="mt-5 flex justify-center sm:hidden">
-          <Link
-            href="/tabeller"
-            className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/70 px-5 py-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 6h18M3 14h18M3 18h18" />
-            </svg>
-            Se alla tabeller
-          </Link>
         </div>
 
-        <div className="mt-8 space-y-6">
+        <div className="mt-6 space-y-7">
           {activeError && (
             <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
               <div className="flex items-center gap-3">
-                <svg className="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-5 w-5 shrink-0 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <p className="text-sm font-medium text-red-800">{activeError}</p>
@@ -984,9 +677,14 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
           )}
 
           {(isLoading || (!activeError && !hasLoadedAnyMatches)) && filteredMatches.length === 0 && (
-            <div className="rounded-2xl border border-slate-200 bg-white px-6 py-16 text-center">
-              <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-600" />
-              <p className="mt-4 text-sm font-medium text-slate-600">Hämtar matcher...</p>
+            <div className="space-y-2.5" aria-label="Hämtar matcher" role="status">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="h-28 animate-pulse rounded-2xl border border-slate-200 bg-white"
+                  style={{ animationDelay: `${i * 100}ms` }}
+                />
+              ))}
             </div>
           )}
 
@@ -1015,9 +713,18 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
             </div>
           )}
 
-          {!isLoading && filteredMatches.length > 0 && <div className="space-y-5">{statusPanels.map(renderStatusPanel)}</div>}
-        </div>
+          {!isLoading && filteredMatches.length > 0 && statusFilter === "current" && (
+            <>
+              {liveSection}
+              {upcomingSection ?? emptySlimRow("Kommande", "Det som står på tur i matchkalendern.")}
+              {finishedSection ?? emptySlimRow("Resultat", "Senaste resultaten.")}
+            </>
+          )}
 
+          {!isLoading && filteredMatches.length > 0 && statusFilter === "live" && liveSection}
+          {!isLoading && filteredMatches.length > 0 && statusFilter === "upcoming" && upcomingSection}
+          {!isLoading && filteredMatches.length > 0 && statusFilter === "finished" && finishedSection}
+        </div>
       </div>
 
       {selectedMatch && (
