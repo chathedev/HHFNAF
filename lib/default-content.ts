@@ -100,6 +100,14 @@ export const defaultContent: FullContent = {
       linkUrl: "https://westerlinds.nu",
     },
     {
+      id: "uw-tech",
+      src: "/partners/uw-tech.png",
+      alt: "UW-TECH",
+      tier: "Diamantpartner",
+      benefits: ["Huvudsponsor", "Logotyp på matchställ", "Exklusiva event"],
+      visibleInCarousel: true,
+    },
+    {
       id: "forsakringskonsult",
       src: "https://az729104.cdn.laget.se/11308402.jpg",
       alt: "Försäkringskonsult",
