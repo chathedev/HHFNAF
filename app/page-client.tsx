@@ -868,7 +868,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Följ oss på Facebook"
-                  className="group flex items-center space-x-2 bg-white/15 hover:bg-white/25 rounded-full px-4 py-2 transition-transform duration-300 hover:scale-105"
+                  className="group flex items-center space-x-2 bg-white/15 hover:bg-white/25 rounded-sm px-4 py-2 transition-transform duration-300 hover:scale-105"
                 >
                   <Facebook className="w-5 h-5" />
                   <span className="font-medium hidden sm:block">Facebook</span>
@@ -878,7 +878,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Följ oss på Instagram"
-                  className="group flex items-center space-x-2 bg-white/15 hover:bg-white/25 rounded-full px-4 py-2 transition-transform duration-300 hover:scale-105"
+                  className="group flex items-center space-x-2 bg-white/15 hover:bg-white/25 rounded-sm px-4 py-2 transition-transform duration-300 hover:scale-105"
                 >
                   <Instagram className="w-5 h-5" />
                   <span className="font-medium hidden sm:block">Instagram</span>
