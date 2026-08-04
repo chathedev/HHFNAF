@@ -3,24 +3,6 @@
   "pageDescription": "Har du frågor eller funderingar? Tveka inte att höra av dig till oss!",
   "departments": [
     {
-      "name": "Sponsring & Marknadsföring",
-      "description": "Vill du sponsra oss eller samarbeta?",
-      "email": "marknad@harnosandshf.se",
-      "icon": "Mail"
-    },
-    {
-      "name": "Kommunikation",
-      "description": "Media, press och kommunikation",
-      "email": "kommunikation@harnosandshf.se",
-      "icon": "Mail"
-    },
-    {
-      "name": "Föreningsinsats",
-      "description": "Förenings- och arbetsinsatser",
-      "email": "foreningsinsats@harnosandshf.se",
-      "icon": "Mail"
-    },
-    {
       "name": "Sport & Träning",
       "description": "Frågor om träning och sportverksamhet",
       "email": "sport@harnosandshf.se",
@@ -30,12 +12,6 @@
       "name": "Ekonomi",
       "description": "Ekonomiska frågor och fakturor",
       "email": "ekonomi@harnosandshf.se",
-      "icon": "Mail"
-    },
-    {
-      "name": "Styrelsen",
-      "description": "Kontakt med föreningens styrelse",
-      "email": "styrelsen@harnosandshf.se",
       "icon": "Mail"
     }
   ],

@@ -102,10 +102,11 @@ export const defaultContent: FullContent = {
     {
       id: "uw-tech",
       src: "/partners/uw-tech.png",
-      alt: "UW-TECH",
+      alt: "UW-Tech",
       tier: "Diamantpartner",
       benefits: ["Huvudsponsor", "Logotyp på matchställ", "Exklusiva event"],
       visibleInCarousel: true,
+      linkUrl: "https://www.uw-tech.se",
     },
     {
       id: "forsakringskonsult",
@@ -145,7 +146,7 @@ export const defaultContent: FullContent = {
     },
     {
       id: "mekonomen",
-      src: "https://d3sjey3kqst1or.cloudfront.net/static/version1750738442/frontend/Mekonomen/Mek/sv_SE/images/main-logo.svg",
+      src: "/partners/mekonomen.svg",
       alt: "Mekonomen",
       tier: "Guldpartner",
       benefits: ["Logotyp på hemsida", "Synlighet vid hemmamatcher"],

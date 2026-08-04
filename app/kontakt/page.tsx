@@ -37,21 +37,6 @@ export default function KontaktPage() {
           pageDescription: "Har du frågor eller funderingar? Tveka inte att höra av dig till oss!",
           departments: [
             {
-              title: "Sponsring & Marknadsföring",
-              description: "Vill du sponsra oss eller samarbeta?",
-              email: "marknad@harnosandshf.se",
-            },
-            {
-              title: "Kommunikation",
-              description: "Media, press och kommunikation",
-              email: "kommunikation@harnosandshf.se",
-            },
-            {
-              title: "Föreningsinsats",
-              description: "Förenings- och arbetsinsatser",
-              email: "foreningsinsats@harnosandshf.se",
-            },
-            {
               title: "Sport & Träning",
               description: "Frågor om träning och sportverksamhet",
               email: "sport@harnosandshf.se",
@@ -60,11 +45,6 @@ export default function KontaktPage() {
               title: "Ekonomi",
               description: "Ekonomiska frågor och fakturor",
               email: "ekonomi@harnosandshf.se",
-            },
-            {
-              title: "Styrelsen",
-              description: "Kontakt med föreningens styrelse",
-              email: "styrelsen@harnosandshf.se",
             },
           ],
           generalContact: {

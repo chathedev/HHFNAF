@@ -168,7 +168,7 @@ function PartnersPageContent({ partners }: PartnersPageContentProps) {
                     Kontakta oss via{" "}
                     <Link href="/kontakt" className="text-orange-500 hover:underline">kontaktformuläret</Link>{" "}
                     eller skicka ett mail till{" "}
-                    <a href="mailto:marknad@harnosandshf.se" className="text-orange-500 hover:underline">marknad@harnosandshf.se</a>.
+                    <a href="mailto:kontakt@harnosandshf.se" className="text-orange-500 hover:underline">kontakt@harnosandshf.se</a>.
                     Vi bokar gärna ett möte för att diskutera möjligheterna.
                   </AccordionContent>
                 </AccordionItem>

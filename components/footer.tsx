@@ -98,10 +98,10 @@ export default function Footer() {
             <p className="text-[11px] font-bold uppercase tracking-wider text-white/40">Feedback</p>
             <p className="mt-3 text-sm text-white/40">Har du förslag eller idéer för hemsidan?</p>
             <a
-              href="mailto:styrelsen@harnosandshf.se"
+              href="mailto:kontakt@harnosandshf.se"
               className="mt-2 block text-sm text-white/70 transition hover:text-white"
             >
-              styrelsen@harnosandshf.se
+              kontakt@harnosandshf.se
             </a>
           </div>
         </div>
