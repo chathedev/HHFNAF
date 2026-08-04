@@ -10,14 +10,14 @@ export default function Footer() {
   return (
     <footer className="bg-slate-950 text-white">
       <div className="mx-auto max-w-5xl px-5 py-14 sm:px-8">
-        {/* Supporterbutik banner */}
-        {shopVisible && (
-          <div className="mb-12 border border-white/10 px-6 py-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-white/40">Supporterbutik</p>
-              <p className="mt-1 text-base font-bold text-white">Beställ via webbutiken, hämta lokalt.</p>
-              <p className="mt-1 text-sm text-white/50">Matchtröjor, supporterplagg och presenter.</p>
-            </div>
+        {/* Supporterbutik banner — always shown; link/label depend on live availability */}
+        <div className="mb-12 border border-white/10 px-6 py-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-white/40">Supporterbutik</p>
+            <p className="mt-1 text-base font-bold text-white">Beställ via webbutiken, hämta lokalt.</p>
+            <p className="mt-1 text-sm text-white/50">Matchtröjor, supporterplagg och presenter.</p>
+          </div>
+          {shopVisible ? (
             <Link
               href={SHOP_URL}
               target="_blank"
@@ -27,8 +27,16 @@ export default function Footer() {
               <ShoppingBag className="h-4 w-4" />
               Öppna Butiken
             </Link>
-          </div>
-        )}
+          ) : (
+            <span
+              aria-disabled="true"
+              className="inline-flex items-center justify-center gap-2 border border-white/15 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white/30 shrink-0 cursor-not-allowed"
+            >
+              <ShoppingBag className="h-4 w-4" />
+              Ej tillgänglig
+            </span>
+          )}
+        </div>
 
         {/* Grid */}
         <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-12">
@@ -55,8 +63,8 @@ export default function Footer() {
                   Köp biljett
                 </a>
               </li>
-              {shopVisible && (
-                <li>
+              <li>
+                {shopVisible ? (
                   <a
                     href={SHOP_URL}
                     target="_blank"
@@ -65,8 +73,12 @@ export default function Footer() {
                   >
                     Butik
                   </a>
-                </li>
-              )}
+                ) : (
+                  <span aria-disabled="true" className="text-sm text-white/25 cursor-not-allowed">
+                    Butik (ej tillgänglig)
+                  </span>
+                )}
+              </li>
               <li>
                 <Link href="/lag" className="text-sm text-white/70 transition hover:text-white">Våra Lag</Link>
               </li>

@@ -1181,7 +1181,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                     >
                       Tabeller
                     </Link>
-                    {shopVisible && (
+                    {shopVisible ? (
                       <Link
                         href={SHOP_URL}
                         target="_blank"
@@ -1190,6 +1190,10 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                       >
                         Besök butiken
                       </Link>
+                    ) : (
+                      <span aria-disabled="true" className="text-sm font-medium text-slate-300 cursor-not-allowed">
+                        Butiken ej tillgänglig
+                      </span>
                     )}
                   </div>
                 )}

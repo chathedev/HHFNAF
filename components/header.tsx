@@ -103,7 +103,7 @@ function Header() {
                 />
               </Link>
             ))}
-            {shopVisible && (
+            {shopVisible ? (
               <Link
                 href={SHOP_URL}
                 target="_blank"
@@ -116,6 +116,17 @@ function Header() {
                   Hämta lokalt
                 </span>
               </Link>
+            ) : (
+              <span
+                aria-disabled="true"
+                className="inline-flex items-center gap-3 rounded-md border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/35 cursor-not-allowed"
+              >
+                <ShoppingBag className="h-4 w-4" />
+                <span>Butik</span>
+                <span className="rounded-sm bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-white/40">
+                  Ej tillgänglig
+                </span>
+              </span>
             )}
             {/* Social links moved inside this flex container for right alignment */}
             <div className="flex items-center space-x-4">
@@ -156,7 +167,7 @@ function Header() {
               ))}
             </nav>
 
-            {shopVisible && (
+            {shopVisible ? (
               <Link
                 href={SHOP_URL}
                 target="_blank"
@@ -173,6 +184,20 @@ function Header() {
                   <div className="text-sm text-black/70">Ingen leverans</div>
                 </div>
               </Link>
+            ) : (
+              <div
+                aria-disabled="true"
+                className="mt-4 flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 px-4 py-4 text-white/35 cursor-not-allowed"
+              >
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md bg-white/10">
+                  <ShoppingBag className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold uppercase tracking-[0.2em] text-white/30">Supporterbutik</div>
+                  <div className="text-base font-bold leading-tight">Ej tillgänglig just nu</div>
+                  <div className="text-sm text-white/30">Försök igen senare</div>
+                </div>
+              </div>
             )}
 
             <div className="flex items-center justify-center gap-6 mt-6 pt-6 border-t border-gray-800">
