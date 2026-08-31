@@ -38,7 +38,8 @@ const PLACEHOLDER_IMAGE =
 
 const POLL_INTERVAL_MS = 10 * 60 * 1000
 const MAX_POSTS = 6
-const getProxiedInstagramImageUrl = (url: string) => `/api/instagram-image?url=${encodeURIComponent(url)}`
+const getProxiedInstagramImageUrl = (url: string, width = 640) =>
+  `/api/instagram-image?url=${encodeURIComponent(url)}&w=${width}`
 
 const formatCompactNumber = (value?: number) => {
   if (!Number.isFinite(value)) return "0"
@@ -177,7 +178,7 @@ export function InstagramFeed() {
     return Array.from(new Set(list))
   }
 
-  const resolveImage = (post: InstagramPost) => {
+  const resolveImage = (post: InstagramPost, width = 480) => {
     const key = getPostKey(post)
     const candidates = getImageCandidates(post)
     const index = imageRetryIndex[key] ?? 0
@@ -186,7 +187,7 @@ export function InstagramFeed() {
     if (brokenImages[key]) return PLACEHOLDER_IMAGE
     const picked = candidates[Math.min(index, candidates.length - 1)] || ""
     if (!picked) return PLACEHOLDER_IMAGE
-    return getProxiedInstagramImageUrl(picked)
+    return getProxiedInstagramImageUrl(picked, width)
   }
 
   const markImageBroken = (post: InstagramPost) => {
@@ -294,7 +295,7 @@ export function InstagramFeed() {
               onClick={(event) => event.stopPropagation()}
             >
               <img
-                src={resolveImage(selectedPost)}
+                src={resolveImage(selectedPost, 1080)}
                 alt={truncateCaption(selectedPost.caption, 120)}
                 className="h-auto max-h-[42vh] w-full object-cover sm:max-h-[48vh]"
                 onError={() => markImageBroken(selectedPost)}

@@ -51,6 +51,32 @@ export async function GET(request: NextRequest) {
   }
 
   const arrayBuffer = await upstream.arrayBuffer()
+
+  // Instagram serves full-resolution JPEGs (often 0.5-1MB each) — re-encode to a
+  // sized webp so the feed doesn't dominate the page weight. Falls back to the
+  // original bytes if processing fails (e.g. animated/unsupported formats).
+  const widthParam = Number(request.nextUrl.searchParams.get("w") || 640)
+  const targetWidth = Math.min(Math.max(Number.isFinite(widthParam) ? widthParam : 640, 160), 1280)
+  const lowerType = contentType.toLowerCase()
+  if (!lowerType.includes("gif") && !lowerType.includes("svg")) {
+    try {
+      const sharp = (await import("sharp")).default
+      const optimized = await sharp(Buffer.from(arrayBuffer))
+        .resize({ width: targetWidth, withoutEnlargement: true })
+        .webp({ quality: 78 })
+        .toBuffer()
+      return new NextResponse(new Uint8Array(optimized), {
+        status: 200,
+        headers: {
+          "Content-Type": "image/webp",
+          "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800, immutable",
+        },
+      })
+    } catch {
+      // fall through to the original bytes
+    }
+  }
+
   return new NextResponse(arrayBuffer, {
     status: 200,
     headers: {

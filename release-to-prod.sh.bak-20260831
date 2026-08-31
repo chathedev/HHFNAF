@@ -1,0 +1,158 @@
+#!/bin/bash
+# Publishes the staged HHFNAF build to production.
+#
+# Rewritten 2026-08-04 after a release left harnosandshf.se showing raw
+# unstyled HTML and then nginx's maintenance fallback. Root cause: this
+# script used to `npm run build` DIRECTLY inside /root/HHFNAF while
+# harnosandshf-www was still running and serving requests from it — for the
+# entire build (10-40s+), live visitors got HTML referencing asset hashes
+# that were being deleted out from under them mid-request (the exact
+# "Failed to find Server Action" / no-CSS symptoms), and the `pm2 restart`
+# afterward hard-killed the process, leaving nginx's upstream down long
+# enough to trip the maintenance-page fallback. On top of that, this script
+# shared no lock with /root/SERVERF/scripts/sync-frontends.sh, which
+# rebuilds the SAME /root/HHFNAF directory on its own cron schedule — two
+# builds could collide in the same directory at once.
+#
+# Fixed by: building in a fully isolated scratch directory (prod is never
+# touched by a build that might fail or take a while), taking the SAME lock
+# the cron sync uses (so the two can never race each other), and an atomic
+# rename-swap of .next (a single syscall, not an in-place overwrite).
+#
+# STILL WRONG until 2026-08-05: `pm2 reload` is only a zero-downtime rolling
+# restart in CLUSTER mode. harnosandshf-www runs in fork_mode (a single
+# process on port 3001) — for a fork-mode app, `pm2 reload` behaves exactly
+# like `pm2 restart`: kill, then start. Every release still had a real gap
+# where nginx's upstream was down, which is what actually tripped the
+# maintenance page, "graceful reload" comment notwithstanding.
+#
+# Real fix: a second permanent pm2 process, harnosandshf-www-backup, on port
+# 3011, wired into nginx's harnosandshf_www upstream as a `backup` server
+# (see /etc/nginx/sites-available/www.harnosandshf.se) — nginx fails over to
+# it automatically the instant 3001 stops answering. This script reloads the
+# BACKUP first (invisible — nginx keeps routing live traffic to the still-up
+# primary on the OLD build) and health-checks it, THEN reloads the primary
+# (nginx auto-fails-over to the backup, which is already serving the NEW
+# build, for that window) and health-checks it too. Net effect: visitors
+# always get an in-service instance, and it always has the latest release —
+# never stale, never a gap, never the fallback page. Automatic rollback to
+# the last known-good .next (reloading both instances) if either health
+# check fails.
+set -euo pipefail
+
+STAGING_SRC="/root/HHFNAF-staging"
+PROD_DIR="/root/HHFNAF"
+BUILD_DIR="/root/HHFNAF-release-build"
+LOCKFILE="/tmp/sync-frontends.lock"   # shared with sync-frontends.sh — mutually exclusive
+
+log() { echo "[release] $(date -Iseconds) $1"; }
+
+exec 9>"$LOCKFILE"
+if ! flock -w 120 9; then
+  echo "[release] Could not acquire the frontend-sync lock after 120s — a cron cycle is stuck. Aborting, production untouched." >&2
+  exit 1
+fi
+log "Lock acquired"
+
+# 1. Build in total isolation — production is never touched by a build that
+#    might fail, hang, or take a while.
+log "Syncing staging source into isolated build dir..."
+rsync -a --delete \
+  --exclude node_modules \
+  --exclude .next \
+  --exclude .git \
+  --exclude release-to-prod.sh \
+  "$STAGING_SRC/" "$BUILD_DIR/"
+
+cd "$BUILD_DIR"
+log "Installing dependencies..."
+npm install --silent
+
+log "Building..."
+npm run build
+
+if [ ! -f "$BUILD_DIR/.next/BUILD_ID" ]; then
+  echo "[release] Build finished but .next/BUILD_ID is missing — treating as a failed build. Production untouched." >&2
+  exit 1
+fi
+NEW_BUILD_ID=$(cat "$BUILD_DIR/.next/BUILD_ID")
+log "Build succeeded: $NEW_BUILD_ID"
+
+# 2. Sync the built source (everything except .next, node_modules) into prod,
+#    then swap .next in with two atomic renames — each is a single instant
+#    inode operation, not a content copy, so there is no window where a live
+#    request can see a half-written build.
+log "Syncing source into production..."
+rsync -a --delete \
+  --exclude node_modules \
+  --exclude .next \
+  --exclude .git \
+  "$BUILD_DIR/" "$PROD_DIR/"
+
+cd "$PROD_DIR"
+log "Installing production dependencies..."
+npm install --silent --production=false
+
+PREV_NEXT_BACKUP="$PROD_DIR/.next-prev"
+rm -rf "$PREV_NEXT_BACKUP"
+if [ -d "$PROD_DIR/.next" ]; then
+  mv "$PROD_DIR/.next" "$PREV_NEXT_BACKUP"
+fi
+mv "$BUILD_DIR/.next" "$PROD_DIR/.next"
+log "Swapped in new build"
+
+health_check() {
+  # $1 = port. Startup isn't instant; a few retries.
+  local port="$1" i
+  for i in $(seq 1 15); do
+    sleep 1
+    if curl -sf -o /dev/null "http://127.0.0.1:${port}/kontakt"; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+roll_back() {
+  echo "[release] Rolling back to the previous .next and reloading both instances." >&2
+  rm -rf "$PROD_DIR/.next"
+  if [ -d "$PREV_NEXT_BACKUP" ]; then
+    mv "$PREV_NEXT_BACKUP" "$PROD_DIR/.next"
+    pm2 reload harnosandshf-www-backup --update-env
+    pm2 reload harnosandshf-www --update-env
+    echo "[release] Rolled back and reloaded the previous build." >&2
+  else
+    echo "[release] No previous build to roll back to — production may be degraded. Needs manual attention." >&2
+  fi
+}
+
+# 3. Reload the BACKUP (3011) first. Live traffic is still on the primary
+#    (3001, old build) the whole time this runs — this step is invisible.
+log "Reloading harnosandshf-www-backup (3011)..."
+pm2 reload harnosandshf-www-backup --update-env
+
+if ! health_check 3011; then
+  echo "[release] Backup instance failed its health check on the new build — rolling back before touching the primary." >&2
+  roll_back
+  exit 1
+fi
+log "Backup is healthy on $NEW_BUILD_ID"
+
+# 4. Reload the PRIMARY (3001). nginx's harnosandshf_www upstream fails over
+#    to the backup (already confirmed healthy on the NEW build) for exactly
+#    this window, so visitors never see a gap and never see a stale build.
+log "Reloading harnosandshf-www (3001)..."
+pm2 reload harnosandshf-www --update-env
+
+if ! health_check 3001; then
+  echo "[release] Primary failed its health check — rolling back." >&2
+  roll_back
+  exit 1
+fi
+
+log "Health check passed — $NEW_BUILD_ID is live on both instances"
+pm2 list | grep harnosandshf-www
+
+# Keep only the immediate previous build for rollback headroom; don't let
+# backups accumulate forever.
+rm -rf "$PREV_NEXT_BACKUP"
