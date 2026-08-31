@@ -37,7 +37,8 @@ export default function LoginPage() {
           title: "Success",
           description: "Login successful. Redirecting...",
         })
-        router.push("/editor")
+        const next = new URLSearchParams(window.location.search).get("next")
+        router.push(next && next.startsWith("/") ? next : "/editor")
       } else {
         toast({
           title: "Error",

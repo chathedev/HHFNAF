@@ -6,7 +6,7 @@ import "./globals.css"
 import "../styles/real-time-updates.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ScrollToTop } from "@/components/scroll-to-top"
-import { VisitBeacon } from "@/components/visit-beacon"
+import { AnalyticsBeacon } from "@/components/analytics-beacon"
 import { ShopStatusProvider } from "@/components/shop-status-provider"
 import { deriveSiteVariant, getThemeVariant } from "@/lib/site-variant"
 
@@ -159,7 +159,7 @@ export default async function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ShopStatusProvider>
             <ScrollToTop />
-            <VisitBeacon />
+            <AnalyticsBeacon />
             {children}
           </ShopStatusProvider>
         </ThemeProvider>

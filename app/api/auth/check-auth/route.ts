@@ -5,8 +5,9 @@ export async function GET(request: NextRequest) {
   try {
     const cookieStore = cookies()
     const authCookie = cookieStore.get("editor-auth")
+    const cookieToken = process.env.AUTH_COOKIE_TOKEN || "authenticated"
 
-    if (authCookie && authCookie.value === "authenticated") {
+    if (authCookie && authCookie.value === cookieToken) {
       return NextResponse.json({ authenticated: true })
     }
 

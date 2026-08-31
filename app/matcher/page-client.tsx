@@ -377,6 +377,9 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   const openMatchModal = useCallback(
     (match: NormalizedMatch) => {
       setSelectedMatchId(match.id)
+      // Expose the open match to the analytics heartbeat so the admin page can
+      // see which match people are following.
+      ;(window as any).__hhfMatchContext = String(match.apiMatchId ?? match.id)
       fetchMatchTimeline(match, true).catch((error) => {
         console.warn("Failed to hydrate match timeline", error)
       })
@@ -730,7 +733,10 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
       {selectedMatch && (
         <MatchFeedModal
           isOpen={true}
-          onClose={() => setSelectedMatchId(null)}
+          onClose={() => {
+            setSelectedMatchId(null)
+            ;(window as any).__hhfMatchContext = undefined
+          }}
           matchFeed={getMergedTimeline(selectedMatch)}
           homeTeam={selectedMatch.homeTeam}
           awayTeam={selectedMatch.awayTeam}
