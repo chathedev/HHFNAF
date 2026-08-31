@@ -1193,7 +1193,10 @@ const createMatchDataChannel = () => {
     id: match.apiMatchId ?? match.id,
     home: match.homeTeam,
     away: match.awayTeam,
-    date: match.date.toISOString().split("T")[0],
+    // Local-date formatting, NOT toISOString: UTC conversion shifts dates before
+    // 02:00 Stockholm (and midnight-normalized dates) one day back, which changes
+    // the composite match id and remounts the card on the first WS delta.
+    date: `${match.date.getFullYear()}-${String(match.date.getMonth() + 1).padStart(2, "0")}-${String(match.date.getDate()).padStart(2, "0")}`,
     time: match.time ?? undefined,
     result: match.result ?? undefined,
     venue: match.venue ?? undefined,
@@ -1605,20 +1608,29 @@ const createMatchDataChannel = () => {
   }
 
   const connectWebSocket = () => {
-    if (!isBrowser || !wsWanted || wsIsOpen() || typeof WebSocket === "undefined") {
+    // Guard on ANY existing socket (CONNECTING included) — connecting again while
+    // a socket is mid-handshake creates a duplicate whose handlers then close or
+    // null out the wrong instance via the shared `ws` binding.
+    if (!isBrowser || !wsWanted || ws !== null || typeof WebSocket === "undefined") {
       return
     }
+    let socket: WebSocket
     try {
-      ws = new WebSocket(buildWsUrl())
+      socket = new WebSocket(buildWsUrl())
     } catch {
       scheduleWsReconnect()
       return
     }
-    ws.onopen = () => {
+    ws = socket
+    // Every handler acts on its own captured socket instance and only touches
+    // the shared `ws` binding when it still points at that instance.
+    socket.onopen = () => {
+      if (ws !== socket) return
       wsReconnectDelay = WS_RECONNECT_MIN_MS
       updateConnectionState({ isConnected: true })
     }
-    ws.onmessage = (message) => {
+    socket.onmessage = (message) => {
+      if (ws !== socket) return
       let payload: any
       try {
         payload = JSON.parse(message.data)
@@ -1633,18 +1645,20 @@ const createMatchDataChannel = () => {
         handleMissedEvents(payload)
       }
     }
-    ws.onclose = () => {
-      ws = null
-      if (wsWanted) {
-        scheduleWsReconnect()
-        // While the socket is down the fast poll timers take over again;
-        // kick one immediately so a drop mid-match doesn't freeze scores.
-        pollFull()
+    socket.onclose = () => {
+      if (ws === socket) {
+        ws = null
+        if (wsWanted) {
+          scheduleWsReconnect()
+          // While the socket is down the fast poll timers take over again;
+          // kick one immediately so a drop mid-match doesn't freeze scores.
+          pollFull()
+        }
       }
     }
-    ws.onerror = () => {
+    socket.onerror = () => {
       try {
-        ws?.close()
+        socket.close()
       } catch {
         // closing an already-broken socket can throw; reconnect handles it
       }
@@ -2022,8 +2036,14 @@ export const useMatchData = (options?: {
     () => (options?.followInitialWindow ? getParamsFromWindow(options?.initialData?.window) : undefined),
     [options?.followInitialWindow, options?.initialData?.window],
   )
-  const params = useMemo(() => ({ ...(initialWindowParams ?? {}), ...(options?.params ?? {}) }), [initialWindowParams, options?.params])
-  const paramsSignature = useMemo(() => buildQueryMeta(params).signature, [params])
+  // Memoize params on CONTENT (signature), not object identity — callers pass
+  // inline objects, and a new identity every render cascades into a new
+  // `refresh` identity, tearing down and recreating the polling interval so a
+  // fast-rendering parent can starve refreshes entirely.
+  const rawParams = { ...(initialWindowParams ?? {}), ...(options?.params ?? {}) }
+  const paramsSignature = buildQueryMeta(rawParams).signature
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const params = useMemo(() => rawParams, [paramsSignature])
   const useDirectFetching = hasWindowedParams(params)
   const enabled = options?.enabled ?? true
   const paramsLimit = typeof params?.limit === "number" && params.limit >= 0 ? params.limit : undefined
