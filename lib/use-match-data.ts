@@ -1427,6 +1427,18 @@ const createMatchDataChannel = () => {
   }
 
   const handleSnapshot = (payload: any) => {
+    // Snapshots (connect + 60s safety poll) carry stripped list payloads: live
+    // matches lack the full matchFeed that deltas have accumulated client-side.
+    // Save the richer feeds and dedupe fingerprints so the rebuild below can't
+    // regress live matches to a poorer state once a minute.
+    const previousLiveFeeds = new Map<string, MatchFeedEvent[]>()
+    matchMap.forEach((match, id) => {
+      if (match.matchStatus === "live" && Array.isArray(match.matchFeed) && match.matchFeed.length > 0) {
+        previousLiveFeeds.set(id, match.matchFeed)
+      }
+    })
+    const previousEventIds = new Map(matchEventIds)
+
     matchMap.clear()
     rawMatchStore.clear()
     apiIdToNormalizedId.clear()
@@ -1434,6 +1446,23 @@ const createMatchDataChannel = () => {
 
     const normalizedCurrent = normalizeAndRegisterMatches(resolveCurrentMatchPayload(payload))
     const normalizedOld = normalizeAndRegisterMatches(resolveOldMatchPayload(payload))
+
+    // Restore accumulated live feeds when the snapshot's copy is poorer, and
+    // merge back dedupe fingerprints so the next delta's events don't re-append
+    // as duplicates on top of the rebuilt state.
+    normalizedCurrent.forEach((match) => {
+      if (match.matchStatus !== "live") return
+      const savedFeed = previousLiveFeeds.get(match.id)
+      if (savedFeed && savedFeed.length > (Array.isArray(match.matchFeed) ? match.matchFeed.length : 0)) {
+        match.matchFeed = savedFeed
+      }
+      const savedIds = previousEventIds.get(match.id)
+      if (savedIds && savedIds.size > 0) {
+        const merged = new Set(matchEventIds.get(match.id) ?? [])
+        savedIds.forEach((fp) => merged.add(fp))
+        matchEventIds.set(match.id, merged)
+      }
+    })
     const normalizedRecentResults = sortMatchesDescending(
       dedupeNormalizedMatches(normalizeMatches(resolveRecentResultsPayload(payload))),
     )
