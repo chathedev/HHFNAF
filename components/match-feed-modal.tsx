@@ -1107,53 +1107,50 @@ export function MatchFeedModal({
         ref={modalRef}
         className="flex h-[96dvh] w-full max-w-xl flex-col overflow-hidden bg-white sm:h-[90vh] sm:border sm:border-slate-200"
       >
-        {/* Header — HHF branded */}
-        <header className="sticky top-0 z-20 bg-gradient-to-br from-emerald-950 via-emerald-900 to-emerald-950 text-white px-5 py-4 sm:px-6">
-          {/* Top row: crest + series/context, close */}
+        {/* Header — minimal, matches the home page idiom */}
+        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white px-5 py-4 sm:px-6">
+          {/* Top row: series/context, close */}
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <img src="/logo.png" alt="Härnösands HF" className="h-6 w-6 shrink-0 object-contain" />
-              <span className="truncate text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-300/80">
-                {matchData?.series || "Matchcenter"}
-              </span>
-            </div>
+            <span className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+              {matchData?.series || "Matchcenter"}
+            </span>
             <button
               type="button"
               onClick={onClose}
-              className="-mr-1 rounded-full p-1.5 text-emerald-100/70 transition hover:bg-white/10 hover:text-white shrink-0"
+              className="-mr-1 shrink-0 p-1.5 text-slate-400 transition hover:text-slate-900"
               aria-label="Stäng"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
 
-          {/* Scoreboard: HOME · score · AWAY, HHF side highlighted */}
+          {/* Scoreboard: HOME · score · AWAY, HHF side emphasized */}
           <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
             <p
-              className={`min-w-0 truncate text-right text-sm font-bold uppercase tracking-wide ${
-                isHHFName(homeTeam) ? "text-emerald-300" : "text-white/70"
+              className={`min-w-0 truncate text-right text-sm font-semibold leading-tight ${
+                isHHFName(homeTeam) ? "text-slate-950" : "text-slate-500"
               }`}
             >
               {homeTeam}
             </p>
             <div className="flex flex-col items-center">
-              <p className="text-4xl font-black leading-none tabular-nums sm:text-5xl">{scoreboard}</p>
+              <p className="text-4xl font-black leading-none tabular-nums tracking-tight text-slate-950 sm:text-5xl">{scoreboard}</p>
               <span className="mt-1.5 inline-flex items-center gap-1.5">
                 {(matchStatus === "live" || matchStatus === "halftime") ? (
                   <>
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-red-300">Live</span>
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-500" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-rose-600">Live</span>
                   </>
                 ) : (
-                  <span className="text-[10px] font-semibold uppercase tracking-widest text-emerald-300/60">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
                     {matchStatus === "finished" ? "Slut" : "Kommande"}
                   </span>
                 )}
               </span>
             </div>
             <p
-              className={`min-w-0 truncate text-left text-sm font-bold uppercase tracking-wide ${
-                isHHFName(awayTeam) ? "text-emerald-300" : "text-white/70"
+              className={`min-w-0 truncate text-left text-sm font-semibold leading-tight ${
+                isHHFName(awayTeam) ? "text-slate-950" : "text-slate-500"
               }`}
             >
               {awayTeam}

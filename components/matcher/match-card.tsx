@@ -85,25 +85,14 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
         ? { label: match.statusLabel ?? "SLUT", tone: "bg-slate-100 text-slate-500" }
         : { label: match.statusLabel ?? "Kommande", tone: "bg-sky-50 text-sky-700" }
 
-  const outcomeChip =
+  const outcomeText =
     outcome === "win"
-      ? { label: "Vinst", tone: "bg-emerald-100 text-emerald-700" }
+      ? { label: "Vinst", tone: "text-emerald-600" }
       : outcome === "loss"
-        ? { label: "Förlust", tone: "bg-rose-50 text-rose-600" }
+        ? { label: "Förlust", tone: "text-rose-500" }
         : outcome === "draw"
-          ? { label: "Oavgjort", tone: "bg-slate-100 text-slate-600" }
+          ? { label: "Oavgjort", tone: "text-slate-500" }
           : null
-
-  const stripeTone =
-    status === "live"
-      ? "bg-rose-500"
-      : status === "upcoming"
-        ? "bg-emerald-400"
-        : outcome === "win"
-          ? "bg-emerald-500"
-          : outcome === "loss"
-            ? "bg-rose-300"
-            : "bg-slate-200"
 
   const metaParts = [
     showDate ? match.display?.dateCard || match.displayDate : null,
@@ -124,9 +113,9 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
       role={canOpenTimeline ? "button" : undefined}
       tabIndex={canOpenTimeline ? 0 : undefined}
       aria-label={canOpenTimeline ? `${homeName} mot ${awayName}, öppna matchhändelser` : undefined}
-      className={`group relative overflow-hidden rounded-2xl border border-slate-200 bg-white transition-all duration-200 ${
+      className={`group relative rounded-lg border border-slate-200 bg-white transition-colors ${
         canOpenTimeline
-          ? "cursor-pointer hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-[0_12px_32px_rgba(16,185,129,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 active:scale-[0.995]"
+          ? "cursor-pointer hover:border-slate-300 hover:bg-slate-50/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
           : ""
       }`}
       onMouseEnter={() => {
@@ -143,23 +132,22 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
         }
       }}
     >
-      <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${stripeTone}`} />
-      <div className="p-4 pl-5 sm:p-5 sm:pl-6">
+      <div className="px-4 py-3.5 sm:px-5">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-700">
-              {teamTypeLabel}
-            </span>
-            {match.series && <span className="truncate text-xs text-slate-400">{match.series}</span>}
-          </div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            {outcomeChip && (
-              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] ${outcomeChip.tone}`}>
-                {outcomeChip.label}
+          <p className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+            {teamTypeLabel}
+            {match.series && (
+              <span className="ml-2 font-normal normal-case tracking-normal text-slate-400">{match.series}</span>
+            )}
+          </p>
+          <div className="flex shrink-0 items-center gap-2.5">
+            {outcomeText && (
+              <span className={`text-[10px] font-semibold uppercase tracking-widest ${outcomeText.tone}`}>
+                {outcomeText.label}
               </span>
             )}
             <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.12em] tabular-nums ${statusBadge.tone} ${
+              className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest tabular-nums ${statusBadge.tone} ${
                 status === "live" ? "live-badge" : ""
               }`}
             >
@@ -169,68 +157,44 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
           </div>
         </div>
 
-        <div className="mt-3.5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:gap-5">
-          <div className="min-w-0 text-right">
-            <p
-              className={`truncate text-sm font-semibold leading-snug sm:text-base ${
-                isHHFName(homeName) ? "text-slate-950" : "text-slate-600"
-              }`}
-              title={homeName}
-            >
-              {homeName}
-            </p>
-            <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-slate-400">Hemma</p>
-          </div>
-
-          <div className="flex min-w-[4.5rem] flex-col items-center justify-center">
+        <div className="mt-2 flex items-center justify-between gap-4">
+          <h3 className="min-w-0 truncate text-sm font-semibold leading-tight sm:text-[15px]" title={`${homeName} – ${awayName}`}>
+            <span className={isHHFName(homeName) ? "text-slate-950" : "text-slate-600"}>{homeName}</span>
+            <span className="text-slate-300"> – </span>
+            <span className={isHHFName(awayName) ? "text-slate-950" : "text-slate-600"}>{awayName}</span>
+          </h3>
+          <div className="shrink-0 text-right">
             {scoreValue ? (
               <AnimatedScore
                 value={scoreValue}
-                className="whitespace-nowrap text-xl font-black tabular-nums tracking-tight text-slate-950 sm:text-2xl"
+                className="whitespace-nowrap text-xl font-black tabular-nums tracking-tight text-slate-950"
               />
             ) : status === "upcoming" ? (
-              <>
-                <p className="text-xl font-black tabular-nums tracking-tight text-slate-950 sm:text-2xl">
-                  {formatMatchTimeLabel(match)}
-                </p>
-                <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-400">Avkast</p>
-              </>
+              <p className="text-xl font-black tabular-nums tracking-tight text-slate-950">
+                {formatMatchTimeLabel(match)}
+              </p>
             ) : awaitingFinishedResult ? (
               <p className="text-xs font-medium text-slate-400">Resultat inväntas</p>
-            ) : (
-              <p className="text-lg font-bold text-slate-300">vs</p>
-            )}
-          </div>
-
-          <div className="min-w-0">
-            <p
-              className={`truncate text-sm font-semibold leading-snug sm:text-base ${
-                isHHFName(awayName) ? "text-slate-950" : "text-slate-600"
-              }`}
-              title={awayName}
-            >
-              {awayName}
-            </p>
-            <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-slate-400">Borta</p>
+            ) : null}
           </div>
         </div>
 
         {metaParts.length > 0 && (
-          <p className="mt-3 text-center text-xs text-slate-400">{metaParts.join(" · ")}</p>
+          <p className="mt-1.5 text-xs text-slate-400">{metaParts.join(" · ")}</p>
         )}
 
         {showLivePendingScore && (
-          <p className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-medium text-sky-800">
+          <p className="mt-2.5 border-l-2 border-sky-300 pl-3 text-xs text-sky-800">
             Matchen är live men poängen har ännu inte publicerats.
           </p>
         )}
         {showProfixioWarning && (
-          <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+          <p className="mt-2.5 border-l-2 border-amber-400 pl-3 text-xs text-amber-700">
             Liveuppdateringen har tekniska problem för den här matchen just nu.
           </p>
         )}
         {showFinishedZeroZeroIssue && (
-          <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+          <p className="mt-2.5 border-l-2 border-amber-400 pl-3 text-xs text-amber-700">
             Misstänkt resultatfel: matchen är avslutad men står som 0–0. Kontrollera matchrapporten.
           </p>
         )}
