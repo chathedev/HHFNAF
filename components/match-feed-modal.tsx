@@ -1321,60 +1321,70 @@ export function MatchFeedModal({
                           )
                         }
 
+                        const isSevenMeterGoal =
+                          isGoal && `${event.type || ""} ${event.description || ""}`.toLowerCase().includes("7-m")
+                        const goalLabel = isSevenMeterGoal ? "Mål (7m)" : typeLabel
+                        const [homeDigits, awayDigits] = score ? score.split(/[-–]/) : [null, null]
+                        const renderScore = (align: "left" | "right") =>
+                          score && (
+                            <p className={`text-lg font-black tabular-nums leading-tight ${align === "right" ? "text-right" : ""}`}>
+                              <span className={isGoal && side === "home" ? "text-emerald-600" : "text-slate-900"}>{homeDigits}</span>
+                              <span className="text-slate-300">–</span>
+                              <span className={isGoal && side === "away" ? "text-emerald-600" : "text-slate-900"}>{awayDigits}</span>
+                            </p>
+                          )
+                        const renderBody = (align: "left" | "right") => (
+                          <div className={align === "right" ? "text-right" : ""}>
+                            {renderScore(align)}
+                            <p className={`text-[13px] font-bold leading-snug ${isGoal ? "text-emerald-700" : isSuspension ? "text-amber-600" : "text-slate-600"}`}>
+                              {isGoal ? goalLabel : typeLabel}
+                            </p>
+                            {event.player && (
+                              <p className="text-[13px] leading-snug text-slate-500">
+                                {event.playerNumber && <span className="font-bold text-slate-700">{event.playerNumber}</span>}
+                                {event.playerNumber && "  "}{event.player}
+                              </p>
+                            )}
+                            {!event.player && !isGoal && !isTimeout && (
+                              <p className="text-[13px] leading-snug text-slate-400">{getEventDisplayText(event)}</p>
+                            )}
+                          </div>
+                        )
+
                         return (
                           <li key={`${event.eventId ?? "idx"}-${index}`} className="relative">
-                            <div className="grid grid-cols-[1fr_52px_1fr] items-start">
+                            <div className="grid grid-cols-[1fr_52px_1fr] items-center">
                               {/* Left column (home team) */}
-                              <div className="flex justify-end pr-3 py-2">
+                              <div className="relative flex justify-end pr-3 py-1.5">
                                 {side === "home" && (
-                                  <div className="text-right">
-                                    {score && (
-                                      <p className="text-base font-black tabular-nums text-slate-900 leading-tight">{score}</p>
-                                    )}
-                                    <p className={`text-sm font-bold leading-snug ${isGoal ? "text-emerald-600" : isSuspension ? "text-amber-600" : "text-slate-600"}`}>
-                                      {typeLabel}
-                                    </p>
-                                    {event.player && (
-                                      <p className="text-sm text-slate-500">
-                                        {event.playerNumber && <span className="font-bold text-slate-700">{event.playerNumber}</span>}
-                                        {event.playerNumber && "  "}{event.player}
-                                      </p>
-                                    )}
-                                    {!event.player && !isGoal && !isTimeout && (
-                                      <p className="text-sm text-slate-400">{getEventDisplayText(event)}</p>
-                                    )}
-                                  </div>
+                                  <>
+                                    <span
+                                      aria-hidden
+                                      className={`absolute right-0 top-1/2 h-px w-2.5 -translate-y-1/2 ${isGoal ? "bg-emerald-200" : isSuspension ? "bg-amber-200" : "bg-slate-200"}`}
+                                    />
+                                    {renderBody("right")}
+                                  </>
                                 )}
                               </div>
 
                               {/* Center: dot + time */}
-                              <div className="flex flex-col items-center justify-start z-10 py-2 px-1">
-                                <span className={`shrink-0 ${
-                                  isGoal ? "h-3 w-3" : isSuspension ? "h-2.5 w-2.5" : "h-2 w-2"
-                                } ${isGoal ? (side === "home" ? "bg-slate-900" : "bg-slate-400") : isSuspension ? "bg-amber-500" : style.dot}`} />
+                              <div className="flex flex-col items-center justify-center z-10 py-1.5 px-1">
+                                <span className={`shrink-0 rounded-sm ${
+                                  isGoal ? "h-3 w-3 bg-emerald-500" : isSuspension ? "h-2.5 w-2.5 bg-amber-500" : `h-2 w-2 ${style.dot}`
+                                }`} />
                                 <p className="mt-1 whitespace-nowrap text-center text-[11px] font-semibold tabular-nums text-slate-400 leading-none">{event.time || ""}</p>
                               </div>
 
                               {/* Right column (away team) */}
-                              <div className="pl-3 py-2">
+                              <div className="relative pl-3 py-1.5">
                                 {side === "away" && (
-                                  <div>
-                                    {score && (
-                                      <p className="text-base font-black tabular-nums text-slate-900 leading-tight">{score}</p>
-                                    )}
-                                    <p className={`text-sm font-bold leading-snug ${isGoal ? "text-emerald-600" : isSuspension ? "text-amber-600" : "text-slate-600"}`}>
-                                      {typeLabel}
-                                    </p>
-                                    {event.player && (
-                                      <p className="text-sm text-slate-500">
-                                        {event.playerNumber && <span className="font-bold text-slate-700">{event.playerNumber}</span>}
-                                        {event.playerNumber && "  "}{event.player}
-                                      </p>
-                                    )}
-                                    {!event.player && !isGoal && !isTimeout && (
-                                      <p className="text-sm text-slate-400">{getEventDisplayText(event)}</p>
-                                    )}
-                                  </div>
+                                  <>
+                                    <span
+                                      aria-hidden
+                                      className={`absolute left-0 top-1/2 h-px w-2.5 -translate-y-1/2 ${isGoal ? "bg-emerald-200" : isSuspension ? "bg-amber-200" : "bg-slate-200"}`}
+                                    />
+                                    {renderBody("left")}
+                                  </>
                                 )}
                               </div>
                             </div>
