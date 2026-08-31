@@ -29,7 +29,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Fel uppgifter." }, { status: 401 })
     }
 
-    cookies().set({
+    const cookieStore = await cookies()
+    cookieStore.set({
       name: "editor-auth",
       value: cookieToken,
       httpOnly: true,

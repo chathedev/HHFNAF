@@ -10,9 +10,10 @@ export const metadata = {
 
 export const dynamic = "force-dynamic"
 
-export default function AdminPage() {
+export default async function AdminPage() {
   const cookieToken = process.env.AUTH_COOKIE_TOKEN || "authenticated"
-  const authCookie = cookies().get("editor-auth")
+  const cookieStore = await cookies()
+  const authCookie = cookieStore.get("editor-auth")
   if (!authCookie || authCookie.value !== cookieToken) {
     redirect("/login?next=/admin")
   }

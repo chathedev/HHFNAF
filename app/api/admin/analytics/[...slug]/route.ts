@@ -8,15 +8,17 @@ import { cookies } from "next/headers"
 const API_BASE = (process.env.NEXT_PUBLIC_MATCH_API_BASE || "https://api.harnosandshf.se").replace(/\/$/, "")
 const ALLOWED = new Set(["overview", "minutely", "live", "matches"])
 
-export async function GET(request: NextRequest, { params }: { params: { slug: string[] } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string[] }> }) {
   const cookieToken = process.env.AUTH_COOKIE_TOKEN || "authenticated"
-  const authCookie = cookies().get("editor-auth")
+  const cookieStore = await cookies()
+  const authCookie = cookieStore.get("editor-auth")
   if (!authCookie || authCookie.value !== cookieToken) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 })
   }
 
-  const endpoint = params.slug?.[0]
-  if (!endpoint || params.slug.length !== 1 || !ALLOWED.has(endpoint)) {
+  const { slug } = await params
+  const endpoint = slug?.[0]
+  if (!endpoint || slug.length !== 1 || !ALLOWED.has(endpoint)) {
     return NextResponse.json({ error: "unknown endpoint" }, { status: 404 })
   }
 
