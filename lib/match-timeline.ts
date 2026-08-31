@@ -38,13 +38,24 @@ export const isSyntheticFinalOnlyTimeline = <T extends TimelineEventLike>(timeli
   )
 }
 
-export const getBestAvailableTimeline = <T>(source: TimelineSource<T>): T[] => {
+export const getBestAvailableTimeline = <T extends TimelineEventLike>(source: TimelineSource<T>): T[] => {
   const candidates = [
     toArray(source.matchFeed),
     toArray(source.timeline),
     toArray(source.events),
     toArray(source.scoreTimeline),
   ]
+
+  // A synthetic "Fulltid"-only placeholder (the Profixio-403 fallback) must not
+  // shadow a later candidate that holds the real goal-by-goal data — otherwise
+  // matches whose feed never loaded show an empty timeline despite scoreTimeline
+  // carrying every goal.
+  const real = candidates.find(
+    (timeline) => timeline.length > 0 && !isSyntheticFinalOnlyTimeline(timeline),
+  )
+  if (real) {
+    return real
+  }
 
   return candidates.find((timeline) => timeline.length > 0) ?? []
 }

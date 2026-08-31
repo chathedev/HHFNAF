@@ -446,6 +446,38 @@ const enrichTimelineWithMatchDetails = (payload: any, fallbackTimeline: MatchFee
       })
     })
 
+  // scoreTimeline carries every goal even when the feed never loaded (Profixio
+  // 403 fallback matches). Merge its goals in wherever the base timeline lacks a
+  // goal at that moment — matched semantically on time+team, since identity keys
+  // differ between the feed shape (eventId, player) and the scoreTimeline shape.
+  const goalMomentKey = (time?: string, team?: string) =>
+    `${normalizeText(time)}|${normalizeText(team)}`
+  const baseGoalMoments = new Set(
+    enhancedBase
+      .filter((event) => getEventSemanticType(event) === "goal")
+      .map((event) => goalMomentKey(event.time, event.team)),
+  )
+  const scoreTimelineEntries = Array.isArray(payload?.match?.scoreTimeline)
+    ? payload.match.scoreTimeline
+    : []
+  scoreTimelineEntries.forEach((entry: any) => {
+    const normalized = normalizeTimelineEvent(entry)
+    if (getEventSemanticType(normalized) !== "goal") return
+    if (baseGoalMoments.has(goalMomentKey(normalized.time, normalized.team))) return
+    const typeText = `${normalized.type || ""}`.toLowerCase()
+    const variant = typeText.includes("7-m") ? "seven" : "goal"
+    const lookupEntry =
+      normalized.team && normalized.time
+        ? goalLookup.get(getGoalLookupKey(normalized.team, normalized.time, variant))
+        : undefined
+    baseGoalMoments.add(goalMomentKey(normalized.time, normalized.team))
+    pushSupplemental({
+      ...normalized,
+      player: normalized.player ?? lookupEntry?.player,
+      playerNumber: normalized.playerNumber ?? lookupEntry?.playerNumber,
+    })
+  })
+
   const mergedTimeline = [...enhancedBase, ...supplemental]
   const hasSecondHalfStart = mergedTimeline.some((event) => {
     const text = getEventCombinedText(event)
