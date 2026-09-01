@@ -1,114 +1,146 @@
 #!/bin/bash
 # Publishes the staged HHFNAF build to production.
+# SUPPORTS_PREBUILD — the site-prewarm daemon looks for this marker.
 #
-# Rewritten 2026-08-04 after a release left harnosandshf.se showing raw
-# unstyled HTML and then nginx's maintenance fallback. Root cause: this
-# script used to `npm run build` DIRECTLY inside /root/HHFNAF while
-# harnosandshf-www was still running and serving requests from it — for the
-# entire build (10-40s+), live visitors got HTML referencing asset hashes
-# that were being deleted out from under them mid-request (the exact
-# "Failed to find Server Action" / no-CSS symptoms), and the `pm2 restart`
-# afterward hard-killed the process, leaving nginx's upstream down long
-# enough to trip the maintenance-page fallback. On top of that, this script
-# shared no lock with /root/SERVERF/scripts/sync-frontends.sh, which
-# rebuilds the SAME /root/HHFNAF directory on its own cron schedule — two
-# builds could collide in the same directory at once.
+# WARM RELEASES (2026-08-31). The build no longer happens on the Release click.
+# A prewarm daemon calls `--prewarm-check` every few seconds; when staging has
+# settled it runs `--prebuild`, which does the whole isolated rsync + install +
+# build and stamps the result with a hash of the staging source. A plain run
+# (what the console's Release button invokes, unchanged) then finds that stamp,
+# skips straight to PROMOTE — rsync the tiny source delta, atomically swap .next,
+# roll the blue/green pair with fast-polled health checks — and the new build is
+# what visitors get within a couple of seconds. Only when no fresh warm build
+# exists does the click pay for a full build, and it says so in the log.
 #
-# Fixed by: building in a fully isolated scratch directory (prod is never
-# touched by a build that might fail or take a while), taking the SAME lock
-# the cron sync uses (so the two can never race each other), and an atomic
-# rename-swap of .next (a single syscall, not an in-place overwrite).
-#
-# STILL WRONG until 2026-08-05: `pm2 reload` is only a zero-downtime rolling
-# restart in CLUSTER mode. harnosandshf-www runs in fork_mode (a single
-# process on port 3001) — for a fork-mode app, `pm2 reload` behaves exactly
-# like `pm2 restart`: kill, then start. Every release still had a real gap
-# where nginx's upstream was down, which is what actually tripped the
-# maintenance page, "graceful reload" comment notwithstanding.
-#
-# Real fix: a second permanent pm2 process, harnosandshf-www-backup, on port
-# 3011, wired into nginx's harnosandshf_www upstream as a `backup` server
-# (see /etc/nginx/sites-available/www.harnosandshf.se) — nginx fails over to
-# it automatically the instant 3001 stops answering. This script reloads the
-# BACKUP first (invisible — nginx keeps routing live traffic to the still-up
-# primary on the OLD build) and health-checks it, THEN reloads the primary
-# (nginx auto-fails-over to the backup, which is already serving the NEW
-# build, for that window) and health-checks it too. Net effect: visitors
-# always get an in-service instance, and it always has the latest release —
-# never stale, never a gap, never the fallback page. Automatic rollback to
-# the last known-good .next (reloading both instances) if either health
-# check fails.
+# The promote path keeps every safety the 2026-08-04/05 rewrite earned: isolated
+# build dir, the shared frontend-sync lock, atomic rename swaps, backup-first
+# blue/green reload, health checks with automatic rollback. See git history for
+# the full war stories; the short version is: never build inside prod, never
+# leave nginx without a healthy upstream, never keep a broken build.
 set -euo pipefail
 
 STAGING_SRC="/root/HHFNAF-staging"
 PROD_DIR="/root/HHFNAF"
 BUILD_DIR="/root/HHFNAF-release-build"
 LOCKFILE="/tmp/sync-frontends.lock"   # shared with sync-frontends.sh — mutually exclusive
+STAMP="$BUILD_DIR/.warm-stamp"
+QUIET_S=15                            # staging must be untouched this long before a prewarm
 
-log() { echo "[release] $(date -Iseconds) $1"; }
+log()  { echo "[release] $(date -Iseconds) $1"; }
+step() { echo "[step] $1 $2"; }       # machine-readable for the console's release card
+
+src_hash() {
+  find "$STAGING_SRC" \( -name node_modules -o -name .next -o -name .git \) -prune \
+       -o -type f ! -name release-to-prod.sh -printf '%P|%T@|%s\n' 2>/dev/null | sort | md5sum | cut -d' ' -f1
+}
+src_newest() {
+  find "$STAGING_SRC" \( -name node_modules -o -name .next -o -name .git \) -prune \
+       -o -type f ! -name release-to-prod.sh -printf '%T@\n' 2>/dev/null | sort -rn | head -1 | cut -d. -f1
+}
+
+do_prebuild() {
+  local want; want=$(src_hash)
+  step build "Building"
+  log "Prebuild: syncing staging source into isolated build dir..."
+  rsync -a --delete \
+    --exclude node_modules --exclude .next --exclude .git --exclude release-to-prod.sh \
+    "$STAGING_SRC/" "$BUILD_DIR/"
+  cd "$BUILD_DIR"
+  log "Prebuild: installing dependencies..."
+  npm install --silent
+  log "Prebuild: building..."
+  npm run build
+  if [ ! -f "$BUILD_DIR/.next/BUILD_ID" ]; then
+    echo "[release] Build finished but .next/BUILD_ID is missing — failed build, nothing stamped." >&2
+    rm -f "$STAMP"
+    exit 1
+  fi
+  # Stamp what this artifact was built FROM. If staging changed while the build
+  # ran, the hashes differ and the stamp is honest about being stale already.
+  local now; now=$(src_hash)
+  if [ "$now" != "$want" ]; then
+    # Staging moved under the build. The artifact is still a complete, valid
+    # build of what staging WAS — usable by the release running right now — but
+    # it is not stamped warm, so the daemon rebuilds for the next one.
+    log "Prebuild: staging changed mid-build — artifact not stamped, will rebuild."
+    rm -f "$STAMP"; return 0
+  fi
+  printf '%s %s\n' "$want" "$(cat "$BUILD_DIR/.next/BUILD_ID")" > "$STAMP"
+  log "Prebuild: warm build $(cat "$BUILD_DIR/.next/BUILD_ID") ready"
+}
+
+warm_fresh() {
+  [ -f "$STAMP" ] && [ -f "$BUILD_DIR/.next/BUILD_ID" ] || return 1
+  [ "$(cut -d' ' -f1 "$STAMP")" = "$(src_hash)" ]
+}
+
+# ── prewarm entry points (the daemon's, never the console's) ──────────────────
+if [ "${1:-}" = "--prewarm-check" ]; then
+  warm_fresh && exit 0                              # already warm
+  newest=$(src_newest); now=$(date +%s)
+  [ -n "$newest" ] && [ $((now - newest)) -lt $QUIET_S ] && exit 0   # still being edited
+  exec 9>"$LOCKFILE"; flock -n 9 || exit 0          # a release/sync is running — stay out
+  do_prebuild
+  exit 0
+fi
+if [ "${1:-}" = "--prebuild" ]; then
+  exec 9>"$LOCKFILE"
+  flock -w 120 9 || { echo "[release] lock busy" >&2; exit 1; }
+  do_prebuild
+  exit 0
+fi
+
+# ── a real release ────────────────────────────────────────────────────────────
+T0=$(date +%s.%N)
+elapsed() { awk -v a="$T0" -v b="$(date +%s.%N)" 'BEGIN{printf "%.1fs", b-a}'; }
 
 exec 9>"$LOCKFILE"
 if ! flock -w 120 9; then
   echo "[release] Could not acquire the frontend-sync lock after 120s — a cron cycle is stuck. Aborting, production untouched." >&2
   exit 1
 fi
-log "Lock acquired"
 
-# 1. Build in total isolation — production is never touched by a build that
-#    might fail, hang, or take a while.
-log "Syncing staging source into isolated build dir..."
-rsync -a --delete \
-  --exclude node_modules \
-  --exclude .next \
-  --exclude .git \
-  --exclude release-to-prod.sh \
-  "$STAGING_SRC/" "$BUILD_DIR/"
-
-cd "$BUILD_DIR"
-log "Installing dependencies..."
-npm install --silent
-
-log "Building..."
-npm run build
-
-if [ ! -f "$BUILD_DIR/.next/BUILD_ID" ]; then
-  echo "[release] Build finished but .next/BUILD_ID is missing — treating as a failed build. Production untouched." >&2
-  exit 1
+if warm_fresh; then
+  NEW_BUILD_ID=$(cut -d' ' -f2 "$STAMP")
+  step warm "Warm build ready"
+  log "Warm build $NEW_BUILD_ID matches staging — promoting directly, no build needed"
+else
+  log "No fresh warm build — running a full build first (the prewarm daemon usually has this done already)"
+  do_prebuild
+  NEW_BUILD_ID=$(cat "$BUILD_DIR/.next/BUILD_ID")
 fi
-NEW_BUILD_ID=$(cat "$BUILD_DIR/.next/BUILD_ID")
-log "Build succeeded: $NEW_BUILD_ID"
 
-# 2. Sync the built source (everything except .next, node_modules) into prod,
-#    then swap .next in with two atomic renames — each is a single instant
-#    inode operation, not a content copy, so there is no window where a live
-#    request can see a half-written build.
+# ── PROMOTE ───────────────────────────────────────────────────────────────────
+step promote "Promoting"
 log "Syncing source into production..."
+LOCK_CHANGED=0
+cmp -s "$BUILD_DIR/package-lock.json" "$PROD_DIR/package-lock.json" || LOCK_CHANGED=1
 rsync -a --delete \
-  --exclude node_modules \
-  --exclude .next \
-  --exclude .git \
+  --exclude node_modules --exclude .next --exclude .git \
   "$BUILD_DIR/" "$PROD_DIR/"
-
 cd "$PROD_DIR"
-log "Installing production dependencies..."
-npm install --silent --production=false
+if [ "$LOCK_CHANGED" = 1 ]; then
+  log "Dependencies changed — installing in production (slower this once)..."
+  npm install --silent --production=false
+fi
 
 PREV_NEXT_BACKUP="$PROD_DIR/.next-prev"
 rm -rf "$PREV_NEXT_BACKUP"
 if [ -d "$PROD_DIR/.next" ]; then
   mv "$PROD_DIR/.next" "$PREV_NEXT_BACKUP"
 fi
+# The warm .next is MOVED into prod (atomic, same fs). The build dir keeps its
+# stamp invalid afterwards, so the daemon rebuilds a fresh warm artifact.
 mv "$BUILD_DIR/.next" "$PROD_DIR/.next"
-log "Swapped in new build"
+rm -f "$STAMP"
+log "Swapped in build $NEW_BUILD_ID ($(elapsed))"
 
 health_check() {
-  # $1 = port. Startup isn't instant; a few retries.
+  # $1 = port. Poll fast — this is the click-to-live path, not a cron job.
   local port="$1" i
-  for i in $(seq 1 15); do
-    sleep 1
-    if curl -sf -o /dev/null "http://127.0.0.1:${port}/kontakt"; then
-      return 0
-    fi
+  for i in $(seq 1 200); do
+    curl -sf -m 1 -o /dev/null "http://127.0.0.1:${port}/kontakt" && return 0
+    sleep 0.1
   done
   return 1
 }
@@ -126,33 +158,53 @@ roll_back() {
   fi
 }
 
-# 3. Reload the BACKUP (3011) first. Live traffic is still on the primary
-#    (3001, old build) the whole time this runs — this step is invisible.
+# Backup (3011) first: invisible, primary still serves the old build. The pm2
+# RPC round-trip is slow (~0.5s) and none of it needs to gate us: reload in the
+# background, watch the port for the OLD process dropping, then health-poll the
+# new one up. If the drop never shows (a wedged reload), fall back to waiting
+# for the RPC so the health check can never pass against the old process.
+step flip "Switching over"
 log "Reloading harnosandshf-www-backup (3011)..."
-pm2 reload harnosandshf-www-backup --update-env
-
+pm2 reload harnosandshf-www-backup --update-env >/dev/null 2>&1 &
+BK_RELOAD=$!
+DROPPED=0
+for i in $(seq 1 100); do
+  curl -sf -m 0.3 -o /dev/null "http://127.0.0.1:3011/kontakt" || { DROPPED=1; break; }
+  sleep 0.05
+done
+[ "$DROPPED" = 1 ] || wait "$BK_RELOAD" || true
 if ! health_check 3011; then
   echo "[release] Backup instance failed its health check on the new build — rolling back before touching the primary." >&2
   roll_back
   exit 1
 fi
-log "Backup is healthy on $NEW_BUILD_ID"
+log "Backup healthy on $NEW_BUILD_ID ($(elapsed))"
 
-# 4. Reload the PRIMARY (3001). nginx's harnosandshf_www upstream fails over
-#    to the backup (already confirmed healthy on the NEW build) for exactly
-#    this window, so visitors never see a gap and never see a stale build.
+# The moment the primary drops, nginx fails over to the backup — which is
+# already confirmed healthy on the NEW build. So LIVE is the instant 3001 stops
+# answering, not when pm2's RPC round-trip returns: reload in the background and
+# watch the port to catch that instant.
 log "Reloading harnosandshf-www (3001)..."
-pm2 reload harnosandshf-www --update-env
+pm2 reload harnosandshf-www --update-env >/dev/null 2>&1 &
+RELOAD_PID=$!
+for i in $(seq 1 100); do
+  curl -sf -m 0.3 -o /dev/null "http://127.0.0.1:3001/kontakt" || break
+  sleep 0.05
+done
+step live "Live"
+log "LIVE: $NEW_BUILD_ID is what visitors get ($(elapsed))"
 
+if ! wait "$RELOAD_PID"; then
+  log "pm2 reload returned nonzero — retrying in the foreground"
+  pm2 reload harnosandshf-www --update-env >/dev/null
+fi
 if ! health_check 3001; then
   echo "[release] Primary failed its health check — rolling back." >&2
   roll_back
   exit 1
 fi
+step done "Done"
+log "Primary confirmed healthy — release complete ($(elapsed))"
 
-log "Health check passed — $NEW_BUILD_ID is live on both instances"
-pm2 list | grep harnosandshf-www
-
-# Keep only the immediate previous build for rollback headroom; don't let
-# backups accumulate forever.
+# Keep only the immediate previous build for rollback headroom.
 rm -rf "$PREV_NEXT_BACKUP"

@@ -14,6 +14,7 @@ import { Toaster } from "@/components/ui/toaster"
 
 export default function LoginPage() {
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
@@ -68,14 +69,24 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="mt-1"
-              />
+              <div className="relative mt-1">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="pr-16"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute inset-y-0 right-2 text-xs font-medium text-slate-500 hover:text-slate-900"
+                  aria-label={showPassword ? "Dölj lösenordet" : "Visa lösenordet"}
+                >
+                  {showPassword ? "Dölj" : "Visa"}
+                </button>
+              </div>
             </div>
             <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600" disabled={loading}>
               {loading ? "Logging in..." : "Login"}
