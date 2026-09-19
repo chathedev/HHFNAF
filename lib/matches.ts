@@ -70,14 +70,31 @@ export const isTicketEligibleVenue = (venue?: string | null) => {
   return TICKET_VENUES.some((candidate) => normalizedVenue.includes(normalizeMatchKey(candidate)))
 }
 
+/**
+ * USM (Ungdoms-SM) and other cup play is run by the federation, not by the club,
+ * so there is never a Clubmate ticket for it even when it is played at Öbacka SC
+ * by a team whose name would otherwise look ticket-eligible.
+ */
+export const isCupPlayMatch = (match: { series?: string | null; teamType?: string | null }) => {
+  const haystack = `${match.series ?? ""} ${match.teamType ?? ""}`
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+  return /\busm\b/.test(haystack)
+}
+
 export const canShowTicketForMatch = (match: {
   teamType?: string | null
   isHome?: boolean | null
   venue?: string | null
   opponent?: string | null
+  series?: string | null
   date?: Date | null
 }) => {
   if (match.isHome === false) {
+    return false
+  }
+  if (isCupPlayMatch(match)) {
     return false
   }
   if (isTicketExcludedMatch(match)) {
