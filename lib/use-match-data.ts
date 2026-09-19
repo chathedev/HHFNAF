@@ -1413,10 +1413,29 @@ const createMatchDataChannel = () => {
     const updatedFeed = mergeMatchFeed(existingMatch.matchFeed, [normalizedEvent])
     const nextHomeScore = normalizedEvent.homeScore ?? undefined
     const nextAwayScore = normalizedEvent.awayScore ?? undefined
-    const nextResult =
-      typeof nextHomeScore === "number" && typeof nextAwayScore === "number"
-        ? `${nextHomeScore}-${nextAwayScore}`
-        : existingMatch.result
+    // Events are replayed, not just streamed: the server's timeline backfill re-emits a
+    // whole match feed with fresh event ids long after the final whistle, and a
+    // reconnect replays from the last id we stored. Applying those scores blindly
+    // rewrote settled results back to an intermediate score, most visibly 0-0 from the
+    // opening event. So: never touch the score of a match the server calls finished, and
+    // for a live match only accept a score that has not gone backwards.
+    const parseScoreTotal = (value?: string | null) => {
+      const parsed = (value ?? "").match(/(\d+)\s*[-–—]\s*(\d+)/)
+      if (!parsed) return null
+      const total = Number.parseInt(parsed[1], 10) + Number.parseInt(parsed[2], 10)
+      return Number.isFinite(total) ? total : null
+    }
+    let nextResult = existingMatch.result
+    if (
+      existingMatch.matchStatus !== "finished" &&
+      typeof nextHomeScore === "number" &&
+      typeof nextAwayScore === "number"
+    ) {
+      const currentTotal = parseScoreTotal(existingMatch.result)
+      if (currentTotal === null || nextHomeScore + nextAwayScore >= currentTotal) {
+        nextResult = `${nextHomeScore}–${nextAwayScore}`
+      }
+    }
 
     const updatedMatch = {
       ...existingMatch,
