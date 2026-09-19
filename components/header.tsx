@@ -16,22 +16,40 @@ function Header() {
 
   useEffect(() => {
     let ticking = false
+    const syncScrolled = () => setScrolled(window.scrollY > 50)
     const handleScroll = () => {
       if (ticking) return
       ticking = true
       requestAnimationFrame(() => {
-        setScrolled(window.scrollY > 50)
+        syncScrolled()
         ticking = false
       })
     }
 
+    // A reload restores the previous scroll position without firing a scroll event, so
+    // reading it once on mount is what keeps the header from rendering its transparent
+    // top state while the page is actually scrolled down and content passes under it.
+    syncScrolled()
+    // Browsers restore the offset slightly after hydration, so check again on the next
+    // frame and once the page has fully loaded.
+    const raf = requestAnimationFrame(syncScrolled)
+    window.addEventListener("load", syncScrolled)
     window.addEventListener("scroll", handleScroll, { passive: true })
-    return () => window.removeEventListener("scroll", handleScroll)
+    window.addEventListener("resize", syncScrolled)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener("load", syncScrolled)
+      window.removeEventListener("scroll", handleScroll)
+      window.removeEventListener("resize", syncScrolled)
+    }
   }, [])
 
-  const visiblePaths = ["/", "/lag", "/matcher", "/kontakt", "/kop-biljett", "/shop"]
-
-  if (!visiblePaths.includes(pathname)) {
+  // The header used to be gated by a hardcoded allow-list, which silently dropped it
+  // from any page added later - /tabeller, /partners and /links all render <Header />
+  // and got nothing. Only the internal tools opt out now; every public page that mounts
+  // the component gets it.
+  const CHROMELESS_PREFIXES = ["/admin", "/editor", "/login", "/instructions"]
+  if (CHROMELESS_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) {
     return null
   }
 

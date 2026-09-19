@@ -6,7 +6,7 @@ export default function LinksPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-1 flex items-center justify-center bg-gradient-to-br from-green-50 to-orange-50 py-16">
+      <main className="flex-1 flex items-center justify-center bg-gradient-to-br from-green-50 to-orange-50 pb-16 pt-40">
         <div className="container mx-auto px-4 max-w-md">
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-green-700 mb-4">Snabblänkar</h1>
@@ -80,7 +80,7 @@ export default function LinksPage() {
           </div>
         </div>
       </main>
-      {/* Removed Footer component */}
+      {/* Intentionally no Footer: this is the Instagram-bio landing page. */}
     </div>
   )
 }

@@ -6,6 +6,7 @@ import { notFound } from "next/navigation"
 import { use, useEffect, useMemo, useState } from "react"
 
 import lagContent from "@/public/content/lag.json"
+import { Header } from "@/components/header"
 import Footer from "@/components/footer"
 import { Card } from "@/components/ui/card"
 import { canShowTicketForMatch, normalizeMatchKey } from "@/lib/matches"
@@ -190,7 +191,10 @@ export default function TeamPage({ params }: TeamPageProps) {
 
   return (
     <>
+      <Header />
       <main className="flex-1 bg-white">
+        {/* Clears the fixed header. */}
+        <div className="h-24" />
         <section className="relative overflow-hidden rounded-b-[3rem] bg-gradient-to-br from-emerald-600 via-emerald-500 to-orange-400">
           <div className="pointer-events-none absolute -left-36 top-8 h-72 w-72 rounded-full bg-white/15 blur-3xl" />
           <div className="pointer-events-none absolute -right-44 bottom-[-140px] h-80 w-80 rounded-full bg-emerald-900/30 blur-3xl" />
