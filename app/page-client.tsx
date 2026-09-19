@@ -58,6 +58,43 @@ type MatchTopScorer = {
 }
 
 // How long a finished match keeps its own section on the home page.
+// A match can appear in several buckets of the same payload at once - most visibly
+// during the live-to-finished handover, when grouped.live still holds an old running
+// score while recentResults already has the final one. Whichever copy happened to be
+// concatenated first used to win, so the row flipped between an intermediate score and
+// the real result. These rank a match's copies so one id always resolves to one value,
+// and that value can only ever move forward.
+const matchProgressRank = (match: NormalizedMatch) => {
+  const status = normalizeStatusValue(match.matchStatus)
+  if (status === "finished") return 3
+  if (status === "live" || status === "halftime") return 2
+  return 1
+}
+
+const matchScoreTotal = (match: NormalizedMatch) => {
+  const parsed = (match.result ?? "").match(/(\d+)\s*[-–—]\s*(\d+)/)
+  if (!parsed) return -1
+  const total = Number.parseInt(parsed[1], 10) + Number.parseInt(parsed[2], 10)
+  return Number.isFinite(total) ? total : -1
+}
+
+/** Returns whichever copy represents the later point in the match. Ties keep `a`. */
+const freshestMatchCopy = (a: NormalizedMatch | undefined, b: NormalizedMatch | undefined) => {
+  if (!a) return b
+  if (!b) return a
+  const rankA = matchProgressRank(a)
+  const rankB = matchProgressRank(b)
+  if (rankA !== rankB) return rankB > rankA ? b : a
+  const elapsedOf = (match: NormalizedMatch) => {
+    const value = (match as { elapsedMinutes?: unknown }).elapsedMinutes
+    return typeof value === "number" ? value : -1
+  }
+  const elapsedA = elapsedOf(a)
+  const elapsedB = elapsedOf(b)
+  if (elapsedA !== elapsedB) return elapsedB > elapsedA ? b : a
+  return matchScoreTotal(b) > matchScoreTotal(a) ? b : a
+}
+
 const JUST_FINISHED_WINDOW_MS = 2 * 60 * 60 * 1000
 // Used only when the timeline gives us nothing better: two 30 minute halves plus a break,
 // which is the longest a senior game realistically runs.
@@ -272,7 +309,11 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const applyLiveOverride = useCallback(
     (match: NormalizedMatch): NormalizedMatch => {
       const override = liveOverrideById[match.id]
-      return override ? ({ ...match, ...override } as NormalizedMatch) : match
+      if (!override) return match
+      const candidate = { ...match, ...override } as NormalizedMatch
+      // The override is a snapshot from whenever the popup last polled. Once the list
+      // has moved past it (the match finished, the score went up), the list wins.
+      return freshestMatchCopy(match, candidate) === candidate ? candidate : match
     },
     [liveOverrideById],
   )
@@ -742,19 +783,34 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
   const homeMatchFlow = useMemo(() => {
     const seen = new Set<string>()
-    const liveItems = (groupedFeed?.live ?? []).slice(0, 5)
     const now = Date.now()
     const SIX_HOURS = 6 * 60 * 60 * 1000
 
-    // Every finished match we know about, from both sources, deduped. recentResults is
-    // the API's own shortlist; grouped.finished catches games whose result landed after
-    // that list was built.
-    const finishedSeen = new Set<string>()
-    const finishedPool = [...recentResults, ...(groupedFeed?.finished ?? [])].filter((match) => {
-      if (finishedSeen.has(match.id)) return false
-      finishedSeen.add(match.id)
-      return true
-    })
+    // Collapse every bucket down to one copy per match first. Building the sections
+    // straight off grouped.live / grouped.finished let the same match render from two
+    // different copies depending on concat order, which is what made the score flip.
+    const resolved = new Map<string, NormalizedMatch>()
+    for (const match of [
+      ...(groupedFeed?.live ?? []),
+      ...(groupedFeed?.finished ?? []),
+      ...recentResults,
+      ...(groupedFeed?.upcoming ?? []),
+    ]) {
+      if (!match?.id) continue
+      resolved.set(match.id, freshestMatchCopy(resolved.get(match.id), match) as NormalizedMatch)
+    }
+    const all = Array.from(resolved.values()).map(applyLiveOverride)
+    const statusOf = (match: NormalizedMatch) => getSimplifiedMatchStatus(match)
+
+    const liveItems = all
+      .filter((match) => statusOf(match) === "live")
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .slice(0, 5)
+
+    // Sorted newest first so the most recent result leads the section.
+    const finishedPool = all
+      .filter((match) => statusOf(match) === "finished")
+      .sort((a, b) => b.date.getTime() - a.date.getTime())
 
     // A match keeps its own slot on the home page for two hours after the final whistle,
     // so someone arriving just after a game can still see how it went without hunting
@@ -782,7 +838,10 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
     const usedSlots = liveItems.length + justFinished.length + olderResults.length
     const remainingSlots = Math.max(15 - usedSlots, 0)
-    const upcomingItems = (groupedFeed?.upcoming ?? []).slice(0, remainingSlots)
+    const upcomingItems = all
+      .filter((match) => statusOf(match) === "upcoming")
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .slice(0, remainingSlots)
 
     const ordered = [...liveItems, ...justFinished, ...olderResults, ...upcomingItems].filter((match) => {
       if (seen.has(match.id)) {
@@ -797,7 +856,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       total: ordered.length,
       justFinishedIds,
     }
-  }, [groupedFeed, recentResults])
+  }, [groupedFeed, recentResults, applyLiveOverride])
 
   // Only show the skeleton while we have NO answer at all. SSR already fetches
   // the match window and passes it as initialData, so hasMatchPayload is true
