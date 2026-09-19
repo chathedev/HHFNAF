@@ -59,6 +59,9 @@ export type MatchPenalty = {
   durationSeconds?: number
   remainingSeconds?: number
   active?: boolean
+  /** Set by the API when a suspension from the previous period is still being served. */
+  isForPreviousPeriod?: boolean
+  fullTimeExpulsion?: boolean
 }
 
 type MatchFeedModalProps = {
@@ -720,6 +723,11 @@ export function MatchFeedModal({
   const [displayedFeed, setDisplayedFeed] = useState<MatchFeedEvent[]>([])
   const [isFeedTransitioning, setIsFeedTransitioning] = useState(false)
   const [clockTick, setClockTick] = useState(0)
+  // When the countdown values currently in state were received from the server.
+  // Local interpolation is measured from this instant rather than from a tick counter,
+  // so a slow or missed refresh can never make the countdown drift below the truth and
+  // then visibly jump back up when the match clock stops.
+  const [countdownAnchorAt, setCountdownAnchorAt] = useState<number>(() => Date.now())
   const allowAutoRefresh = matchStatus === "live" || matchStatus === "halftime"
   const canFetchDetailedTimeline = matchData?.timelineAvailable !== false || matchData?.eventsAvailable !== false
   const modalRefreshIntervalMs = matchData?.provider === "procup" ? 5_000 : 3_000
@@ -736,18 +744,32 @@ export function MatchFeedModal({
   const clockRunning = Boolean(effectiveClockState?.running)
   const clockReason = effectiveClockState?.reason ?? (clockRunning ? "running" : "stopped")
   const timeoutBaseSecondsLeft = Math.max(0, effectiveClockState?.timeout?.timeoutSecondsLeft ?? 0)
-  const timeoutSecondsLeft = Math.max(0, timeoutBaseSecondsLeft - (clockReason === "timeout" ? clockTick : 0))
+  // clockTick is only read to force a re-render once a second; the value subtracted is
+  // real elapsed time since the data arrived.
+  void clockTick
+  const secondsSinceCountdownData = Math.max(0, Math.floor((Date.now() - countdownAnchorAt) / 1000))
+  const timeoutSecondsLeft = Math.max(
+    0,
+    timeoutBaseSecondsLeft - (clockReason === "timeout" ? secondsSinceCountdownData : 0),
+  )
   const activePenalties = useMemo(() => {
     const currentPeriod = effectiveClockState?.period
     const result: Array<(typeof effectivePenalties)[number] & { remaining: number }> = []
     for (const item of effectivePenalties) {
       if (!item.active) continue
-      if (typeof currentPeriod === "number" && item.period !== currentPeriod) continue
-      const remaining = Math.max(0, (item.remainingSeconds ?? 0) - (clockRunning ? clockTick : 0))
+      // A suspension handed out late in a period carries its remaining time into the
+      // next one. The server recomputes that carry-over but keeps the original period on
+      // the event, so filtering strictly on period would hide it exactly when it matters.
+      const carriedOver = item.isForPreviousPeriod === true || item.fullTimeExpulsion === true
+      if (typeof currentPeriod === "number" && item.period !== currentPeriod && !carriedOver) continue
+      const remaining = Math.max(
+        0,
+        (item.remainingSeconds ?? 0) - (clockRunning ? secondsSinceCountdownData : 0),
+      )
       if (remaining > 0) result.push({ ...item, remaining })
     }
     return result
-  }, [effectivePenalties, effectiveClockState?.period, clockRunning, clockTick])
+  }, [effectivePenalties, effectiveClockState?.period, clockRunning, secondsSinceCountdownData])
 
   const fetchDetailData = async () => {
     const apiMatchId = matchData?.apiMatchId
@@ -769,6 +791,7 @@ export function MatchFeedModal({
         setDetailClockState((payload?.clockState as MatchClockState) ?? null)
         setDetailPenalties(Array.isArray(payload?.penalties) ? payload.penalties : [])
         setClockTick(0)
+        setCountdownAnchorAt(Date.now())
       })
     } finally {
       clearTimeout(timeoutId)
@@ -817,6 +840,7 @@ export function MatchFeedModal({
     setDetailClockState(null)
     setDetailPenalties([])
     setClockTick(0)
+    setCountdownAnchorAt(Date.now())
     if (canFetchDetailedTimeline) {
       fetchDetailData().catch(() => undefined)
     }
