@@ -629,7 +629,16 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
   // Start with backend status, but ALWAYS check timeline for halftime override
   let derivedStatus: NormalizedMatch["matchStatus"] | undefined = normalizeStatusValue(match.matchStatus)
 
-  if (match.resultState === "available" && parseFinalScore(match.result)) {
+  // Only infer "finished" from a score when the backend has NOT explicitly said the
+  // match is running. A live match publishes a score from the first whistle (0-0 parses
+  // fine), so without this guard every ongoing match is marked finished the moment its
+  // feed starts reporting, and it vanishes from the Live section.
+  if (
+    derivedStatus !== "live" &&
+    derivedStatus !== "halftime" &&
+    match.resultState === "available" &&
+    parseFinalScore(match.result ?? undefined)
+  ) {
     derivedStatus = "finished"
   }
 

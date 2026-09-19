@@ -66,11 +66,15 @@ export const getSimplifiedMatchStatus = (match: NormalizedMatch): "live" | "fini
   if (normalized === "finished") {
     return "finished"
   }
-  if (match.resultState === "available" && parseScore(match.result) !== null) {
-    return "finished"
-  }
+  // An explicit live status always wins. A live match publishes a running score from
+  // the first whistle (often "0-0"), so the score heuristic below would otherwise file
+  // every ongoing match under Resultat the moment its feed starts reporting.
   if (normalized === "live" || normalized === "halftime") {
     return "live"
+  }
+  // Fallback for matches whose status never got updated but which clearly have a result.
+  if (match.resultState === "available" && parseScore(match.result) !== null) {
+    return "finished"
   }
   return "upcoming"
 }
