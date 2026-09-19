@@ -41,7 +41,7 @@ import {
   shouldShowFinishedZeroZeroIssue,
   shouldShowProfixioTechnicalIssue,
 } from "@/lib/match-card-utils"
-import { useMatchData, forceMatchDataPoll, normalizeStatusValue, type NormalizedMatch } from "@/lib/use-match-data"
+import { useMatchData, forceMatchDataPoll, normalizeStatusValue, getMatchEndTime, type NormalizedMatch } from "@/lib/use-match-data"
 import { AnimatedScore } from "@/components/animated-score"
 import { MatchCardCTA } from "@/components/match-card-cta"
 import { InstagramFeed } from "@/components/instagram-feed"
@@ -55,6 +55,28 @@ type MatchTopScorer = {
   goals: number
   goalTimes?: string[]
   sevenMeterGoals?: number
+}
+
+// How long a finished match keeps its own section on the home page.
+const JUST_FINISHED_WINDOW_MS = 2 * 60 * 60 * 1000
+// Used only when the timeline gives us nothing better: two 30 minute halves plus a break,
+// which is the longest a senior game realistically runs.
+const ASSUMED_MATCH_DURATION_MS = 75 * 60 * 1000
+
+const resolveMatchEndedAt = (match: NormalizedMatch): number | null => {
+  const explicitEnd = getMatchEndTime(match)
+  if (explicitEnd instanceof Date) {
+    const value = explicitEnd.getTime()
+    if (Number.isFinite(value)) return value
+  }
+  const start =
+    typeof match.startTimestamp === "number"
+      ? match.startTimestamp
+      : match.date instanceof Date
+        ? match.date.getTime()
+        : new Date(match.date).getTime()
+  if (!Number.isFinite(start)) return null
+  return start + ASSUMED_MATCH_DURATION_MS
 }
 
 const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
@@ -721,22 +743,48 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const homeMatchFlow = useMemo(() => {
     const seen = new Set<string>()
     const liveItems = (groupedFeed?.live ?? []).slice(0, 5)
-    // Use recentResults from API, but fall back to recently finished matches
-    // from the grouped feed when the API returns no recent results (e.g. when
-    // a match result hasn't been published yet).
     const now = Date.now()
     const SIX_HOURS = 6 * 60 * 60 * 1000
-    const finishedFallback = recentResults.length === 0
-      ? (groupedFeed?.finished ?? []).filter((m) => {
-          const ts = typeof m.startTimestamp === "number" ? m.startTimestamp : new Date(m.date).getTime()
-          return Number.isFinite(ts) && now - ts < SIX_HOURS
-        }).slice(0, 3)
-      : []
-    const resultItems = recentResults.length > 0 ? recentResults.slice(0, 3) : finishedFallback
-    const remainingSlots = Math.max(15 - liveItems.length - resultItems.length, 0)
+
+    // Every finished match we know about, from both sources, deduped. recentResults is
+    // the API's own shortlist; grouped.finished catches games whose result landed after
+    // that list was built.
+    const finishedSeen = new Set<string>()
+    const finishedPool = [...recentResults, ...(groupedFeed?.finished ?? [])].filter((match) => {
+      if (finishedSeen.has(match.id)) return false
+      finishedSeen.add(match.id)
+      return true
+    })
+
+    // A match keeps its own slot on the home page for two hours after the final whistle,
+    // so someone arriving just after a game can still see how it went without hunting
+    // through the full results list.
+    const justFinished = finishedPool
+      .filter((match) => {
+        const endedAt = resolveMatchEndedAt(match)
+        if (endedAt === null) return false
+        // The backend already calls these finished. When our duration estimate still puts
+        // the final whistle in the future, the game ended early (or ran short), so treat
+        // it as having just ended rather than dropping it out of the bracket.
+        const sinceEnd = Math.max(0, now - endedAt)
+        return sinceEnd < JUST_FINISHED_WINDOW_MS
+      })
+      .sort((a, b) => (resolveMatchEndedAt(b) ?? 0) - (resolveMatchEndedAt(a) ?? 0))
+    const justFinishedIds = new Set(justFinished.map((match) => match.id))
+
+    const olderResults = finishedPool
+      .filter((match) => {
+        if (justFinishedIds.has(match.id)) return false
+        const ts = typeof match.startTimestamp === "number" ? match.startTimestamp : new Date(match.date).getTime()
+        return Number.isFinite(ts) && now - ts < SIX_HOURS
+      })
+      .slice(0, 3)
+
+    const usedSlots = liveItems.length + justFinished.length + olderResults.length
+    const remainingSlots = Math.max(15 - usedSlots, 0)
     const upcomingItems = (groupedFeed?.upcoming ?? []).slice(0, remainingSlots)
 
-    const ordered = [...liveItems, ...resultItems, ...upcomingItems].filter((match) => {
+    const ordered = [...liveItems, ...justFinished, ...olderResults, ...upcomingItems].filter((match) => {
       if (seen.has(match.id)) {
         return false
       }
@@ -747,6 +795,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     return {
       items: ordered.slice(0, 15),
       total: ordered.length,
+      justFinishedIds,
     }
   }, [groupedFeed, recentResults])
 
@@ -1109,6 +1158,27 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                       )
                     })()}
 
+                    {/* JUST FINISHED - keeps its own bracket for two hours after the final whistle */}
+                    {(() => {
+                      const justFinished = homeMatchFlow.items.filter(
+                        (m) => getMatchStatus(m) === "finished" && homeMatchFlow.justFinishedIds.has(m.id)
+                      )
+                      if (justFinished.length === 0) return null
+                      return (
+                        <div className="rounded-lg border border-emerald-100 bg-emerald-50/40 p-3 sm:p-4">
+                          <div className="flex items-center gap-3 mb-3">
+                            <span className="text-[11px] font-semibold uppercase tracking-widest text-emerald-700">
+                              {justFinished.length === 1 ? "Nyss avslutad" : "Nyss avslutade"}
+                            </span>
+                            <div className="flex-1 h-px bg-emerald-200" />
+                          </div>
+                          <ul className="space-y-2">
+                            {justFinished.map(renderHomeFlowRow)}
+                          </ul>
+                        </div>
+                      )
+                    })()}
+
                     {/* Promoted A-lag ticket matches - UPCOMING (shown after live so live always appears first) */}
                     {(() => {
                       const ticketMatches = homeMatchFlow.items.filter(
@@ -1199,7 +1269,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 
                     {/* FINISHED matches */}
                     {(() => {
-                      const finishedMatches = homeMatchFlow.items.filter((m) => getMatchStatus(m) === "finished")
+                      const finishedMatches = homeMatchFlow.items.filter(
+                        (m) => getMatchStatus(m) === "finished" && !homeMatchFlow.justFinishedIds.has(m.id)
+                      )
                       if (finishedMatches.length === 0) return null
                       return (
                         <div>
