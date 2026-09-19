@@ -3,6 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card"
 import Image from "next/image"
 import { useState } from "react"
+import Link from "next/link"
 
 interface Partner {
   id: string
@@ -220,7 +221,7 @@ export default function Partners({ partners }: PartnersProps) {
               Tillsammans kan vi utveckla handbollen i Härnösand och skapa fantastiska upplevelser för våra spelare och
               supportrar.
             </p>
-            <a
+            <Link
               href="/kontakt"
               className="inline-flex items-center px-8 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors duration-300 shadow-lg hover:shadow-xl"
             >
@@ -228,7 +229,7 @@ export default function Partners({ partners }: PartnersProps) {
               <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
-            </a>
+            </Link>
           </div>
         </div>
       </div>

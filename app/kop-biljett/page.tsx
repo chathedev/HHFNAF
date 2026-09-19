@@ -1,4 +1,6 @@
 "use client"
+
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Header } from "@/components/header"
@@ -93,7 +95,7 @@ export default function KopBiljettPage() {
                   </a>
                 </Button>
                 <Button asChild className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 text-lg">
-                  <a href="/kontakt">Kontakta Oss</a>
+                  <Link href="/kontakt">Kontakta Oss</Link>
                 </Button>
               </div>
             </div>

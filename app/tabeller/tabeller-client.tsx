@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
+import Link from "next/link"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "") || "https://api.harnosandshf.se"
 const STANDINGS_REFRESH_MS = 90_000
@@ -154,7 +155,7 @@ export function TabellerClient({
     <div className="container mx-auto max-w-6xl px-4 py-8">
       {/* Header */}
       <div className="mb-8">
-        <a
+        <Link
           href="/"
           className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700 transition hover:text-emerald-900 mb-4"
         >
@@ -162,7 +163,7 @@ export function TabellerClient({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
           Startsidan
-        </a>
+        </Link>
         <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-emerald-600">Härnösands HF</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">Serietabeller</h1>
         <p className="mt-2 text-sm text-slate-600 sm:text-base max-w-2xl">
