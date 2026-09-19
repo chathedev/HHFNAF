@@ -40,9 +40,23 @@ function classifySeries(series: string): string {
   return "all"
 }
 
-export function TabellerClient({ initialData }: { initialData: StandingsData }) {
+export function TabellerClient({
+  initialData,
+  initialSeasons = [],
+  initialSeason = null,
+  initialCurrentSeason = null,
+}: {
+  initialData: StandingsData
+  initialSeasons?: string[]
+  initialSeason?: string | null
+  initialCurrentSeason?: string | null
+}) {
   const [data, setData] = useState<StandingsData>(initialData)
   const [updatedAt, setUpdatedAt] = useState<string | null>(null)
+  const [seasons, setSeasons] = useState<string[]>(initialSeasons)
+  const [currentSeason, setCurrentSeason] = useState<string | null>(initialCurrentSeason)
+  // null means "whatever the API calls current"; picking a season pins it.
+  const [selectedSeason, setSelectedSeason] = useState<string | null>(initialSeason)
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [expandedSeries, setExpandedSeries] = useState<Set<string>>(() => {
     // Expand all by default
@@ -54,14 +68,22 @@ export function TabellerClient({ initialData }: { initialData: StandingsData }) 
   useEffect(() => {
     let cancelled = false
     const load = () => {
-      fetch(`${API_BASE_URL}/matcher/standings?meta=1`, { cache: "no-store" })
+      const query = selectedSeason ? `&season=${encodeURIComponent(selectedSeason)}` : ""
+      fetch(`${API_BASE_URL}/matcher/standings?meta=1${query}`, { cache: "no-store" })
         .then((res) => (res.ok ? res.json() : Promise.reject("Failed")))
         .then((payload) => {
           if (cancelled) return
           const tables = payload && typeof payload === "object" && "standings" in payload ? payload.standings : payload
-          if (payload && typeof payload === "object" && "updatedAt" in payload) {
-            setUpdatedAt(payload.updatedAt ?? null)
+          if (payload && typeof payload === "object") {
+            if ("updatedAt" in payload) setUpdatedAt(payload.updatedAt ?? null)
+            if (Array.isArray(payload.seasons)) setSeasons(payload.seasons)
+            if (typeof payload.currentSeason === "string") setCurrentSeason(payload.currentSeason)
+            // Pin the selection once we know what the API actually served, so the
+            // dropdown and the tables can never drift apart.
+            if (typeof payload.season === "string") setSelectedSeason(payload.season)
           }
+          // An older season legitimately has tables the current one does not, and vice
+          // versa, so replace rather than merge. Only an empty payload is ignored.
           if (tables && typeof tables === "object" && Object.keys(tables).length > 0) {
             setData(tables as StandingsData)
           }
@@ -81,7 +103,12 @@ export function TabellerClient({ initialData }: { initialData: StandingsData }) 
       cancelled = true
       clearInterval(timer)
     }
-  }, [])
+  }, [selectedSeason])
+
+  // Switching season swaps the whole table set; expand the new one like a fresh load.
+  useEffect(() => {
+    setExpandedSeries(new Set(Object.keys(data)))
+  }, [data])
 
   const seriesList = useMemo(() => {
     return Object.entries(data)
@@ -140,6 +167,12 @@ export function TabellerClient({ initialData }: { initialData: StandingsData }) 
         <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">Serietabeller</h1>
         <p className="mt-2 text-sm text-slate-600 sm:text-base max-w-2xl">
           Ställningar för alla serier vi deltar i. Officiella tabeller direkt från Profixio.
+          {selectedSeason && (
+            <span className="ml-2 font-semibold text-slate-700">
+              Säsong {selectedSeason}
+              {currentSeason && selectedSeason !== currentSeason ? " (avslutad)" : ""}
+            </span>
+          )}
           {updatedAt && (
             <span className="ml-2 text-xs text-slate-400">
               Uppdaterad {new Date(updatedAt).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}
@@ -167,7 +200,24 @@ export function TabellerClient({ initialData }: { initialData: StandingsData }) 
       {/* Filters */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 mb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {seasons.length > 1 && (
+              <label className="mr-1 flex items-center gap-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Säsong</span>
+                <select
+                  value={selectedSeason ?? currentSeason ?? ""}
+                  onChange={(event) => setSelectedSeason(event.target.value)}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 focus:border-emerald-400 focus:outline-none"
+                >
+                  {seasons.map((season) => (
+                    <option key={season} value={season}>
+                      {season}
+                      {season === currentSeason ? " (pågående)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             {CATEGORY_FILTERS.map((f) => (
               <button
                 key={f.value}
