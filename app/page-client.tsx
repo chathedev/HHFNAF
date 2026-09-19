@@ -41,7 +41,7 @@ import {
   shouldShowFinishedZeroZeroIssue,
   shouldShowProfixioTechnicalIssue,
 } from "@/lib/match-card-utils"
-import { useMatchData, forceMatchDataPoll, type NormalizedMatch } from "@/lib/use-match-data"
+import { useMatchData, forceMatchDataPoll, normalizeStatusValue, type NormalizedMatch } from "@/lib/use-match-data"
 import { AnimatedScore } from "@/components/animated-score"
 import { MatchCardCTA } from "@/components/match-card-cta"
 import { InstagramFeed } from "@/components/instagram-feed"
@@ -152,6 +152,13 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   const [stableScoreByMatchId, setStableScoreByMatchId] = useState<Record<string, string>>({})
   const timelineFetchInFlightRef = useRef<Record<string, Promise<void>>>({})
   const timelineFetchedAtRef = useRef<Record<string, number>>({})
+  // Live score/status pulled from the match detail endpoint while a popup is open.
+  // The home list reads the same map, so the row and the popup can never disagree.
+  const [liveOverrideById, setLiveOverrideById] = useState<Record<string, Partial<NormalizedMatch>>>({})
+  // Mirrors of state that async callbacks need to read without becoming new functions
+  // on every update - an unstable callback identity restarts the live refresh interval.
+  const timelineByMatchIdRef = useRef<Record<string, MatchFeedEvent[]>>({})
+  const selectedMatchRef = useRef<NormalizedMatch | null>(null)
   const { shopVisible } = useShopStatus()
   const {
     matches: currentMatches,
@@ -236,26 +243,47 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     return getSimplifiedMatchStatus(match)
   }
 
+  useEffect(() => {
+    timelineByMatchIdRef.current = timelineByMatchId
+  }, [timelineByMatchId])
+
+  const applyLiveOverride = useCallback(
+    (match: NormalizedMatch): NormalizedMatch => {
+      const override = liveOverrideById[match.id]
+      return override ? ({ ...match, ...override } as NormalizedMatch) : match
+    },
+    [liveOverrideById],
+  )
+
   const allHomeMatches = useMemo(() => {
     const seenIds = new Set<string>()
-    return [...currentMatches, ...recentResults].filter((match) => {
-      if (seenIds.has(match.id)) {
-        return false
-      }
-      seenIds.add(match.id)
-      return true
-    })
-  }, [currentMatches, recentResults])
+    return [...currentMatches, ...recentResults]
+      .filter((match) => {
+        if (seenIds.has(match.id)) {
+          return false
+        }
+        seenIds.add(match.id)
+        return true
+      })
+      .map(applyLiveOverride)
+  }, [currentMatches, recentResults, applyLiveOverride])
 
-  const selectedMatch = useMemo(
-    () => allHomeMatches.find((match) => match.id === selectedMatchId) ?? (selectedMatchSnapshot?.id === selectedMatchId ? selectedMatchSnapshot : null),
-    [allHomeMatches, selectedMatchId, selectedMatchSnapshot],
-  )
+  const selectedMatch = useMemo(() => {
+    const fromList = allHomeMatches.find((match) => match.id === selectedMatchId)
+    if (fromList) return fromList
+    // The match can drop out of the home flow (e.g. when it moves from live to
+    // finished). Keep showing it, but with the newest score we have rather than the
+    // frozen copy captured when the popup was opened.
+    if (selectedMatchSnapshot?.id === selectedMatchId) {
+      return applyLiveOverride(selectedMatchSnapshot)
+    }
+    return null
+  }, [allHomeMatches, selectedMatchId, selectedMatchSnapshot, applyLiveOverride])
 
   const fetchMatchTimeline = useCallback(async (match: NormalizedMatch, force = false) => {
     const lastFetchedAt = timelineFetchedAtRef.current[match.id] ?? 0
     const shouldRefresh = force || match.matchStatus === "live" || Date.now() - lastFetchedAt > 5000
-    if (!shouldRefresh && Object.prototype.hasOwnProperty.call(timelineByMatchId, match.id)) {
+    if (!shouldRefresh && Object.prototype.hasOwnProperty.call(timelineByMatchIdRef.current, match.id)) {
       return
     }
     const inFlight = timelineFetchInFlightRef.current[match.id]
@@ -300,6 +328,30 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       if (topScorers.length > 0) {
         setTopScorersByMatchId((prev) => ({ ...prev, [match.id]: topScorers }))
       }
+      // The detail endpoint carries a fresher score than the list poll. Publish it so
+      // the home row and the popup render the same numbers at the same instant.
+      const detail = payload?.match
+      if (detail && typeof detail === "object") {
+        const next: Partial<NormalizedMatch> = {}
+        if (typeof detail.result === "string") next.result = detail.result
+        if (typeof detail.homeScore === "number") next.homeScore = detail.homeScore
+        if (typeof detail.awayScore === "number") next.awayScore = detail.awayScore
+        if (typeof detail.matchStatus === "string") {
+          next.matchStatus = normalizeStatusValue(detail.matchStatus) as NormalizedMatch["matchStatus"]
+        }
+        if (Object.keys(next).length > 0) {
+          setLiveOverrideById((prev) => {
+            const current = prev[match.id]
+            const unchanged =
+              current &&
+              (Object.keys(next) as Array<keyof NormalizedMatch>).every(
+                (key) => (current as Record<string, unknown>)[key as string] === (next as Record<string, unknown>)[key as string],
+              )
+            if (unchanged) return prev
+            return { ...prev, [match.id]: { ...current, ...next } }
+          })
+        }
+      }
     })()
 
     timelineFetchInFlightRef.current[match.id] = request
@@ -308,7 +360,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     } finally {
       delete timelineFetchInFlightRef.current[match.id]
     }
-  }, [timelineByMatchId])
+    // Deliberately dependency-free: this callback drives the live refresh interval, and
+    // a new identity on every timeline update would restart that interval forever.
+  }, [])
 
   const openMatchModal = useCallback(
     (match: NormalizedMatch) => {
@@ -333,15 +387,25 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   )
 
   useEffect(() => {
-    if (!selectedMatch) return
-    if (selectedMatch.matchStatus !== "live") return
+    selectedMatchRef.current = selectedMatch
+  }, [selectedMatch])
 
-    const interval = window.setInterval(() => {
-      fetchMatchTimeline(selectedMatch, true).catch(() => undefined)
-    }, 3000)
+  // Poll the open popup on the same 2s cadence the backend refreshes live matches.
+  // Keyed on id + status only: depending on the match object itself would rebuild this
+  // interval on every list poll and the timer would never reach its deadline.
+  const selectedMatchIsLive = selectedMatch?.matchStatus === "live" || selectedMatch?.matchStatus === "halftime"
+  useEffect(() => {
+    if (!selectedMatchId || !selectedMatchIsLive) return
 
+    const tick = () => {
+      const match = selectedMatchRef.current
+      if (!match) return
+      fetchMatchTimeline(match, true).catch(() => undefined)
+    }
+    tick()
+    const interval = window.setInterval(tick, 2000)
     return () => window.clearInterval(interval)
-  }, [selectedMatch, fetchMatchTimeline])
+  }, [selectedMatchId, selectedMatchIsLive, fetchMatchTimeline])
 
   const renderHomeMatchCard = (match: NormalizedMatch) => {
     const status = getMatchStatus(match)
