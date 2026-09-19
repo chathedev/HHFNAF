@@ -23,7 +23,6 @@ import {
   Zap,
   Calendar,
 } from "lucide-react"
-import { HandbollfestBanner } from "@/components/handbollfest-banner" // HANDBOLLFEST_IMPORT
 import { Header } from "@/components/header"
 import Footer from "@/components/footer"
 import { ErrorBoundary } from "@/components/error-boundary"
@@ -892,12 +891,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
           <section className="relative z-30 -mt-10 sm:-mt-16">
             <div className="container mx-auto px-4 sm:px-6">
               <div className="max-w-5xl mx-auto">
-                {/* HANDBOLLFEST_BANNER_START — auto-hides from 13 sep 2026; the
-                    cleanup cron (root crontab, /root/handbollfest-cleanup.sh)
-                    deletes this marked block, the marked import, the component
-                    file and the poster assets, then releases, on 13/9. */}
-                {Date.now() < new Date("2026-09-13T00:00:00+02:00").getTime() && <HandbollfestBanner />}
-                {/* HANDBOLLFEST_BANNER_END */}
                 {/* Shop hero banner */}
                 <Link
                   href={shopVisible ? SHOP_URL : "/shop"}

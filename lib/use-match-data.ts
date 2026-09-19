@@ -2120,6 +2120,27 @@ export const useMatchData = (options?: {
     [dataType, paramsLimit],
   )
 
+  // A transient empty response (backend restart, a dropped WS frame, a hiccup on
+  // the API) must never wipe a list we already have on screen. Keep the last known
+  // good feed and just clear the loading/error flags instead.
+  const hasRenderableContentRef = useRef(
+    (options?.initialData?.matches?.length ?? 0) > 0 ||
+      (options?.initialData?.recentResults?.length ?? 0) > 0 ||
+      (options?.initialData?.groupedFeed?.live.length ?? 0) > 0 ||
+      (options?.initialData?.groupedFeed?.upcoming.length ?? 0) > 0 ||
+      (options?.initialData?.groupedFeed?.finished.length ?? 0) > 0,
+  )
+  const isEmptyFeed = (
+    selected: NormalizedMatch[],
+    recent: NormalizedMatch[] | undefined,
+    grouped: { live: NormalizedMatch[]; upcoming: NormalizedMatch[]; finished: NormalizedMatch[] } | undefined,
+  ) =>
+    selected.length === 0 &&
+    (recent?.length ?? 0) === 0 &&
+    (grouped?.live.length ?? 0) === 0 &&
+    (grouped?.upcoming.length ?? 0) === 0 &&
+    (grouped?.finished.length ?? 0) === 0
+
   const applyPayload = useCallback(
     (payload: MatchChannelPayload) => {
       const selectedMatches = selectMatchesFromPayload(payload)
@@ -2129,6 +2150,16 @@ export const useMatchData = (options?: {
           lastUpdated: Date.now(),
         })
       })
+      const emptyPayload = isEmptyFeed(selectedMatches, payload.recentResults, payload.groupedFeed)
+      if (emptyPayload && hasRenderableContentRef.current) {
+        startTransition(() => {
+          setError(null)
+          setLoading(false)
+          setHasPayload(true)
+        })
+        return selectedMatches
+      }
+      hasRenderableContentRef.current = !emptyPayload
       startTransition(() => {
         setMatches(selectedMatches)
         setRecentResults(payload.recentResults)
@@ -2155,16 +2186,25 @@ export const useMatchData = (options?: {
           lastUpdated: Date.now(),
         })
       })
+      const nextGrouped = payload.groupedFeed ?? {
+        live: [],
+        upcoming: [],
+        finished: [],
+      }
+      const emptyPayload = isEmptyFeed(selectedMatches, payload.recentResults ?? [], nextGrouped)
+      if (emptyPayload && hasRenderableContentRef.current) {
+        startTransition(() => {
+          setError(null)
+          setLoading(false)
+          setHasPayload(true)
+        })
+        return selectedMatches
+      }
+      hasRenderableContentRef.current = !emptyPayload
       startTransition(() => {
         setMatches(selectedMatches)
         setRecentResults(payload.recentResults ?? [])
-        setGroupedFeed(
-          payload.groupedFeed ?? {
-            live: [],
-            upcoming: [],
-            finished: [],
-          },
-        )
+        setGroupedFeed(nextGrouped)
         setSources(payload.sources)
         setWindow(payload.window)
         setHasData(selectedMatches.length > 0 || (payload.recentResults?.length ?? 0) > 0)
