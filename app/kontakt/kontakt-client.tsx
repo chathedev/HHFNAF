@@ -20,6 +20,7 @@ export default function KontaktClient({ content }: { content: any }) {
     message: "",
   })
   const [formStatus, setFormStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
+  const [errorMessage, setErrorMessage] = useState("")
   const [openFaq, setOpenFaq] = useState<number | null>(0)
 
   useEffect(() => {
@@ -54,12 +55,22 @@ export default function KontaktClient({ content }: { content: any }) {
       })
 
       if (!response.ok) {
-        throw new Error("Request failed")
+        // The API answers in English; show the visitor something they can act on.
+        setErrorMessage(
+          response.status === 429
+            ? "Du har skickat flera meddelanden på kort tid. Vänta en stund och försök igen."
+            : response.status === 400
+              ? "Kontrollera att namn, e-post och meddelande är ifyllda och att e-postadressen stämmer."
+              : "",
+        )
+        setFormStatus("error")
+        return
       }
 
       setFormStatus("success")
       setFormData({ name: "", email: "", subject: "", message: "" })
     } catch {
+      setErrorMessage("")
       setFormStatus("error")
     }
   }
@@ -187,6 +198,7 @@ export default function KontaktClient({ content }: { content: any }) {
                         id="name"
                         name="name"
                         type="text"
+                        autoComplete="name"
                         placeholder={content.contactForm.namePlaceholder}
                         className="h-11 border-gray-300 focus:border-green-500 focus:ring-green-500"
                         value={formData.name}
@@ -210,6 +222,7 @@ export default function KontaktClient({ content }: { content: any }) {
                         id="email"
                         name="email"
                         type="email"
+                        autoComplete="email"
                         placeholder={content.contactForm.emailPlaceholder}
                         className="h-11 border-gray-300 focus:border-green-500 focus:ring-green-500"
                         value={formData.email}
@@ -272,7 +285,7 @@ export default function KontaktClient({ content }: { content: any }) {
 
                   {formStatus === "error" && (
                     <div className="bg-red-50 border border-red-200 text-red-800 rounded-lg p-4 text-center text-sm">
-                      Något gick fel. Försök igen eller skicka ett mail direkt.
+                      {errorMessage || "Något gick fel. Försök igen eller skicka ett mail direkt."}
                     </div>
                   )}
 
