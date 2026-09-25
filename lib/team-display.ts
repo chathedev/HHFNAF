@@ -38,6 +38,57 @@ export const CLUB_TEAM_METADATA: ClubTeamMetadata[] = [
   { id: "p7-2018", name: "P7", displayName: "P7 (2018)", category: "Herr", heroImage: "/placeholder.jpg", heroImageAlt: "P7 (2018)", link: "https://www.laget.se/P7-2018" },
 ]
 
+// Youth classes are named by the age players turn during the season, so the birth years
+// behind "P16" move every season. Mirrors seasonalTeamLabel in the API
+// (SERVERF/teamtype-inference.js): class X in the season ending year Y covers players born
+// Y-X-1, plus Y-X for the two-year classes (even ages from 12 up). Seasons start in July.
+const TEAM_CLASS_PATTERN = /^\s*([fp])\s*(\d{1,2})(?!\d)/i
+
+// Evaluated in Stockholm time so the server and the browser agree on the season even
+// around the 1 July rollover.
+const STOCKHOLM_YEAR_MONTH = new Intl.DateTimeFormat("sv-SE", {
+  timeZone: "Europe/Stockholm",
+  year: "numeric",
+  month: "2-digit",
+})
+
+export const seasonEndYearForDate = (value: Date = new Date()) => {
+  const parts = STOCKHOLM_YEAR_MONTH.formatToParts(value)
+  const year = Number(parts.find((part) => part.type === "year")?.value)
+  const month = Number(parts.find((part) => part.type === "month")?.value)
+  return month >= 7 ? year + 1 : year
+}
+
+export const teamClassOf = (value?: string | null) => {
+  const match = TEAM_CLASS_PATTERN.exec(value ?? "")
+  if (!match) return null
+  const age = Number(match[2])
+  if (!Number.isFinite(age)) return null
+  return { gender: match[1].toUpperCase() as "F" | "P", age }
+}
+
+export const teamClassKey = (value?: string | null) => {
+  const teamClass = teamClassOf(value)
+  return teamClass ? `${teamClass.gender.toLowerCase()}${teamClass.age}` : null
+}
+
+// Only a bare class ("P16") or a class plus year list ("F14 (2011–12)") is relabeled; cup
+// codes like "P12B" are separate classes.
+const RELABELABLE_CLASS_PATTERN = /^\s*[fp]\s*\d{1,2}(?:\s*\([\d\s/–-]*\))?\s*$/i
+
+export const seasonalTeamLabel = (value: string, date: Date = new Date()) => {
+  if (!RELABELABLE_CLASS_PATTERN.test(value)) return value
+  const teamClass = teamClassOf(value)
+  if (!teamClass || teamClass.age < 5 || teamClass.age > 18) return value
+  const older = seasonEndYearForDate(date) - teamClass.age - 1
+  const twoYear = teamClass.age >= 12 && teamClass.age % 2 === 0
+  return `${teamClass.gender}${teamClass.age} (${twoYear ? `${older}/${older + 1}` : older})`
+}
+
+// Birth years named in a label, e.g. "P16 (2010/2011)" -> [2010, 2011].
+export const birthYearsInLabel = (value?: string | null) =>
+  Array.from((value ?? "").matchAll(/(?:19|20)\d{2}/g), (m) => Number(m[0]))
+
 const EXTENDED_TEAM_DISPLAY_BY_KEY: Record<string, string> = {
   f162009: "F16 (2009/2010/2011)",
   p142011: "P14 (2011/2012)",
@@ -90,4 +141,12 @@ export const createTeamMatchKeySet = (...values: Array<string | null | undefined
     }
   })
   return keys
+}
+
+// Display label for a team/class: youth classes get the current season's birth years,
+// everything else keeps its existing display name.
+export const currentTeamLabel = (value?: string | null, date: Date = new Date()) => {
+  if (!value) return value ?? ""
+  const seasonal = seasonalTeamLabel(value.trim(), date)
+  return seasonal !== value.trim() ? seasonal : extendTeamDisplayName(value)
 }

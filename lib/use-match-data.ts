@@ -162,6 +162,8 @@ type ApiMatch = {
   homeScore?: number
   awayScore?: number
   arena?: string | null
+  clubmate?: { enabled?: boolean; url?: string | null } | null
+  isPaidMatch?: boolean
 }
 
 export type NormalizedMatch = {
@@ -196,6 +198,8 @@ export type NormalizedMatch = {
   timelineUnavailableReason?: string | null
   hasStream?: boolean
   streamProvider?: string | null
+  /** ClubMate event link when on sale; null when not; undefined when the API sent no info. */
+  ticketUrl?: string | null
   statusLabel?: string
   resultState?: MatchResultState
   display?: MatchDisplay
@@ -754,6 +758,13 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     timelineMode: match.timelineMode,
     timelineUnavailableReason: match.timelineUnavailableReason ?? null,
     hasStream: match.hasStream ?? match.dataAvailability?.stream ?? Boolean(match.playUrl),
+    // undefined: the API sent no ticket info; null: not on sale in ClubMate; string: event link.
+    ticketUrl:
+      match.clubmate === undefined && match.isPaidMatch === undefined
+        ? undefined
+        : match.clubmate?.enabled && match.clubmate.url
+          ? match.clubmate.url
+          : null,
     streamProvider: match.streamProvider ?? match.dataAvailability?.streamProvider ?? null,
     statusLabel: match.statusLabel ?? match.display?.statusLabel ?? buildStatusLabel(derivedStatus),
     resultState: match.resultState ?? match.dataAvailability?.resultState,
@@ -1236,6 +1247,11 @@ const createMatchDataChannel = () => {
     dataAvailability: match.dataAvailability,
     homeScore: match.homeScore,
     awayScore: match.awayScore,
+    // Carry the ClubMate ticket state through: WebSocket deltas never include it, and
+    // losing it here would bring back the old team/venue guess on the next delta.
+    clubmate:
+      match.ticketUrl === undefined ? undefined : match.ticketUrl ? { enabled: true, url: match.ticketUrl } : null,
+    isPaidMatch: match.ticketUrl === undefined ? undefined : Boolean(match.ticketUrl),
     homeImg: undefined,
     awayImg: undefined,
   })
@@ -1360,6 +1376,12 @@ const createMatchDataChannel = () => {
 
     if (!mergedRaw.date || !mergedRaw.teamType || !mergedRaw.opponent) {
       return false
+    }
+
+    // A match first seen over the socket has no ClubMate info yet (socket payloads are
+    // undecorated). Treat it as not on sale until the next poll brings the real state.
+    if (mergedRaw.clubmate === undefined && mergedRaw.isPaidMatch === undefined) {
+      mergedRaw.clubmate = null
     }
 
     const normalizedMatch = normalizeMatch(mergedRaw)

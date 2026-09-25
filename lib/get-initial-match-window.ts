@@ -81,6 +81,8 @@ type ApiMatchLike = {
   }
   homeScore?: number
   awayScore?: number
+  clubmate?: { enabled?: boolean; url?: string | null } | null
+  isPaidMatch?: boolean
 }
 
 const API_BASE_URL =
@@ -334,6 +336,13 @@ const normalizeMatch = (match: ApiMatchLike): NormalizedMatch | null => {
     timelineMode: match.timelineMode,
     timelineUnavailableReason: match.timelineUnavailableReason ?? null,
     hasStream: match.hasStream ?? match.dataAvailability?.stream ?? Boolean(match.playUrl),
+    // undefined: the API sent no ticket info; null: not on sale in ClubMate; string: event link.
+    ticketUrl:
+      match.clubmate === undefined && match.isPaidMatch === undefined
+        ? undefined
+        : match.clubmate?.enabled && match.clubmate.url
+          ? match.clubmate.url
+          : null,
     streamProvider: match.streamProvider ?? match.dataAvailability?.streamProvider ?? null,
     statusLabel: match.statusLabel ?? match.display?.statusLabel ?? buildStatusLabel(derivedStatus),
     resultState: match.resultState ?? match.dataAvailability?.resultState,

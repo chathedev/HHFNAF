@@ -1,10 +1,8 @@
 "use client"
 
 import { getMatchWatchLabel } from "@/lib/match-card-utils"
-import { canShowTicketForMatch } from "@/lib/matches"
+import { canShowTicketForMatch, getTicketUrl } from "@/lib/matches"
 import type { NormalizedMatch } from "@/lib/use-match-data"
-
-const TICKET_LINK = "https://clubs.clubmate.se/harnosandshf/overview/"
 
 export function MatchCardCTA({ match, status }: { match: NormalizedMatch; status: string }) {
   const showTicketCTA = canShowTicketForMatch(match) && status !== "finished"
@@ -38,7 +36,7 @@ export function MatchCardCTA({ match, status }: { match: NormalizedMatch; status
       )}
       {showTicketCTA && (
         <a
-          href={TICKET_LINK}
+          href={getTicketUrl(match)}
           target="_blank"
           rel="noreferrer"
           className="inline-flex w-full items-center justify-center gap-2 rounded-[6px] bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500 sm:w-auto sm:py-2"

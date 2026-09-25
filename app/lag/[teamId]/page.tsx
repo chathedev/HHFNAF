@@ -9,7 +9,7 @@ import lagContent from "@/public/content/lag.json"
 import { Header } from "@/components/header"
 import Footer from "@/components/footer"
 import { Card } from "@/components/ui/card"
-import { canShowTicketForMatch, normalizeMatchKey } from "@/lib/matches"
+import { canShowTicketForMatch, getTicketUrl, normalizeMatchKey } from "@/lib/matches"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 import {
@@ -17,6 +17,8 @@ import {
   createTeamMatchKeySet,
   extendTeamDisplayName,
   extendTeamDisplayNameFromCandidates,
+  seasonalTeamLabel,
+  teamClassKey,
 } from "@/lib/team-display"
 import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
 import { canOpenMatchTimeline, getMatchProviderBadge, getProviderHelperText, getMatchWatchLabel } from "@/lib/match-card-utils"
@@ -115,8 +117,13 @@ type TeamPageProps = {
   params: Promise<{ teamId: string }>
 }
 
-const getTeamDisplayName = (team: (typeof teams)[number]) =>
-  extendTeamDisplayNameFromCandidates([team.displayName, team.name, team.id])
+const getTeamDisplayName = (team: (typeof teams)[number]) => {
+  // Youth teams are titled by class with this season's birth years ("F16 (2010/2011)").
+  const seasonal = seasonalTeamLabel(team.name)
+  return seasonal !== team.name
+    ? seasonal
+    : extendTeamDisplayNameFromCandidates([team.displayName, team.name, team.id])
+}
 
 export default function TeamPage({ params }: TeamPageProps) {
   const { teamId } = use(params);
@@ -138,6 +145,10 @@ export default function TeamPage({ params }: TeamPageProps) {
     () => createTeamMatchKeySet(team.name, team.displayName, team.id, teamDisplayName),
     [team.name, team.displayName, team.id, teamDisplayName],
   );
+
+  // Match labels carry this season's birth years ("F16 (2010/2011)"), so youth pages match
+  // on class ("f16") and the page title uses the same seasonal label.
+  const teamClass = useMemo(() => teamClassKey(team.name), [team.name]);
 
   const allMatches = useMemo(() => {
     const seenIds = new Set<string>()
@@ -161,6 +172,9 @@ export default function TeamPage({ params }: TeamPageProps) {
         if (fallbackKey && teamMatchKeys.has(fallbackKey)) {
           return true
         }
+        if (teamClass && teamClassKey(match.teamType) === teamClass) {
+          return true
+        }
       }
       return false
     })
@@ -180,7 +194,7 @@ export default function TeamPage({ params }: TeamPageProps) {
         return compareMatchesByDateAscStable(a, b)
       })
       .slice(0, 2)
-  }, [allMatches, teamMatchKeys])
+  }, [allMatches, teamMatchKeys, teamClass])
   const descriptionFallback =
     "Härnösands HF samlar spelare, ledare och supportrar i ett starkt lagbygge. Följ laget via våra kanaler och uppdateringar nedan."
   const loading = currentLoading || finishedLoading
@@ -432,7 +446,7 @@ export default function TeamPage({ params }: TeamPageProps) {
 
                       {showTicket && (
                         <a
-                          href={TICKET_URL}
+                          href={getTicketUrl(match)}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(event) => event.stopPropagation()}

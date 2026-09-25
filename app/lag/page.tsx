@@ -10,7 +10,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
-import { CLUB_TEAM_METADATA, extendTeamDisplayName } from "@/lib/team-display"
+import { CLUB_TEAM_METADATA, currentTeamLabel, extendTeamDisplayName } from "@/lib/team-display"
 import { Card } from "@/components/ui/card"
 
 const PLACEHOLDER_HERO = "/placeholder.jpg"
@@ -162,7 +162,7 @@ export default function LagPage() {
                             {team.category}
                           </p>
                           <h3 className="text-sm font-semibold tracking-tight text-gray-900">
-                            {extendTeamDisplayName(team.displayName ?? team.name)}
+                            {currentTeamLabel(team.name) !== team.name ? currentTeamLabel(team.name) : extendTeamDisplayName(team.displayName ?? team.name)}
                           </h3>
                           {team.link && (
                             <span className="inline-flex w-full items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white">

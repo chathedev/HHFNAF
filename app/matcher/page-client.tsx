@@ -8,7 +8,7 @@ import { getMatchEndTime, useMatchData, forceMatchDataPoll, type NormalizedMatch
 import { MatchCard } from "@/components/matcher/match-card"
 import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
 import { normalizeMatchKey } from "@/lib/matches"
-import { extendTeamDisplayName, createTeamMatchKeySet } from "@/lib/team-display"
+import { extendTeamDisplayName, createTeamMatchKeySet, seasonalTeamLabel, teamClassKey } from "@/lib/team-display"
 import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
 import { resolvePreferredTimeline } from "@/lib/match-timeline"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
@@ -36,6 +36,7 @@ const TEAM_OPTION_VALUES = [
   "A-lag Herrar",
   "Fritids-Teknikskola",
   "F19-Senior",
+  "F18",
   "F16 (2009)",
   "F15 (2010)",
   "F14 (2011)",
@@ -47,6 +48,8 @@ const TEAM_OPTION_VALUES = [
   "F8 (2017)",
   "F7 (2018)",
   "F6 (2019)",
+  "P19",
+  "P18",
   "P16 (2009/2010)",
   "P14 (2011)",
   "P13 (2012)",
@@ -60,6 +63,10 @@ const TEAM_OPTION_VALUES = [
 const buildTeamKeys = (...values: string[]) => {
   const set = createTeamMatchKeySet(...values)
   values.forEach((value) => {
+    // Match youth teams on their class ("p16"), not the birth years in the label, which
+    // change every season.
+    const classKey = teamClassKey(value)
+    if (classKey) set.add(classKey)
     const extended = extendTeamDisplayName(value)
     if (extended && extended !== value) {
       createTeamMatchKeySet(extended).forEach((key) => set.add(key))
@@ -79,10 +86,13 @@ TEAM_OPTION_VALUES.forEach((value) => {
   }
 })
 
-const TEAM_OPTIONS = TEAM_OPTION_VALUES.map((value) => ({
-  value,
-  label: extendTeamDisplayName(value),
-}))
+// Labels carry the current season's birth years, so they are built at render time rather
+// than once at module load (a long-running server process would keep last season's years).
+const buildTeamOptions = () =>
+  TEAM_OPTION_VALUES.map((value) => ({
+    value,
+    label: teamClassKey(value) ? seasonalTeamLabel(value) : extendTeamDisplayName(value),
+  }))
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: "current", label: "Översikt" },
@@ -236,6 +246,7 @@ function DayGroupList({
 
 export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatchData }) {
   const [selectedTeam, setSelectedTeam] = useState<string>("all")
+  const teamOptions = useMemo(buildTeamOptions, [])
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("current")
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   const [finishedLimit, setFinishedLimit] = useState(FINISHED_PAGE_SIZE)
@@ -456,7 +467,11 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
         const normalizedKey = match.normalizedTeam
         if (!selectedTeamKeys.has(normalizedKey)) {
           const fallbackKey = match.teamType ? normalizeMatchKey(match.teamType) : ""
-          if (!fallbackKey || !selectedTeamKeys.has(fallbackKey)) {
+          const classKey = teamClassKey(match.teamType)
+          if (
+            (!fallbackKey || !selectedTeamKeys.has(fallbackKey)) &&
+            (!classKey || !selectedTeamKeys.has(classKey))
+          ) {
             return false
           }
         }
@@ -647,7 +662,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                   onChange={(e) => setSelectedTeam(e.target.value)}
                 >
                   <option value="all">Alla lag</option>
-                  {TEAM_OPTIONS.map((team) => (
+                  {teamOptions.map((team) => (
                     <option key={team.value} value={team.value}>
                       {team.label}
                     </option>

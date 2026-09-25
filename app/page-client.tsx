@@ -30,7 +30,7 @@ import { defaultContent } from "@/lib/default-content"
 import type { FullContent, Partner } from "@/lib/content-types"
 import { deriveSiteVariant, type SiteVariant, getThemeVariant, getHeroImages, type ThemeVariant } from "@/lib/site-variant"
 import { extendTeamDisplayName } from "@/lib/team-display"
-import { canShowTicketForMatch } from "@/lib/matches"
+import { canShowTicketForMatch, getTicketUrl } from "@/lib/matches"
 import { resolvePreferredTimeline } from "@/lib/match-timeline"
 import {
   buildMatchScheduleLabel,
@@ -1178,7 +1178,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                                       <AnimatedScore value={scoreValue} className="text-3xl font-black tabular-nums text-white" />
                                     )}
                                     <Link
-                                      href={TICKET_URL}
+                                      href={getTicketUrl(match)}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       onClick={(e) => e.stopPropagation()}
@@ -1287,7 +1287,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                                       <AnimatedScore value={scoreValue} className="text-3xl font-black tabular-nums text-white" />
                                     )}
                                     <Link
-                                      href={TICKET_URL}
+                                      href={getTicketUrl(match)}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       onClick={(e) => e.stopPropagation()}

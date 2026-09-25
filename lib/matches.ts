@@ -83,6 +83,15 @@ export const isCupPlayMatch = (match: { series?: string | null; teamType?: strin
   return /\busm\b/.test(haystack)
 }
 
+export const CLUBMATE_OVERVIEW_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
+
+/**
+ * Where "Köp biljett" should send the visitor: the match's own ClubMate event when the
+ * API matched one, otherwise the club's ClubMate overview.
+ */
+export const getTicketUrl = (match?: { ticketUrl?: string | null } | null) =>
+  match?.ticketUrl || CLUBMATE_OVERVIEW_URL
+
 export const canShowTicketForMatch = (match: {
   teamType?: string | null
   isHome?: boolean | null
@@ -90,7 +99,14 @@ export const canShowTicketForMatch = (match: {
   opponent?: string | null
   series?: string | null
   date?: Date | null
+  ticketUrl?: string | null
 }) => {
+  // The API checks every match against the events actually on sale in ClubMate (synced
+  // every 30 minutes) and sends the event link, or null when the match is not on sale.
+  // That is authoritative. The heuristic below only covers payloads without that field.
+  if (match.ticketUrl !== undefined) {
+    return Boolean(match.ticketUrl)
+  }
   if (match.isHome === false) {
     return false
   }
