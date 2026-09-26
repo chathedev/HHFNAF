@@ -10,21 +10,34 @@ const isAllowedInstagramHost = (hostname: string) => {
   return ALLOWED_HOST_PATTERNS.some((pattern) => pattern.test(hostname))
 }
 
+const API_BASE =
+  process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "") || "https://api.harnosandshf.se"
+const SHORTCODE_PATTERN = /^[A-Za-z0-9_-]{5,40}$/
+
 export async function GET(request: NextRequest) {
+  // Preferred: the post's shortcode. The API keeps a durable copy of each post image, so
+  // this keeps working after Instagram's signed CDN links expire (they do within days).
+  const shortcode = request.nextUrl.searchParams.get("shortcode")?.trim()
   const source = request.nextUrl.searchParams.get("url")?.trim()
-  if (!source) {
-    return NextResponse.json({ ok: false, error: "Missing url parameter" }, { status: 400 })
-  }
 
   let parsed: URL
-  try {
-    parsed = new URL(source)
-  } catch {
-    return NextResponse.json({ ok: false, error: "Invalid url" }, { status: 400 })
-  }
-
-  if (parsed.protocol !== "https:" || !isAllowedInstagramHost(parsed.hostname)) {
-    return NextResponse.json({ ok: false, error: "Host not allowed" }, { status: 403 })
+  if (shortcode) {
+    if (!SHORTCODE_PATTERN.test(shortcode)) {
+      return NextResponse.json({ ok: false, error: "Invalid shortcode" }, { status: 400 })
+    }
+    parsed = new URL(`${API_BASE}/instagram/image/${shortcode}`)
+  } else {
+    if (!source) {
+      return NextResponse.json({ ok: false, error: "Missing url parameter" }, { status: 400 })
+    }
+    try {
+      parsed = new URL(source)
+    } catch {
+      return NextResponse.json({ ok: false, error: "Invalid url" }, { status: 400 })
+    }
+    if (parsed.protocol !== "https:" || !isAllowedInstagramHost(parsed.hostname)) {
+      return NextResponse.json({ ok: false, error: "Host not allowed" }, { status: 403 })
+    }
   }
 
   let upstream: Response

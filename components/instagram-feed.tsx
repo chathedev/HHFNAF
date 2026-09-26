@@ -41,6 +41,10 @@ const MAX_POSTS = 6
 const getProxiedInstagramImageUrl = (url: string, width = 640) =>
   `/api/instagram-image?url=${encodeURIComponent(url)}&w=${width}`
 
+// Shortcode-based image: served from the API's durable copy, unaffected by Instagram's
+// expiring CDN links. Tried first; the raw CDN links remain as fallbacks.
+const SHORTCODE_CANDIDATE_PREFIX = "shortcode:"
+
 const formatCompactNumber = (value?: number) => {
   if (!Number.isFinite(value)) return "0"
   return new Intl.NumberFormat("sv-SE", { notation: "compact", maximumFractionDigits: 1 }).format(value || 0)
@@ -167,6 +171,7 @@ export function InstagramFeed() {
 
   const getImageCandidates = (post: InstagramPost) => {
     const list = [
+      post.shortcode ? `${SHORTCODE_CANDIDATE_PREFIX}${post.shortcode}` : "",
       post.imageUrl,
       post.thumbnailSrc,
       ...(Array.isArray(post.displayResources) ? post.displayResources.map((item) => item?.src) : []),
@@ -187,6 +192,10 @@ export function InstagramFeed() {
     if (brokenImages[key]) return PLACEHOLDER_IMAGE
     const picked = candidates[Math.min(index, candidates.length - 1)] || ""
     if (!picked) return PLACEHOLDER_IMAGE
+    if (picked.startsWith(SHORTCODE_CANDIDATE_PREFIX)) {
+      const shortcode = picked.slice(SHORTCODE_CANDIDATE_PREFIX.length)
+      return `/api/instagram-image?shortcode=${encodeURIComponent(shortcode)}&w=${width}`
+    }
     return getProxiedInstagramImageUrl(picked, width)
   }
 
