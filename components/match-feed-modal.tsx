@@ -4,6 +4,14 @@ import { memo, startTransition, useEffect, useMemo, useRef, useState } from "rea
 import { X } from "lucide-react"
 import type { NormalizedMatch } from "@/lib/use-match-data"
 import { preferRicherTimeline, resolvePreferredTimeline } from "@/lib/match-timeline"
+import {
+  MatchCourt,
+  type CourtEvent,
+  type CourtLineupPlayer,
+  type CourtPenalty,
+  type CourtPlayerStats,
+  type CourtTeamStats,
+} from "@/components/match-court"
 
 export type MatchFeedEvent = {
   time?: string
@@ -714,11 +722,16 @@ export function MatchFeedModal({
   topScorers = [],
 }: MatchFeedModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
-  const [activeTab, setActiveTab] = useState<"timeline" | "scorers">("timeline")
+  const [activeTab, setActiveTab] = useState<"plan" | "timeline" | "scorers">("plan")
   const refreshInFlightRef = useRef(false)
+  // The match whose details the modal currently shows; late responses for another match are dropped.
+  const openMatchIdRef = useRef<string | undefined>(undefined)
   const [detailTimeline, setDetailTimeline] = useState<MatchFeedEvent[] | null>(null)
   const [detailClockState, setDetailClockState] = useState<MatchClockState | null>(null)
   const [detailPenalties, setDetailPenalties] = useState<MatchPenalty[]>([])
+  const [detailLineup, setDetailLineup] = useState<{ home?: CourtLineupPlayer[]; away?: CourtLineupPlayer[] } | null>(null)
+  const [detailPlayers, setDetailPlayers] = useState<CourtPlayerStats[] | null>(null)
+  const [detailTeamStats, setDetailTeamStats] = useState<CourtTeamStats[] | null>(null)
   const [isTimelineLoading, setIsTimelineLoading] = useState(false)
   const [displayedFeed, setDisplayedFeed] = useState<MatchFeedEvent[]>([])
   const [isFeedTransitioning, setIsFeedTransitioning] = useState(false)
@@ -785,11 +798,16 @@ export function MatchFeedModal({
       })
       if (!response.ok) return
       const payload = await response.json()
+      if (openMatchIdRef.current !== apiMatchId) return
       const normalized = enrichTimelineWithMatchDetails(payload, matchFeed)
       startTransition(() => {
         setDetailTimeline(normalized)
         setDetailClockState((payload?.clockState as MatchClockState) ?? null)
         setDetailPenalties(Array.isArray(payload?.penalties) ? payload.penalties : [])
+        const detailMatch = payload?.match
+        if (detailMatch?.lineup && typeof detailMatch.lineup === "object") setDetailLineup(detailMatch.lineup)
+        if (Array.isArray(detailMatch?.playerStats?.players)) setDetailPlayers(detailMatch.playerStats.players)
+        if (Array.isArray(detailMatch?.teamStats)) setDetailTeamStats(detailMatch.teamStats)
         setClockTick(0)
         setCountdownAnchorAt(Date.now())
       })
@@ -835,10 +853,18 @@ export function MatchFeedModal({
   }, [isOpen, onClose])
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) {
+      openMatchIdRef.current = undefined
+      return
+    }
+    openMatchIdRef.current = matchData?.apiMatchId
+    setActiveTab("plan")
     setDetailTimeline(null)
     setDetailClockState(null)
     setDetailPenalties([])
+    setDetailLineup(null)
+    setDetailPlayers(null)
+    setDetailTeamStats(null)
     setClockTick(0)
     setCountdownAnchorAt(Date.now())
     if (canFetchDetailedTimeline) {
@@ -1078,6 +1104,37 @@ export function MatchFeedModal({
     [displayedFeed],
   )
 
+  const hhfSide = isHHFName(homeTeam) ? "home" : isHHFName(awayTeam) ? "away" : null
+  const courtEvents = useMemo<CourtEvent[]>(
+    () =>
+      displayedFeed.map((event) => ({
+        side: getResolvedEventSide(event, homeTeam, awayTeam),
+        time: event.time,
+        type: event.type,
+        player: event.player,
+        playerNumber: event.playerNumber,
+        homeScore: event.homeScore,
+        awayScore: event.awayScore,
+      })),
+    [displayedFeed, homeTeam, awayTeam],
+  )
+  const courtPenalties = useMemo<CourtPenalty[]>(
+    () =>
+      activePenalties.map((item) => ({
+        side: resolveTeamSide(item.team, homeTeam, awayTeam),
+        player: item.player,
+        playerNumber: item.playerNumber,
+        remaining: item.remaining,
+      })),
+    [activePenalties, homeTeam, awayTeam],
+  )
+  const hasCourtData =
+    displayedFeed.length > 0 ||
+    Boolean(detailLineup?.home?.length || detailLineup?.away?.length) ||
+    Boolean(detailPlayers?.length)
+  const visibleTab = activeTab === "plan" && !hasCourtData ? "timeline" : activeTab
+  const showTabs = !isNoLiveUpdatesIssue || hasCourtData
+
   const refreshNow = async () => {
     if (refreshInFlightRef.current) return
     try {
@@ -1211,22 +1268,39 @@ export function MatchFeedModal({
         )}
 
         {/* Tabs */}
-        {!isNoLiveUpdatesIssue && (
-          <nav className="z-10 flex justify-center gap-6 border-b border-slate-100 bg-white px-5">
+        {showTabs && (
+          <nav className="z-10 flex justify-center gap-6 border-b border-slate-100 bg-white px-5" role="tablist" aria-label="Matchvy">
+            {hasCourtData && (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={visibleTab === "plan"}
+                onClick={() => setActiveTab("plan")}
+                className={`py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
+                  visibleTab === "plan" ? "border-emerald-600 text-emerald-700" : "border-transparent text-slate-300 hover:text-slate-500"
+                }`}
+              >
+                Plan
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => setActiveTab("timeline")}
+              role="tab"
+                aria-selected={visibleTab === "timeline"}
+                onClick={() => setActiveTab("timeline")}
               className={`py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
-                activeTab === "timeline" ? "border-emerald-600 text-emerald-700" : "border-transparent text-slate-300 hover:text-slate-500"
+                visibleTab === "timeline" ? "border-emerald-600 text-emerald-700" : "border-transparent text-slate-300 hover:text-slate-500"
               }`}
             >
               Tidslinje
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab("scorers")}
+              role="tab"
+                aria-selected={visibleTab === "scorers"}
+                onClick={() => setActiveTab("scorers")}
               className={`py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
-                activeTab === "scorers" ? "border-emerald-600 text-emerald-700" : "border-transparent text-slate-300 hover:text-slate-500"
+                visibleTab === "scorers" ? "border-emerald-600 text-emerald-700" : "border-transparent text-slate-300 hover:text-slate-500"
               }`}
             >
               Målskyttar
@@ -1236,7 +1310,26 @@ export function MatchFeedModal({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto bg-white">
-          {activeTab === "timeline" && (
+          {visibleTab === "plan" && (
+            <MatchCourt
+              homeTeam={homeTeam}
+              awayTeam={awayTeam}
+              hhfSide={hhfSide}
+              lineup={detailLineup}
+              players={detailPlayers}
+              teamStats={detailTeamStats}
+              events={courtEvents}
+              penalties={courtPenalties}
+              isLive={matchStatus === "live" || matchStatus === "halftime"}
+              periodSeconds={
+                typeof (effectiveClockState?.source as { periodLengthSeconds?: unknown } | undefined)?.periodLengthSeconds === "number"
+                  ? ((effectiveClockState?.source as { periodLengthSeconds: number }).periodLengthSeconds)
+                  : undefined
+              }
+            />
+          )}
+
+          {visibleTab === "timeline" && (
             <div>
               {showTimelineSkeleton && (
                 <div className="py-6">
@@ -1419,7 +1512,7 @@ export function MatchFeedModal({
             </div>
           )}
 
-          {activeTab === "scorers" && (
+          {visibleTab === "scorers" && (
             <div className="px-5 py-6 sm:px-6">
               {Object.keys(topScorersByTeam).length === 0 && (
                 <p className="py-10 text-center text-sm text-slate-400">Inga registrerade målskyttar än.</p>
