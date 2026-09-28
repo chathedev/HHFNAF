@@ -12,6 +12,7 @@ import {
   type CourtPlayerStats,
   type CourtTeamStats,
 } from "@/components/match-court"
+import { TrackingCourt2D, useTrackingForMatch } from "@/components/tracking-court-2d"
 
 export type MatchFeedEvent = {
   time?: string
@@ -1128,7 +1129,10 @@ export function MatchFeedModal({
       })),
     [activePenalties, homeTeam, awayTeam],
   )
+  // staging only: a video analysis of this match (2D positions), when one exists
+  const trackingId = useTrackingForMatch(isOpen ? matchData?.apiMatchId : null)
   const hasCourtData =
+    Boolean(trackingId) ||
     displayedFeed.length > 0 ||
     Boolean(detailLineup?.home?.length || detailLineup?.away?.length) ||
     Boolean(detailPlayers?.length)
@@ -1310,6 +1314,11 @@ export function MatchFeedModal({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto bg-white">
+          {visibleTab === "plan" && trackingId && (
+            <div className="px-3 pt-4 sm:px-5">
+              <TrackingCourt2D id={trackingId} compact />
+            </div>
+          )}
           {visibleTab === "plan" && (
             <MatchCourt
               homeTeam={homeTeam}
