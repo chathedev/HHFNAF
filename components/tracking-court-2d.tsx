@@ -373,33 +373,6 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
     return { home, away } as Record<Side, string>
   }, [meta?.teamColours, hhfSide])
 
-  // people on the bench / right next to the court: dashed, dimmed, labelled
-  const paintOffCourt = useCallback(
-    (ctx: CanvasRenderingContext2D, off: Frame["o"], k2: number, dpr: number) => {
-      if (!off?.length) return
-      const font = Math.max(10, Math.round(10 * dpr))
-      ctx.font = `600 ${font}px ui-sans-serif, system-ui, sans-serif`
-      ctx.textBaseline = "middle"
-      ctx.lineWidth = 1.5 * dpr
-      ctx.setLineDash([4 * dpr, 3 * dpr])
-      for (const [, , sd, x1, y1, x2, y2] of off) {
-        const X1 = x1 * k2
-        const Y1 = y1 * k2
-        ctx.strokeStyle = sd === "home" || sd === "away" ? colours[sd as Side] : "rgba(148, 163, 184, 0.95)"
-        ctx.globalAlpha = 0.75
-        ctx.strokeRect(X1, Y1, (x2 - x1) * k2, (y2 - y1) * k2)
-        ctx.globalAlpha = 1
-        const tw = ctx.measureText("Bänk").width + 6 * dpr
-        ctx.fillStyle = "rgba(71, 85, 105, 0.8)"
-        ctx.fillRect(X1, Y1 - 13 * dpr, tw, 12 * dpr)
-        ctx.fillStyle = "#ffffff"
-        ctx.fillText("Bänk", X1 + 3 * dpr, Y1 - 7 * dpr)
-      }
-      ctx.setLineDash([])
-    },
-    [colours],
-  )
-
   // the track id that holds the identity at a given time (after a split, the new part)
   const effectiveTid = useCallback(
     (tid: number, time: number) => {
@@ -523,8 +496,62 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
           p.ident = p.ident ? { ...p.ident, side: null, number: null, name: null, playerId: null, role: "player" } : null
         })
       }
-      let ball: [number, number, number] | null = a.b ?? null
-      if (a.b && b?.b && k > 0) ball = [a.b[0] + (b.b[0] - a.b[0]) * k, a.b[1] + (b.b[1] - a.b[1]) * k, 0]
+      // only the game is shown: players of the two teams and the referees, on the court.
+      // Benches, coaches, people walking along the side, the crowd and anyone the
+      // analysis could not place in a team are left out (plan and video alike).
+      const inPlay = (p: Resolved) => {
+        const role = p.ident?.role
+        if (role === "official") return p.x >= -0.6 && p.x <= COURT_W + 0.6 && p.y >= -0.4 && p.y <= COURT_H + 0.4
+        if (role !== "player" && role !== "keeper") return false
+        if (p.ident?.side !== "home" && p.ident?.side !== "away") return false
+        const mx = role === "keeper" ? 1.5 : 0.6
+        return p.x >= -mx && p.x <= COURT_W + mx && p.y >= -0.3 && p.y <= COURT_H + 0.3
+      }
+      for (let j = players.length - 1; j >= 0; j--) if (!inPlay(players[j])) players.splice(j, 1)
+      bench.length = 0
+      // ball: only a sighting that is part of a believable flight. In a +-0.6 s window the
+      // sightings are chained in time order; a link is believable when it needs at most
+      // 32 m/s. The longest chain (at least 4 sightings) is the ball; a lone sighting
+      // that jumps between players is not shown. "In hand" only right after a chain.
+      let ball: [number, number, number] | null = null
+      {
+        const seen: { t: number; x: number; y: number }[] = []
+        let held: [number, number] | null = null
+        for (let j = Math.max(0, i - 8); j <= Math.min(list.length - 1, i + 7); j++) {
+          const f = list[j]
+          if (!f.b || Math.abs(f.t - time) > 0.6) continue
+          if (f.b[2] === 0) seen.push({ t: f.t, x: f.b[0], y: f.b[1] })
+          else if (f.t <= time) held = [f.b[0], f.b[1]]
+        }
+        let best: { t: number; x: number; y: number }[] = []
+        for (let s0 = 0; s0 < seen.length; s0++) {
+          const chain = [seen[s0]]
+          for (let m = s0 + 1; m < seen.length; m++) {
+            const last = chain[chain.length - 1]
+            const dt = Math.max(0.05, seen[m].t - last.t)
+            if (Math.hypot(seen[m].x - last.x, seen[m].y - last.y) / dt <= 32) chain.push(seen[m])
+          }
+          if (chain.length > best.length) best = chain
+        }
+        if (best.length >= 4) {
+          let sx = 0
+          let sy = 0
+          let sw = 0
+          for (const q of best) {
+            const dt = Math.abs(q.t - time)
+            if (dt > 0.35) continue
+            const w = 0.4 - dt
+            sx += q.x * w
+            sy += q.y * w
+            sw += w
+          }
+          if (sw > 0) ball = [sx / sw, sy / sw, 0]
+          else {
+            const q = best.reduce((a, c) => (Math.abs(c.t - time) < Math.abs(a.t - time) ? c : a))
+            if (Math.abs(q.t - time) < 0.6) ball = [q.x, q.y, 0]
+          }
+        } else if (held && a.b && a.b[2] === 1) ball = [held[0], held[1], 1]
+      }
       // goals from the official feed: the ball flies from the scorer into the net
       for (const g of goals) {
         const v = g.v as number
@@ -640,27 +667,8 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
       ctx.strokeRect(X(-0.8), Y(8.5), 0.8 * s, 3 * s)
       ctx.strokeRect(X(COURT_W), Y(8.5), 0.8 * s, 3 * s)
 
-      const { players, bench, ball } = resolveAt(time)
+      const { players, ball } = resolveAt(time)
       hitRef.current = players
-      {
-        const fl = framesRef.current
-        const fi = frameIndexAt(fl, time)
-        const off = fi >= 0 && Math.abs(fl[fi].t - time) < 1.0 ? [...(fl[fi].o ?? [])] : []
-        // people the analysis found standing still at the sideline count as bench too
-        for (const b of bench) off.push([b.x, b.y < COURT_H / 2 ? -1 : COURT_H + 1, b.ident?.side ?? "", 0, 0, 0, 0])
-        const rr = Math.max(6 * dpr, 0.4 * s)
-        ctx.lineWidth = Math.max(1.5, 0.12 * s)
-        for (const [x, y, sd] of off) {
-          const cx = X(Math.min(COURT_W + PAD - 0.5, Math.max(-PAD + 0.5, x)))
-          const cy = Y(Math.min(COURT_H + PAD - 0.5, Math.max(-PAD + 0.5, y)))
-          ctx.strokeStyle = sd === "home" || sd === "away" ? colours[sd as Side] : "#94a3b8"
-          ctx.fillStyle = "rgba(248, 250, 252, 0.9)"
-          ctx.beginPath()
-          ctx.arc(cx, cy, rr, 0, Math.PI * 2)
-          ctx.fill()
-          ctx.stroke()
-        }
-      }
       const r = Math.max(8 * dpr, 0.55 * s)
       // officials first (under players)
       const ordered = [...players].sort((a, b) => Number(a.ident?.role === "official") - Number(b.ident?.role === "official")).reverse()
@@ -767,22 +775,16 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
       inHand?: boolean,
     ) => {
       // the same identities as the plan at this moment (rules applied)
-      const { players: shown, bench: benchNow } = resolveAt(ft)
+      const { players: shown } = resolveAt(ft)
       const capped = new Map<number, Ident | null>()
       for (const p of shown) capped.set(p.tid, p.ident)
-      const benchTids = new Set(benchNow.map((b) => b.tid))
       const font = Math.max(11, Math.round(12 * dpr))
       ctx.font = `700 ${font}px ui-sans-serif, system-ui, sans-serif`
       ctx.textBaseline = "middle"
       const hits: { key: string; box: [number, number, number, number] }[] = []
       for (const [tid, x1, y1, x2, y2] of boxes) {
-        const raw = identOf(tid, ft)
-        if (raw?.role === "ignore") continue
-        if (benchTids.has(tid)) {
-          paintOffCourt(ctx, [[0, 0, raw?.side ?? "", x1, y1, x2, y2]], k2, dpr)
-          continue
-        }
-        const ident = capped.has(tid) ? (capped.get(tid) ?? null) : raw
+        if (!capped.has(tid)) continue       // not in play: no box at all
+        const ident = capped.get(tid) ?? null
         const role = ident?.role ?? "player"
         const side = ident?.side ?? null
         const eff = effectiveTid(tid, ft)
@@ -830,7 +832,7 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
       }
       return hits
     },
-    [identOf, effectiveTid, colours, selected, info?.tracks.alias, resolveAt, paintOffCourt],
+    [effectiveTid, colours, selected, info?.tracks.alias, resolveAt],
   )
 
   // the real video plays underneath; boxes are interpolated between analysed
@@ -857,28 +859,45 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
         return
       }
       const a = list[k]
-      let b: Frame | undefined
-      for (let j = k + 1; j < list.length && j < k + 4; j++) {
-        if (list[j].bx) {
-          b = list[j]
-          break
+      // every box is the weighted mean of that person's boxes within ±0.35 s: it glides
+      // with the player instead of twitching with each detection
+      const acc = new Map<number, [number, number, number, number, number]>()
+      let bx = 0
+      let by = 0
+      let bw = 0
+      for (let j = Math.max(0, k - 5); j <= Math.min(list.length - 1, k + 5); j++) {
+        const f = list[j]
+        if (!f.bx) continue
+        const dt = Math.abs(f.t - time)
+        if (dt > 0.35) continue
+        const w = 0.4 - dt
+        for (const [tid, x1, y1, x2, y2] of f.bx) {
+          const q = acc.get(tid) ?? [0, 0, 0, 0, 0]
+          q[0] += x1 * w
+          q[1] += y1 * w
+          q[2] += x2 * w
+          q[3] += y2 * w
+          q[4] += w
+          acc.set(tid, q)
+        }
+        if (f.bb && f.b?.[2] === 0) {
+          bx += f.bb[0] * w
+          by += f.bb[1] * w
+          bw += w
         }
       }
-      const span = b ? b.t - a.t : 0
-      const r = b && span > 0 && span < 1.0 ? Math.min(1, Math.max(0, (time - a.t) / span)) : 0
-      const next = new Map((b?.bx ?? []).map((x) => [x[0], x]))
-      const boxes = (a.bx ?? []).map(([tid, x1, y1, x2, y2]) => {
-        const q = next.get(tid)
-        return (q
-          ? [tid, x1 + (q[1] - x1) * r, y1 + (q[2] - y1) * r, x2 + (q[3] - x2) * r, y2 + (q[4] - y2) * r]
-          : [tid, x1, y1, x2, y2]) as [number, number, number, number, number]
+      const present = new Set((a.bx ?? []).map((x) => x[0]))
+      const boxes: [number, number, number, number, number][] = []
+      acc.forEach((q, tid) => {
+        if (!present.has(tid) || q[4] <= 0) return
+        boxes.push([tid, q[0] / q[4], q[1] / q[4], q[2] / q[4], q[3] / q[4]])
       })
-      let bb = a.bb
-      if (a.bb && b?.bb && r > 0) bb = [a.bb[0] + (b.bb[0] - a.bb[0]) * r, a.bb[1] + (b.bb[1] - a.bb[1]) * r]
-      paintOffCourt(ctx, a.o, canvas.width / 960, dpr)
-      videoBoxesRef.current = paintBoxes(ctx, boxes, canvas.width / 960, dpr, time, bb, a.b?.[2] === 1)
+      // the ball circle in the video only where the plan believes in the ball
+      const trusted = resolveAt(time).ball
+      const bb: [number, number] | undefined = bw > 0 && trusted && trusted[2] === 0 ? [bx / bw, by / bw] : undefined
+      videoBoxesRef.current = paintBoxes(ctx, boxes, canvas.width / 960, dpr, time, bb, false)
     },
-    [framesRef, paintBoxes, paintOffCourt],
+    [framesRef, paintBoxes, resolveAt],
   )
 
   const drawVideo = useCallback(
@@ -932,12 +951,11 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
       const k2 = canvas.width / Math.max(1, img.naturalWidth)
       const bb = list[fk]?.i === drawIdx ? list[fk].bb : undefined
-      if (list[fk]?.i === drawIdx) paintOffCourt(ctx, list[fk].o, k2 * (img.naturalWidth / 960), dpr)
       const hits = paintBoxes(ctx, boxes, k2, dpr, list[fk]?.t ?? time, bb, list[fk]?.b?.[2] === 1)
       videoBoxesRef.current = hits
       shownImgRef.current = key
     },
-    [framesRef, loadImg, paintBoxes, paintOffCourt, selected],
+    [framesRef, loadImg, paintBoxes, selected],
   )
 
   // ---- clock: playback + live follow at display refresh rate ----
@@ -1150,7 +1168,6 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
     else if (p.ident?.role === "player") field[sd] += 1
   }
   const suspNow = now?.susp ?? []
-  const offCourt = (currentFrame?.o?.length ?? 0) + (now?.bench.length ?? 0)
   // an unseen keeper only means an empty goal when that goal is in the picture
   const clockNow = clockAt(meta?.clock, displayTime)
   const half = clockNow != null && clockNow >= (meta?.periodSeconds ?? 1800) ? "2" : "1"
@@ -1281,7 +1298,6 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
                 {teamName(side)}: <span className="font-semibold tabular-nums text-slate-800">{formation(side)}</span>
               </span>
             ))}
-            <span>Bänk och sidlinje: {offCourt}</span>
           </p>
           {suspNow.length > 0 && (
             <ul className="flex flex-wrap gap-1.5" aria-label="Utvisningar just nu">
