@@ -25,6 +25,8 @@ type Frame = {
   o?: [number, number, string, number, number, number, number][]
   // goals in the picture: [left, right] (1 = visible)
   gv?: [number, number]
+  // the part of the court the camera shows now: x,y pairs in decimetres (polygon)
+  vw?: number[]
 }
 
 type Ident = {
@@ -358,7 +360,7 @@ function useTracking(id: string, compact: boolean) {
   return { info, error, framesRef, frameCount, fullSpan }
 }
 
-type Resolved = { key: string; x: number; y: number; ident: Ident | null; tid: number }
+type Resolved = { key: string; x: number; y: number; ident: Ident | null; tid: number; ghost?: boolean }
 
 function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: boolean }) {
   const { info, error, framesRef, frameCount, fullSpan } = useTracking(id, compact)
@@ -472,6 +474,7 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
           ball: null as null | [number, number, number],
           frame: null as Frame | null,
           susp: [] as Suspension[],
+          ghosts: [] as Resolved[],
         }
       const a = list[i]
       const b = list[i + 1]
@@ -563,6 +566,20 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
         return p.x >= -mx && p.x <= COURT_W + mx && p.y >= -my && p.y <= COURT_H + my
       }
       for (let j = players.length - 1; j >= 0; j--) if (!onCourtNow(players[j])) players.splice(j, 1)
+      // two tracks on one person (a split box, a ghost) sit on top of each other: a team-mate
+      // within 0.7 m of a stronger identity is the same person, drawn once
+      {
+        const byStrength = [...players]
+          .filter((p) => p.ident && (p.ident.role === "player" || p.ident.role === "keeper") && (p.ident.side === "home" || p.ident.side === "away"))
+          .sort((a, b) => strengthOf(b.ident) - strengthOf(a.ident))
+        const kept: Resolved[] = []
+        const twins = new Set<Resolved>()
+        for (const p of byStrength) {
+          if (kept.some((k) => k.ident?.side === p.ident?.side && Math.hypot(k.x - p.x, k.y - p.y) < 0.7)) twins.add(p)
+          else kept.push(p)
+        }
+        for (let j = players.length - 1; j >= 0; j--) if (twins.has(players[j])) players.splice(j, 1)
+      }
       for (const side of ["home", "away"] as Side[]) {
         const mine = players.filter((p) => p.ident?.side === side && (p.ident.role === "player" || p.ident.role === "keeper"))
         const drop = new Set<Resolved>()
@@ -581,6 +598,8 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
         const role = p.ident?.role
         if (role === "official") return true          // already inside the margins above
         if (role !== "player" && role !== "keeper") return false
+        // a goalkeeper stands at a goal; a "keeper" in the middle of the court is someone in red
+        if (role === "keeper" && p.x > 10 && p.x < 30) return false
         return p.ident?.side === "home" || p.ident?.side === "away"
       }
       for (let j = players.length - 1; j >= 0; j--) if (!inPlay(players[j])) players.splice(j, 1)
@@ -648,7 +667,53 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
           break
         }
       }
-      return { players, bench, ball, frame: a, susp }
+      // players the camera cannot see right now are still on the court: named players and keepers
+      // last seen OUTSIDE the picture stay where they were (hollow) for a while
+      const ghosts: Resolved[] = []
+      {
+        let poly: number[] | null = null
+        for (let j = i; j >= Math.max(0, i - 8); j--) {
+          if (list[j].vw) {
+            poly = list[j].vw as number[]
+            break
+          }
+        }
+        if (poly) {
+          const inside = (x: number, y: number) => {
+            let c = false
+            for (let u = 0, v = poly!.length / 2 - 1; u < poly!.length / 2; v = u++) {
+              const xi = poly![2 * u] / 10
+              const yi = poly![2 * u + 1] / 10
+              const xj = poly![2 * v] / 10
+              const yj = poly![2 * v + 1] / 10
+              if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c
+            }
+            return c
+          }
+          const have = new Set(players.map((p) => p.key))
+          for (let j = i - 1; j >= 0 && time - list[j].t <= 45; j--) {
+            const f = list[j]
+            for (const row of f.p) {
+              const ident = identOf(row[0], f.t)
+              if (!ident || (ident.side !== "home" && ident.side !== "away")) continue
+              if (ident.role !== "keeper" && !(ident.role === "player" && ident.playerId)) continue
+              if (ident.role === "keeper" && row[1] > 10 && row[1] < 30) continue
+              const key = ident.playerId ? `p${ident.playerId}` : `t${info?.tracks.alias[String(effectiveTid(row[0], f.t))] ?? row[0]}`
+              if (have.has(key)) continue
+              const age = time - f.t
+              if (age > (ident.role === "keeper" ? 45 : 8)) continue
+              if (row[1] < -1.5 || row[1] > COURT_W + 1.5 || row[2] < -0.2 || row[2] > COURT_H + 0.2) continue
+              if (inside(row[1], row[2])) {
+                have.add(key) // it was in view when last seen: it was lost, not out of sight
+                continue
+              }
+              have.add(key)
+              ghosts.push({ key, x: row[1], y: row[2], ident, tid: row[0], ghost: true })
+            }
+          }
+        }
+      }
+      return { players, bench, ball, frame: a, susp, ghosts }
     }
     return (time: number) => {
       const list = framesRef.current
@@ -748,7 +813,7 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
       ctx.strokeRect(X(-0.8), Y(8.5), 0.8 * s, 3 * s)
       ctx.strokeRect(X(COURT_W), Y(8.5), 0.8 * s, 3 * s)
 
-      const { players, ball } = resolveAt(time)
+      const { players, ball, ghosts } = resolveAt(time)
       hitRef.current = players
       // dots ease in and out (0.18 s / 0.3 s) instead of popping: a player the analysis loses
       // for a moment fades and comes back, it does not blink
@@ -824,6 +889,29 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
         }
       }
       ctx.globalAlpha = 1
+      // out of the camera's view: hollow, where they were last seen
+      for (const g of ghosts) {
+        const side = g.ident?.side
+        if (side !== "home" && side !== "away") continue
+        const cx = X(g.x)
+        const cy = Y(g.y)
+        ctx.globalAlpha = 0.5
+        ctx.fillStyle = "rgba(255,255,255,0.75)"
+        ctx.beginPath()
+        ctx.arc(cx, cy, r, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.lineWidth = Math.max(1.5, r * 0.18)
+        ctx.setLineDash([r * 0.5, r * 0.4])
+        ctx.strokeStyle = g.ident?.role === "keeper" ? "#f59e0b" : colours[side]
+        ctx.stroke()
+        ctx.setLineDash([])
+        ctx.fillStyle = colours[side]
+        ctx.font = `700 ${Math.round(r * 1.02)}px ui-sans-serif, system-ui, sans-serif`
+        ctx.textAlign = "center"
+        ctx.textBaseline = "middle"
+        ctx.fillText(g.ident?.number != null ? String(g.ident.number) : g.ident?.role === "keeper" ? "MV" : "", cx, cy + r * 0.06)
+      }
+      ctx.globalAlpha = 1
       if (ball) {
         const br = Math.max(4 * dpr, 0.3 * s)
         ctx.fillStyle = "#fbbf24"
@@ -839,6 +927,7 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
     },
     [resolveAt, colours, selected],
   )
+  // (ghosts are read from resolveAt inside draw)
 
   // ---- annotated review video: the image for the frame on screen, synced to the plan ----
   const loadImg = useCallback(
@@ -1278,6 +1367,11 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
     if (p.ident?.role === "keeper") keepers[sd] += 1
     else if (p.ident?.role === "player") field[sd] += 1
   }
+  const outside = { home: 0, away: 0 } as Record<Side, number>
+  for (const g of now?.ghosts ?? []) {
+    const sd = g.ident?.side
+    if (sd === "home" || sd === "away") outside[sd] += 1
+  }
   const suspNow = now?.susp ?? []
   // an unseen keeper only means an empty goal when that goal is in the picture
   const clockNow = clockAt(meta?.clock, displayTime)
@@ -1306,7 +1400,7 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
       : goalInView(side)
         ? `${field[side]} utespelare, tom kasse`
         : `${field[side]} utespelare i bild`
-    return `${shown}${n ? `, ${n} utvisad${n > 1 ? "e" : ""}` : ""}`
+    return `${shown}${outside[side] ? `, ${outside[side]} utanför bild` : ""}${n ? `, ${n} utvisad${n > 1 ? "e" : ""}` : ""}`
   }
   const suspensionEvents = (info.events ?? []).filter((e) => SUSPENSION.test(e.type ?? "") && e.v != null)
 
@@ -1540,6 +1634,10 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
           <li className="inline-flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
             Domare
+          </li>
+          <li className="inline-flex items-center gap-1.5">
+            <span className="h-3 w-3 rounded-full border-2 border-dashed border-slate-400 bg-white/70" />
+            Utanför bild
           </li>
           <li className="inline-flex items-center gap-1.5">
             <span className="h-1 w-4 rounded-full bg-amber-400" />
