@@ -372,6 +372,8 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
   const [selected, setSelected] = useState<string | null>(null)
   const [ballSimulated, setBallSimulated] = useState(true)
   const hitRef = useRef<Resolved[]>([])
+  const fadeRef = useRef(new Map<string, { p: Resolved; alpha: number }>())
+  const lastDrawRef = useRef({ ms: 0, time: 0 })
   const videoRef = useRef<HTMLCanvasElement | null>(null)
   const videoElRef = useRef<HTMLVideoElement | null>(null)
   const overlayRef = useRef<HTMLCanvasElement | null>(null)
@@ -748,10 +750,34 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
 
       const { players, ball } = resolveAt(time)
       hitRef.current = players
+      // dots ease in and out (0.18 s / 0.3 s) instead of popping: a player the analysis loses
+      // for a moment fades and comes back, it does not blink
+      const nowMs = performance.now()
+      const dtS = Math.min(0.1, (nowMs - lastDrawRef.current.ms) / 1000)
+      const jumped = Math.abs(time - lastDrawRef.current.time) > 1.0
+      lastDrawRef.current = { ms: nowMs, time }
+      const fade = fadeRef.current
+      if (jumped) fade.clear()
+      const presentKeys = new Set<string>()
+      for (const p of players) {
+        presentKeys.add(p.key)
+        const e = fade.get(p.key)
+        if (e) {
+          e.p = p
+          e.alpha = Math.min(1, e.alpha + dtS / 0.18)
+        } else fade.set(p.key, { p, alpha: jumped ? 1 : Math.min(1, dtS / 0.18) })
+      }
+      fade.forEach((e, key) => {
+        if (presentKeys.has(key)) return
+        e.alpha -= dtS / 0.3
+        if (e.alpha <= 0) fade.delete(key)
+      })
+      const shown = Array.from(fade.values())
       const r = Math.max(8 * dpr, 0.55 * s)
       // officials first (under players)
-      const ordered = [...players].sort((a, b) => Number(a.ident?.role === "official") - Number(b.ident?.role === "official")).reverse()
-      for (const p of ordered) {
+      const ordered = shown.sort((a, b) => Number(a.p.ident?.role === "official") - Number(b.p.ident?.role === "official")).reverse()
+      for (const { p, alpha } of ordered) {
+        ctx.globalAlpha = alpha
         const ident = p.ident
         const role = ident?.role ?? "player"
         const side = ident?.side ?? null
@@ -797,6 +823,7 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
           ctx.fillText(label, cx, ly + r * 0.02)
         }
       }
+      ctx.globalAlpha = 1
       if (ball) {
         const br = Math.max(4 * dpr, 0.3 * s)
         ctx.fillStyle = "#fbbf24"
