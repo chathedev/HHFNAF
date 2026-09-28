@@ -17,7 +17,8 @@ type Frame = {
   i?: number
   bx?: [number, number, number, number, number][]
   bb?: [number, number]
-  p: [number, number, number][]
+  // [tid, x, y, kit?]: kit = index into meta.kits of the shirt the track wears right now
+  p: ([number, number, number] | [number, number, number, number])[]
   // ball, only when it was really seen: [x, y, 0]
   b?: [number, number, number]
   // people just outside the court (bench, sideline, table): [x, y, side, x1, y1, x2, y2]
@@ -83,6 +84,7 @@ type Meta = {
   // which goal each team defends per half: {"1": {"home": "left", "away": "right"}, ...}
   defending?: Record<string, Partial<Record<Side, "left" | "right">>> | null
   periodSeconds?: number | null
+  kits?: { name: string; side: Side | null; role: "player" | "keeper" | "official" }[]
 }
 
 type LineupPlayer = { id?: number; name?: string; number?: string; isKeeper?: boolean; isCaptain?: boolean }
@@ -442,7 +444,9 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
       const seen = new Set<string>()
       // a player the detector missed for a frame or two (fast pans) stays on the plan:
       // seen just before and just after, drawn in between
-      const pts: [number, number, number][] = [...a.p]
+      const kitOf = new Map<number, number>()
+      for (const row of a.p) if (row.length > 3) kitOf.set(row[0], row[3] as number)
+      const pts: [number, number, number][] = a.p.map((row) => [row[0], row[1], row[2]])
       const before = list[i - 1]
       if (before && b && b.t - before.t < 0.8) {
         const inA = new Set(a.p.map((q) => q[0]))
@@ -450,14 +454,31 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
         for (const [tid] of b.p) {
           const q = prevPos.get(tid)
           // from where it was last seen; the loop below glides it to the next frame
-          if (q && !inA.has(tid)) pts.push([tid, q[1], q[2]])
+          if (q && !inA.has(tid)) {
+            pts.push([tid, q[1], q[2]])
+            if (q.length > 3) kitOf.set(tid, q[3] as number)
+          }
         }
       }
       for (const [tid, x, y] of pts) {
         const n = nextPos.get(tid)
         const px = n ? x + (n[0] - x) * k : x
         const py = n ? y + (n[1] - y) * k : y
-        const ident = identOf(tid, time)
+        let ident = identOf(tid, time)
+        // not named yet (newest seconds at the live edge): the shirt already tells the team
+        const kit = kitOf.has(tid) ? info?.meta.kits?.[kitOf.get(tid) as number] : undefined
+        if (!ident && kit) {
+          ident = {
+            side: kit.side,
+            role: kit.role,
+            number: null,
+            numberConf: 0,
+            playerId: null,
+            name: null,
+            n: 0,
+            kitConf: 0.3,
+          }
+        }
         if (ident?.role === "ignore") continue
         const eff = effectiveTid(tid, time)
         const key = ident?.playerId ? `p${ident.playerId}` : `t${info?.tracks.alias[String(eff)] ?? eff}`
