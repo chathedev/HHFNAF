@@ -172,8 +172,45 @@ const capOf = (susp: Suspension[], side: Side) => Math.max(4, 7 - susp.filter((x
 const strengthOf = (ident: Ident | null) =>
   (ident?.kitConf ?? 0.5) * (ident?.number != null ? 2 : 1) * Math.log(2 + (ident?.n ?? 0))
 
-function useTracking(id: string) {
+type Boot = { info: Info; frames: string; offset: number; from: number | null; span: [number, number] | null }
+const bootCache = new Map<string, { at: number; promise: Promise<Boot> }>()
+
+// identities, events and the first frames in ONE request; a prefetch (hovering the match,
+// landing on /matcher) fills the cache so opening the plan is instant
+function getBoot(id: string, compact: boolean): Promise<Boot> {
+  const key = `${id}|${compact ? "slim" : "full"}`
+  const hit = bootCache.get(key)
+  if (hit && Date.now() - hit.at < 20000) return hit.promise
+  const promise = fetch(`${BASE}/${encodeURIComponent(id)}/bootstrap${compact ? "?slim=1" : ""}`, { cache: "no-store" }).then((res) => {
+    if (!res.ok) throw new Error("Analysen kunde inte läsas in.")
+    return res.json() as Promise<Boot>
+  })
+  bootCache.set(key, { at: Date.now(), promise })
+  promise.catch(() => bootCache.delete(key))
+  return promise
+}
+
+let releasedCache: { at: number; promise: Promise<Array<{ id: string; matchId?: string; test?: boolean; status?: string }>> } | null = null
+function getReleased() {
+  if (releasedCache && Date.now() - releasedCache.at < 60000) return releasedCache.promise
+  const promise = fetch(`${BASE}/matches`, { cache: "no-store" })
+    .then((res) => (res.ok ? res.json() : { matches: [] }))
+    .then((d: { matches?: Array<{ id: string; matchId?: string; test?: boolean; status?: string }> }) => d.matches ?? [])
+    .catch(() => [])
+  releasedCache = { at: Date.now(), promise }
+  return promise
+}
+
+// call early (page load / hover): the list of analyses and the first window of each finished one
+export function prefetchTracking() {
+  void getReleased().then((list) => {
+    for (const m of list) if (!m.test) void getBoot(m.id, true).catch(() => {})
+  })
+}
+
+function useTracking(id: string, compact: boolean) {
   const [info, setInfo] = useState<Info | null>(null)
+  const [fullSpan, setFullSpan] = useState<[number, number] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const framesRef = useRef<Frame[]>([])
   const [frameCount, setFrameCount] = useState(0)
@@ -251,40 +288,60 @@ function useTracking(id: string) {
       }
     }
 
-    // everything before the newest frames, fetched after the page is already live
-    const backfill = async () => {
+    const slimQ = compact ? "&slim=1" : ""
+    const getFrames = async (query: string) => {
+      const res = await fetch(`${BASE}/${encodeURIComponent(id)}/frames?${query}${slimQ}`, { cache: "no-store" })
+      if (!res.ok) return [] as Frame[]
+      return parseFrames(await res.text())
+    }
+
+    // everything before the first loaded frame, after the plan is already showing
+    const backfillBefore = async () => {
       const first = framesRef.current[0]?.t
       if (first === undefined) return
       try {
-        const res = await fetch(`${BASE}/${encodeURIComponent(id)}/frames?to=${first}`, { cache: "no-store" })
-        if (!res.ok) return
-        const older = parseFrames(await res.text()).filter((f) => f.t < (framesRef.current[0]?.t ?? first))
+        const older = (await getFrames(`to=${first}`)).filter((f) => f.t < (framesRef.current[0]?.t ?? first))
         if (cancelled || !older.length) return
         framesRef.current = [...older, ...framesRef.current]
         setFrameCount(framesRef.current.length)
       } catch {}
     }
 
+    // a finished match: the rest after the first window, in 15-minute pieces
+    const loadRest = async (end: number) => {
+      try {
+        let cursor = framesRef.current[framesRef.current.length - 1]?.t ?? 0
+        while (!cancelled && cursor < end - 0.5) {
+          const part = await getFrames(`from=${cursor + 0.001}&to=${cursor + 900}`)
+          if (cancelled) return
+          if (part.length) {
+            append(part)
+            cursor = framesRef.current[framesRef.current.length - 1].t
+          } else cursor += 900
+        }
+        await backfillBefore()
+      } catch {}
+    }
+
     ;(async () => {
       try {
-        const infoRes = await fetch(`${BASE}/${encodeURIComponent(id)}`, { cache: "no-store" })
-        if (!infoRes.ok) throw new Error("Analysen kunde inte läsas in.")
-        const nextInfo = (await infoRes.json()) as Info
+        const boot = await getBoot(id, compact)
+        if (cancelled) return
+        const nextInfo = boot.info
         const status = nextInfo.meta.status
         const running = status === "live" || status === "processing" || status === "starting"
-        // a running analysis opens on its live edge at once (the newest two minutes);
-        // the rest of the match follows in the background for scrubbing back
-        const framesRes = await fetch(`${BASE}/${encodeURIComponent(id)}/frames${running ? "?tail=120" : ""}`, { cache: "no-store" })
-        if (!framesRes.ok) throw new Error("Analysen kunde inte läsas in.")
-        const text = await framesRes.text()
-        if (cancelled) return
-        framesRef.current = parseFrames(text)
+        framesRef.current = parseFrames(boot.frames)
         setFrameCount(framesRef.current.length)
         setInfo(nextInfo)
-        lastOffset = framesRes.headers.get("x-frames-offset") ?? "0"
+        lastOffset = String(boot.offset ?? 0)
         if (running) {
           openStream()
-          void backfill()
+          void backfillBefore()
+        } else {
+          const first = framesRef.current[0]?.t ?? 0
+          const end = boot.span?.[1] ?? nextInfo.meta.lastT ?? nextInfo.meta.duration ?? first
+          setFullSpan([boot.span?.[0] ?? 0, end])
+          void loadRest(end)
         }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "Analysen kunde inte läsas in.")
@@ -296,15 +353,15 @@ function useTracking(id: string) {
       if (retryTimer) clearTimeout(retryTimer)
       source?.close()
     }
-  }, [id, reloadKey])
+  }, [id, reloadKey, compact])
 
-  return { info, error, framesRef, frameCount }
+  return { info, error, framesRef, frameCount, fullSpan }
 }
 
 type Resolved = { key: string; x: number; y: number; ident: Ident | null; tid: number }
 
 function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: boolean }) {
-  const { info, error, framesRef, frameCount } = useTracking(id)
+  const { info, error, framesRef, frameCount, fullSpan } = useTracking(id, compact)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const wrapRef = useRef<HTMLDivElement | null>(null)
   const timeRef = useRef(0)
@@ -336,8 +393,10 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
   const hhfSide: Side | null = isHhf(meta?.home) ? "home" : isHhf(meta?.away) ? "away" : null
 
   const frames = framesRef.current
-  const firstT = frames.length ? frames[0].t : 0
-  const lastT = frames.length ? frames[frames.length - 1].t : 0
+  // a finished match: the slider covers the whole match from the first moment, even while
+  // the later parts are still arriving in the background
+  const firstT = fullSpan ? Math.min(fullSpan[0], frames[0]?.t ?? fullSpan[0]) : frames.length ? frames[0].t : 0
+  const lastT = fullSpan ? fullSpan[1] : frames.length ? frames[frames.length - 1].t : 0
 
   // start: live -> follow the live edge; finished -> from the beginning
   useEffect(() => {
@@ -1536,12 +1595,12 @@ export function useTrackingForMatch(matchId?: string | number | null) {
     setTrackingId(null) // never show the previous match's analysis
     if (!matchId) return
     let cancelled = false
-    fetch(`${BASE}/matches`, { cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: { matches?: Array<{ id: string; matchId?: string; test?: boolean }> } | null) => {
-        if (cancelled || !data?.matches) return
-        const hit = data.matches.find((m) => String(m.matchId) === String(matchId) && !m.test)
+    getReleased()
+      .then((matches) => {
+        if (cancelled) return
+        const hit = matches.find((m) => String(m.matchId) === String(matchId) && !m.test)
         setTrackingId(hit?.id ?? null)
+        if (hit) void getBoot(hit.id, true).catch(() => {})
       })
       .catch(() => {})
     return () => {

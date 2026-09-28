@@ -7,6 +7,7 @@ import { getSimplifiedMatchStatus } from "@/lib/match-card-utils"
 import { getMatchEndTime, useMatchData, forceMatchDataPoll, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchCard } from "@/components/matcher/match-card"
 import { SelectMenu } from "@/components/ui/select-menu"
+import { prefetchTracking } from "@/components/tracking-court-2d"
 import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
 import { normalizeMatchKey } from "@/lib/matches"
 import { extendTeamDisplayName, createTeamMatchKeySet, seasonalTeamLabel, teamClassKey } from "@/lib/team-display"
@@ -291,6 +292,10 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   const [finishedLimit, setFinishedLimit] = useState(FINISHED_PAGE_SIZE)
   const [query, setQuery] = useState("")
+  // released match analyses: fetch the list and the first frames now, so opening the plan is instant
+  useEffect(() => {
+    prefetchTracking()
+  }, [])
   const [searchLimit, setSearchLimit] = useState(SEARCH_PAGE_SIZE)
   // a search can be linked: /matcher?q=strands+18+januari
   useEffect(() => {

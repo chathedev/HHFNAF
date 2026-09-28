@@ -11,7 +11,7 @@ export const runtime = "nodejs"
 // Analysis runs on the tivly compute node over lyrnet.
 const TRACKING_BASE = process.env.TRACKING_SERVICE_URL || "http://10.44.0.9:3020"
 const SEGMENT = /^[A-Za-z0-9_-]{1,64}$/
-const PUBLIC_PARTS = new Set(["frames", "stream"])
+const PUBLIC_PARTS = new Set(["frames", "stream", "bootstrap"])
 
 export async function GET(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params
@@ -24,10 +24,13 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
     if (!allowed) return NextResponse.json({ error: "not_available" }, { status: 404 })
   }
   const upstreamUrl = new URL(`${TRACKING_BASE}/tracking/${path.join("/")}`)
-  for (const key of ["from", "to", "offset", "tail"]) {
+  for (const key of ["from", "to", "offset", "tail", "window"]) {
     const value = request.nextUrl.searchParams.get(key)
     if (value !== null && /^-?\d+(\.\d+)?$/.test(value)) upstreamUrl.searchParams.set(key, value)
   }
+
+  // the public site never needs video boxes or review frames: slim frames only
+  if (!TRACKING_STAGING || request.nextUrl.searchParams.get("slim") === "1") upstreamUrl.searchParams.set("slim", "1")
 
   const isStream = path[path.length - 1] === "stream" || path[1] === "video"
   let upstream: Response
