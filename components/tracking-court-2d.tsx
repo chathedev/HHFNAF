@@ -400,7 +400,7 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
   // who is where at a moment; computed once per moment (the plan, the video boxes and
   // the counters all ask for the same instant within one animation frame)
   const resolveAt = useMemo(() => {
-    let last: { time: number; count: number; value: ReturnType<typeof resolve> } | null = null
+    const cache: { list: Frame[]; first: number; last: number; time: number; count: number; value: ReturnType<typeof resolve> }[] = []
     function resolve(time: number) {
       const list = framesRef.current
       const i = frameIndexAt(list, time)
@@ -421,11 +421,18 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
       // smooth motion: each position is the weighted mean of the frames within ±0.45 s,
       // which removes the camera's frame-to-frame jitter without adding delay
       const smooth = new Map<number, [number, number, number]>()
-      for (let j = Math.max(0, i - 5); j <= Math.min(list.length - 1, i + 6); j++) {
-        const dt = Math.abs(list[j].t - time)
-        if (dt > 0.45) continue
+      const here = new Map<number, [number, number]>()
+      for (const row of a.p) here.set(row[0], [row[1], row[2]])
+      for (let j = i; j >= 0 && time - list[j].t <= 0.45; j--) smoothFrame(list[j])
+      for (let j = i + 1; j < list.length && list[j].t - time <= 0.45; j++) smoothFrame(list[j])
+      function smoothFrame(f: Frame) {
+        const dt = Math.abs(f.t - time)
         const w = 0.5 - dt
-        for (const row of list[j].p) {
+        for (const row of f.p) {
+          // a position far from where the track is in this very frame is another
+          // person (id switch, calibration flip): never averaged in
+          const h = here.get(row[0])
+          if (h && Math.hypot(row[1] - h[0], row[2] - h[1]) > 3) continue
           const acc = smooth.get(row[0]) ?? [0, 0, 0]
           acc[0] += row[1] * w
           acc[1] += row[2] * w
@@ -485,6 +492,16 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
       // the rules: never more on court than a team may have (7, minus suspensions),
       // never two keepers of one team; the weakest identities give way
       const susp = activeSuspensions(info?.events, clockAt(info?.meta.clock, time))
+      // people outside the playing area (bench, coaches, crowd) never count towards a team
+      const onCourtNow = (p: Resolved) => {
+        const mx = p.ident?.role === "keeper" ? 1.8 : 1.5
+        // along the middle of the sidelines stand the benches (coaches, substitutes, table):
+        // there the line itself is the limit; the wings work the corners and may step out
+        const middle = p.x > 8 && p.x < 32 && p.ident?.role !== "official"
+        const my = middle ? 0.2 : 1.0
+        return p.x >= -mx && p.x <= COURT_W + mx && p.y >= -my && p.y <= COURT_H + my
+      }
+      for (let j = players.length - 1; j >= 0; j--) if (!onCourtNow(players[j])) players.splice(j, 1)
       for (const side of ["home", "away"] as Side[]) {
         const mine = players.filter((p) => p.ident?.side === side && (p.ident.role === "player" || p.ident.role === "keeper"))
         const drop = new Set<Resolved>()
@@ -501,11 +518,9 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
       // analysis could not place in a team are left out (plan and video alike).
       const inPlay = (p: Resolved) => {
         const role = p.ident?.role
-        if (role === "official") return p.x >= -0.6 && p.x <= COURT_W + 0.6 && p.y >= -0.4 && p.y <= COURT_H + 0.4
+        if (role === "official") return true          // already inside the margins above
         if (role !== "player" && role !== "keeper") return false
-        if (p.ident?.side !== "home" && p.ident?.side !== "away") return false
-        const mx = role === "keeper" ? 1.5 : 0.6
-        return p.x >= -mx && p.x <= COURT_W + mx && p.y >= -0.3 && p.y <= COURT_H + 0.3
+        return p.ident?.side === "home" || p.ident?.side === "away"
       }
       for (let j = players.length - 1; j >= 0; j--) if (!inPlay(players[j])) players.splice(j, 1)
       bench.length = 0
@@ -517,7 +532,7 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
       {
         const seen: { t: number; x: number; y: number }[] = []
         let held: [number, number] | null = null
-        for (let j = Math.max(0, i - 8); j <= Math.min(list.length - 1, i + 7); j++) {
+        for (let j = Math.max(0, i - 14); j <= Math.min(list.length - 1, i + 14); j++) {
           const f = list[j]
           if (!f.b || Math.abs(f.t - time) > 0.6) continue
           if (f.b[2] === 0) seen.push({ t: f.t, x: f.b[0], y: f.b[1] })
@@ -533,7 +548,7 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
           }
           if (chain.length > best.length) best = chain
         }
-        if (best.length >= 4) {
+        if (best.length >= 3) {
           let sx = 0
           let sy = 0
           let sw = 0
@@ -575,10 +590,15 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
       return { players, bench, ball, frame: a, susp }
     }
     return (time: number) => {
-      const count = framesRef.current.length
-      if (last && last.time === time && last.count === count) return last.value
+      const list = framesRef.current
+      const count = list.length
+      const first = list[0]?.t ?? 0
+      const lastT = list[count - 1]?.t ?? 0
+      const hit = cache.find((c) => c.time === time && c.list === list && c.count === count && c.first === first && c.last === lastT)
+      if (hit) return hit.value
       const value = resolve(time)
-      last = { time, count, value }
+      cache.unshift({ list, first, last: lastT, time, count, value })
+      if (cache.length > 4) cache.pop()
       return value
     }
   }, [framesRef, identOf, effectiveTid, goals, info?.tracks.alias, info?.events, info?.meta])
@@ -862,6 +882,8 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
       // every box is the weighted mean of that person's boxes within ±0.35 s: it glides
       // with the player instead of twitching with each detection
       const acc = new Map<number, [number, number, number, number, number]>()
+      const aBoxes = new Map<number, [number, number]>()
+      for (const [tid, x1, y1, x2, y2] of a.bx ?? []) aBoxes.set(tid, [(x1 + x2) / 2, (y1 + y2) / 2])
       let bx = 0
       let by = 0
       let bw = 0
@@ -872,6 +894,9 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
         if (dt > 0.35) continue
         const w = 0.4 - dt
         for (const [tid, x1, y1, x2, y2] of f.bx) {
+          // a box far from this track's box in the shown frame is another person: never averaged in
+          const ref = aBoxes.get(tid)
+          if (ref && Math.hypot((x1 + x2) / 2 - ref[0], (y1 + y2) / 2 - ref[1]) > 90) continue
           const q = acc.get(tid) ?? [0, 0, 0, 0, 0]
           q[0] += x1 * w
           q[1] += y1 * w

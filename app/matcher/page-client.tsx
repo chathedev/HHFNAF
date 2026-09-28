@@ -481,6 +481,9 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     return () => window.clearInterval(interval)
   }, [selectedMatch, fetchMatchTimeline])
 
+  // the search works INSIDE the chosen tab: tab and search filter together
+  const isSearching = query.trim().length > 0
+
   const selectedTeamKeys = useMemo(() => {
     if (selectedTeam === "all") {
       return null
@@ -531,6 +534,10 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
         }
       }
 
+      if (isSearching && !matchesQuery(matchSearchText(match), query)) {
+        return false
+      }
+
       const status = getMatchStatus(match)
 
       if (statusFilter === "live" && status !== "live") {
@@ -547,7 +554,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
 
       return true
     })
-  }, [matchesForFilter, selectedTeamKeys, statusFilter])
+  }, [matchesForFilter, selectedTeamKeys, statusFilter, isSearching, query])
 
   const groupedMatches = useMemo(() => {
     const live: NormalizedMatch[] = []
@@ -577,34 +584,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     return { live, upcoming, finished }
   }, [filteredMatches])
 
-  // search looks through every match (all tabs, all results), newest first
-  const isSearching = query.trim().length > 0
-  const searchResults = useMemo(() => {
-    if (!isSearching) return []
-    const seen = new Set<string>()
-    const merged = [...oldMatches, ...liveUpcomingMatches.filter((m) => getMatchStatus(m) !== "finished")].filter((m) => {
-      if (seen.has(m.id)) return false
-      seen.add(m.id)
-      return true
-    })
-    return merged
-      .filter((match) => {
-        if (selectedTeamKeys) {
-          const fallbackKey = match.teamType ? normalizeMatchKey(match.teamType) : ""
-          const classKey = teamClassKey(match.teamType)
-          if (
-            !selectedTeamKeys.has(match.normalizedTeam) &&
-            (!fallbackKey || !selectedTeamKeys.has(fallbackKey)) &&
-            (!classKey || !selectedTeamKeys.has(classKey))
-          )
-            return false
-        }
-        return matchesQuery(matchSearchText(match), query)
-      })
-      .sort(compareMatchesByDateDescStable)
-  }, [isSearching, query, oldMatches, liveUpcomingMatches, selectedTeamKeys])
-  const searchGroups = useMemo(() => groupMatchesByDay(searchResults.slice(0, searchLimit)), [searchResults, searchLimit])
-
   // how many matches each tab holds (for the chosen team), shown on the tabs
   const tabCounts = useMemo(() => {
     const seen = new Set<string>()
@@ -624,16 +603,17 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
         )
           continue
       }
+      if (isSearching && !matchesQuery(matchSearchText(m), query)) continue
       const st = getMatchStatus(m)
       if (st === "live") live += 1
       else if (st === "upcoming") upcoming += 1
       else finished += 1
     }
     return { current: null, live: live || null, upcoming, finished } as Record<StatusFilter, number | null>
-  }, [oldMatches, liveUpcomingMatches, selectedTeamKeys])
+  }, [oldMatches, liveUpcomingMatches, selectedTeamKeys, isSearching, query])
 
   const liveCount = groupedMatches.live.length
-  const visibleFinished = groupedMatches.finished.slice(0, finishedLimit)
+  const visibleFinished = groupedMatches.finished.slice(0, isSearching ? searchLimit : finishedLimit)
   const hiddenFinishedCount = groupedMatches.finished.length - visibleFinished.length
 
   const upcomingGroups = useMemo(() => groupMatchesByDay(groupedMatches.upcoming), [groupedMatches.upcoming])
@@ -667,7 +647,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     <div className="mt-4 flex justify-center">
       <button
         type="button"
-        onClick={() => setFinishedLimit((prev) => prev + FINISHED_PAGE_SIZE)}
+        onClick={() => (isSearching ? setSearchLimit((n) => n + SEARCH_PAGE_SIZE) : setFinishedLimit((prev) => prev + FINISHED_PAGE_SIZE))}
         className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700"
       >
         Visa fler resultat
@@ -733,7 +713,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
               <div
                 role="tablist"
                 aria-label="Filtrera matchvy"
-                className={`grid grid-cols-4 gap-1 rounded-xl bg-slate-100/80 p-1 transition md:flex md:shrink-0 ${isSearching ? "opacity-60" : ""}`}
+                className={`grid grid-cols-4 gap-1 rounded-xl bg-slate-100/80 p-1 transition md:flex md:shrink-0`}
               >
                 {STATUS_OPTIONS.map((option) => {
                   const isActive = statusFilter === option.value
@@ -743,19 +723,16 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                       type="button"
                       role="tab"
                       aria-selected={isActive}
-                      onClick={() => {
-                        setStatusFilter(option.value)
-                        setQuery("")          // a tab shows that view again, not the search
-                      }}
+                      onClick={() => setStatusFilter(option.value)}
                       className={`relative inline-flex min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-1.5 py-1.5 text-xs font-semibold transition sm:px-3 sm:text-sm md:px-4 ${
-                        isActive && !isSearching ? "bg-slate-950 text-white shadow-sm" : "text-slate-600 hover:bg-white"
+                        isActive ? "bg-slate-950 text-white shadow-sm" : "text-slate-600 hover:bg-white"
                       }`}
                     >
                       {option.label}
                       {tabCounts[option.value] != null && (
                         <span
                           className={`hidden rounded-full px-1.5 text-[10px] font-bold tabular-nums sm:inline ${
-                            isActive && !isSearching ? "bg-white/15 text-white" : "bg-white text-slate-500"
+                            isActive ? "bg-white/15 text-white" : "bg-white text-slate-500"
                           }`}
                         >
                           {tabCounts[option.value]}
@@ -857,12 +834,34 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
               <svg className="mx-auto h-14 w-14 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <h2 className="mt-4 text-xl font-semibold text-slate-950">Inga matcher hittades</h2>
-              <p className="mt-2 text-sm text-slate-500">Ändra lag eller byt vy för att se fler matcher.</p>
+              <h2 className="mt-4 text-xl font-semibold text-slate-950">
+                {isSearching ? `Inga träffar på "${query.trim()}" här` : "Inga matcher hittades"}
+              </h2>
+              <p className="mt-2 text-sm text-slate-500">
+                {isSearching
+                  ? "Sökningen gäller den flik du valt. Prova en annan flik eller ett annat sökord."
+                  : "Ändra lag eller byt vy för att se fler matcher."}
+              </p>
+              {isSearching && (
+                <div className="mt-5 flex flex-wrap justify-center gap-2">
+                  {STATUS_OPTIONS.filter((o) => o.value !== "current" && o.value !== statusFilter && (tabCounts[o.value] ?? 0) > 0).map((o) => (
+                    <button
+                      key={o.value}
+                      type="button"
+                      onClick={() => setStatusFilter(o.value)}
+                      className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100"
+                    >
+                      {o.label}
+                      <span className="rounded-full bg-white px-2 text-xs font-bold tabular-nums">{tabCounts[o.value]}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
               <button
                 onClick={() => {
                   setSelectedTeam("all")
                   setStatusFilter("current")
+                  setQuery("")
                 }}
                 className="mt-6 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
               >
@@ -871,36 +870,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
             </div>
           )}
 
-          {isSearching && (
-            <section aria-live="polite">
-              <SectionHeader label={`Sökresultat för "${query.trim()}"`} count={searchResults.length} />
-              {searchResults.length ? (
-                <>
-                  <DayGroupList groups={searchGroups} renderMatch={renderMatch} />
-                  {searchResults.length > searchLimit && (
-                    <div className="mt-4 flex justify-center">
-                      <button
-                        type="button"
-                        onClick={() => setSearchLimit((n) => n + SEARCH_PAGE_SIZE)}
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700"
-                      >
-                        Visa fler träffar
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold tabular-nums text-slate-500">
-                          {searchResults.length - searchLimit}
-                        </span>
-                      </button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <p className="rounded-2xl border border-slate-200 bg-white px-5 py-8 text-center text-sm text-slate-500">
-                  {oldLoading || liveLoading ? "Söker i matcherna…" : "Inga matcher matchar sökningen. Prova ett lagnamn, en hall eller ett datum som \"18 januari\"."}
-                </p>
-              )}
-            </section>
-          )}
-
-          {!isSearching && !isLoading && filteredMatches.length > 0 && statusFilter === "current" && (
+          {!isLoading && filteredMatches.length > 0 && statusFilter === "current" && (
             <>
               {liveSection ?? emptySlimRow("Live", "Matcher som just nu är igång.")}
               {upcomingSection ?? emptySlimRow("Kommande", "Det som står på tur i matchkalendern.")}
@@ -908,9 +878,9 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
             </>
           )}
 
-          {!isSearching && !isLoading && filteredMatches.length > 0 && statusFilter === "live" && liveSection}
-          {!isSearching && !isLoading && filteredMatches.length > 0 && statusFilter === "upcoming" && upcomingSection}
-          {!isSearching && !isLoading && filteredMatches.length > 0 && statusFilter === "finished" && finishedSection}
+          {!isLoading && filteredMatches.length > 0 && statusFilter === "live" && liveSection}
+          {!isLoading && filteredMatches.length > 0 && statusFilter === "upcoming" && upcomingSection}
+          {!isLoading && filteredMatches.length > 0 && statusFilter === "finished" && finishedSection}
         </div>
       </div>
 
