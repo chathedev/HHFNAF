@@ -115,6 +115,45 @@ const DAY_LABEL_FORMATTER = new Intl.DateTimeFormat("sv-SE", {
 
 type DayGroup = { key: string; label: string; matches: NormalizedMatch[] }
 
+// ---- search: team, opponent, series, venue, result and the date in many spellings ----
+const SV_MONTHS = ["januari", "februari", "mars", "april", "maj", "juni", "juli", "augusti", "september", "oktober", "november", "december"]
+const SV_DAYS = ["söndag", "måndag", "tisdag", "onsdag", "torsdag", "fredag", "lördag"]
+// lower case, no accents (ö = o), one kind of dash: "Öbacka 31–27" finds "obacka 31-27"
+const normSearch = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[–—]/g, "-")
+
+const matchSearchText = (match: NormalizedMatch) => {
+  const parts = [match.homeTeam, match.awayTeam, match.opponent, match.teamType, match.series, match.venue, match.result, match.displayDate, match.time]
+  const d = match.date instanceof Date ? match.date : new Date(match.date as unknown as string)
+  if (!Number.isNaN(d.getTime())) {
+    const day = d.getDate()
+    const month = d.getMonth() + 1
+    const pad = (n: number) => String(n).padStart(2, "0")
+    parts.push(
+      `${day} ${SV_MONTHS[d.getMonth()]}`,
+      SV_DAYS[d.getDay()],
+      `${d.getFullYear()}-${pad(month)}-${pad(day)}`,
+      `${day}/${month}`,
+      `${day}.${month}`,
+      `${pad(day)}/${pad(month)}`,
+      String(d.getFullYear()),
+    )
+  }
+  return normSearch(parts.filter(Boolean).join(" | "))
+}
+
+// every word of the query must be found somewhere in the match
+const matchesQuery = (text: string, query: string) => {
+  const words = normSearch(query).split(/\s+/).filter(Boolean)
+  return words.every((word) => text.includes(word))
+}
+
+const SEARCH_PAGE_SIZE = 60
+
 const groupMatchesByDay = (matches: NormalizedMatch[]): DayGroup[] => {
   const groups: DayGroup[] = []
   let current: DayGroup | null = null
@@ -250,6 +289,20 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("current")
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   const [finishedLimit, setFinishedLimit] = useState(FINISHED_PAGE_SIZE)
+  const [query, setQuery] = useState("")
+  const [searchLimit, setSearchLimit] = useState(SEARCH_PAGE_SIZE)
+  // a search can be linked: /matcher?q=strands+18+januari
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("q")
+    if (q) setQuery(q)
+  }, [])
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    if (query.trim()) url.searchParams.set("q", query.trim())
+    else url.searchParams.delete("q")
+    window.history.replaceState(window.history.state, "", url.toString())
+    setSearchLimit(SEARCH_PAGE_SIZE)
+  }, [query])
   const [timelineByMatchId, setTimelineByMatchId] = useState<Record<string, MatchFeedEvent[]>>({})
   const [topScorersByMatchId, setTopScorersByMatchId] = useState<Record<string, MatchTopScorer[]>>({})
   const [clockStateByMatchId, setClockStateByMatchId] = useState<Record<string, MatchClockState>>({})
@@ -523,6 +576,34 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     return { live, upcoming, finished }
   }, [filteredMatches])
 
+  // search looks through every match (all tabs, all results), newest first
+  const isSearching = query.trim().length > 0
+  const searchResults = useMemo(() => {
+    if (!isSearching) return []
+    const seen = new Set<string>()
+    const merged = [...oldMatches, ...liveUpcomingMatches.filter((m) => getMatchStatus(m) !== "finished")].filter((m) => {
+      if (seen.has(m.id)) return false
+      seen.add(m.id)
+      return true
+    })
+    return merged
+      .filter((match) => {
+        if (selectedTeamKeys) {
+          const fallbackKey = match.teamType ? normalizeMatchKey(match.teamType) : ""
+          const classKey = teamClassKey(match.teamType)
+          if (
+            !selectedTeamKeys.has(match.normalizedTeam) &&
+            (!fallbackKey || !selectedTeamKeys.has(fallbackKey)) &&
+            (!classKey || !selectedTeamKeys.has(classKey))
+          )
+            return false
+        }
+        return matchesQuery(matchSearchText(match), query)
+      })
+      .sort(compareMatchesByDateDescStable)
+  }, [isSearching, query, oldMatches, liveUpcomingMatches, selectedTeamKeys])
+  const searchGroups = useMemo(() => groupMatchesByDay(searchResults.slice(0, searchLimit)), [searchResults, searchLimit])
+
   const liveCount = groupedMatches.live.length
   const visibleFinished = groupedMatches.finished.slice(0, finishedLimit)
   const hiddenFinishedCount = groupedMatches.finished.length - visibleFinished.length
@@ -654,6 +735,29 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
               </div>
 
               <div className="flex items-center gap-2">
+                <div className="relative min-w-0 flex-1 lg:w-64 lg:flex-none">
+                  <svg className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+                  </svg>
+                  <input
+                    type="search"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Sök lag, motståndare, datum…"
+                    aria-label="Sök matcher på lag, motståndare, hall, serie eller datum"
+                    className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-8 pr-8 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none"
+                  />
+                  {query && (
+                    <button
+                      type="button"
+                      onClick={() => setQuery("")}
+                      aria-label="Rensa sökningen"
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md px-1.5 py-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
                 <select
                   id="team-filter"
                   aria-label="Filtrera lag"
@@ -731,7 +835,36 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
             </div>
           )}
 
-          {!isLoading && filteredMatches.length > 0 && statusFilter === "current" && (
+          {isSearching && (
+            <section aria-live="polite">
+              <SectionHeader label={`Sökresultat för "${query.trim()}"`} count={searchResults.length} />
+              {searchResults.length ? (
+                <>
+                  <DayGroupList groups={searchGroups} renderMatch={renderMatch} />
+                  {searchResults.length > searchLimit && (
+                    <div className="mt-4 flex justify-center">
+                      <button
+                        type="button"
+                        onClick={() => setSearchLimit((n) => n + SEARCH_PAGE_SIZE)}
+                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700"
+                      >
+                        Visa fler träffar
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold tabular-nums text-slate-500">
+                          {searchResults.length - searchLimit}
+                        </span>
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="rounded-2xl border border-slate-200 bg-white px-5 py-8 text-center text-sm text-slate-500">
+                  {oldLoading || liveLoading ? "Söker i matcherna…" : "Inga matcher matchar sökningen. Prova ett lagnamn, en hall eller ett datum som \"18 januari\"."}
+                </p>
+              )}
+            </section>
+          )}
+
+          {!isSearching && !isLoading && filteredMatches.length > 0 && statusFilter === "current" && (
             <>
               {liveSection ?? emptySlimRow("Live", "Matcher som just nu är igång.")}
               {upcomingSection ?? emptySlimRow("Kommande", "Det som står på tur i matchkalendern.")}
@@ -739,9 +872,9 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
             </>
           )}
 
-          {!isLoading && filteredMatches.length > 0 && statusFilter === "live" && liveSection}
-          {!isLoading && filteredMatches.length > 0 && statusFilter === "upcoming" && upcomingSection}
-          {!isLoading && filteredMatches.length > 0 && statusFilter === "finished" && finishedSection}
+          {!isSearching && !isLoading && filteredMatches.length > 0 && statusFilter === "live" && liveSection}
+          {!isSearching && !isLoading && filteredMatches.length > 0 && statusFilter === "upcoming" && upcomingSection}
+          {!isSearching && !isLoading && filteredMatches.length > 0 && statusFilter === "finished" && finishedSection}
         </div>
       </div>
 
