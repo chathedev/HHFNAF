@@ -1129,7 +1129,8 @@ export function MatchFeedModal({
       })),
     [activePenalties, homeTeam, awayTeam],
   )
-  // staging only: a video analysis of this match (2D positions), when one exists
+  // a video analysis of this match (2D positions from our own camera at the home court),
+  // when one is released; every other match shows statistics without a court
   const trackingId = useTrackingForMatch(isOpen ? matchData?.apiMatchId : null)
   const hasCourtData =
     Boolean(trackingId) ||
@@ -1284,7 +1285,7 @@ export function MatchFeedModal({
                   visibleTab === "plan" ? "border-emerald-600 text-emerald-700" : "border-transparent text-slate-300 hover:text-slate-500"
                 }`}
               >
-                Plan
+                {trackingId ? "Plan" : "Statistik"}
               </button>
             )}
             <button

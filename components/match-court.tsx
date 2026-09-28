@@ -117,98 +117,6 @@ const arcPath = (radius: number, mirrored: boolean) => {
 const GOAL_SLOTS_Y = [10, 7.5, 12.5, 5, 15]
 const GOAL_SLOT_X = 2.7
 
-function CourtSvg({
-  recentGoals,
-  lastEvent,
-  penalties,
-  hhfSide,
-  isLive,
-}: {
-  recentGoals: Record<CourtSide, CourtEvent[]>
-  lastEvent: CourtEvent | null
-  penalties: CourtPenalty[]
-  hhfSide: CourtSide | null
-  isLive: boolean
-}) {
-  const clipId = `court-bounds-${useId().replace(/:/g, "")}`
-  // Home attacks the right goal, away the left one. A team's latest scorers sit in
-  // the goal area they scored in, so nothing on the court pretends to be a position.
-  const line = "#94a3b8"
-  const bubbleColor = (side: CourtSide) => (side === hhfSide ? "#059669" : "#475569")
-  const renderGoalStack = (side: CourtSide) =>
-    recentGoals[side].slice(0, GOAL_SLOTS_Y.length).map((event, index) => {
-      const cx = side === "home" ? W - GOAL_SLOT_X : GOAL_SLOT_X
-      const cy = GOAL_SLOTS_Y[index]
-      const newest = index === 0
-      const r = newest ? 1.25 : 1
-      return (
-        <g key={`${side}-${event.time}-${index}`} opacity={1 - index * 0.15}>
-          {newest && isLive && lastEvent === event && (
-            <circle cx={cx} cy={cy} r={r} fill="none" stroke="#f59e0b" strokeWidth={0.25} className="court-pulse" />
-          )}
-          <circle cx={cx} cy={cy} r={r} fill={bubbleColor(side)} />
-          <text x={cx} y={cy} dy="0.36em" textAnchor="middle" fontSize={newest ? 1.2 : 1} fontWeight={800} fill="#fff">
-            {event.playerNumber || "•"}
-          </text>
-        </g>
-      )
-    })
-
-  // Suspended players wait at their bench: home bench on the left half, away on the right.
-  const benchChips = (side: CourtSide) =>
-    penalties
-      .filter((p) => p.side === side)
-      .slice(0, 3)
-      .map((p, index) => {
-        // Three chips per half at most, kept clear of the centre line.
-        const x = side === "home" ? 1 + index * 6 : W - 6.4 - index * 6
-        return (
-          <g key={`pen-${side}-${index}`}>
-            <rect x={x} y={H - 2.3} width={5.4} height={1.6} rx={0.8} fill="#ffe4e6" />
-            <text x={x + 2.7} y={H - 1.5} dy="0.35em" textAnchor="middle" fontSize={0.85} fontWeight={800} fill="#be123c">
-              {p.playerNumber ? `#${p.playerNumber} ` : ""}
-              {formatClock(p.remaining)}
-            </text>
-          </g>
-        )
-      })
-
-  return (
-    <svg viewBox={`-1.4 -0.4 ${W + 2.8} ${H + 0.8}`} className="block h-auto w-full" role="img" aria-label="Handbollsplan med senaste målskyttarna">
-      <defs>
-        <clipPath id={clipId}>
-          <rect x={0} y={0} width={W} height={H} />
-        </clipPath>
-      </defs>
-      <rect x={0} y={0} width={W} height={H} fill="#f8fafc" stroke={line} strokeWidth={0.12} />
-      {/* 6 m goal areas */}
-      <path d={`${arcPath(6, false)} Z`} fill="#ecfdf5" stroke={line} strokeWidth={0.12} />
-      <path d={`${arcPath(6, true)} Z`} fill="#ecfdf5" stroke={line} strokeWidth={0.12} />
-      {/* 9 m free-throw lines */}
-      <g clipPath={`url(#${clipId})`}>
-        <path d={arcPath(9, false)} fill="none" stroke={line} strokeWidth={0.1} strokeDasharray="0.45 0.45" />
-        <path d={arcPath(9, true)} fill="none" stroke={line} strokeWidth={0.1} strokeDasharray="0.45 0.45" />
-      </g>
-      {/* 7 m lines and 4 m goalkeeper marks */}
-      <line x1={7} x2={7} y1={9.5} y2={10.5} stroke={line} strokeWidth={0.12} />
-      <line x1={W - 7} x2={W - 7} y1={9.5} y2={10.5} stroke={line} strokeWidth={0.12} />
-      <line x1={4} x2={4} y1={9.92} y2={10.08} stroke={line} strokeWidth={0.2} />
-      <line x1={W - 4} x2={W - 4} y1={9.92} y2={10.08} stroke={line} strokeWidth={0.2} />
-      {/* centre line and substitution lines (4.5 m from centre) */}
-      <line x1={W / 2} x2={W / 2} y1={0} y2={H} stroke={line} strokeWidth={0.12} />
-      <line x1={W / 2 - 4.5} x2={W / 2 - 4.5} y1={H - 0.3} y2={H + 0.3} stroke={line} strokeWidth={0.12} />
-      <line x1={W / 2 + 4.5} x2={W / 2 + 4.5} y1={H - 0.3} y2={H + 0.3} stroke={line} strokeWidth={0.12} />
-      {/* goals, 3 m wide */}
-      <rect x={-1} y={GOAL_TOP} width={1} height={3} fill="#e2e8f0" stroke="#64748b" strokeWidth={0.12} />
-      <rect x={W} y={GOAL_TOP} width={1} height={3} fill="#e2e8f0" stroke="#64748b" strokeWidth={0.12} />
-      {renderGoalStack("home")}
-      {renderGoalStack("away")}
-      {benchChips("home")}
-      {benchChips("away")}
-    </svg>
-  )
-}
-
 function MomentumLine({
   events,
   hhfSide,
@@ -471,16 +379,7 @@ function MatchCourtComponent({
 
   return (
     <div className="px-4 py-5 sm:px-6">
-      <style>{`@keyframes court-pulse{0%{transform:scale(1);opacity:1}100%{transform:scale(2.1);opacity:0}}.court-pulse{transform-box:fill-box;transform-origin:center;animation:court-pulse 1.6s ease-out infinite}@media (prefers-reduced-motion:reduce){.court-pulse{animation:none}}`}</style>
-
-      <div className="mb-1.5 flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-widest">
-        <span className={`min-w-0 truncate ${hhfSide === "away" ? "text-emerald-700" : "text-slate-400"}`}>← {awayTeam}</span>
-        <span className={`min-w-0 truncate text-right ${hhfSide === "home" ? "text-emerald-700" : "text-slate-400"}`}>{homeTeam} →</span>
-      </div>
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5">
-        <CourtSvg recentGoals={recentGoals} lastEvent={lastEvent} penalties={penalties} hhfSide={hhfSide} isLive={isLive} />
-      </div>
-      <p className="mt-2 flex items-center gap-2 text-sm text-slate-700" aria-live={isLive ? "polite" : "off"}>
+      <p className="flex items-center gap-2 text-sm text-slate-700" aria-live={isLive ? "polite" : "off"}>
         {lastEventText ? (
           <>
             {isLive && <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-amber-400" />}
@@ -492,9 +391,6 @@ function MatchCourtComponent({
         ) : (
           <span className="text-slate-400">Inga mål än.</span>
         )}
-      </p>
-      <p className="mt-1 text-[11px] leading-snug text-slate-400">
-        Pilen visar anfallsriktning. Numren i målgården är de senaste målskyttarna. Spelarpositioner från video kommer.
       </p>
 
       <MomentumLine events={chronological} hhfSide={hhfSide} periodSeconds={periodSeconds} />

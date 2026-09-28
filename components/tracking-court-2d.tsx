@@ -349,7 +349,10 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
       setFollow(true)
       setPlaying(true)
     } else {
-      timeRef.current = framesRef.current[0]?.t ?? 0
+      // a finished match starts at kick-off (the clock's first run), not in the warm-up
+      const first = framesRef.current[0]?.t ?? 0
+      const kickoff = info.meta.clock?.find((a) => a[2])?.[0]
+      timeRef.current = kickoff != null && kickoff > first ? kickoff : first
       setDisplayTime(timeRef.current)
     }
   }, [info, frameCount, framesRef])
@@ -421,8 +424,11 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
     [info?.events],
   )
 
-  const resolveAt = useCallback(
-    (time: number) => {
+  // who is where at a moment; computed once per moment (the plan, the video boxes and
+  // the counters all ask for the same instant within one animation frame)
+  const resolveAt = useMemo(() => {
+    let last: { time: number; count: number; value: ReturnType<typeof resolve> } | null = null
+    function resolve(time: number) {
       const list = framesRef.current
       const i = frameIndexAt(list, time)
       if (i < 0)
@@ -439,6 +445,21 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
       const k = b && span > 0 && span < 1.5 ? Math.min(1, Math.max(0, (time - a.t) / span)) : 0
       const nextPos = new Map<number, [number, number]>()
       if (b) for (const [tid, x, y] of b.p) nextPos.set(tid, [x, y])
+      // smooth motion: each position is the weighted mean of the frames within ±0.45 s,
+      // which removes the camera's frame-to-frame jitter without adding delay
+      const smooth = new Map<number, [number, number, number]>()
+      for (let j = Math.max(0, i - 5); j <= Math.min(list.length - 1, i + 6); j++) {
+        const dt = Math.abs(list[j].t - time)
+        if (dt > 0.45) continue
+        const w = 0.5 - dt
+        for (const row of list[j].p) {
+          const acc = smooth.get(row[0]) ?? [0, 0, 0]
+          acc[0] += row[1] * w
+          acc[1] += row[2] * w
+          acc[2] += w
+          smooth.set(row[0], acc)
+        }
+      }
       const players: Resolved[] = []
       const bench: Resolved[] = []
       const seen = new Set<string>()
@@ -462,8 +483,9 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
       }
       for (const [tid, x, y] of pts) {
         const n = nextPos.get(tid)
-        const px = n ? x + (n[0] - x) * k : x
-        const py = n ? y + (n[1] - y) * k : y
+        const sm = smooth.get(tid)
+        const px = sm && sm[2] > 0.3 ? sm[0] / sm[2] : n ? x + (n[0] - x) * k : x
+        const py = sm && sm[2] > 0.3 ? sm[1] / sm[2] : n ? y + (n[1] - y) * k : y
         let ident = identOf(tid, time)
         // not named yet (newest seconds at the live edge): the shirt already tells the team
         const kit = kitOf.has(tid) ? info?.meta.kits?.[kitOf.get(tid) as number] : undefined
@@ -524,9 +546,15 @@ function TrackingCourt2DInner({ id, compact = false }: { id: string; compact?: b
         }
       }
       return { players, bench, ball, frame: a, susp }
-    },
-    [framesRef, identOf, effectiveTid, goals, info?.tracks.alias],
-  )
+    }
+    return (time: number) => {
+      const count = framesRef.current.length
+      if (last && last.time === time && last.count === count) return last.value
+      const value = resolve(time)
+      last = { time, count, value }
+      return value
+    }
+  }, [framesRef, identOf, effectiveTid, goals, info?.tracks.alias, info?.events, info?.meta])
 
   // ---- drawing ----
   const draw = useCallback(

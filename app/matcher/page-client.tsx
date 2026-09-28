@@ -6,6 +6,7 @@ import Link from "next/link"
 import { getSimplifiedMatchStatus } from "@/lib/match-card-utils"
 import { getMatchEndTime, useMatchData, forceMatchDataPoll, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchCard } from "@/components/matcher/match-card"
+import { SelectMenu } from "@/components/ui/select-menu"
 import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
 import { normalizeMatchKey } from "@/lib/matches"
 import { extendTeamDisplayName, createTeamMatchKeySet, seasonalTeamLabel, teamClassKey } from "@/lib/team-display"
@@ -774,20 +775,14 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
               </div>
 
               <div className="flex min-w-0 flex-1 items-center gap-2 md:justify-end">
-                <select
+                <SelectMenu
                   id="team-filter"
-                  aria-label="Filtrera lag"
-                  className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 transition focus:border-emerald-400 focus:outline-none md:max-w-[15rem]"
+                  ariaLabel="Filtrera lag"
                   value={selectedTeam}
-                  onChange={(e) => setSelectedTeam(e.target.value)}
-                >
-                  <option value="all">Alla lag</option>
-                  {teamOptions.map((team) => (
-                    <option key={team.value} value={team.value}>
-                      {team.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setSelectedTeam}
+                  className="flex-1 md:w-60 md:flex-none"
+                  options={[{ value: "all", label: "Alla lag" }, ...teamOptions.map((team) => ({ value: team.value, label: team.label }))]}
+                />
                 <Link
                   href="/tabeller"
                   className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50/80 px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"

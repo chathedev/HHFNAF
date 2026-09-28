@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
+import { SelectMenu } from "@/components/ui/select-menu"
 import Link from "next/link"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "") || "https://api.harnosandshf.se"
@@ -203,21 +204,16 @@ export function TabellerClient({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2">
             {seasons.length > 1 && (
-              <label className="mr-1 flex items-center gap-2">
+              <div className="mr-1 flex items-center gap-2">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Säsong</span>
-                <select
+                <SelectMenu
+                  ariaLabel="Välj säsong"
+                  size="sm"
                   value={selectedSeason ?? currentSeason ?? ""}
-                  onChange={(event) => setSelectedSeason(event.target.value)}
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 focus:border-emerald-400 focus:outline-none"
-                >
-                  {seasons.map((season) => (
-                    <option key={season} value={season}>
-                      {season}
-                      {season === currentSeason ? " (pågående)" : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  onChange={setSelectedSeason}
+                  options={seasons.map((season) => ({ value: season, label: season, hint: season === currentSeason ? "pågående" : undefined }))}
+                />
+              </div>
             )}
             {CATEGORY_FILTERS.map((f) => (
               <button
