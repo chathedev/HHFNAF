@@ -1,7 +1,7 @@
 // Venue ID to name mapping
 export const VENUE_MAPPINGS: Record<string, string> = {
   "32": "Öbacka SC",
-  "33": "Öbackahallen",
+  "33": "Öbacka SC",
   "34": "Sundsvalls Sporthall",
   "35": "Timrå Sporthall", 
   "36": "Kramfors Sporthall",

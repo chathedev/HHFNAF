@@ -1557,7 +1557,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                       Var spelas matcherna?
                     </AccordionTrigger>
                     <AccordionContent className="text-gray-600 text-sm leading-relaxed">
-                      Våra hemmamatcher spelas huvudsakligen i Landgrenshallen i Härnösand. Se aktuellt matchschema på{" "}
+                      Våra hemmamatcher spelas i Öbacka SC i Härnösand. Se aktuellt matchschema på{" "}
                       <Link href="/matcher" className="text-orange-500 hover:underline">matchsidan</Link> för tider och platser.
                     </AccordionContent>
                   </AccordionItem>

@@ -26,7 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
       "Härnösands HF", "Härnösands Handbollsförening", "HHF", "Härnösands",
       "Härnösand handboll", "handboll Härnösand", "handbollsklubb Härnösand",
       "sport Härnösand", "idrottsförening Härnösand", "Västernorrland handboll",
-      "Ångermanland handboll", "Norrland handboll", "Öbackahallen",
+      "Ångermanland handboll", "Norrland handboll", "Öbacka SC",
       "A-lag handboll", "herrhandboll", "damhandboll", "ungdomshandboll",
       "juniorhandboll", "handbollsmatcher", "handbollsturnering",
       "handbollscup", "matcher Härnösand", "handbollsresultat",
@@ -135,7 +135,7 @@ export default async function RootLayout({
           geo: { "@type": "GeoCoordinates", latitude: 62.6327, longitude: 17.9378 },
           sameAs: ["https://www.facebook.com/harnosandshf", "https://www.instagram.com/harnosandshf"],
           memberOf: { "@type": "Organization", name: "Svenska Handbollsförbundet", url: "https://www.handboll.se" },
-          location: { "@type": "Place", name: "Öbackahallen" },
+          location: { "@type": "Place", name: "Öbacka SC" },
           contactPoint: { "@type": "ContactPoint", email: "kontakt@harnosandshf.se", contactType: "customer service" },
         }) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
