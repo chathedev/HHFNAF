@@ -19,7 +19,6 @@ import {
   Facebook,
   Instagram,
   ShoppingBag,
-  Ticket,
   Zap,
   Calendar,
 } from "lucide-react"
@@ -30,7 +29,6 @@ import { defaultContent } from "@/lib/default-content"
 import type { FullContent, Partner } from "@/lib/content-types"
 import { deriveSiteVariant, type SiteVariant, getThemeVariant, getHeroImages, type ThemeVariant } from "@/lib/site-variant"
 import { extendTeamDisplayName } from "@/lib/team-display"
-import { canShowTicketForMatch, getTicketUrl } from "@/lib/matches"
 import { resolvePreferredTimeline } from "@/lib/match-timeline"
 import {
   buildMatchScheduleLabel,
@@ -116,7 +114,6 @@ const resolveMatchEndedAt = (match: NormalizedMatch): number | null => {
   return start + ASSUMED_MATCH_DURATION_MS
 }
 
-const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 const API_BASE_URL =
   (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
   "https://api.harnosandshf.se"
@@ -1093,9 +1090,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                     <Calendar className="h-4 w-4 text-slate-400 shrink-0" />
                     <span className="text-sm font-medium text-slate-700">Matcher</span>
                   </Link>
-                  <Link href={TICKET_URL} target="_blank" rel="noopener noreferrer" aria-label="Biljetter" className="group flex items-center gap-3 bg-white p-4 transition hover:bg-slate-50">
-                    <Ticket className="h-4 w-4 text-slate-400 shrink-0" />
-                    <span className="text-sm font-medium text-slate-700">Biljetter</span>
+                  <Link href="/tabeller" aria-label="Tabeller" className="group flex items-center gap-3 bg-white p-4 transition hover:bg-slate-50">
+                    <Trophy className="h-4 w-4 text-slate-400 shrink-0" />
+                    <span className="text-sm font-medium text-slate-700">Tabeller</span>
                   </Link>
                   <Link href="/lag" aria-label="Lag" className="group flex items-center gap-3 bg-white p-4 transition hover:bg-slate-50">
                     <Users className="h-4 w-4 text-slate-400 shrink-0" />
@@ -1122,84 +1119,10 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                   </p>
                 ) : homeMatchFlow.items.length > 0 ? (
                   <div className="space-y-6">
-                    {/* Promoted A-lag ticket matches - LIVE first, upcoming shown after live section */}
-                    {(() => {
-                      const ticketMatches = homeMatchFlow.items.filter(
-                        (m) => getMatchStatus(m) === "live" && canShowTicketForMatch(m)
-                      )
-                      if (ticketMatches.length === 0) return null
-                      return (
-                        <div className="space-y-3">
-                          {ticketMatches.map((match) => {
-                            const status = getMatchStatus(match)
-                            const canOpen = canOpenMatchTimeline(match)
-                            const scheduleLabel = buildMatchScheduleLabel(match)
-                            const matchupLabel = getMatchupLabel(match)
-                            const teamTypeRaw = match.teamType?.trim() || ""
-                            const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
-                            const liveScore = typeof match.result === "string" ? match.result.trim() : ""
-                            const stableScore = liveScore || stableScoreByMatchId[match.id] || ""
-                            const hasStarted = match.date.getTime() <= Date.now() + 60_000
-                            const scoreValue = stableScore && (status !== "upcoming" || hasStarted) ? stableScore : null
-                            const isLive = status === "live"
-
-                            return (
-                              <article
-                                key={`promoted-${match.id}`}
-                                className={`group relative border border-slate-900 bg-slate-950 p-5 sm:p-6 text-white transition ${
-                                  canOpen ? "cursor-pointer hover:bg-slate-900" : ""
-                                }`}
-                                onMouseEnter={() => { if (canOpen) fetchMatchTimeline(match).catch(() => undefined) }}
-                                onClick={(event) => {
-                                  if (!canOpen) return
-                                  if ((event.target as HTMLElement).closest("a,button")) return
-                                  openMatchModal(match)
-                                }}
-                              >
-                                <div className="flex items-start justify-between gap-4">
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                                      {isLive ? (
-                                        <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest bg-white text-slate-900">
-                                          LIVE
-                                        </span>
-                                      ) : (
-                                        <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white/60">
-                                          {match.statusLabel ?? "KOMMANDE"}
-                                        </span>
-                                      )}
-                                      <span className="text-[11px] font-medium text-white/40">{teamTypeLabel}</span>
-                                    </div>
-                                    <h3 className="text-base sm:text-lg font-bold leading-snug break-words">{matchupLabel}</h3>
-                                    {scheduleLabel && <p className="mt-1 text-xs text-white/40 break-words">{scheduleLabel}</p>}
-                                  </div>
-                                  <div className="flex flex-col items-end gap-3 shrink-0">
-                                    {scoreValue && (
-                                      <AnimatedScore value={scoreValue} className="text-3xl font-black tabular-nums text-white" />
-                                    )}
-                                    <Link
-                                      href={getTicketUrl(match)}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="inline-flex items-center gap-1.5 border border-white/20 px-4 py-2 text-xs font-semibold text-white transition hover:bg-white hover:text-slate-900"
-                                    >
-                                      <Ticket className="h-3.5 w-3.5" />
-                                      Köp biljett
-                                    </Link>
-                                  </div>
-                                </div>
-                              </article>
-                            )
-                          })}
-                        </div>
-                      )
-                    })()}
-
-                    {/* LIVE matches (non-promoted) */}
+                    {/* LIVE matches */}
                     {(() => {
                       const liveMatches = homeMatchFlow.items.filter(
-                        (m) => getMatchStatus(m) === "live" && !canShowTicketForMatch(m)
+                        (m) => getMatchStatus(m) === "live"
                       )
                       if (liveMatches.length === 0) return null
                       return (
@@ -1238,77 +1161,10 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                       )
                     })()}
 
-                    {/* Promoted A-lag ticket matches - UPCOMING (shown after live so live always appears first) */}
-                    {(() => {
-                      const ticketMatches = homeMatchFlow.items.filter(
-                        (m) => getMatchStatus(m) === "upcoming" && canShowTicketForMatch(m)
-                      )
-                      if (ticketMatches.length === 0) return null
-                      return (
-                        <div className="space-y-3">
-                          {ticketMatches.map((match) => {
-                            const status = getMatchStatus(match)
-                            const canOpen = canOpenMatchTimeline(match)
-                            const scheduleLabel = buildMatchScheduleLabel(match)
-                            const matchupLabel = getMatchupLabel(match)
-                            const teamTypeRaw = match.teamType?.trim() || ""
-                            const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
-                            const liveScore = typeof match.result === "string" ? match.result.trim() : ""
-                            const stableScore = liveScore || stableScoreByMatchId[match.id] || ""
-                            const hasStarted = match.date.getTime() <= Date.now() + 60_000
-                            const scoreValue = stableScore && (status !== "upcoming" || hasStarted) ? stableScore : null
-
-                            return (
-                              <article
-                                key={`promoted-upcoming-${match.id}`}
-                                className={`group relative border border-slate-900 bg-slate-950 p-5 sm:p-6 text-white transition ${
-                                  canOpen ? "cursor-pointer hover:bg-slate-900" : ""
-                                }`}
-                                onMouseEnter={() => { if (canOpen) fetchMatchTimeline(match).catch(() => undefined) }}
-                                onClick={(event) => {
-                                  if (!canOpen) return
-                                  if ((event.target as HTMLElement).closest("a,button")) return
-                                  openMatchModal(match)
-                                }}
-                              >
-                                <div className="flex items-start justify-between gap-4">
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                                      <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white/60">
-                                        {match.statusLabel ?? "KOMMANDE"}
-                                      </span>
-                                      <span className="text-[11px] font-medium text-white/40">{teamTypeLabel}</span>
-                                    </div>
-                                    <h3 className="text-base sm:text-lg font-bold leading-snug break-words">{matchupLabel}</h3>
-                                    {scheduleLabel && <p className="mt-1 text-xs text-white/40 break-words">{scheduleLabel}</p>}
-                                  </div>
-                                  <div className="flex flex-col items-end gap-3 shrink-0">
-                                    {scoreValue && (
-                                      <AnimatedScore value={scoreValue} className="text-3xl font-black tabular-nums text-white" />
-                                    )}
-                                    <Link
-                                      href={getTicketUrl(match)}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="inline-flex items-center gap-1.5 border border-white/20 px-4 py-2 text-xs font-semibold text-white transition hover:bg-white hover:text-slate-900"
-                                    >
-                                      <Ticket className="h-3.5 w-3.5" />
-                                      Köp biljett
-                                    </Link>
-                                  </div>
-                                </div>
-                              </article>
-                            )
-                          })}
-                        </div>
-                      )
-                    })()}
-
-                    {/* UPCOMING matches (non-promoted) */}
+                    {/* UPCOMING matches */}
                     {(() => {
                       const upcomingMatches = homeMatchFlow.items.filter(
-                        (m) => getMatchStatus(m) === "upcoming" && !canShowTicketForMatch(m)
+                        (m) => getMatchStatus(m) === "upcoming"
                       )
                       if (upcomingMatches.length === 0) return null
                       return (
@@ -1707,12 +1563,12 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                   </AccordionItem>
                   <AccordionItem value="item-4">
                     <AccordionTrigger className="text-base font-semibold text-gray-800 hover:no-underline">
-                      Hur köper jag biljetter?
+                      Kan jag följa matcherna live?
                     </AccordionTrigger>
                     <AccordionContent className="text-gray-600 text-sm leading-relaxed">
-                      Biljetter köps via Clubmate. Gå till{" "}
-                      <Link href="/kop-biljett" className="text-orange-500 hover:underline">biljettsidan</Link> för att
-                      komma direkt till biljettköpet. Du kan även köpa biljetter vid ingången på matchdagen.
+                      Ja. På{" "}
+                      <Link href="/matcher" className="text-orange-500 hover:underline">matchsidan</Link> uppdateras
+                      ställning och händelser i realtid, och när en match sänds finns en länk direkt till sändningen.
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>

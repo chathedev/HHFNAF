@@ -56,14 +56,6 @@ export default function Footer() {
             <p className="text-[11px] font-bold uppercase tracking-wider text-white/40">Navigation</p>
             <ul className="mt-3 space-y-2">
               <li>
-                <a
-                  href="https://clubs.clubmate.se/harnosandshf/overview/"
-                  className="text-sm text-white/70 transition hover:text-white"
-                >
-                  Köp biljett
-                </a>
-              </li>
-              <li>
                 {shopVisible ? (
                   <a
                     href={SHOP_URL}

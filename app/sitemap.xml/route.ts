@@ -7,7 +7,6 @@ export async function GET() {
     { url: "/", priority: "1.0", changefreq: "daily" },
     { url: "/lag", priority: "0.8", changefreq: "weekly" },
     { url: "/matcher", priority: "0.8", changefreq: "daily" },
-    { url: "/kop-biljett", priority: "0.8", changefreq: "daily" },
     { url: "/kontakt", priority: "0.7", changefreq: "monthly" },
     { url: "/links", priority: "0.6", changefreq: "monthly" },
   ]

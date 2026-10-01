@@ -9,7 +9,7 @@ import lagContent from "@/public/content/lag.json"
 import { Header } from "@/components/header"
 import Footer from "@/components/footer"
 import { Card } from "@/components/ui/card"
-import { canShowTicketForMatch, getTicketUrl, normalizeMatchKey } from "@/lib/matches"
+import { normalizeMatchKey } from "@/lib/matches"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 import {
@@ -24,7 +24,6 @@ import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@
 import { canOpenMatchTimeline, getMatchProviderBadge, getProviderHelperText, getMatchWatchLabel } from "@/lib/match-card-utils"
 
 const PLACEHOLDER_HERO = "/placeholder.jpg"
-const TICKET_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
 
 const encodeAssetPath = (path: string) => {
   if (!path) {
@@ -61,9 +60,6 @@ const extractOpponentName = (opponent: string) => opponent.replace(/\s*\((hemma|
 
 const buildScheduleLine = (match: NormalizedMatch) =>
   [match.displayDate, match.time, match.venue].filter((item): item is string => Boolean(item)).join(" • ")
-
-const shouldShowTicketButton = (match: NormalizedMatch, status: NormalizedMatch["matchStatus"]) =>
-  status !== "finished" && canShowTicketForMatch(match)
 
 const contentTeamEntries = lagContent.teamCategories.flatMap((category) => {
   const rawTeams = Array.isArray(category.teams) ? category.teams : []
@@ -329,7 +325,6 @@ export default function TeamPage({ params }: TeamPageProps) {
                 const canOpenTimeline = canOpenMatchTimeline(match)
                 const providerBadge = getMatchProviderBadge(match)
                 const providerHelperText = getProviderHelperText(match)
-                const showTicket = shouldShowTicketButton(match, status) && !matchShouldBeFinished
                 const matchTeamLabel = extendTeamDisplayName(match.teamType)
 
                 // Don't show LIVE badge if match should be finished
@@ -444,20 +439,6 @@ export default function TeamPage({ params }: TeamPageProps) {
                         )}
                       </div>
 
-                      {showTicket && (
-                        <a
-                          href={getTicketUrl(match)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(event) => event.stopPropagation()}
-                          className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600"
-                        >
-                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                          </svg>
-                          Köp biljett
-                        </a>
-                      )}
                     </div>
                   </Card>
                 )

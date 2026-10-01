@@ -19,23 +19,6 @@ export type UpcomingMatch = {
   fullDateText?: string
 }
 
-export const MATCH_TYPES_WITH_TICKETS = ["a-lag", "dam/utv"]
-export const TICKET_VENUES = ["öbacka sc", "änget sportcenter"]
-
-/** Matches excluded from ticket CTA (no ticketing available on Clubmate) */
-const TICKET_EXCLUDED_MATCHES: Array<{ opponent: string; date: string }> = [
-  { opponent: "gimonäs", date: "2026-04-19" },
-]
-
-const isTicketExcludedMatch = (match: { opponent?: string | null; date?: Date | null }) => {
-  if (!match.opponent || !match.date) return false
-  const normalizedOpponent = normalizeMatchKey(match.opponent)
-  const dateStr = `${match.date.getFullYear()}-${String(match.date.getMonth() + 1).padStart(2, "0")}-${String(match.date.getDate()).padStart(2, "0")}`
-  return TICKET_EXCLUDED_MATCHES.some(
-    (ex) => normalizedOpponent.includes(normalizeMatchKey(ex.opponent)) && dateStr === ex.date,
-  )
-}
-
 const HARNOSAND_CLUB_NAME = "härnösands hf"
 
 export const normalizeMatchKey = (value?: string | null) =>
@@ -45,79 +28,6 @@ export const normalizeMatchKey = (value?: string | null) =>
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "")
     .trim()
-
-export const isTicketEligibleTeamType = (teamType?: string | null) => {
-  const normalized = normalizeMatchKey(teamType)
-  if (!normalized) {
-    return false
-  }
-  const isALag = normalized.includes("alag")
-  const hasHerr = normalized.includes("herr")
-  const hasDam = normalized.includes("dam")
-  const hasUtv = normalized.includes("utv")
-
-  const isALagSenior = isALag && (hasHerr || hasDam)
-  const isDamUtv = hasDam && hasUtv
-
-  return isALagSenior || isDamUtv
-}
-
-export const isTicketEligibleVenue = (venue?: string | null) => {
-  const normalizedVenue = normalizeMatchKey(venue)
-  if (!normalizedVenue) {
-    return false
-  }
-  return TICKET_VENUES.some((candidate) => normalizedVenue.includes(normalizeMatchKey(candidate)))
-}
-
-/**
- * USM (Ungdoms-SM) and other cup play is run by the federation, not by the club,
- * so there is never a Clubmate ticket for it even when it is played at Öbacka SC
- * by a team whose name would otherwise look ticket-eligible.
- */
-export const isCupPlayMatch = (match: { series?: string | null; teamType?: string | null }) => {
-  const haystack = `${match.series ?? ""} ${match.teamType ?? ""}`
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-  return /\busm\b/.test(haystack)
-}
-
-export const CLUBMATE_OVERVIEW_URL = "https://clubs.clubmate.se/harnosandshf/overview/"
-
-/**
- * Where "Köp biljett" should send the visitor: the match's own ClubMate event when the
- * API matched one, otherwise the club's ClubMate overview.
- */
-export const getTicketUrl = (match?: { ticketUrl?: string | null } | null) =>
-  match?.ticketUrl || CLUBMATE_OVERVIEW_URL
-
-export const canShowTicketForMatch = (match: {
-  teamType?: string | null
-  isHome?: boolean | null
-  venue?: string | null
-  opponent?: string | null
-  series?: string | null
-  date?: Date | null
-  ticketUrl?: string | null
-}) => {
-  // The API checks every match against the events actually on sale in ClubMate (synced
-  // every 30 minutes) and sends the event link, or null when the match is not on sale.
-  // That is authoritative. The heuristic below only covers payloads without that field.
-  if (match.ticketUrl !== undefined) {
-    return Boolean(match.ticketUrl)
-  }
-  if (match.isHome === false) {
-    return false
-  }
-  if (isCupPlayMatch(match)) {
-    return false
-  }
-  if (isTicketExcludedMatch(match)) {
-    return false
-  }
-  return isTicketEligibleTeamType(match.teamType) && isTicketEligibleVenue(match.venue)
-}
 
 const formatDateForDisplay = (date: Date) => {
   const formatted = new Intl.DateTimeFormat("sv-SE", {

@@ -58,7 +58,6 @@ function Header() {
     { name: "Lag", href: "/lag" },
     { name: "Matcher", href: "/matcher" },
     { name: "Tabeller", href: "/tabeller" },
-    { name: "Köp biljett", href: "https://clubs.clubmate.se/harnosandshf/overview/" },
     { name: "Kontakt", href: "/kontakt" },
   ]
 

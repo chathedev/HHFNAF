@@ -72,6 +72,13 @@ const nextConfig = {
       },
     ],
   },
+  // Ticket sales via ClubMate ended 2026-10-01; old links and search results land on the match page.
+  async redirects() {
+    return [
+      { source: '/kop-biljett', destination: '/matcher', permanent: true },
+      { source: '/kop-biljett/:path*', destination: '/matcher', permanent: true },
+    ];
+  },
   webpack: (config, { isServer }) => {
     // Add a rule to handle .mjs files
     config.module.rules.push({

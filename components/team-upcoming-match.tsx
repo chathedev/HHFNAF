@@ -5,7 +5,6 @@ import Link from "next/link"
 import { extendTeamDisplayName } from "@/lib/team-display"
 
 import { Card } from "@/components/ui/card"
-import { canShowTicketForMatch } from "@/lib/matches"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
 import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
@@ -85,10 +84,9 @@ const getDisplayScore = (rawResult?: string, isHome?: boolean): string | null =>
 
 type TeamUpcomingMatchProps = {
   teamLabels: string | string[]
-  ticketUrl?: string
 }
 
-export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchProps) {
+export function TeamUpcomingMatch({ teamLabels }: TeamUpcomingMatchProps) {
   const [selectedMatch, setSelectedMatch] = useState<NormalizedMatch | null>(null)
   
   // ALL HOOKS MUST BE AT THE TOP - before any conditional returns
@@ -267,7 +265,6 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   const homeAwayLabel = nextMatch.isHome === false ? 'borta' : 'hemma'
   const isHome = nextMatch.isHome !== false
   
-  const isTicketEligibleBase = Boolean(ticketUrl) && canShowTicketForMatch(nextMatch)
   const outcomeInfo = getMatchOutcome(nextMatch.result, nextMatch.isHome, status)
   const displayScore = getDisplayScore(nextMatch.result, nextMatch.isHome)
   
@@ -286,8 +283,6 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
   const providerBadge = getMatchProviderBadge(nextMatch)
   const providerHelperText = getProviderHelperText(nextMatch)
   
-  const isFutureOrLive = nextMatch.date.getTime() >= Date.now() || status === "live"
-  const showTicket = isTicketEligibleBase && !outcomeInfo && isFutureOrLive
 
   // Only allow clicking timeline for live or finished matches
   const canOpenTimeline = nextMatch ? canOpenMatchTimeline(nextMatch) : false
@@ -449,19 +444,6 @@ export function TeamUpcomingMatch({ teamLabels, ticketUrl }: TeamUpcomingMatchPr
           )}
         </div>
 
-        {showTicket && ticketUrl && (
-          <Link
-            href={ticketUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-            </svg>
-            Köp biljett
-          </Link>
-        )}
       </div>
     </div>
     

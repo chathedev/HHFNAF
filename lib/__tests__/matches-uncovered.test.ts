@@ -3,8 +3,8 @@
 // Gap: lib/matches.ts exports parseMatchesFromHtml, getMatchTeams,
 // formatCountdownLabel, enrichMatchWithDetails, refreshMatchResult, and
 // fetchUpcomingMatches — NONE of these have any test coverage today.
-// lib/__tests__/matches.test.ts only covers normalizeMatchKey / ticket
-// eligibility helpers. See lib/matches.ts:104 (parseMatchesFromHtml),
+// lib/__tests__/matches.test.ts only covers normalizeMatchKey.
+// See lib/matches.ts:104 (parseMatchesFromHtml),
 // :261 (getMatchTeams), :277 (formatCountdownLabel), :314 (enrichMatchWithDetails),
 // :362 (refreshMatchResult), :396 (fetchUpcomingMatches).
 
