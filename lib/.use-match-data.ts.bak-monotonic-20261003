@@ -604,12 +604,6 @@ const shouldShowFinishedMatchForTeam = (match: { date: Date; matchFeed?: MatchFe
   return true
 }
 
-// A match that has been seen finished must not flip back to live because one response was
-// served from a stale snapshot (e.g. during an API failover). Regressions inside this
-// window are ignored; after it, the backend is trusted again (a genuine correction).
-const FINISHED_REGRESSION_GUARD_MS = 3 * 60 * 1000
-const finishedSeenAt = new Map<string, { at: number; result?: string }>()
-
 const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
   const teamType = match.teamType?.trim()
   const opponent = match.opponent?.trim()
@@ -729,23 +723,6 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     // If backend provided status and no timeline override needed, keep backend status
   }
 
-  let guardedResult = match.result ?? undefined
-  let statusRegressionBlocked = false
-  if (id) {
-    const seen = finishedSeenAt.get(id)
-    if (derivedStatus === "finished") {
-      finishedSeenAt.set(id, { at: seen?.at ?? Date.now(), result: match.result ?? seen?.result })
-    } else if (
-      seen &&
-      (derivedStatus === "live" || derivedStatus === "halftime") &&
-      Date.now() - seen.at < FINISHED_REGRESSION_GUARD_MS
-    ) {
-      derivedStatus = "finished"
-      statusRegressionBlocked = true
-      guardedResult = seen.result ?? guardedResult
-    }
-  }
-
   return {
     id,
     homeTeam: match.home,
@@ -759,7 +736,7 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     venue: mapVenueIdToName(match.venue ?? match.arena),
     series: match.series ?? undefined,
     infoUrl: match.infoUrl ?? undefined,
-    result: guardedResult,
+    result: match.result ?? undefined,
     isHome: derivedIsHome,
     playUrl: match.playUrl && match.playUrl !== "null" ? match.playUrl : undefined,
     matchStatus: derivedStatus,
@@ -778,9 +755,7 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     timelineUnavailableReason: match.timelineUnavailableReason ?? null,
     hasStream: match.hasStream ?? match.dataAvailability?.stream ?? Boolean(match.playUrl),
     streamProvider: match.streamProvider ?? match.dataAvailability?.streamProvider ?? null,
-    statusLabel: statusRegressionBlocked
-      ? buildStatusLabel(derivedStatus)
-      : match.statusLabel ?? match.display?.statusLabel ?? buildStatusLabel(derivedStatus),
+    statusLabel: match.statusLabel ?? match.display?.statusLabel ?? buildStatusLabel(derivedStatus),
     resultState: match.resultState ?? match.dataAvailability?.resultState,
     display: match.display,
     presentation: match.presentation,
