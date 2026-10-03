@@ -100,157 +100,6 @@ const API_BASE_URL =
   (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
   "https://api.harnosandshf.se"
 
-// Last detail payload per match: reopening a match (or opening one that was prefetched
-// from its card) renders instantly from here while a fresh fetch runs in the background.
-const DETAIL_CACHE_MAX = 40
-const matchDetailCache = new Map<string, { payload: any; at: number }>()
-const matchDetailInflight = new Map<string, Promise<any | null>>()
-
-const storeMatchDetail = (apiMatchId: string, payload: any) => {
-  matchDetailCache.delete(apiMatchId)
-  matchDetailCache.set(apiMatchId, { payload, at: Date.now() })
-  if (matchDetailCache.size > DETAIL_CACHE_MAX) {
-    const oldest = matchDetailCache.keys().next().value
-    if (oldest !== undefined) matchDetailCache.delete(oldest)
-  }
-}
-
-const requestMatchDetail = (apiMatchId: string, timeoutMs = 8_000): Promise<any | null> => {
-  const inflight = matchDetailInflight.get(apiMatchId)
-  if (inflight) return inflight
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-  const request = fetch(`${API_BASE_URL}/matcher/match/${encodeURIComponent(apiMatchId)}?includeEvents=1`, {
-    cache: "no-store",
-    headers: { Accept: "application/json" },
-    signal: controller.signal,
-  })
-    .then(async (response) => {
-      if (!response.ok) return null
-      const payload = await response.json()
-      storeMatchDetail(apiMatchId, payload)
-      return payload
-    })
-    .catch(() => null)
-    .finally(() => {
-      clearTimeout(timeoutId)
-      matchDetailInflight.delete(apiMatchId)
-    })
-  matchDetailInflight.set(apiMatchId, request)
-  return request
-}
-
-/** Shared, de-duplicated detail request; also fills the modal's cache. */
-export const loadMatchDetail = (apiMatchId: string) => requestMatchDetail(apiMatchId)
-
-/** Warm the detail cache (e.g. on card hover/touch) so the modal opens with data. */
-export const prefetchMatchDetail = (apiMatchId?: string | null) => {
-  if (!apiMatchId) return
-  const cached = matchDetailCache.get(apiMatchId)
-  if (cached && Date.now() - cached.at < 15_000) return
-  void requestMatchDetail(apiMatchId)
-}
-
-type StripSide = "home" | "away"
-
-// Live match summary shown on top of the timeline. Bars animate (width transitions) as
-// events arrive, so the numbers "flow" with the game instead of jumping.
-const TimelineStatsStrip = memo(function TimelineStatsStrip({
-  events,
-  homeTeam,
-  awayTeam,
-}: {
-  events: MatchFeedEvent[]
-  homeTeam: string
-  awayTeam: string
-}) {
-  const stats = useMemo(() => {
-    const blank = () => ({ goals: 0, seven: 0, suspensions: 0, timeouts: 0 })
-    const bySide: Record<StripSide, ReturnType<typeof blank>> = { home: blank(), away: blank() }
-    const goalRun: StripSide[] = []
-    const chronological = [...events].sort(
-      (a, b) => (parseEventTimeToSeconds(a.time) ?? 0) - (parseEventTimeToSeconds(b.time) ?? 0),
-    )
-    for (const event of chronological) {
-      const side = getResolvedEventSide(event, homeTeam, awayTeam)
-      if (side === "center") continue
-      const type = getEventSemanticType(event)
-      const text = getEventCombinedText(event)
-      if (type === "goal" && !text.includes("miss") && !text.includes("räddad")) {
-        bySide[side].goals += 1
-        if (text.includes("7-m") || text.includes("7m") || text.includes("straff")) bySide[side].seven += 1
-        goalRun.push(side)
-      } else if (type === "suspension") {
-        bySide[side].suspensions += 1
-      } else if (type === "timeout") {
-        bySide[side].timeouts += 1
-      }
-    }
-    return { bySide, lastGoals: goalRun.slice(-8) }
-  }, [events, homeTeam, awayTeam])
-
-  const rows: Array<{ label: string; key: keyof (typeof stats.bySide)["home"] }> = [
-    { label: "Mål", key: "goals" },
-    { label: "7-m mål", key: "seven" },
-    { label: "Utvisningar", key: "suspensions" },
-    { label: "Timeouts", key: "timeouts" },
-  ]
-  // HHF in club green on whichever side it plays; the opponent in neutral grey.
-  const homeIsHHF = isHHFName(homeTeam) && !isHHFName(awayTeam)
-  const colorFor = (side: StripSide) =>
-    (side === "home") === homeIsHHF ? "bg-emerald-600" : "bg-slate-400"
-  const hasAny = rows.some((row) => stats.bySide.home[row.key] + stats.bySide.away[row.key] > 0)
-  if (!hasAny) return null
-
-  return (
-    <div className="border-b border-slate-100 px-5 py-4">
-      <div className="space-y-2.5">
-        {rows.map((row) => {
-          const home = stats.bySide.home[row.key]
-          const away = stats.bySide.away[row.key]
-          const total = home + away
-          const homePct = total > 0 ? (home / total) * 100 : 50
-          return (
-            <div key={row.key} className="grid grid-cols-[2rem_1fr_2rem] items-center gap-2">
-              <span className="text-right text-sm font-bold tabular-nums text-slate-900">{home}</span>
-              <div>
-                <div className="mb-1 text-center text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-                  {row.label}
-                </div>
-                <div className="flex h-1.5 overflow-hidden rounded-full bg-slate-100">
-                  <div
-                    className={`h-full ${colorFor("home")} transition-[width] duration-700 ease-out`}
-                    style={{ width: total > 0 ? `${homePct}%` : "0%" }}
-                  />
-                  <div
-                    className={`ml-auto h-full ${colorFor("away")} transition-[width] duration-700 ease-out`}
-                    style={{ width: total > 0 ? `${100 - homePct}%` : "0%" }}
-                  />
-                </div>
-              </div>
-              <span className="text-sm font-bold tabular-nums text-slate-900">{away}</span>
-            </div>
-          )
-        })}
-      </div>
-      {stats.lastGoals.length > 0 && (
-        <div className="mt-3 flex items-center justify-center gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Senaste mål</span>
-          <div className="flex gap-1">
-            {stats.lastGoals.map((side, index) => (
-              <span
-                key={`${index}-${side}`}
-                title={side === "home" ? homeTeam : awayTeam}
-                className={`h-2.5 w-2.5 rounded-full transition-colors duration-500 ${colorFor(side)}`}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-})
-
 const isZeroScore = (value?: string) => {
   const normalized = (value || "").replace(/\s/g, "").replace("–", "-")
   return normalized === "0-0"
@@ -874,7 +723,7 @@ export function MatchFeedModal({
   topScorers = [],
 }: MatchFeedModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
-  const [activeTab, setActiveTab] = useState<"plan" | "timeline" | "scorers">("timeline")
+  const [activeTab, setActiveTab] = useState<"plan" | "timeline" | "scorers">("plan")
   const refreshInFlightRef = useRef(false)
   // The match whose details the modal currently shows; late responses for another match are dropped.
   const openMatchIdRef = useRef<string | undefined>(undefined)
@@ -885,11 +734,6 @@ export function MatchFeedModal({
   const [detailPlayers, setDetailPlayers] = useState<CourtPlayerStats[] | null>(null)
   const [detailTeamStats, setDetailTeamStats] = useState<CourtTeamStats[] | null>(null)
   const [isTimelineLoading, setIsTimelineLoading] = useState(false)
-  // True once this match's detail has been received (from cache or network). Until then
-  // the timeline shows a skeleton — never the "no timeline" message for a match whose
-  // data simply has not arrived yet.
-  const [hasDetailData, setHasDetailData] = useState(false)
-  const detailFailuresRef = useRef(0)
   const [displayedFeed, setDisplayedFeed] = useState<MatchFeedEvent[]>([])
   const [isFeedTransitioning, setIsFeedTransitioning] = useState(false)
   const [clockTick, setClockTick] = useState(0)
@@ -941,45 +785,35 @@ export function MatchFeedModal({
     return result
   }, [effectivePenalties, effectiveClockState?.period, clockRunning, secondsSinceCountdownData])
 
-  // urgent: render in the same frame (cached data on open); otherwise as a transition so
-  // background refreshes never block interaction.
-  const applyDetailPayload = (payload: any, urgent = false) => {
-    const normalized = enrichTimelineWithMatchDetails(payload, matchFeed)
-    const run = urgent ? (fn: () => void) => fn() : startTransition
-    run(() => {
-      setDetailTimeline(normalized)
-      setDetailClockState((payload?.clockState as MatchClockState) ?? null)
-      setDetailPenalties(Array.isArray(payload?.penalties) ? payload.penalties : [])
-      const detailMatch = payload?.match
-      if (detailMatch?.lineup && typeof detailMatch.lineup === "object") setDetailLineup(detailMatch.lineup)
-      if (Array.isArray(detailMatch?.playerStats?.players)) setDetailPlayers(detailMatch.playerStats.players)
-      if (Array.isArray(detailMatch?.teamStats)) setDetailTeamStats(detailMatch.teamStats)
-      setClockTick(0)
-      setCountdownAnchorAt(Date.now())
-      setHasDetailData(true)
-    })
-  }
-
   const fetchDetailData = async () => {
     const apiMatchId = matchData?.apiMatchId
     if (!apiMatchId) return
     setIsTimelineLoading(true)
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 8_000)
     try {
-      const payload = await requestMatchDetail(apiMatchId)
+      const response = await fetch(`${API_BASE_URL}/matcher/match/${encodeURIComponent(apiMatchId)}?includeEvents=1`, {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      })
+      if (!response.ok) return
+      const payload = await response.json()
       if (openMatchIdRef.current !== apiMatchId) return
-      if (!payload) {
-        detailFailuresRef.current += 1
-        // Two failed attempts in a row: stop showing a skeleton and fall back to the
-        // empty state; the live poll keeps retrying in the background.
-        if (detailFailuresRef.current >= 2) setHasDetailData(true)
-        else setTimeout(() => {
-          if (openMatchIdRef.current === apiMatchId) fetchDetailData().catch(() => undefined)
-        }, 1_500)
-        return
-      }
-      detailFailuresRef.current = 0
-      applyDetailPayload(payload)
+      const normalized = enrichTimelineWithMatchDetails(payload, matchFeed)
+      startTransition(() => {
+        setDetailTimeline(normalized)
+        setDetailClockState((payload?.clockState as MatchClockState) ?? null)
+        setDetailPenalties(Array.isArray(payload?.penalties) ? payload.penalties : [])
+        const detailMatch = payload?.match
+        if (detailMatch?.lineup && typeof detailMatch.lineup === "object") setDetailLineup(detailMatch.lineup)
+        if (Array.isArray(detailMatch?.playerStats?.players)) setDetailPlayers(detailMatch.playerStats.players)
+        if (Array.isArray(detailMatch?.teamStats)) setDetailTeamStats(detailMatch.teamStats)
+        setClockTick(0)
+        setCountdownAnchorAt(Date.now())
+      })
     } finally {
+      clearTimeout(timeoutId)
       setIsTimelineLoading(false)
     }
   }
@@ -1025,7 +859,7 @@ export function MatchFeedModal({
       return
     }
     openMatchIdRef.current = matchData?.apiMatchId
-    setActiveTab("timeline")
+    setActiveTab("plan")
     setDetailTimeline(null)
     setDetailClockState(null)
     setDetailPenalties([])
@@ -1034,13 +868,6 @@ export function MatchFeedModal({
     setDetailTeamStats(null)
     setClockTick(0)
     setCountdownAnchorAt(Date.now())
-    detailFailuresRef.current = 0
-    const cached = matchData?.apiMatchId ? matchDetailCache.get(matchData.apiMatchId) : undefined
-    if (cached) {
-      applyDetailPayload(cached.payload, true)
-    } else {
-      setHasDetailData(!canFetchDetailedTimeline)
-    }
     if (canFetchDetailedTimeline) {
       fetchDetailData().catch(() => undefined)
     }
@@ -1199,7 +1026,7 @@ export function MatchFeedModal({
       .sort((a, b) => b - a)
   }, [groupedByPeriod])
   const hasVisibleTimeline = displayedFeed.length > 0
-  const showTimelineSkeleton = !hasVisibleTimeline && !hasDetailData
+  const showTimelineSkeleton = isTimelineLoading && !hasVisibleTimeline
   const hasTimelineUpdates = displayedFeed.length > 0
   const isNoLiveUpdatesIssue = !hasTimelineUpdates || clockReason === "no_events"
   const showTimeoutTimer = clockReason === "timeout" && timeoutSecondsLeft > 0
@@ -1448,17 +1275,6 @@ export function MatchFeedModal({
         {/* Tabs */}
         {showTabs && (
           <nav className="z-10 flex justify-center gap-6 border-b border-slate-100 bg-white px-5" role="tablist" aria-label="Matchvy">
-            <button
-              type="button"
-              role="tab"
-                aria-selected={visibleTab === "timeline"}
-                onClick={() => setActiveTab("timeline")}
-              className={`py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
-                visibleTab === "timeline" ? "border-emerald-600 text-emerald-700" : "border-transparent text-slate-300 hover:text-slate-500"
-              }`}
-            >
-              Tidslinje
-            </button>
             {hasCourtData && (
               <button
                 type="button"
@@ -1472,7 +1288,17 @@ export function MatchFeedModal({
                 {trackingId ? "Plan" : "Statistik"}
               </button>
             )}
-            
+            <button
+              type="button"
+              role="tab"
+                aria-selected={visibleTab === "timeline"}
+                onClick={() => setActiveTab("timeline")}
+              className={`py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
+                visibleTab === "timeline" ? "border-emerald-600 text-emerald-700" : "border-transparent text-slate-300 hover:text-slate-500"
+              }`}
+            >
+              Tidslinje
+            </button>
             <button
               type="button"
               role="tab"
@@ -1515,9 +1341,6 @@ export function MatchFeedModal({
 
           {visibleTab === "timeline" && (
             <div>
-              {!showTimelineSkeleton && displayedFeed.length > 0 && (
-                <TimelineStatsStrip events={displayedFeed} homeTeam={homeTeam} awayTeam={awayTeam} />
-              )}
               {showTimelineSkeleton && (
                 <div className="py-6">
                   {Array.from({ length: 5 }).map((_, index) => (

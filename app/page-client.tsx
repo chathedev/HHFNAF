@@ -43,7 +43,7 @@ import { useMatchData, forceMatchDataPoll, normalizeStatusValue, getMatchEndTime
 import { AnimatedScore } from "@/components/animated-score"
 import { MatchCardCTA } from "@/components/match-card-cta"
 import { InstagramFeed } from "@/components/instagram-feed"
-import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
+import { MatchFeedModal, loadMatchDetail, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
 import { SHOP_URL, useShopStatus } from "@/components/shop-status-provider"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
 type MatchTopScorer = {
@@ -357,18 +357,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     }
 
     const request = (async () => {
-      const fetchTimelinePayload = async (url: string) => {
-        const response = await fetch(url, {
-          cache: "no-store",
-          headers: { Accept: "application/json" },
-        })
-        if (!response.ok) {
-          return null
-        }
-        return response.json()
-      }
-
-      const payload = await fetchTimelinePayload(`${API_BASE_URL}/matcher/match/${encodeURIComponent(apiMatchId)}?includeEvents=1`)
+      const payload = await loadMatchDetail(apiMatchId)
       const rawTimeline = resolvePreferredTimeline(payload ?? {}, match.matchFeed ?? [])
 
       if (!payload) {
