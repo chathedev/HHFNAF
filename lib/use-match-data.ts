@@ -605,10 +605,87 @@ const shouldShowFinishedMatchForTeam = (match: { date: Date; matchFeed?: MatchFe
 }
 
 // A match that has been seen finished must not flip back to live because one response was
-// served from a stale snapshot (e.g. during an API failover). Regressions inside this
-// window are ignored; after it, the backend is trusted again (a genuine correction).
-const FINISHED_REGRESSION_GUARD_MS = 3 * 60 * 1000
+// served from a stale snapshot (an API failover, a cached window, a cached server render).
+// Such a snapshot always carries an older, lower score, so finished is sticky for the
+// page's lifetime and only a strictly higher score (real new goals) may reopen it.
+// The old 3-minute window let 20-minute-old snapshots through and the card flickered.
 const finishedSeenAt = new Map<string, { at: number; result?: string }>()
+
+// Whether an incoming non-finished copy must be held at the finished state we saw. Only a
+// strictly higher score reopens it; with no final score on record ("Inte publicerat") any
+// real scored update does, otherwise such a match would stay locked for the whole visit.
+const finishedReopenBlocked = (seen: { result?: string }, incomingResult?: string | null) => {
+  const seenTotal = scoreTotal(seen.result)
+  const incomingTotal = scoreTotal(incomingResult)
+  if (incomingTotal === null) return true
+  if (seenTotal === null) return incomingTotal === 0
+  return incomingTotal <= seenTotal
+}
+
+const applyFinishedGuard = (match: NormalizedMatch): NormalizedMatch => {
+  if (match.matchStatus === "finished") return match
+  const seen = finishedSeenAt.get(match.id)
+  if (!seen || !finishedReopenBlocked(seen, match.result)) return match
+  return {
+    ...match,
+    matchStatus: "finished",
+    isHalftime: false,
+    result: seen.result ?? match.result,
+    statusLabel: buildStatusLabel("finished"),
+  }
+}
+
+// Client-side navigation back to a page remounts it with its cached server-rendered data,
+// which can predate a final whistle this tab has already seen. Hold it to the guard too.
+const guardInitialData = (data?: EnhancedMatchData): EnhancedMatchData | undefined => {
+  if (!data || typeof document === "undefined") return data
+  rememberFinishedMatches(data)
+  const changed = new Set<string>()
+  const guard = (match: NormalizedMatch) => {
+    const next = applyFinishedGuard(match)
+    if (next !== match) changed.add(match.id)
+    return next
+  }
+  const matches = data.matches.map(guard)
+  const recentResults = data.recentResults?.map(guard)
+  if (changed.size === 0 || !data.groupedFeed) return { ...data, matches, recentResults }
+  const moved = [...data.groupedFeed.live, ...data.groupedFeed.upcoming]
+    .filter((match) => changed.has(match.id))
+    .map(applyFinishedGuard)
+  return {
+    ...data,
+    matches,
+    recentResults,
+    groupedFeed: {
+      live: data.groupedFeed.live.filter((match) => !changed.has(match.id)),
+      upcoming: data.groupedFeed.upcoming.filter((match) => !changed.has(match.id)),
+      finished: [...moved, ...data.groupedFeed.finished.filter((match) => !changed.has(match.id))],
+    },
+  }
+}
+
+// The server-rendered first paint never passes through normalizeMatch on the client, so
+// seed the guard from it: a card the page loaded as finished must not flip to live when
+// the first client poll happens to get an older snapshot.
+const rememberFinishedMatches = (data?: EnhancedMatchData) => {
+  if (!data) return
+  const all = [
+    ...(data.matches ?? []),
+    ...(data.recentResults ?? []),
+    ...(data.groupedFeed?.finished ?? []),
+  ]
+  for (const match of all) {
+    if (!match?.id || match.matchStatus !== "finished" || finishedSeenAt.has(match.id)) continue
+    finishedSeenAt.set(match.id, { at: Date.now(), result: match.result ?? undefined })
+  }
+}
+
+const scoreTotal = (value?: string | null) => {
+  const parsed = (value ?? "").match(/(\d+)\s*[-–—]\s*(\d+)/)
+  if (!parsed) return null
+  const total = Number.parseInt(parsed[1], 10) + Number.parseInt(parsed[2], 10)
+  return Number.isFinite(total) ? total : null
+}
 
 const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
   const teamType = match.teamType?.trim()
@@ -733,16 +810,26 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
   let statusRegressionBlocked = false
   if (id) {
     const seen = finishedSeenAt.get(id)
+    const seenTotal = scoreTotal(seen?.result)
+    const incomingTotal = scoreTotal(match.result)
     if (derivedStatus === "finished") {
-      finishedSeenAt.set(id, { at: seen?.at ?? Date.now(), result: match.result ?? seen?.result })
+      // Keep the highest final we have seen; a stale "finished" copy can carry an older score.
+      if (seen && seenTotal !== null && (incomingTotal === null || incomingTotal < seenTotal)) {
+        guardedResult = seen.result
+      } else {
+        finishedSeenAt.set(id, { at: seen?.at ?? Date.now(), result: match.result ?? seen?.result })
+      }
     } else if (
       seen &&
-      (derivedStatus === "live" || derivedStatus === "halftime") &&
-      Date.now() - seen.at < FINISHED_REGRESSION_GUARD_MS
+      (derivedStatus === "live" || derivedStatus === "halftime" || derivedStatus === "upcoming") &&
+      finishedReopenBlocked(seen, match.result)
     ) {
       derivedStatus = "finished"
       statusRegressionBlocked = true
       guardedResult = seen.result ?? guardedResult
+    } else if (seen) {
+      // Genuinely reopened with new goals: trust the backend again.
+      finishedSeenAt.delete(id)
     }
   }
 
@@ -2134,14 +2221,16 @@ export const useMatchData = (options?: {
 
   const initialConnectionState = matchDataChannel.getConnectionState()
   const initialHasData = initialConnectionState.hasData || Boolean(options?.initialData?.matches?.length)
-  const [matches, setMatches] = useState<NormalizedMatch[]>(options?.initialData?.matches ?? [])
-  const [recentResults, setRecentResults] = useState<NormalizedMatch[]>(options?.initialData?.recentResults ?? [])
+  // Computed once on mount; later prop changes are ignored here just as the useState seeds were.
+  const [guardedInitialData] = useState(() => guardInitialData(options?.initialData))
+  const [matches, setMatches] = useState<NormalizedMatch[]>(guardedInitialData?.matches ?? [])
+  const [recentResults, setRecentResults] = useState<NormalizedMatch[]>(guardedInitialData?.recentResults ?? [])
   const [groupedFeed, setGroupedFeed] = useState<{
     live: NormalizedMatch[]
     upcoming: NormalizedMatch[]
     finished: NormalizedMatch[]
   }>(
-    options?.initialData?.groupedFeed ?? {
+    guardedInitialData?.groupedFeed ?? {
       live: [],
       upcoming: [],
       finished: [],
