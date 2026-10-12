@@ -780,14 +780,14 @@ export function ClubAssistant() {
                 )}
               </form>
               <p className="py-2.5 text-center text-[11.5px] text-zinc-400">
-                Powered by{" "}
+                Drivs av{" "}
                 <a
                   href="https://kaldros.se"
                   target="_blank"
                   rel="noopener"
                   className="font-medium text-zinc-500 underline-offset-2 transition-colors hover:text-zinc-800 hover:underline"
                 >
-                  Kaldros.se
+                  Kaldros
                 </a>
               </p>
             </div>
