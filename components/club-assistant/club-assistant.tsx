@@ -11,7 +11,8 @@ type ChatMessage = { id: string; role: "user" | "assistant"; content: string; er
 
 const API_BASE = (process.env.NEXT_PUBLIC_MATCH_API_BASE || "https://api.harnosandshf.se").replace(/\/$/, "")
 const STORAGE_KEY = "hhf-assistant:v1"
-const TEASER_KEY = "hhf-assistant:teaser-seen"
+// Set when the visitor closes the hello with its ✕; it then stays away for the visit.
+const HELLO_DISMISSED_KEY = "hhf-assistant:hello-dismissed"
 const TEASER_EXAMPLES = [
   "När spelar P16 nästa match?",
   "Vem gjorde mål i senaste matchen?",
@@ -138,6 +139,7 @@ export function ClubAssistant() {
   const slotRef = useRef<HTMLInputElement>(null)
   const launcherRef = useRef<HTMLButtonElement>(null)
   const hoverTimerRef = useRef<number | null>(null)
+  const helloShownRef = useRef(false)
   const stickToBottomRef = useRef(true)
   const sendingRef = useRef(false)
   const restoredRef = useRef(false)
@@ -160,23 +162,20 @@ export function ClubAssistant() {
     }
   }, [messages, busy])
 
-  // First visit: a short hello slides out next to the launcher, once per session.
+  // Every page load: the hello slides out after a moment and tucks itself away again.
+  // Only a ✕ on the bubble (for the rest of the visit) or an open chat keeps it away.
   useEffect(() => {
-    if (hidden || open) return
-    let seen = false
+    if (hidden || open || helloShownRef.current) return
+    let dismissed = false
     try {
-      seen = window.sessionStorage.getItem(TEASER_KEY) === "1"
+      dismissed = window.sessionStorage.getItem(HELLO_DISMISSED_KEY) === "1"
     } catch {
-      seen = false
+      dismissed = false
     }
-    if (seen || readStoredMessages().length > 0) return
+    if (dismissed) return
     const show = window.setTimeout(() => {
+      helloShownRef.current = true
       setTeaser(true)
-      try {
-        window.sessionStorage.setItem(TEASER_KEY, "1")
-      } catch {
-        // ignore
-      }
     }, 2400)
     const hide = window.setTimeout(() => setTeaser(false), 10400)
     return () => {
@@ -593,6 +592,11 @@ export function ClubAssistant() {
               onClick={() => {
                 setTeaser(false)
                 setHovering(false)
+                try {
+                  window.sessionStorage.setItem(HELLO_DISMISSED_KEY, "1")
+                } catch {
+                  // ignore
+                }
               }}
               className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
             >
