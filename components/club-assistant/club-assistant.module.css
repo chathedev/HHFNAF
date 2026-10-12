@@ -20,60 +20,99 @@
 }
 
 .launcher {
-  display: inline-flex;
-  align-items: center;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 56px;
   height: 56px;
   border-radius: 9999px;
   background: #15803d;
   background-image: radial-gradient(120% 90% at 30% 0%, rgba(255, 255, 255, 0.16), transparent 60%);
   color: #ffffff;
-  box-shadow: 0 10px 28px -10px rgba(21, 128, 61, 0.75), 0 2px 6px rgba(0, 0, 0, 0.18);
-  transition: transform 160ms ease, box-shadow 160ms ease;
+  box-shadow: 0 10px 28px -12px rgba(21, 128, 61, 0.7), 0 2px 6px rgba(0, 0, 0, 0.16);
+  transition:
+    transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 420ms cubic-bezier(0.22, 1, 0.36, 1);
   -webkit-tap-highlight-color: transparent;
 }
 
-.launcher:active { transform: scale(0.95); }
+/* Soft feedback: a slight lift on hover, a gentle press on click. */
+@media (hover: hover) {
+  .launcher:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 32px -12px rgba(21, 128, 61, 0.72), 0 3px 8px rgba(0, 0, 0, 0.14);
+  }
+}
 
-.launcherIcon {
+.launcher:active {
+  transform: scale(0.97);
+  transition-duration: 180ms;
+}
+
+/* Mark and close icon sit on top of each other and cross-fade. */
+.iconLayer {
+  position: absolute;
+  inset: 0;
   display: grid;
   place-items: center;
-  width: 56px;
-  height: 56px;
-  flex-shrink: 0;
+  transition:
+    opacity 260ms ease,
+    transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* "Fråga HHF" slides out to the left of the mark; the mark itself never moves. */
-.launcherLabel {
-  max-width: 0;
-  margin-left: 0;
-  overflow: hidden;
+.iconHidden {
   opacity: 0;
-  white-space: nowrap;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  transition: max-width 420ms cubic-bezier(0.2, 0.9, 0.3, 1), margin 420ms cubic-bezier(0.2, 0.9, 0.3, 1), opacity 260ms ease;
+  transform: scale(0.82);
 }
 
-.launcherExpanded .launcherLabel {
-  max-width: 120px;
-  margin-left: 20px;
-  margin-right: -6px;
+/* The hello next to the launcher: slides out from it, tail pointing at it. */
+.teaser {
+  position: absolute;
+  right: calc(100% + 12px);
+  bottom: 4px;
+  width: max-content;
+  max-width: min(300px, calc(100vw - 104px));
+  padding: 11px 34px 11px 14px;
+  text-wrap: balance;
+  border: 1px solid #e4e4e7;
+  border-radius: 16px 16px 6px 16px;
+  background: #ffffff;
+  box-shadow: 0 14px 34px -14px rgba(0, 0, 0, 0.24), 0 2px 6px rgba(0, 0, 0, 0.06);
+  opacity: 0;
+  transform: translateX(10px) scale(0.96);
+  transform-origin: 100% 100%;
+  pointer-events: none;
+  transition:
+    opacity 280ms ease,
+    transform 440ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.teaser::after {
+  content: "";
+  position: absolute;
+  right: -6px;
+  bottom: 16px;
+  width: 11px;
+  height: 11px;
+  background: #ffffff;
+  border-top: 1px solid #e4e4e7;
+  border-right: 1px solid #e4e4e7;
+  transform: rotate(45deg);
+}
+
+.teaserShown {
   opacity: 1;
+  transform: none;
+  pointer-events: auto;
 }
 
-@media (hover: hover) {
-  .launcher:hover { transform: translateY(-2px); box-shadow: 0 14px 32px -10px rgba(21, 128, 61, 0.8), 0 3px 8px rgba(0, 0, 0, 0.18); }
-  .launcher:hover .launcherLabel { max-width: 120px; margin-left: 20px; margin-right: -6px; opacity: 1; }
+.exampleIn {
+  animation: exampleIn 420ms ease both;
 }
 
-.iconIn {
-  animation: iconIn 220ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
-}
-
-@keyframes iconIn {
-  0% { opacity: 0; transform: rotate(-60deg) scale(0.6); }
-  100% { opacity: 1; transform: rotate(0) scale(1); }
+@keyframes exampleIn {
+  0% { opacity: 0; transform: translateY(3px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 /* ---- Mark: a bubble whose dots dribble now and then -------------------- */
@@ -166,8 +205,8 @@
     bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   }
 
-  .launcher { height: 60px; }
-  .launcherIcon { width: 60px; height: 60px; }
+  .launcher { width: 60px; height: 60px; }
+  .teaser { bottom: 6px; }
 
   .panelColumn {
     position: static;
@@ -259,7 +298,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .launcherIn,
-  .iconIn,
+  .exampleIn,
   .markBreath,
   .dribble,
   .panelIn,
@@ -268,6 +307,8 @@
   .dot {
     animation: none !important;
   }
-  .launcherLabel { transition: none; }
+  .teaser,
+  .iconLayer,
+  .launcher { transition: none; }
   .launcher:hover { transform: none; }
 }

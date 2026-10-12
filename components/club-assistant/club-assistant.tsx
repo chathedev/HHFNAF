@@ -11,7 +11,14 @@ type ChatMessage = { id: string; role: "user" | "assistant"; content: string; er
 
 const API_BASE = (process.env.NEXT_PUBLIC_MATCH_API_BASE || "https://api.harnosandshf.se").replace(/\/$/, "")
 const STORAGE_KEY = "hhf-assistant:v1"
-const PILL_KEY = "hhf-assistant:pill-seen"
+const TEASER_KEY = "hhf-assistant:teaser-seen"
+const TEASER_EXAMPLES = [
+  "När spelar P16 nästa match?",
+  "Vem gjorde mål i senaste matchen?",
+  "När tränar F12?",
+  "Hur går det för herrarna i tabellen?",
+  "Vilka matcher spelas i helgen?",
+]
 const HIDDEN_PREFIXES = ["/admin", "/editor", "/login", "/stats", "/analys"]
 const MAX_QUESTION = 1000
 const GENERIC_ERROR = "Något gick fel. Försök igen om en stund."
@@ -104,6 +111,7 @@ export function ClubAssistant() {
   const isMobile = useMediaQuery("(max-width: 639px)")
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)")
   const finePointer = useMediaQuery("(pointer: fine)")
+  const canHover = useMediaQuery("(hover: hover) and (pointer: fine)")
 
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -111,7 +119,9 @@ export function ClubAssistant() {
   const [busy, setBusy] = useState(false)
   const [typingId, setTypingId] = useState<string | null>(null)
   const [revealed, setRevealed] = useState(0)
-  const [pill, setPill] = useState(false)
+  const [teaser, setTeaser] = useState(false)
+  const [hovering, setHovering] = useState(false)
+  const [exampleIndex, setExampleIndex] = useState(0)
   const [announce, setAnnounce] = useState("")
   const [atBottom, setAtBottom] = useState(true)
   const [viewport, setViewport] = useState<{ height: number; top: number } | null>(null)
@@ -127,6 +137,7 @@ export function ClubAssistant() {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const slotRef = useRef<HTMLInputElement>(null)
   const launcherRef = useRef<HTMLButtonElement>(null)
+  const hoverTimerRef = useRef<number | null>(null)
   const stickToBottomRef = useRef(true)
   const sendingRef = useRef(false)
   const restoredRef = useRef(false)
@@ -149,30 +160,39 @@ export function ClubAssistant() {
     }
   }, [messages, busy])
 
-  // First visit: the launcher slides out "Fråga HHF" for a few seconds, once per session.
+  // First visit: a short hello slides out next to the launcher, once per session.
   useEffect(() => {
     if (hidden || open) return
     let seen = false
     try {
-      seen = window.sessionStorage.getItem(PILL_KEY) === "1"
+      seen = window.sessionStorage.getItem(TEASER_KEY) === "1"
     } catch {
       seen = false
     }
-    if (seen) return
+    if (seen || readStoredMessages().length > 0) return
     const show = window.setTimeout(() => {
-      setPill(true)
+      setTeaser(true)
       try {
-        window.sessionStorage.setItem(PILL_KEY, "1")
+        window.sessionStorage.setItem(TEASER_KEY, "1")
       } catch {
         // ignore
       }
-    }, 1400)
-    const hide = window.setTimeout(() => setPill(false), 7400)
+    }, 2400)
+    const hide = window.setTimeout(() => setTeaser(false), 10400)
     return () => {
       window.clearTimeout(show)
       window.clearTimeout(hide)
     }
   }, [hidden, open])
+
+  const teaserVisible = (teaser || hovering) && !open
+
+  // While the hello is out, its example question changes every few seconds.
+  useEffect(() => {
+    if (!teaserVisible || reducedMotion) return
+    const timer = window.setInterval(() => setExampleIndex((i) => (i + 1) % TEASER_EXAMPLES.length), 3200)
+    return () => window.clearInterval(timer)
+  }, [teaserVisible, reducedMotion])
 
   // The club's current team names for the quick picks.
   useEffect(() => {
@@ -342,7 +362,7 @@ export function ClubAssistant() {
       // The ref blocks a second send from the same tap or keypress before state updates land.
       if (!question || busy || sendingRef.current) return
       sendingRef.current = true
-      setPill(false)
+      setTeaser(false)
       setTemplate(null)
       setSlot("")
       const userMessage: ChatMessage = { id: newId(), role: "user", content: question }
@@ -535,31 +555,67 @@ export function ClubAssistant() {
   return (
     <>
       {showLauncher ? (
-        <div className={`${styles.launcherPos} ${styles.launcherIn}`}>
+        <div
+          className={`${styles.launcherPos} ${styles.launcherIn}`}
+          onMouseEnter={() => {
+            if (!canHover) return
+            if (hoverTimerRef.current) window.clearTimeout(hoverTimerRef.current)
+            setHovering(true)
+          }}
+          onMouseLeave={() => {
+            if (!canHover) return
+            hoverTimerRef.current = window.setTimeout(() => setHovering(false), 220)
+          }}
+        >
+          {/* The hello: slides out on the first visit and whenever the launcher is hovered. */}
+          <div className={`${styles.teaser} ${teaserVisible ? styles.teaserShown : ""}`} aria-hidden={!teaserVisible}>
+            <button
+              type="button"
+              tabIndex={teaserVisible ? 0 : -1}
+              onClick={() => {
+                setTeaser(false)
+                setHovering(false)
+                setOpen(true)
+              }}
+              className="block text-left"
+            >
+              <span className="block text-[14px] leading-snug text-zinc-800">
+                <span className="font-semibold text-zinc-950">Hej!</span> Fråga vad som helst om HHF.
+              </span>
+              <span key={exampleIndex} className={`${styles.exampleIn} mt-1 block text-[12.5px] leading-snug text-zinc-500`}>
+                t.ex. {TEASER_EXAMPLES[exampleIndex]}
+              </span>
+            </button>
+            <button
+              type="button"
+              tabIndex={teaserVisible ? 0 : -1}
+              aria-label="Stäng"
+              onClick={() => {
+                setTeaser(false)
+                setHovering(false)
+              }}
+              className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
           <button
             ref={launcherRef}
             type="button"
             aria-label={open ? "Stäng HHF-assistenten" : "Öppna HHF-assistenten"}
             aria-expanded={open}
             onClick={() => {
-              setPill(false)
+              setTeaser(false)
+              setHovering(false)
               setOpen((value) => !value)
             }}
-            className={`${styles.launcher} ${pill && !open ? styles.launcherExpanded : ""}`}
+            className={styles.launcher}
           >
-            {open ? null : (
-              <span className={styles.launcherLabel} aria-hidden="true">
-                Fråga HHF
-              </span>
-            )}
-            <span className={styles.launcherIcon}>
-              {open ? (
-                <X key="close" className={`${styles.iconIn} h-6 w-6`} strokeWidth={2.2} />
-              ) : (
-                <span key="mark" className={styles.iconIn}>
-                  <ChatMark size={37} animated={!reducedMotion} />
-                </span>
-              )}
+            <span className={`${styles.iconLayer} ${open ? styles.iconHidden : ""}`}>
+              <ChatMark size={37} animated={!reducedMotion} />
+            </span>
+            <span className={`${styles.iconLayer} ${open ? "" : styles.iconHidden}`}>
+              <X className="h-6 w-6" strokeWidth={2.2} />
             </span>
           </button>
         </div>
