@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react"
 import { usePathname } from "next/navigation"
 import { ArrowDown, ArrowUp, RotateCcw, Square, X } from "lucide-react"
-import { RobotIcon } from "./robot-icon"
+import { ChatMark } from "./chat-mark"
 import { RichText } from "./rich-text"
 import styles from "./club-assistant.module.css"
 
@@ -11,21 +11,26 @@ type ChatMessage = { id: string; role: "user" | "assistant"; content: string; er
 
 const API_BASE = (process.env.NEXT_PUBLIC_MATCH_API_BASE || "https://api.harnosandshf.se").replace(/\/$/, "")
 const STORAGE_KEY = "hhf-assistant:v1"
-const TEASER_KEY = "hhf-assistant:teaser-seen"
+const PILL_KEY = "hhf-assistant:pill-seen"
 const HIDDEN_PREFIXES = ["/admin", "/editor", "/login", "/stats", "/analys"]
 const MAX_QUESTION = 1000
 const GENERIC_ERROR = "Något gick fel. Försök igen om en stund."
+const FALLBACK_TEAMS = ["Herrarna", "Damlaget", "F19", "F16", "F14", "F12", "P19", "P16", "P14", "P12"]
 
-type Suggestion = { label: string; question?: string; prefill?: string }
+// A question with a blank for the team: "När tränar [lag]?"
+type Template = { before: string; after: string }
+type Suggestion = { label: string; question?: string; template?: Template }
 
 const SUGGESTIONS: Suggestion[] = [
   { label: "Matcher idag", question: "Vilka matcher spelas idag?" },
   { label: "Senaste resultaten", question: "Vilka är de senaste resultaten?" },
   { label: "Matcher i helgen", question: "Vilka matcher spelas i helgen?" },
   { label: "Nästa hemmamatch", question: "När är nästa hemmamatch?" },
-  { label: "När tränar mitt lag?", prefill: "När tränar " },
-  { label: "Målskyttar senaste matchen", prefill: "Vem gjorde mål i senaste matchen för " },
-  { label: "Herrarnas tabell", question: "Hur ligger herrarna till i tabellen?" },
+  { label: "När tränar …", template: { before: "När tränar ", after: "?" } },
+  { label: "Nästa match för …", template: { before: "När spelar ", after: " nästa match?" } },
+  { label: "Målskyttar för …", template: { before: "Vem gjorde mål i senaste matchen för ", after: "?" } },
+  { label: "Tabellen för …", template: { before: "Hur ligger ", after: " till i tabellen?" } },
+  { label: "Tränare för …", template: { before: "Vem är tränare för ", after: "?" } },
   { label: "Börja spela handboll", question: "Hur börjar man spela handboll i HHF?" },
 ]
 
@@ -55,9 +60,9 @@ function followUpsFor(messages: ChatMessage[]): Suggestion[] {
         { label: `${capitalize(team)}: skytteliga`, question: `Vem har gjort flest mål i ${team} den här säsongen?` },
       ]
     : []
-  return [...options, ...SUGGESTIONS].filter(
-    (s) => !s.question || !asked.has(s.question.trim().toLowerCase()),
-  ).slice(0, 8)
+  return [...options, ...SUGGESTIONS]
+    .filter((s) => !s.question || !asked.has(s.question.trim().toLowerCase()))
+    .slice(0, 10)
 }
 
 let idCounter = 0
@@ -88,6 +93,11 @@ function useMediaQuery(query: string) {
   return matches
 }
 
+const chipClass =
+  "shrink-0 whitespace-nowrap rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-[13px] font-medium text-zinc-700 transition-colors hover:border-green-600 hover:text-green-800 active:bg-green-50"
+const templateChipClass =
+  "shrink-0 whitespace-nowrap rounded-full border border-green-600/25 bg-green-50/60 px-3 py-1.5 text-[13px] font-medium text-green-900 transition-colors hover:border-green-600 active:bg-green-100"
+
 export function ClubAssistant() {
   const pathname = usePathname() || "/"
   const hidden = HIDDEN_PREFIXES.some((prefix) => pathname.startsWith(prefix))
@@ -101,10 +111,13 @@ export function ClubAssistant() {
   const [busy, setBusy] = useState(false)
   const [typingId, setTypingId] = useState<string | null>(null)
   const [revealed, setRevealed] = useState(0)
-  const [teaser, setTeaser] = useState(false)
+  const [pill, setPill] = useState(false)
   const [announce, setAnnounce] = useState("")
   const [atBottom, setAtBottom] = useState(true)
   const [viewport, setViewport] = useState<{ height: number; top: number } | null>(null)
+  const [template, setTemplate] = useState<Template | null>(null)
+  const [slot, setSlot] = useState("")
+  const [teams, setTeams] = useState<string[]>(FALLBACK_TEAMS)
 
   const targetRef = useRef("")
   const revealedRef = useRef(0)
@@ -112,10 +125,14 @@ export function ClubAssistant() {
   const abortRef = useRef<AbortController | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const slotRef = useRef<HTMLInputElement>(null)
   const launcherRef = useRef<HTMLButtonElement>(null)
   const stickToBottomRef = useRef(true)
   const sendingRef = useRef(false)
   const restoredRef = useRef(false)
+  const templateRef = useRef<Template | null>(null)
+  const teamsLoadedRef = useRef(false)
+  templateRef.current = template
 
   // Restore the conversation for this tab; it survives navigating between pages.
   useEffect(() => {
@@ -132,30 +149,44 @@ export function ClubAssistant() {
     }
   }, [messages, busy])
 
-  // A short hello next to the launcher, once per visit.
+  // First visit: the launcher slides out "Fråga HHF" for a few seconds, once per session.
   useEffect(() => {
     if (hidden || open) return
     let seen = false
     try {
-      seen = window.sessionStorage.getItem(TEASER_KEY) === "1"
+      seen = window.sessionStorage.getItem(PILL_KEY) === "1"
     } catch {
       seen = false
     }
-    if (seen || readStoredMessages().length > 0) return
+    if (seen) return
     const show = window.setTimeout(() => {
-      setTeaser(true)
+      setPill(true)
       try {
-        window.sessionStorage.setItem(TEASER_KEY, "1")
+        window.sessionStorage.setItem(PILL_KEY, "1")
       } catch {
         // ignore
       }
-    }, 2600)
-    const hide = window.setTimeout(() => setTeaser(false), 11600)
+    }, 1400)
+    const hide = window.setTimeout(() => setPill(false), 7400)
     return () => {
       window.clearTimeout(show)
       window.clearTimeout(hide)
     }
   }, [hidden, open])
+
+  // The club's current team names for the quick picks.
+  useEffect(() => {
+    if (!open || teamsLoadedRef.current) return
+    teamsLoadedRef.current = true
+    fetch(`${API_BASE}/chat/status`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (Array.isArray(data?.quickPicks) && data.quickPicks.length) setTeams(data.quickPicks)
+      })
+      .catch(() => {
+        teamsLoadedRef.current = false
+      })
+  }, [open])
 
   // Letter-by-letter reveal. Speeds up when the stream runs ahead so it never lags far behind.
   useEffect(() => {
@@ -278,10 +309,16 @@ export function ClubAssistant() {
     stickToBottomRef.current = true
     if (finePointer) window.setTimeout(() => inputRef.current?.focus(), 60)
     const onKey = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setOpen(false)
-        launcherRef.current?.focus()
+      if (event.key !== "Escape") return
+      // Escape first leaves a fill-in question, then closes the panel.
+      if (templateRef.current) {
+        setTemplate(null)
+        setSlot("")
+        window.setTimeout(() => inputRef.current?.focus(), 30)
+        return
       }
+      setOpen(false)
+      launcherRef.current?.focus()
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
@@ -293,7 +330,7 @@ export function ClubAssistant() {
     if (!el) return
     el.style.height = "auto"
     el.style.height = `${Math.min(el.scrollHeight, 132)}px`
-  }, [input, open])
+  }, [input, open, template])
 
   const setAssistantText = useCallback((id: string, content: string, error = false) => {
     setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, content, error } : m)))
@@ -305,7 +342,9 @@ export function ClubAssistant() {
       // The ref blocks a second send from the same tap or keypress before state updates land.
       if (!question || busy || sendingRef.current) return
       sendingRef.current = true
-      setTeaser(false)
+      setPill(false)
+      setTemplate(null)
+      setSlot("")
       const userMessage: ChatMessage = { id: newId(), role: "user", content: question }
       const assistantId = newId()
       const history = [...messages.filter((m) => !m.error && m.content), userMessage]
@@ -414,6 +453,8 @@ export function ClubAssistant() {
     setTypingId(null)
     setMessages([])
     setInput("")
+    setTemplate(null)
+    setSlot("")
     try {
       window.sessionStorage.removeItem(STORAGE_KEY)
     } catch {
@@ -422,9 +463,12 @@ export function ClubAssistant() {
     inputRef.current?.focus()
   }
 
+  const composed = template ? `${template.before}${slot.trim()}${template.after}` : input
+  const canSend = template ? slot.trim().length > 0 : input.trim().length > 0
+
   const onSubmit = (event: FormEvent) => {
     event.preventDefault()
-    void send(input)
+    if (canSend) void send(composed)
   }
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -434,18 +478,37 @@ export function ClubAssistant() {
     }
   }
 
-  const useSuggestion = (suggestion: Suggestion) => {
+  const leaveTemplate = () => {
+    setTemplate(null)
+    setSlot("")
+    window.setTimeout(() => inputRef.current?.focus(), 30)
+  }
+
+  const onSlotKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+      event.preventDefault()
+      if (slot.trim()) void send(composed)
+    } else if (event.key === "Backspace" && !slot) {
+      event.preventDefault()
+      leaveTemplate()
+    }
+  }
+
+  const applySuggestion = (suggestion: Suggestion) => {
     if (suggestion.question) {
       void send(suggestion.question)
       return
     }
-    setInput(suggestion.prefill ?? "")
-    window.setTimeout(() => {
-      const el = inputRef.current
-      if (!el) return
-      el.focus()
-      el.setSelectionRange(el.value.length, el.value.length)
-    }, 30)
+    if (suggestion.template) {
+      setTemplate(suggestion.template)
+      setSlot("")
+      window.setTimeout(() => slotRef.current?.focus(), 30)
+    }
+  }
+
+  const pickTeam = (team: string) => {
+    if (!template) return
+    void send(`${template.before}${team}${template.after}`)
   }
 
   if (hidden) return null
@@ -453,46 +516,51 @@ export function ClubAssistant() {
   const columnStyle =
     isMobile && viewport ? { height: viewport.height, transform: `translateY(${viewport.top}px)` } : undefined
   const showLauncher = !(open && isMobile)
+  const locked = busy || Boolean(typingId)
+
+  const renderChip = (suggestion: Suggestion) => (
+    <button
+      key={suggestion.label}
+      type="button"
+      disabled={locked}
+      // Keep focus (and the phone keyboard) where it is when a chip is tapped.
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={() => applySuggestion(suggestion)}
+      className={suggestion.template ? templateChipClass : chipClass}
+    >
+      {suggestion.label}
+    </button>
+  )
 
   return (
     <>
       {showLauncher ? (
         <div className={`${styles.launcherPos} ${styles.launcherIn}`}>
-          {teaser && !open ? (
-            <div className={`${styles.teaser} ${styles.teaserIn}`} role="status">
-              <button
-                type="button"
-                onClick={() => {
-                  setTeaser(false)
-                  setOpen(true)
-                }}
-                className="text-left text-[14px] leading-snug text-zinc-800"
-              >
-                <span className="font-semibold text-zinc-950">Hej!</span> Fråga mig om matcher, resultat eller när ditt lag tränar.
-              </button>
-              <button
-                type="button"
-                aria-label="Stäng"
-                onClick={() => setTeaser(false)}
-                className="-mr-1 -mt-1 shrink-0 rounded-full p-1 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ) : null}
           <button
             ref={launcherRef}
             type="button"
             aria-label={open ? "Stäng HHF-assistenten" : "Öppna HHF-assistenten"}
             aria-expanded={open}
             onClick={() => {
-              setTeaser(false)
+              setPill(false)
               setOpen((value) => !value)
             }}
-            className={`${styles.launcher} relative grid h-[56px] w-[56px] place-items-center rounded-full bg-green-700 text-white shadow-[0_10px_28px_-10px_rgba(21,128,61,0.75),0_2px_6px_rgba(0,0,0,0.18)] ring-1 ring-black/5 sm:h-[60px] sm:w-[60px]`}
+            className={`${styles.launcher} ${pill && !open ? styles.launcherExpanded : ""}`}
           >
-            {teaser && !open ? <span className={styles.pulseRing} /> : null}
-            {open ? <X className="h-6 w-6" strokeWidth={2.2} /> : <RobotIcon size={34} animated={!reducedMotion} />}
+            {open ? null : (
+              <span className={styles.launcherLabel} aria-hidden="true">
+                Fråga HHF
+              </span>
+            )}
+            <span className={styles.launcherIcon}>
+              {open ? (
+                <X key="close" className={`${styles.iconIn} h-6 w-6`} strokeWidth={2.2} />
+              ) : (
+                <span key="mark" className={styles.iconIn}>
+                  <ChatMark size={37} animated={!reducedMotion} />
+                </span>
+              )}
+            </span>
           </button>
         </div>
       ) : null}
@@ -507,7 +575,7 @@ export function ClubAssistant() {
           <div className={styles.panelColumn} style={columnStyle}>
             <header className={`${styles.panelHeader} flex items-center gap-3 border-b border-zinc-100 px-4`}>
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-green-700 text-white">
-                <RobotIcon size={24} animated={false} />
+                <ChatMark size={25} animated={false} />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[15px] font-semibold leading-tight text-zinc-950">HHF-assistenten</p>
@@ -538,21 +606,17 @@ export function ClubAssistant() {
               <div ref={scrollRef} onScroll={onScroll} className={`${styles.messages} flex-1 overflow-y-auto px-4 py-4`}>
                 <div className="space-y-3 text-[15px] leading-[1.5]">
                   <div className="max-w-[90%] rounded-[18px] rounded-bl-md bg-zinc-100 px-3.5 py-2.5 text-zinc-900">
-                    Hej! Jag svarar på frågor om HHF:s matcher, resultat, tabeller och när lagen tränar.
+                    Hej! Fråga om HHF:s matcher, resultat, tabeller, målskyttar eller när ditt lag tränar.
                   </div>
                   {messages.length === 0 ? (
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {SUGGESTIONS.map((suggestion) => (
-                        <button
-                          key={suggestion.label}
-                          type="button"
-                          onMouseDown={(event) => event.preventDefault()}
-                          onClick={() => useSuggestion(suggestion)}
-                          className="rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-[13.5px] font-medium text-zinc-800 transition-colors hover:border-green-600 hover:text-green-800 active:bg-green-50"
-                        >
-                          {suggestion.label}
-                        </button>
-                      ))}
+                    <div className="space-y-3 pt-1">
+                      <div className="flex flex-wrap gap-2">
+                        {SUGGESTIONS.filter((s) => s.question).map(renderChip)}
+                      </div>
+                      <div>
+                        <p className="pb-1.5 text-[12px] font-medium text-zinc-500">Om ditt lag</p>
+                        <div className="flex flex-wrap gap-2">{SUGGESTIONS.filter((s) => s.template).map(renderChip)}</div>
+                      </div>
                     </div>
                   ) : null}
 
@@ -612,45 +676,88 @@ export function ClubAssistant() {
             </div>
 
             <div className={`${styles.panelFooter} border-t border-zinc-100 px-3 pt-2.5`}>
-              {messages.length > 0 ? (
+              {template ? (
+                <div className={`${styles.slotIn} pb-2.5`}>
+                  <p className="px-1 pb-1.5 text-[12px] font-medium text-zinc-500">Välj lag eller skriv själv</p>
+                  <div className={`${styles.chipRow} -mx-3 flex gap-2 overflow-x-auto px-3`}>
+                    {teams.map((team) => (
+                      <button
+                        key={team}
+                        type="button"
+                        disabled={locked}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => pickTeam(team)}
+                        className={chipClass}
+                      >
+                        {team}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : messages.length > 0 ? (
                 <div
                   className={`${styles.chipRow} -mx-3 mb-2.5 flex gap-2 overflow-x-auto px-3 transition-opacity ${
-                    busy || typingId ? "pointer-events-none opacity-40" : ""
+                    locked ? "pointer-events-none opacity-40" : ""
                   }`}
-                  aria-disabled={busy || Boolean(typingId)}
+                  aria-disabled={locked}
                 >
-                  {followUpsFor(messages).map((suggestion) => (
-                    <button
-                      key={suggestion.label}
-                      type="button"
-                      disabled={busy || Boolean(typingId)}
-                      // Keep focus (and the phone keyboard) where it is when a chip is tapped.
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => useSuggestion(suggestion)}
-                      className="shrink-0 whitespace-nowrap rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-[13px] font-medium text-zinc-700 transition-colors hover:border-green-600 hover:text-green-800 active:bg-green-50"
-                    >
-                      {suggestion.label}
-                    </button>
-                  ))}
+                  {followUpsFor(messages).map(renderChip)}
                 </div>
               ) : null}
               <form onSubmit={onSubmit} className="flex items-end gap-2">
-                <label htmlFor="hhf-assistant-input" className="sr-only">
-                  Skriv en fråga
-                </label>
-                <textarea
-                  id="hhf-assistant-input"
-                  ref={inputRef}
-                  rows={1}
-                  value={input}
-                  maxLength={MAX_QUESTION}
-                  onChange={(event) => setInput(event.target.value)}
-                  onKeyDown={onKeyDown}
-                  placeholder="Fråga om matcher, lag eller träningar"
-                  enterKeyHint="send"
-                  autoComplete="off"
-                  className="block max-h-[132px] min-h-[44px] flex-1 resize-none rounded-[22px] border border-transparent bg-zinc-100 px-4 py-[10px] text-[16px] leading-[1.45] text-zinc-950 outline-none transition-colors placeholder:text-zinc-500 focus:border-green-600/50 focus:bg-white"
-                />
+                {template ? (
+                  // The question with a box for the team, e.g. "När tränar [ lag ]?"
+                  <div
+                    className={`${styles.slotIn} flex min-h-[44px] flex-1 items-center rounded-[22px] border border-green-600/50 bg-white py-[7px] pl-4 pr-1.5 text-[16px] leading-[1.45] text-zinc-950`}
+                  >
+                    <p className="min-w-0 flex-1">
+                      <span className="whitespace-pre-wrap">{template.before}</span>
+                      <input
+                        ref={slotRef}
+                        value={slot}
+                        maxLength={40}
+                        size={Math.max(4, slot.length + 1)}
+                        onChange={(event) => setSlot(event.target.value)}
+                        onKeyDown={onSlotKeyDown}
+                        placeholder="lag"
+                        aria-label="Lag, till exempel P16 eller damlaget"
+                        enterKeyHint="send"
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        className="mx-0.5 inline-block max-w-[11ch] rounded-lg border border-green-600/40 bg-green-50 px-2 py-0.5 align-baseline text-[16px] font-semibold text-green-900 outline-none transition-colors placeholder:font-medium placeholder:text-green-700/50 focus:border-green-600 focus:bg-white focus:ring-2 focus:ring-green-600/15"
+                      />
+                      <span className="whitespace-pre-wrap">{template.after}</span>
+                    </p>
+                    <button
+                      type="button"
+                      onClick={leaveTemplate}
+                      aria-label="Skriv fritt i stället"
+                      className="ml-1 grid h-8 w-8 shrink-0 place-items-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <label htmlFor="hhf-assistant-input" className="sr-only">
+                      Skriv en fråga
+                    </label>
+                    <textarea
+                      id="hhf-assistant-input"
+                      ref={inputRef}
+                      rows={1}
+                      value={input}
+                      maxLength={MAX_QUESTION}
+                      onChange={(event) => setInput(event.target.value)}
+                      onKeyDown={onKeyDown}
+                      placeholder="Fråga om matcher, lag eller träningar"
+                      enterKeyHint="send"
+                      autoComplete="off"
+                      className="block max-h-[132px] min-h-[44px] flex-1 resize-none rounded-[22px] border border-transparent bg-zinc-100 px-4 py-[10px] text-[16px] leading-[1.45] text-zinc-950 outline-none transition-colors placeholder:text-zinc-500 focus:border-green-600/50 focus:bg-white"
+                    />
+                  </>
+                )}
                 {busy ? (
                   <button
                     type="button"
@@ -664,7 +771,8 @@ export function ClubAssistant() {
                   <button
                     type="submit"
                     aria-label="Skicka"
-                    disabled={!input.trim()}
+                    disabled={!canSend}
+                    onMouseDown={(event) => event.preventDefault()}
                     className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-green-700 text-white transition-[transform,background-color] active:scale-95 disabled:bg-zinc-200 disabled:text-zinc-400"
                   >
                     <ArrowUp className="h-5 w-5" strokeWidth={2.4} />

@@ -1,5 +1,14 @@
-/* HHF-assistenten: launcher, robot and panel motion. Kept subtle; all motion stops for
-   visitors who prefer reduced motion. */
+/* HHF-assistenten: launcher, mark and panel. Motion is subtle and stops for visitors who
+   prefer reduced motion. */
+
+/* ---- Launcher ---------------------------------------------------------- */
+
+.launcherPos {
+  position: fixed;
+  z-index: 45;
+  right: calc(16px + env(safe-area-inset-right, 0px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+}
 
 .launcherIn {
   animation: launcherIn 520ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
@@ -11,198 +20,92 @@
 }
 
 .launcher {
+  display: inline-flex;
+  align-items: center;
+  height: 56px;
+  border-radius: 9999px;
+  background: #15803d;
+  background-image: radial-gradient(120% 90% at 30% 0%, rgba(255, 255, 255, 0.16), transparent 60%);
+  color: #ffffff;
+  box-shadow: 0 10px 28px -10px rgba(21, 128, 61, 0.75), 0 2px 6px rgba(0, 0, 0, 0.18);
   transition: transform 160ms ease, box-shadow 160ms ease;
   -webkit-tap-highlight-color: transparent;
 }
 
-.launcher:hover { transform: translateY(-2px) scale(1.04); }
 .launcher:active { transform: scale(0.95); }
 
-/* Two soft rings when the launcher asks for attention */
-.pulseRing {
-  position: absolute;
-  inset: 0;
-  border-radius: 9999px;
-  pointer-events: none;
-  box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.45);
-  animation: pulseRing 1.6s ease-out 2;
+.launcherIcon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
 }
 
-@keyframes pulseRing {
-  0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.45); }
-  100% { box-shadow: 0 0 0 16px rgba(22, 163, 74, 0); }
+/* "Fråga HHF" slides out to the left of the mark; the mark itself never moves. */
+.launcherLabel {
+  max-width: 0;
+  margin-left: 0;
+  overflow: hidden;
+  opacity: 0;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  transition: max-width 420ms cubic-bezier(0.2, 0.9, 0.3, 1), margin 420ms cubic-bezier(0.2, 0.9, 0.3, 1), opacity 260ms ease;
 }
 
-.robotFloat {
-  animation: robotFloat 3.2s ease-in-out infinite;
+.launcherExpanded .launcherLabel {
+  max-width: 120px;
+  margin-left: 20px;
+  margin-right: -6px;
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  .launcher:hover { transform: translateY(-2px); box-shadow: 0 14px 32px -10px rgba(21, 128, 61, 0.8), 0 3px 8px rgba(0, 0, 0, 0.18); }
+  .launcher:hover .launcherLabel { max-width: 120px; margin-left: 20px; margin-right: -6px; opacity: 1; }
+}
+
+.iconIn {
+  animation: iconIn 220ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+@keyframes iconIn {
+  0% { opacity: 0; transform: rotate(-60deg) scale(0.6); }
+  100% { opacity: 1; transform: rotate(0) scale(1); }
+}
+
+/* ---- Mark: a bubble whose dots dribble now and then -------------------- */
+
+.markBreath {
   transform-origin: 50% 60%;
+  animation: markBreath 5.2s ease-in-out infinite;
 }
 
-@keyframes robotFloat {
-  0%, 100% { transform: translateY(0.6px); }
-  50% { transform: translateY(-1.6px); }
+@keyframes markBreath {
+  0%, 22%, 100% { transform: scale(1); }
+  8% { transform: scale(1.05); }
+  16% { transform: scale(0.99); }
 }
 
-.robotWiggle {
+.dribble {
   transform-box: fill-box;
-  transform-origin: 50% 85%;
-  animation: robotWiggle 7s ease-in-out infinite;
+  transform-origin: 50% 100%;
+  animation: dribble 5.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
-@keyframes robotWiggle {
-  0%, 78%, 100% { transform: rotate(0deg); }
-  81% { transform: rotate(-9deg); }
-  85% { transform: rotate(7deg); }
-  89% { transform: rotate(-4deg); }
-  92% { transform: rotate(2deg); }
-  95% { transform: rotate(0deg); }
+.dribble:nth-of-type(2) { animation-delay: 0.12s; }
+.dribble:nth-of-type(3) { animation-delay: 0.24s; }
+
+@keyframes dribble {
+  0%, 14%, 100% { transform: translateY(0) scale(1, 1); }
+  4% { transform: translateY(-2.8px) scale(0.92, 1.08); }
+  8% { transform: translateY(0) scale(1.12, 0.86); }
+  11% { transform: translateY(-1px) scale(1, 1); }
 }
 
-/* Smiling eyes replace the LED eyes during the wiggle */
-.eyesOpen { animation: eyesOpen 7s step-end infinite; }
-.eyesHappy { opacity: 0; animation: eyesHappy 7s step-end infinite; }
-
-@keyframes eyesOpen {
-  0% { opacity: 1; }
-  80% { opacity: 0; }
-  95% { opacity: 1; }
-}
-
-@keyframes eyesHappy {
-  0% { opacity: 0; }
-  80% { opacity: 1; }
-  95% { opacity: 0; }
-}
-
-.blink {
-  transform-box: fill-box;
-  transform-origin: 50% 50%;
-  animation: blink 4.6s ease-in-out infinite;
-}
-
-@keyframes blink {
-  0%, 44%, 50%, 100% { transform: scaleY(1); }
-  47% { transform: scaleY(0.12); }
-}
-
-.antennaGlow { animation: antennaGlow 1.8s ease-in-out infinite; }
-
-@keyframes antennaGlow {
-  0%, 100% { fill: #bbf7d0; }
-  50% { fill: #ffffff; }
-}
-
-.teaserIn {
-  animation: teaserIn 340ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
-  transform-origin: 100% 100%;
-}
-
-@keyframes teaserIn {
-  0% { opacity: 0; transform: translateY(6px) scale(0.92); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.panelIn {
-  animation: panelIn 200ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
-  transform-origin: 100% 100%;
-}
-
-@keyframes panelIn {
-  0% { opacity: 0; transform: translateY(12px) scale(0.98); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-@media (max-width: 639px) {
-  .panelIn { animation-name: panelInMobile; }
-}
-
-@keyframes panelInMobile {
-  0% { opacity: 0; transform: translateY(24px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
-
-.caret {
-  display: inline-block;
-  width: 2px;
-  height: 1.05em;
-  margin-left: 1px;
-  vertical-align: -0.17em;
-  border-radius: 1px;
-  background: #16a34a;
-  animation: caret 1s step-end infinite;
-}
-
-@keyframes caret {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
-.dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 9999px;
-  background: #a1a1aa;
-  animation: dot 1.1s ease-in-out infinite;
-}
-
-.dot:nth-child(2) { animation-delay: 0.15s; }
-.dot:nth-child(3) { animation-delay: 0.3s; }
-
-@keyframes dot {
-  0%, 60%, 100% { transform: translateY(0); opacity: 0.55; }
-  30% { transform: translateY(-4px); opacity: 1; }
-}
-
-.messages {
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .launcherIn,
-  .pulseRing,
-  .robotFloat,
-  .robotWiggle,
-  .eyesOpen,
-  .eyesHappy,
-  .blink,
-  .antennaGlow,
-  .teaserIn,
-  .panelIn,
-  .caret,
-  .dot {
-    animation: none !important;
-  }
-  .eyesHappy { opacity: 0; }
-  .launcher:hover { transform: none; }
-}
-
-/* Layout */
-
-.launcherPos {
-  position: fixed;
-  z-index: 45;
-  right: calc(16px + env(safe-area-inset-right, 0px));
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-}
-
-.teaser {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  max-width: min(272px, calc(100vw - 104px));
-  margin-bottom: 8px;
-  padding: 10px 12px;
-  border: 1px solid #e4e4e7;
-  border-radius: 16px 16px 6px 16px;
-  background: #ffffff;
-  box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.22), 0 2px 6px rgba(0, 0, 0, 0.06);
-}
+/* ---- Panel -------------------------------------------------------------- */
 
 /* Phones: an opaque layer over the whole screen (nothing of the page can show through,
    whatever the keyboard does); the column inside follows the visible viewport. */
@@ -238,11 +141,33 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+.panelIn {
+  animation: panelIn 200ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+  transform-origin: 100% 100%;
+}
+
+@keyframes panelIn {
+  0% { opacity: 0; transform: translateY(12px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 639px) {
+  .panelIn { animation-name: panelInMobile; }
+}
+
+@keyframes panelInMobile {
+  0% { opacity: 0; transform: translateY(24px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
 @media (min-width: 640px) {
   .launcherPos {
     right: calc(24px + env(safe-area-inset-right, 0px));
     bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   }
+
+  .launcher { height: 60px; }
+  .launcherIcon { width: 60px; height: 60px; }
 
   .panelColumn {
     position: static;
@@ -272,7 +197,13 @@
   .panelFooter { padding-bottom: 0; }
 }
 
-/* Suggested questions above the input: one swipeable row with soft edges */
+.messages {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+/* Suggested questions and team picks: one swipeable row with soft edges */
 .chipRow {
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
@@ -280,6 +211,63 @@
   mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 28px), transparent 100%);
 }
 
-.chipRow::-webkit-scrollbar {
-  display: none;
+.chipRow::-webkit-scrollbar { display: none; }
+
+.slotIn {
+  animation: slotIn 220ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+@keyframes slotIn {
+  0% { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Typing ----------------------------------------------------------- */
+
+.caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 1px;
+  vertical-align: -0.17em;
+  border-radius: 1px;
+  background: #16a34a;
+  animation: caret 1s step-end infinite;
+}
+
+@keyframes caret {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #a1a1aa;
+  animation: dot 1.1s ease-in-out infinite;
+}
+
+.dot:nth-child(2) { animation-delay: 0.15s; }
+.dot:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes dot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.55; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .launcherIn,
+  .iconIn,
+  .markBreath,
+  .dribble,
+  .panelIn,
+  .slotIn,
+  .caret,
+  .dot {
+    animation: none !important;
+  }
+  .launcherLabel { transition: none; }
+  .launcher:hover { transform: none; }
 }
