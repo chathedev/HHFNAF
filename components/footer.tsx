@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { ShoppingBag } from "lucide-react"
+import { ArrowUpRight, ShoppingBag } from "lucide-react"
 import { SHOP_URL, useShopStatus } from "@/components/shop-status-provider"
 
 export default function Footer() {
@@ -9,7 +9,8 @@ export default function Footer() {
 
   return (
     <footer className="bg-slate-950 text-white">
-      <div className="mx-auto max-w-5xl px-5 py-14 sm:px-8">
+      {/* Extra bottom room so the floating chat button never covers the last row. */}
+      <div className="mx-auto max-w-5xl px-5 pb-28 pt-14 sm:px-8">
         {/* Supporterbutik banner — always shown; link/label depend on live availability */}
         <div className="mb-12 border border-white/10 px-6 py-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -111,23 +112,32 @@ export default function Footer() {
         </div>
 
         {/* Bottom */}
-        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-6 sm:flex-row">
-          <div>
-            <p className="text-xs text-white/30">
-              © {new Date().getFullYear()} Härnösands HF · 888000-3713
-            </p>
+        <div className="mt-12 flex flex-col gap-6 border-t border-white/10 pt-8 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-center sm:text-left">
+            <p className="text-sm font-semibold text-white/60">© {new Date().getFullYear()} Härnösands HF</p>
+            <p className="mt-1 text-xs text-white/30">Org.nr 888000-3713 · Härnösand</p>
           </div>
           <a
             href="https://www.lyrio.se"
             target="_blank"
             rel="noopener noreferrer"
-            className="group inline-flex items-center gap-2"
+            aria-label="Byggd av Lyrio AB, öppnar lyrio.se"
+            className="group flex w-full items-center gap-4 border border-white/10 px-4 py-3 transition hover:border-white/25 hover:bg-white/[0.03] sm:w-auto"
           >
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-white/25 transition group-hover:text-white/50">
-              Byggd av
-            </span>
-            <span className="text-sm font-bold text-white/50 transition group-hover:text-white">
-              Lyrio
+            <img
+              src="/lyrio-mark.png"
+              alt=""
+              width={40}
+              height={40}
+              className="h-10 w-10 shrink-0 object-contain opacity-80 transition duration-300 group-hover:-rotate-6 group-hover:opacity-100"
+            />
+            <span className="flex min-w-0 flex-col">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-white/35">Byggd av</span>
+              <span className="flex items-center gap-1 text-[15px] font-bold leading-tight text-white/85 transition group-hover:text-white">
+                Lyrio AB
+                <ArrowUpRight className="h-3.5 w-3.5 opacity-40 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100" />
+              </span>
+              <span className="text-xs text-white/40">Webb, system och AI från Härnösand</span>
             </span>
           </a>
         </div>
