@@ -118,7 +118,7 @@ export default function Footer() {
             </p>
           </div>
           <a
-            href="https://wby.se"
+            href="https://www.lyrio.se"
             target="_blank"
             rel="noopener noreferrer"
             className="group inline-flex items-center gap-2"
@@ -127,7 +127,7 @@ export default function Footer() {
               Byggd av
             </span>
             <span className="text-sm font-bold text-white/50 transition group-hover:text-white">
-              Websites By You
+              Lyrio
             </span>
           </a>
         </div>
