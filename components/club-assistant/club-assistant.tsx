@@ -16,12 +16,49 @@ const HIDDEN_PREFIXES = ["/admin", "/editor", "/login", "/stats", "/analys"]
 const MAX_QUESTION = 1000
 const GENERIC_ERROR = "Något gick fel. Försök igen om en stund."
 
-const SUGGESTIONS: { label: string; question?: string; prefill?: string }[] = [
+type Suggestion = { label: string; question?: string; prefill?: string }
+
+const SUGGESTIONS: Suggestion[] = [
   { label: "Matcher idag", question: "Vilka matcher spelas idag?" },
   { label: "Senaste resultaten", question: "Vilka är de senaste resultaten?" },
+  { label: "Matcher i helgen", question: "Vilka matcher spelas i helgen?" },
   { label: "Nästa hemmamatch", question: "När är nästa hemmamatch?" },
-  { label: "Träningstider", prefill: "När tränar " },
+  { label: "När tränar mitt lag?", prefill: "När tränar " },
+  { label: "Målskyttar senaste matchen", prefill: "Vem gjorde mål i senaste matchen för " },
+  { label: "Herrarnas tabell", question: "Hur ligger herrarna till i tabellen?" },
+  { label: "Börja spela handboll", question: "Hur börjar man spela handboll i HHF?" },
 ]
+
+// The team the conversation is about ("P16", "herrarna", "damlaget"), for follow-ups.
+function detectTeam(text: string): string | null {
+  const cls = text.match(/(?:^|[^a-zåäö0-9])([PF])\s?-?\s?(\d{1,2})(?![0-9])/i)
+  if (cls) return `${cls[1].toUpperCase()}${cls[2]}`
+  if (/\bherr(ar|arna|laget)?\b|a-lag(et)?\b/i.test(text)) return "herrarna"
+  if (/\bdam(er|erna|laget)?\b|dam\/utv/i.test(text)) return "damlaget"
+  return null
+}
+
+const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)
+
+function followUpsFor(messages: ChatMessage[]): Suggestion[] {
+  const asked = new Set(messages.filter((m) => m.role === "user").map((m) => m.content.trim().toLowerCase()))
+  let team: string | null = null
+  for (let i = messages.length - 1; i >= 0 && !team; i -= 1) {
+    if (messages[i].role === "user") team = detectTeam(messages[i].content)
+  }
+  const options: Suggestion[] = team
+    ? [
+        { label: `${capitalize(team)}: målskyttar`, question: `Vem gjorde mål i senaste matchen för ${team}?` },
+        { label: `${capitalize(team)}: nästa match`, question: `När spelar ${team} nästa gång?` },
+        { label: `${capitalize(team)}: träningstider`, question: `När tränar ${team}?` },
+        { label: `${capitalize(team)}: tabellen`, question: `Hur ligger ${team} till i tabellen?` },
+        { label: `${capitalize(team)}: skytteliga`, question: `Vem har gjort flest mål i ${team} den här säsongen?` },
+      ]
+    : []
+  return [...options, ...SUGGESTIONS].filter(
+    (s) => !s.question || !asked.has(s.question.trim().toLowerCase()),
+  ).slice(0, 8)
+}
 
 let idCounter = 0
 const newId = () => `${Date.now().toString(36)}-${(idCounter++).toString(36)}`
@@ -154,7 +191,7 @@ export function ClubAssistant() {
     const el = scrollRef.current
     if (!el || !stickToBottomRef.current) return
     el.scrollTop = el.scrollHeight
-  }, [messages, revealed, open])
+  }, [messages, revealed, open, viewport])
 
   const onScroll = () => {
     const el = scrollRef.current
@@ -162,26 +199,52 @@ export function ClubAssistant() {
     stickToBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
   }
 
-  // Phones: fill the visible viewport so the input stays above the on-screen keyboard.
+  // Phones: the panel is an opaque full-screen layer, and the chat column inside it tracks
+  // the visible viewport so the input sits right above the keyboard. The page behind is
+  // pinned in place (iOS ignores overflow:hidden alone) and restored exactly on close.
   useEffect(() => {
     if (!open || !isMobile) {
       setViewport(null)
       return
     }
     const vv = window.visualViewport
-    const update = () => setViewport({ height: vv ? vv.height : window.innerHeight, top: vv ? vv.offsetTop : 0 })
+    let raf = 0
+    const update = () => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() =>
+        setViewport({ height: vv ? vv.height : window.innerHeight, top: vv ? vv.offsetTop : 0 }),
+      )
+    }
     update()
     vv?.addEventListener("resize", update)
     vv?.addEventListener("scroll", update)
     window.addEventListener("resize", update)
-    const html = document.documentElement
-    const previous = html.style.overflow
-    html.style.overflow = "hidden"
+
+    const scrollY = window.scrollY
+    const body = document.body
+    const previous = {
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+      width: body.style.width,
+      overflow: body.style.overflow,
+    }
+    Object.assign(body.style, {
+      position: "fixed",
+      top: `-${scrollY}px`,
+      left: "0",
+      right: "0",
+      width: "100%",
+      overflow: "hidden",
+    })
     return () => {
+      cancelAnimationFrame(raf)
       vv?.removeEventListener("resize", update)
       vv?.removeEventListener("scroll", update)
       window.removeEventListener("resize", update)
-      html.style.overflow = previous
+      Object.assign(body.style, previous)
+      window.scrollTo({ top: scrollY, behavior: "instant" as ScrollBehavior })
     }
   }, [open, isMobile])
 
@@ -327,7 +390,7 @@ export function ClubAssistant() {
     }
   }
 
-  const useSuggestion = (suggestion: (typeof SUGGESTIONS)[number]) => {
+  const useSuggestion = (suggestion: Suggestion) => {
     if (suggestion.question) {
       void send(suggestion.question)
       return
@@ -343,7 +406,8 @@ export function ClubAssistant() {
 
   if (hidden) return null
 
-  const panelStyle = isMobile && viewport ? { height: viewport.height, top: viewport.top } : undefined
+  const columnStyle =
+    isMobile && viewport ? { height: viewport.height, transform: `translateY(${viewport.top}px)` } : undefined
   const showLauncher = !(open && isMobile)
 
   return (
@@ -395,146 +459,161 @@ export function ClubAssistant() {
           aria-modal={isMobile}
           aria-label="HHF-assistenten"
           className={`${styles.panel} ${styles.panelIn}`}
-          style={panelStyle}
         >
-          <header className={`${styles.panelHeader} flex items-center gap-3 border-b border-zinc-100 px-4`}>
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-green-700 text-white">
-              <RobotIcon size={24} animated={false} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[15px] font-semibold leading-tight text-zinc-950">HHF-assistenten</p>
-              <p className="truncate text-[12.5px] leading-tight text-zinc-500">Matcher, resultat och träningar</p>
-            </div>
-            {messages.length > 0 ? (
+          <div className={styles.panelColumn} style={columnStyle}>
+            <header className={`${styles.panelHeader} flex items-center gap-3 border-b border-zinc-100 px-4`}>
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-green-700 text-white">
+                <RobotIcon size={24} animated={false} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[15px] font-semibold leading-tight text-zinc-950">HHF-assistenten</p>
+                <p className="truncate text-[12.5px] leading-tight text-zinc-500">Matcher, resultat och träningar</p>
+              </div>
+              {messages.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={reset}
+                  aria-label="Ny konversation"
+                  title="Ny konversation"
+                  className="grid h-9 w-9 place-items-center rounded-full text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+                >
+                  <RotateCcw className="h-[17px] w-[17px]" />
+                </button>
+              ) : null}
               <button
                 type="button"
-                onClick={reset}
-                aria-label="Ny konversation"
-                title="Ny konversation"
+                onClick={() => setOpen(false)}
+                aria-label="Stäng"
                 className="grid h-9 w-9 place-items-center rounded-full text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
               >
-                <RotateCcw className="h-[17px] w-[17px]" />
+                <X className="h-5 w-5" />
               </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              aria-label="Stäng"
-              className="grid h-9 w-9 place-items-center rounded-full text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </header>
+            </header>
 
-          <div ref={scrollRef} onScroll={onScroll} className={`${styles.messages} flex-1 overflow-y-auto px-4 py-4`}>
-            <div className="space-y-3 text-[15px] leading-[1.5]">
-              <div className="max-w-[90%] rounded-[18px] rounded-bl-md bg-zinc-100 px-3.5 py-2.5 text-zinc-900">
-                Hej! Jag svarar på frågor om HHF:s matcher, resultat, tabeller och när lagen tränar.
+            <div ref={scrollRef} onScroll={onScroll} className={`${styles.messages} flex-1 overflow-y-auto px-4 py-4`}>
+              <div className="space-y-3 text-[15px] leading-[1.5]">
+                <div className="max-w-[90%] rounded-[18px] rounded-bl-md bg-zinc-100 px-3.5 py-2.5 text-zinc-900">
+                  Hej! Jag svarar på frågor om HHF:s matcher, resultat, tabeller och när lagen tränar.
+                </div>
+                {messages.length === 0 ? (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {SUGGESTIONS.map((suggestion) => (
+                      <button
+                        key={suggestion.label}
+                        type="button"
+                        onClick={() => useSuggestion(suggestion)}
+                        className="rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-[13.5px] font-medium text-zinc-800 transition-colors hover:border-green-600 hover:text-green-800 active:bg-green-50"
+                      >
+                        {suggestion.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+
+                {messages.map((message) => {
+                  if (message.role === "user") {
+                    return (
+                      <div key={message.id} className="flex justify-end">
+                        <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-[18px] rounded-br-md bg-green-700 px-3.5 py-2.5 text-white">
+                          {message.content}
+                        </div>
+                      </div>
+                    )
+                  }
+                  const isTyping = message.id === typingId
+                  const text = isTyping ? message.content.slice(0, revealed) : message.content
+                  return (
+                    <div key={message.id} className="flex">
+                      <div
+                        className={`max-w-[90%] break-words rounded-[18px] rounded-bl-md px-3.5 py-2.5 ${
+                          message.error ? "bg-red-50 text-red-800" : "bg-zinc-100 text-zinc-900"
+                        }`}
+                      >
+                        {isTyping && text.length === 0 ? (
+                          <span className="flex h-[22px] items-center gap-1" aria-label="Skriver">
+                            <span className={styles.dot} />
+                            <span className={styles.dot} />
+                            <span className={styles.dot} />
+                          </span>
+                        ) : message.error ? (
+                          <span>{text}</span>
+                        ) : (
+                          <>
+                            <RichText text={text} typing={isTyping} />
+                            {isTyping ? <span className={styles.caret} aria-hidden="true" /> : null}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
-              {messages.length === 0 ? (
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {SUGGESTIONS.map((suggestion) => (
+            </div>
+
+            <div className={`${styles.panelFooter} border-t border-zinc-100 px-3 pt-2.5`}>
+              {messages.length > 0 && !busy && !typingId ? (
+                <div className={`${styles.chipRow} -mx-3 mb-2.5 flex gap-2 overflow-x-auto px-3`}>
+                  {followUpsFor(messages).map((suggestion) => (
                     <button
                       key={suggestion.label}
                       type="button"
                       onClick={() => useSuggestion(suggestion)}
-                      className="rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-[13.5px] font-medium text-zinc-800 transition-colors hover:border-green-600 hover:text-green-800 active:bg-green-50"
+                      className="shrink-0 whitespace-nowrap rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-[13px] font-medium text-zinc-700 transition-colors hover:border-green-600 hover:text-green-800 active:bg-green-50"
                     >
                       {suggestion.label}
                     </button>
                   ))}
                 </div>
               ) : null}
-
-              {messages.map((message) => {
-                if (message.role === "user") {
-                  return (
-                    <div key={message.id} className="flex justify-end">
-                      <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-[18px] rounded-br-md bg-green-700 px-3.5 py-2.5 text-white">
-                        {message.content}
-                      </div>
-                    </div>
-                  )
-                }
-                const isTyping = message.id === typingId
-                const text = isTyping ? message.content.slice(0, revealed) : message.content
-                return (
-                  <div key={message.id} className="flex">
-                    <div
-                      className={`max-w-[90%] break-words rounded-[18px] rounded-bl-md px-3.5 py-2.5 ${
-                        message.error ? "bg-red-50 text-red-800" : "bg-zinc-100 text-zinc-900"
-                      }`}
-                    >
-                      {isTyping && text.length === 0 ? (
-                        <span className="flex h-[22px] items-center gap-1" aria-label="Skriver">
-                          <span className={styles.dot} />
-                          <span className={styles.dot} />
-                          <span className={styles.dot} />
-                        </span>
-                      ) : message.error ? (
-                        <span>{text}</span>
-                      ) : (
-                        <>
-                          <RichText text={text} typing={isTyping} />
-                          {isTyping ? <span className={styles.caret} aria-hidden="true" /> : null}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
+              <form onSubmit={onSubmit} className="flex items-end gap-2">
+                <label htmlFor="hhf-assistant-input" className="sr-only">
+                  Skriv en fråga
+                </label>
+                <textarea
+                  id="hhf-assistant-input"
+                  ref={inputRef}
+                  rows={1}
+                  value={input}
+                  maxLength={MAX_QUESTION}
+                  onChange={(event) => setInput(event.target.value)}
+                  onKeyDown={onKeyDown}
+                  placeholder="Fråga om matcher, lag eller träningar"
+                  enterKeyHint="send"
+                  autoComplete="off"
+                  className="block max-h-[132px] min-h-[44px] flex-1 resize-none rounded-[22px] border border-transparent bg-zinc-100 px-4 py-[10px] text-[16px] leading-[1.45] text-zinc-950 outline-none transition-colors placeholder:text-zinc-500 focus:border-green-600/50 focus:bg-white"
+                />
+                {busy ? (
+                  <button
+                    type="button"
+                    onClick={stop}
+                    aria-label="Stoppa svaret"
+                    className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-zinc-900 text-white transition-transform active:scale-95"
+                  >
+                    <Square className="h-4 w-4" fill="currentColor" />
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    aria-label="Skicka"
+                    disabled={!input.trim()}
+                    className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-green-700 text-white transition-[transform,background-color] active:scale-95 disabled:bg-zinc-200 disabled:text-zinc-400"
+                  >
+                    <ArrowUp className="h-5 w-5" strokeWidth={2.4} />
+                  </button>
+                )}
+              </form>
+              <p className="py-2.5 text-center text-[11.5px] text-zinc-400">
+                Powered by{" "}
+                <a
+                  href="https://kaldros.se"
+                  target="_blank"
+                  rel="noopener"
+                  className="font-medium text-zinc-500 underline-offset-2 transition-colors hover:text-zinc-800 hover:underline"
+                >
+                  Kaldros.se
+                </a>
+              </p>
             </div>
-          </div>
-
-          <div className={`${styles.panelFooter} border-t border-zinc-100 px-3 pt-3`}>
-            <form onSubmit={onSubmit} className="flex items-end gap-2">
-              <label htmlFor="hhf-assistant-input" className="sr-only">
-                Skriv en fråga
-              </label>
-              <textarea
-                id="hhf-assistant-input"
-                ref={inputRef}
-                rows={1}
-                value={input}
-                maxLength={MAX_QUESTION}
-                onChange={(event) => setInput(event.target.value)}
-                onKeyDown={onKeyDown}
-                placeholder="Fråga om matcher, lag eller träningar"
-                enterKeyHint="send"
-                autoComplete="off"
-                className="block max-h-[132px] min-h-[44px] flex-1 resize-none rounded-[22px] border border-transparent bg-zinc-100 px-4 py-[10px] text-[16px] leading-[1.45] text-zinc-950 outline-none transition-colors placeholder:text-zinc-500 focus:border-green-600/50 focus:bg-white"
-              />
-              {busy ? (
-                <button
-                  type="button"
-                  onClick={stop}
-                  aria-label="Stoppa svaret"
-                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-zinc-900 text-white transition-transform active:scale-95"
-                >
-                  <Square className="h-4 w-4" fill="currentColor" />
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  aria-label="Skicka"
-                  disabled={!input.trim()}
-                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-green-700 text-white transition-[transform,background-color] active:scale-95 disabled:bg-zinc-200 disabled:text-zinc-400"
-                >
-                  <ArrowUp className="h-5 w-5" strokeWidth={2.4} />
-                </button>
-              )}
-            </form>
-            <p className="py-2.5 text-center text-[11.5px] text-zinc-400">
-              Powered by{" "}
-              <a
-                href="https://kaldros.se"
-                target="_blank"
-                rel="noopener"
-                className="font-medium text-zinc-500 underline-offset-2 transition-colors hover:text-zinc-800 hover:underline"
-              >
-                Kaldros.se
-              </a>
-            </p>
           </div>
           <p className="sr-only" aria-live="polite">
             {announce}
