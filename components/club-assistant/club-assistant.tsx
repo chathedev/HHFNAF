@@ -327,6 +327,12 @@ export function ClubAssistant() {
             if (event === "delta" && typeof payload.t === "string") {
               targetRef.current += payload.t
               setAssistantText(assistantId, targetRef.current)
+            } else if (event === "replace" && typeof payload.t === "string") {
+              // The server withdrew what it streamed (e.g. a refused request); show this instead.
+              targetRef.current = payload.t
+              revealedRef.current = Math.min(revealedRef.current, payload.t.length)
+              setRevealed(revealedRef.current)
+              setAssistantText(assistantId, payload.t)
             } else if (event === "error") {
               throw new Error(typeof payload.message === "string" ? payload.message : GENERIC_ERROR)
             }
