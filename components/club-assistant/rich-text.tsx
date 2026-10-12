@@ -17,7 +17,7 @@ const ALLOWED_LINK_HOSTS = [
 function safeHref(raw: string): string | null {
   try {
     const url = new URL(raw, "https://www.harnosandshf.se")
-    if (url.protocol === "mailto:") return url.href
+    if (url.protocol === "mailto:") return /@harnosandshf\.se$/i.test(url.pathname) ? url.href : null
     if (url.protocol !== "https:" && url.protocol !== "http:") return null
     const host = url.hostname.toLowerCase()
     return ALLOWED_LINK_HOSTS.some((allowed) => host === allowed || host.endsWith(`.${allowed}`)) ? url.href : null

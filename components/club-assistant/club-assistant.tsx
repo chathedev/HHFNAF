@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react"
 import { usePathname } from "next/navigation"
-import { ArrowUp, RotateCcw, Square, X } from "lucide-react"
+import { ArrowDown, ArrowUp, RotateCcw, Square, X } from "lucide-react"
 import { RobotIcon } from "./robot-icon"
 import { RichText } from "./rich-text"
 import styles from "./club-assistant.module.css"
 
-type ChatMessage = { id: string; role: "user" | "assistant"; content: string; error?: boolean }
+type ChatMessage = { id: string; role: "user" | "assistant"; content: string; error?: boolean; notice?: string }
 
 const API_BASE = (process.env.NEXT_PUBLIC_MATCH_API_BASE || "https://api.harnosandshf.se").replace(/\/$/, "")
 const STORAGE_KEY = "hhf-assistant:v1"
@@ -103,6 +103,7 @@ export function ClubAssistant() {
   const [revealed, setRevealed] = useState(0)
   const [teaser, setTeaser] = useState(false)
   const [announce, setAnnounce] = useState("")
+  const [atBottom, setAtBottom] = useState(true)
   const [viewport, setViewport] = useState<{ height: number; top: number } | null>(null)
 
   const targetRef = useRef("")
@@ -113,6 +114,7 @@ export function ClubAssistant() {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const launcherRef = useRef<HTMLButtonElement>(null)
   const stickToBottomRef = useRef(true)
+  const sendingRef = useRef(false)
   const restoredRef = useRef(false)
 
   // Restore the conversation for this tab; it survives navigating between pages.
@@ -193,10 +195,33 @@ export function ClubAssistant() {
     el.scrollTop = el.scrollHeight
   }, [messages, revealed, open, viewport])
 
+  // Stay pinned to the bottom when the area itself changes size (keyboard, suggestion
+  // row, a long answer finishing), not only when new text arrives.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!open || !el || typeof ResizeObserver === "undefined") return
+    const observer = new ResizeObserver(() => {
+      if (stickToBottomRef.current) el.scrollTop = el.scrollHeight
+    })
+    observer.observe(el)
+    if (el.firstElementChild) observer.observe(el.firstElementChild)
+    return () => observer.disconnect()
+  }, [open])
+
   const onScroll = () => {
     const el = scrollRef.current
     if (!el) return
-    stickToBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+    stickToBottomRef.current = nearBottom
+    setAtBottom(nearBottom)
+  }
+
+  const jumpToLatest = () => {
+    const el = scrollRef.current
+    if (!el) return
+    stickToBottomRef.current = true
+    setAtBottom(true)
+    el.scrollTo({ top: el.scrollHeight, behavior: reducedMotion ? "auto" : "smooth" })
   }
 
   // Phones: the panel is an opaque full-screen layer, and the chat column inside it tracks
@@ -277,7 +302,9 @@ export function ClubAssistant() {
   const send = useCallback(
     async (raw: string) => {
       const question = raw.trim().slice(0, MAX_QUESTION)
-      if (!question || busy) return
+      // The ref blocks a second send from the same tap or keypress before state updates land.
+      if (!question || busy || sendingRef.current) return
+      sendingRef.current = true
       setTeaser(false)
       const userMessage: ChatMessage = { id: newId(), role: "user", content: question }
       const assistantId = newId()
@@ -292,6 +319,7 @@ export function ClubAssistant() {
       setRevealed(0)
       streamDoneRef.current = false
       stickToBottomRef.current = true
+      setAtBottom(true)
       setTypingId(assistantId)
       setBusy(true)
 
@@ -311,6 +339,7 @@ export function ClubAssistant() {
         const reader = response.body.getReader()
         const decoder = new TextDecoder()
         let buffer = ""
+        let finished = false
         for (;;) {
           const { value, done } = await reader.read()
           if (done) break
@@ -333,12 +362,20 @@ export function ClubAssistant() {
               revealedRef.current = Math.min(revealedRef.current, payload.t.length)
               setRevealed(revealedRef.current)
               setAssistantText(assistantId, payload.t)
+            } else if (event === "done") {
+              finished = true
             } else if (event === "error") {
               throw new Error(typeof payload.message === "string" ? payload.message : GENERIC_ERROR)
             }
           }
         }
         if (!targetRef.current) throw new Error(GENERIC_ERROR)
+        if (!finished) {
+          // The connection closed mid-answer: say so instead of passing it off as complete.
+          setMessages((prev) =>
+            prev.map((m) => (m.id === assistantId ? { ...m, notice: "Svaret avbröts. Fråga gärna igen." } : m)),
+          )
+        }
       } catch (error) {
         if (controller.signal.aborted) {
           if (!targetRef.current) {
@@ -360,6 +397,7 @@ export function ClubAssistant() {
       } finally {
         streamDoneRef.current = true
         abortRef.current = null
+        sendingRef.current = false
         setBusy(false)
       }
     },
@@ -496,73 +534,98 @@ export function ClubAssistant() {
               </button>
             </header>
 
-            <div ref={scrollRef} onScroll={onScroll} className={`${styles.messages} flex-1 overflow-y-auto px-4 py-4`}>
-              <div className="space-y-3 text-[15px] leading-[1.5]">
-                <div className="max-w-[90%] rounded-[18px] rounded-bl-md bg-zinc-100 px-3.5 py-2.5 text-zinc-900">
-                  Hej! Jag svarar på frågor om HHF:s matcher, resultat, tabeller och när lagen tränar.
-                </div>
-                {messages.length === 0 ? (
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    {SUGGESTIONS.map((suggestion) => (
-                      <button
-                        key={suggestion.label}
-                        type="button"
-                        onClick={() => useSuggestion(suggestion)}
-                        className="rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-[13.5px] font-medium text-zinc-800 transition-colors hover:border-green-600 hover:text-green-800 active:bg-green-50"
-                      >
-                        {suggestion.label}
-                      </button>
-                    ))}
+            <div className="relative flex min-h-0 flex-1 flex-col">
+              <div ref={scrollRef} onScroll={onScroll} className={`${styles.messages} flex-1 overflow-y-auto px-4 py-4`}>
+                <div className="space-y-3 text-[15px] leading-[1.5]">
+                  <div className="max-w-[90%] rounded-[18px] rounded-bl-md bg-zinc-100 px-3.5 py-2.5 text-zinc-900">
+                    Hej! Jag svarar på frågor om HHF:s matcher, resultat, tabeller och när lagen tränar.
                   </div>
-                ) : null}
+                  {messages.length === 0 ? (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {SUGGESTIONS.map((suggestion) => (
+                        <button
+                          key={suggestion.label}
+                          type="button"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => useSuggestion(suggestion)}
+                          className="rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-[13.5px] font-medium text-zinc-800 transition-colors hover:border-green-600 hover:text-green-800 active:bg-green-50"
+                        >
+                          {suggestion.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
 
-                {messages.map((message) => {
-                  if (message.role === "user") {
+                  {messages.map((message) => {
+                    if (message.role === "user") {
+                      return (
+                        <div key={message.id} className="flex justify-end">
+                          <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-[18px] rounded-br-md bg-green-700 px-3.5 py-2.5 text-white">
+                            {message.content}
+                          </div>
+                        </div>
+                      )
+                    }
+                    const isTyping = message.id === typingId
+                    const text = isTyping ? message.content.slice(0, revealed) : message.content
                     return (
-                      <div key={message.id} className="flex justify-end">
-                        <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-[18px] rounded-br-md bg-green-700 px-3.5 py-2.5 text-white">
-                          {message.content}
+                      <div key={message.id} className="flex">
+                        <div
+                          className={`max-w-[90%] break-words rounded-[18px] rounded-bl-md px-3.5 py-2.5 ${
+                            message.error ? "bg-red-50 text-red-800" : "bg-zinc-100 text-zinc-900"
+                          }`}
+                        >
+                          {isTyping && text.length === 0 ? (
+                            <span className="flex h-[22px] items-center gap-1" aria-label="Skriver">
+                              <span className={styles.dot} />
+                              <span className={styles.dot} />
+                              <span className={styles.dot} />
+                            </span>
+                          ) : message.error ? (
+                            <span>{text}</span>
+                          ) : (
+                            <>
+                              <RichText text={text} typing={isTyping} />
+                              {isTyping ? <span className={styles.caret} aria-hidden="true" /> : null}
+                            </>
+                          )}
+                          {message.notice && !isTyping ? (
+                            <p className="pt-1.5 text-[12.5px] text-zinc-500">{message.notice}</p>
+                          ) : null}
                         </div>
                       </div>
                     )
-                  }
-                  const isTyping = message.id === typingId
-                  const text = isTyping ? message.content.slice(0, revealed) : message.content
-                  return (
-                    <div key={message.id} className="flex">
-                      <div
-                        className={`max-w-[90%] break-words rounded-[18px] rounded-bl-md px-3.5 py-2.5 ${
-                          message.error ? "bg-red-50 text-red-800" : "bg-zinc-100 text-zinc-900"
-                        }`}
-                      >
-                        {isTyping && text.length === 0 ? (
-                          <span className="flex h-[22px] items-center gap-1" aria-label="Skriver">
-                            <span className={styles.dot} />
-                            <span className={styles.dot} />
-                            <span className={styles.dot} />
-                          </span>
-                        ) : message.error ? (
-                          <span>{text}</span>
-                        ) : (
-                          <>
-                            <RichText text={text} typing={isTyping} />
-                            {isTyping ? <span className={styles.caret} aria-hidden="true" /> : null}
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
+                  })}
+                </div>
               </div>
+              {!atBottom && messages.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={jumpToLatest}
+                  aria-label="Till senaste svaret"
+                  className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-zinc-200 bg-white/95 px-3.5 py-2 text-[13px] font-medium text-zinc-800 shadow-[0_6px_20px_-6px_rgba(0,0,0,0.25)] backdrop-blur transition-colors hover:border-green-600 hover:text-green-800"
+                >
+                  <ArrowDown className="h-4 w-4" />
+                  {typingId ? "Till svaret" : null}
+                </button>
+              ) : null}
             </div>
 
             <div className={`${styles.panelFooter} border-t border-zinc-100 px-3 pt-2.5`}>
-              {messages.length > 0 && !busy && !typingId ? (
-                <div className={`${styles.chipRow} -mx-3 mb-2.5 flex gap-2 overflow-x-auto px-3`}>
+              {messages.length > 0 ? (
+                <div
+                  className={`${styles.chipRow} -mx-3 mb-2.5 flex gap-2 overflow-x-auto px-3 transition-opacity ${
+                    busy || typingId ? "pointer-events-none opacity-40" : ""
+                  }`}
+                  aria-disabled={busy || Boolean(typingId)}
+                >
                   {followUpsFor(messages).map((suggestion) => (
                     <button
                       key={suggestion.label}
                       type="button"
+                      disabled={busy || Boolean(typingId)}
+                      // Keep focus (and the phone keyboard) where it is when a chip is tapped.
+                      onMouseDown={(event) => event.preventDefault()}
                       onClick={() => useSuggestion(suggestion)}
                       className="shrink-0 whitespace-nowrap rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-[13px] font-medium text-zinc-700 transition-colors hover:border-green-600 hover:text-green-800 active:bg-green-50"
                     >
