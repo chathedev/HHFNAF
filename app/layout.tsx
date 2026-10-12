@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { ScrollToTop } from "@/components/scroll-to-top"
 import { AnalyticsBeacon } from "@/components/analytics-beacon"
 import { ShopStatusProvider } from "@/components/shop-status-provider"
+import { ClubAssistantMount } from "@/components/club-assistant"
 import { deriveSiteVariant, getThemeVariant } from "@/lib/site-variant"
 
 const inter = Inter({ subsets: ["latin"], display: "swap" })
@@ -161,6 +162,7 @@ export default async function RootLayout({
             <ScrollToTop />
             <AnalyticsBeacon />
             {children}
+            <ClubAssistantMount />
           </ShopStatusProvider>
         </ThemeProvider>
         {/* Clean up Next.js streaming SSR duplicate DOM.
