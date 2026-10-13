@@ -54,9 +54,10 @@ export default function TeamPageClient({ team }: { team: ClubTeamMetadata }) {
     dataType: "old",
   });
 
+  const yearlessAllowed = team.matchesYearlessClass !== false;
   const teamMatchKeys = useMemo(
-    () => createTeamMatchKeySet(team.name, team.displayName, team.id, teamDisplayName),
-    [team.name, team.displayName, team.id, teamDisplayName],
+    () => createTeamMatchKeySet(yearlessAllowed ? team.name : null, team.displayName, team.id, teamDisplayName),
+    [yearlessAllowed, team.name, team.displayName, team.id, teamDisplayName],
   );
 
   // Youth teams match on birth years: laget.se's "F15 (2011)" plays in the competition
@@ -89,7 +90,7 @@ export default function TeamPageClient({ team }: { team: ClubTeamMetadata }) {
         if (usesBirthYears && birthYearsInLabel(match.teamType).length > 0) {
           return matchLabelFitsTeam(match.teamType, team)
         }
-        if (teamClass && teamClassKey(match.teamType) === teamClass) {
+        if (yearlessAllowed && teamClass && teamClassKey(match.teamType) === teamClass) {
           return true
         }
       }
@@ -111,7 +112,7 @@ export default function TeamPageClient({ team }: { team: ClubTeamMetadata }) {
         return compareMatchesByDateAscStable(a, b)
       })
       .slice(0, 2)
-  }, [allMatches, teamMatchKeys, teamClass, usesBirthYears, team])
+  }, [allMatches, teamMatchKeys, teamClass, usesBirthYears, yearlessAllowed, team])
   const descriptionFallback =
     "Härnösands HF samlar spelare, ledare och supportrar i ett starkt lagbygge. Följ laget via våra kanaler och uppdateringar nedan."
   const loading = currentLoading || finishedLoading
@@ -124,13 +125,12 @@ export default function TeamPageClient({ team }: { team: ClubTeamMetadata }) {
     <>
       <Header />
       <main className="flex-1 bg-white">
-        {/* Clears the fixed header. */}
-        <div className="h-24" />
+        {/* The hero runs up under the fixed header, so no white strip shows above it. */}
         <section className="relative overflow-hidden rounded-b-[3rem] bg-gradient-to-br from-emerald-600 via-emerald-500 to-orange-400">
           <div className="pointer-events-none absolute -left-36 top-8 h-72 w-72 rounded-full bg-white/15 blur-3xl" />
           <div className="pointer-events-none absolute -right-44 bottom-[-140px] h-80 w-80 rounded-full bg-emerald-900/30 blur-3xl" />
           <div className="pointer-events-none absolute -left-36 top-8 h-72 w-72 rounded-full bg-white/15 blur-3xl" />
-          <div className="relative mx-auto flex max-w-4xl flex-col items-center px-4 py-20 text-center text-white md:px-6 md:py-24">
+          <div className="relative mx-auto flex max-w-4xl flex-col items-center px-4 pb-20 pt-40 text-center text-white md:px-6 md:pb-24 md:pt-44">
             <Link
               href="/lag"
               className="mb-6 inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.35em] text-emerald-600 shadow transition hover:bg-emerald-50"
@@ -424,19 +424,6 @@ export default function TeamPageClient({ team }: { team: ClubTeamMetadata }) {
               )}
             </section>
 
-            <Card className="mt-8 overflow-hidden rounded-2xl border border-emerald-100/70 bg-white shadow-lg shadow-emerald-50">
-              <div
-                className="h-[420px] w-full rounded-2xl bg-gray-200 md:h-[520px]"
-                style={{
-                  backgroundImage: `url(${team.heroImage})`,
-                  backgroundSize: "contain",
-                  backgroundRepeat: "no-repeat",
-                  backgroundPosition: "center",
-                }}
-                role="img"
-                aria-label={team.heroImageAlt}
-              />
-            </Card>
           </div>
         </div>
       </main>

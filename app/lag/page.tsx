@@ -13,8 +13,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 
-// Follows laget.se: the team list is rebuilt from the API at most every few minutes.
-export const revalidate = 300
+// Follows laget.se through lib/club-teams.ts (API fetch cached a few minutes).
 
 const CATEGORY_ORDER = ["Dam", "Herr", "Övrigt"]
 

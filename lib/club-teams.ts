@@ -2,9 +2,10 @@ import lagContent from "@/public/content/lag.json"
 import { CLUB_TEAM_METADATA, type ClubTeamMetadata } from "@/lib/team-display"
 
 // The club's teams, read from the API's live copy of laget.se (GET /teams, rediscovered
-// every 30 minutes; the same source the club assistant reads). Pages using this revalidate
-// on TEAMS_REVALIDATE_SECONDS, so a team added or renamed on laget.se shows up on the site
-// without a release. The static list in team-display.ts is only the fallback.
+// every 30 minutes; the same source the club assistant reads). The fetch is cached for
+// TEAMS_REVALIDATE_SECONDS, so a team added or renamed on laget.se shows up on the site
+// within minutes and without a release. The static list in team-display.ts is only the
+// fallback for when the API cannot be reached.
 
 export const TEAMS_REVALIDATE_SECONDS = 300
 
@@ -121,7 +122,30 @@ const byAge = (a: ClubTeamMetadata, b: ClubTeamMetadata) => {
   return ageA - ageB
 }
 
-export async function getClubTeams(): Promise<ClubTeamMetadata[]> {
+// Page ids must be unique; a second team with the same id gets a numbered one.
+const withUniqueIds = (teams: ClubTeamMetadata[]) => {
+  const seen = new Map<string, number>()
+  return teams.map((team) => {
+    const count = (seen.get(team.id) ?? 0) + 1
+    seen.set(team.id, count)
+    return count === 1 ? team : { ...team, id: `${team.id}-${count}` }
+  })
+}
+
+// A yearless match label ("F19") belongs to the senior team when one shares the class,
+// not to the youth team "F19 (2009)".
+const withYearlessOwnership = (teams: ClubTeamMetadata[]) => {
+  const classOf = (team: ClubTeamMetadata) => team.name.trim().toLowerCase().replace(/\s+/g, "")
+  const seniorClasses = new Set(teams.filter((team) => !team.birthYears?.length).map(classOf))
+  return teams.map((team) => ({
+    ...team,
+    matchesYearlessClass: !team.birthYears?.length || !seniorClasses.has(classOf(team)),
+  }))
+}
+
+const finish = (teams: ClubTeamMetadata[]) => withYearlessOwnership(withUniqueIds(teams.map(decorate).sort(byAge)))
+
+export async function getClubTeamsWithSource(): Promise<{ teams: ClubTeamMetadata[]; live: boolean }> {
   try {
     const response = await fetch(`${API_BASE_URL}/teams`, {
       next: { revalidate: TEAMS_REVALIDATE_SECONDS },
@@ -131,10 +155,14 @@ export async function getClubTeams(): Promise<ClubTeamMetadata[]> {
       const body = (await response.json()) as { teams?: ApiTeam[] }
       const teams = (body.teams ?? []).map(fromApi).filter((team): team is ClubTeamMetadata => Boolean(team))
       // A near-empty answer is a backend hiccup, not a club without teams.
-      if (teams.length >= 5) return teams.map(decorate).sort(byAge)
+      if (teams.length >= 5) return { teams: finish(teams), live: true }
     }
   } catch {
     // Fall through to the static list.
   }
-  return CLUB_TEAM_METADATA.map(decorate).sort(byAge)
+  return { teams: finish(CLUB_TEAM_METADATA), live: false }
+}
+
+export async function getClubTeams(): Promise<ClubTeamMetadata[]> {
+  return (await getClubTeamsWithSource()).teams
 }

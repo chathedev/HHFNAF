@@ -24,10 +24,12 @@ export type ClubTeamMetadata = {
   heroImageAlt?: string
   trainingPattern?: TeamTrainingSlot[]
   leaders?: TeamLeader[]
+  // False when a senior team shares the class: then bare "F19" matches belong to it.
+  matchesYearlessClass?: boolean
 }
 
 // The live team list comes from the API (GET /teams, which follows laget.se); see
-// lib/club-teams.ts. This copy of the 2026/27 laget.se teams is only the fallback for when
+// lib/club-teams.ts and the /lag/<id> handling in proxy.ts. This copy of the 2026/27 laget.se teams is only the fallback for when
 // the API cannot be reached.
 export const CLUB_TEAM_METADATA: ClubTeamMetadata[] = [
   { id: "dam-utv", name: "Dam/utv", displayName: "Dam/utv", category: "Dam", link: "https://www.laget.se/HHK-dam-utv" },
@@ -66,12 +68,19 @@ export const resolveLegacyTeamId = (id: string, teams: Pick<ClubTeamMetadata, "i
   if (!match) return null
   const gender = match[1].toLowerCase()
   const years = Array.from(id.matchAll(/(?:19|20)\d{2}/g), (m) => Number(m[0]))
-  const candidates = teams.filter((team) => team.id.startsWith(gender) && /^[fp]\d/.test(team.id))
-  for (const year of years) {
-    const hit = candidates.find((team) => team.birthYears?.includes(year))
-    if (hit) return hit.id
+  const candidates = teams.filter((team) => team.id.toLowerCase().startsWith(gender) && /^[fp]\d/i.test(team.id))
+  // The same birth years exactly ("p14-2011" -> P15 (2011)); otherwise the team holding
+  // most of them, ties going to the younger players (who stay together longest).
+  let best: { id: string; score: number } | null = null
+  for (const team of candidates) {
+    const teamYears = team.birthYears ?? []
+    const overlap = years.filter((year) => teamYears.includes(year)).length
+    if (overlap === 0) continue
+    const exact = overlap === years.length && teamYears.length === years.length
+    const score = (exact ? 1000 : 0) + overlap * 10 + (teamYears.includes(years[years.length - 1]) ? 1 : 0)
+    if (!best || score > best.score) best = { id: team.id, score }
   }
-  return null
+  return best?.id ?? null
 }
 
 // True when a match's class label ("P12 (2014/2015)") is played by players from a team
