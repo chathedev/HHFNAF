@@ -1,42 +1,89 @@
 import { normalizeMatchKey } from "./matches"
 
+export type TeamTrainingSlot = {
+  weekday: string
+  time: string
+  endTime?: string | null
+  location?: string | null
+}
+
+export type TeamLeader = { name: string; role?: string | null }
+
 export type ClubTeamMetadata = {
   id: string
   name: string
   displayName: string
   category: string
+  // Birth years of the laget.se team. Matches are picked by these, since a competition
+  // class ("F16 (2010/2011)") can span more than one laget.se team.
+  birthYears?: number[]
   description?: string
   link?: string
   instagramLink?: string
   heroImage?: string
   heroImageAlt?: string
+  trainingPattern?: TeamTrainingSlot[]
+  leaders?: TeamLeader[]
 }
 
+// The live team list comes from the API (GET /teams, which follows laget.se); see
+// lib/club-teams.ts. This copy of the 2026/27 laget.se teams is only the fallback for when
+// the API cannot be reached.
 export const CLUB_TEAM_METADATA: ClubTeamMetadata[] = [
-  { id: "dam-utv", name: "Dam/utv", displayName: "Dam/utv", category: "Dam", heroImage: "/HarnosandsHF/Gruppfoto/Härnösands HF - Dam.jpg", heroImageAlt: "Dam/utv", link: "https://www.laget.se/HHK-dam-utv" },
-  { id: "a-lag-herrar", name: "A-lag Herrar", displayName: "A-lag Herrar", category: "Herr", heroImage: "/HarnosandsHF/Gruppfoto/Härnösands HF - A-lag Herr.jpg", heroImageAlt: "A-lag Herrar", link: "https://www.laget.se/HarnosandsHFHerr" },
-  { id: "fritids-teknikskola", name: "Fritids-Teknikskola", displayName: "Fritids-Teknikskola", category: "Övrigt", heroImage: "/placeholder.jpg", heroImageAlt: "Fritids-Teknikskola", link: "https://www.laget.se/HarnosandsHK-Fritids-Teknikskola" },
-  { id: "f19-senior", name: "F19-Senior", displayName: "F19-Senior", category: "Dam", heroImage: "/HarnosandsHF/Gruppfoto/Härnösands HF - F19.jpg", heroImageAlt: "F19-Senior", link: "https://www.laget.se/HarnosandsHF-F19-senior" },
-  { id: "f16-2009", name: "F16", displayName: "F16 (2009)", category: "Dam", heroImage: "/HarnosandsHF/Gruppfoto/Härnösands HF - F2009.jpg", heroImageAlt: "F16 (2009)", link: "https://www.laget.se/F16-2009" },
-  { id: "f15-2010", name: "F15", displayName: "F15 (2010)", category: "Dam", heroImage: "/HarnosandsHF/Gruppfoto/Härnösands HF - F2010.jpg", heroImageAlt: "F15 (2010)", link: "https://www.laget.se/F15-2010" },
-  { id: "f14-2011", name: "F14", displayName: "F14 (2011–12)", category: "Dam", heroImage: "/HarnosandsHF/Gruppfoto/Härnösands HF - F2011.jpg", heroImageAlt: "F14 (2011–12)", link: "https://www.laget.se/F14-2011" },
-  { id: "f13-2012", name: "F13", displayName: "F13 (2012)", category: "Dam", heroImage: "/HarnosandsHF/Gruppfoto/Härnösands HF - F2012.jpg", heroImageAlt: "F13 (2012)", link: "https://www.laget.se/F13-2012" },
-  { id: "f12-2013", name: "F12", displayName: "F12 (2013)", category: "Dam", heroImage: "/HarnosandsHF/Gruppfoto/Härnösands HF - F2013.jpg", heroImageAlt: "F12 (2013)", link: "https://www.laget.se/F12-2013" },
-  { id: "f11-2014", name: "F11", displayName: "F11 (2014)", category: "Dam", heroImage: "/HarnosandsHF/Gruppfoto/Härnösands HF - F2014.jpg", heroImageAlt: "F11 (2014)", link: "https://www.laget.se/F11-2014" },
-  { id: "f10-2015", name: "F10", displayName: "F10 (2015)", category: "Dam", heroImage: "/HarnosandsHF/Gruppfoto/Härnösands HF - F2015.jpg", heroImageAlt: "F10 (2015)", link: "https://www.laget.se/F10-2015" },
-  { id: "f9-2016", name: "F9", displayName: "F9 (2016)", category: "Dam", heroImage: "/HarnosandsHF/Gruppfoto/Härnösands HF - F2016.jpg", heroImageAlt: "F9 (2016)", link: "https://www.laget.se/F9-2016" },
-  { id: "f8-2017", name: "F8", displayName: "F8 (2017)", category: "Dam", heroImage: "/placeholder.jpg", heroImageAlt: "F8 (2017)", link: "https://www.laget.se/F8-2017" },
-  { id: "f7-2018", name: "F7", displayName: "F7 (2018)", category: "Dam", heroImage: "/placeholder.jpg", heroImageAlt: "F7 (2018)", link: "https://www.laget.se/F7-2018" },
-  { id: "f6-2019", name: "F6", displayName: "F6 (2019)", category: "Dam", heroImage: "/placeholder.jpg", heroImageAlt: "F6 (2019)", link: "https://www.laget.se/F6-2019" },
-  { id: "p16-2009-2010", name: "P16", displayName: "P16 (2009–10)", category: "Herr", heroImage: "/HarnosandsHF/Gruppfoto/Härnösands HF - P2009-2010.jpg", heroImageAlt: "P16 (2009–10)", link: "https://www.laget.se/P16" },
-  { id: "p14-2011", name: "P14", displayName: "P14 (2011)", category: "Herr", heroImage: "/HarnosandsHF/Gruppfoto/Härnösands HF - P2011.jpg", heroImageAlt: "P14 (2011)", link: "https://www.laget.se/P14-2011" },
-  { id: "p13-2012", name: "P13", displayName: "P13 (2012)", category: "Herr", heroImage: "/HarnosandsHF/Gruppfoto/Härnösands HF - P2012.jpg", heroImageAlt: "P13 (2012)", link: "https://www.laget.se/P13-2012" },
-  { id: "p12-2013-2014", name: "P12", displayName: "P12 (2013–14)", category: "Herr", heroImage: "/HarnosandsHF/Gruppfoto/Härnösands HF - P2013.jpg", heroImageAlt: "P12 (2013–14)", link: "https://www.laget.se/P12-2013" },
-  { id: "p10-2015", name: "P10", displayName: "P10 (2015)", category: "Herr", heroImage: "/HarnosandsHF/Gruppfoto/Härnösands HF - P2015.jpg", heroImageAlt: "P10 (2015)", link: "https://www.laget.se/P10-2015" },
-  { id: "p9-2016", name: "P9", displayName: "P9 (2016)", category: "Herr", heroImage: "/HarnosandsHF/Gruppfoto/Härnösands HF - P2016.jpg", heroImageAlt: "P9 (2016)", link: "https://www.laget.se/P9-2016" },
-  { id: "p8-2017", name: "P8", displayName: "P8 (2017)", category: "Herr", heroImage: "/HarnosandsHF/Gruppfoto/Härnösands HF - P2017.jpg", heroImageAlt: "P8 (2017)", link: "https://www.laget.se/P8-2017" },
-  { id: "p7-2018", name: "P7", displayName: "P7 (2018)", category: "Herr", heroImage: "/placeholder.jpg", heroImageAlt: "P7 (2018)", link: "https://www.laget.se/P7-2018" },
+  { id: "dam-utv", name: "Dam/utv", displayName: "Dam/utv", category: "Dam", link: "https://www.laget.se/HHK-dam-utv" },
+  { id: "a-lag-herrar", name: "A-lag Herrar", displayName: "A-lag Herrar", category: "Herr", link: "https://www.laget.se/HarnosandsHFHerr" },
+  { id: "fritids-teknikskola", name: "Fritids-Teknikskola", displayName: "Fritids-Teknikskola", category: "Övrigt", link: "https://www.laget.se/HarnosandsHK-Fritids-Teknikskola" },
+  { id: "f19-senior", name: "F19", displayName: "F19-Senior", category: "Dam", link: "https://www.laget.se/HarnosandsHF-F19-senior" },
+  { id: "f19-2009", name: "F19", displayName: "F19 (2009)", category: "Dam", birthYears: [2009], link: "https://www.laget.se/F19-2009" },
+  { id: "f16-2010", name: "F16", displayName: "F16 (2010)", category: "Dam", birthYears: [2010], link: "https://www.laget.se/F16-2010" },
+  { id: "f15-2011", name: "F15", displayName: "F15 (2011)", category: "Dam", birthYears: [2011], link: "https://www.laget.se/F15-2011" },
+  { id: "f14-2012", name: "F14", displayName: "F14 (2012)", category: "Dam", birthYears: [2012], link: "https://www.laget.se/F14-2012" },
+  { id: "f13-2013", name: "F13", displayName: "F13 (2013)", category: "Dam", birthYears: [2013], link: "https://www.laget.se/F13-2013" },
+  { id: "f12-2014", name: "F12", displayName: "F12 (2014)", category: "Dam", birthYears: [2014], link: "https://www.laget.se/F12-2014" },
+  { id: "f11-2015", name: "F11", displayName: "F11 (2015)", category: "Dam", birthYears: [2015], link: "https://www.laget.se/F11-2015" },
+  { id: "f10-2016", name: "F10", displayName: "F10 (2016)", category: "Dam", birthYears: [2016], link: "https://www.laget.se/F10-2016" },
+  { id: "f9-2017", name: "F9", displayName: "F9 (2017)", category: "Dam", birthYears: [2017], link: "https://www.laget.se/F9-2017" },
+  { id: "f8-2018", name: "F8", displayName: "F8 (2018)", category: "Dam", birthYears: [2018], link: "https://www.laget.se/F8-2018" },
+  { id: "f7-2019", name: "F7", displayName: "F7 (2019)", category: "Dam", birthYears: [2019], link: "https://www.laget.se/F7-2019" },
+  { id: "f6-2020", name: "F6", displayName: "F6 (2020)", category: "Dam", birthYears: [2020], link: "https://www.laget.se/HarnosandsHF-F62020" },
+  { id: "p19-2007-2009", name: "P19", displayName: "P19 (2007–2009)", category: "Herr", birthYears: [2007, 2008, 2009], link: "https://www.laget.se/HarnosandsHF-P19-Senior" },
+  { id: "p16-2010-2011", name: "P16", displayName: "P16 (2010/2011)", category: "Herr", birthYears: [2010, 2011], link: "https://www.laget.se/P16" },
+  { id: "p15-2011", name: "P15", displayName: "P15 (2011)", category: "Herr", birthYears: [2011], link: "https://www.laget.se/P15-2011" },
+  { id: "p14-2012", name: "P14", displayName: "P14 (2012)", category: "Herr", birthYears: [2012], link: "https://www.laget.se/P14-2012" },
+  { id: "p13-2013-2014", name: "P13", displayName: "P13 (2013/2014)", category: "Herr", birthYears: [2013, 2014], link: "https://www.laget.se/P13-2013" },
+  { id: "p11-2015", name: "P11", displayName: "P11 (2015)", category: "Herr", birthYears: [2015], link: "https://www.laget.se/P11-2015" },
+  { id: "p10-2016", name: "P10", displayName: "P10 (2016)", category: "Herr", birthYears: [2016], link: "https://www.laget.se/P10-2016" },
+  { id: "p9-2017", name: "P9", displayName: "P9 (2017)", category: "Herr", birthYears: [2017], link: "https://www.laget.se/P9-2017" },
+  { id: "p8-2018", name: "P8", displayName: "P8 (2018)", category: "Herr", birthYears: [2018], link: "https://www.laget.se/P8-2018" },
+  { id: "p7-2019", name: "P7", displayName: "P7 (2019)", category: "Herr", birthYears: [2019], link: "https://www.laget.se/HarnosandsHF-P72019" },
 ]
+
+// Team page ids carry the class and birth years ("f12-2013"), and laget.se renames the
+// classes every season. An id from an earlier season resolves to the team the same birth
+// cohort plays in now, so old links and bookmarks keep working.
+export const resolveLegacyTeamId = (id: string, teams: Pick<ClubTeamMetadata, "id" | "birthYears">[]) => {
+  const match = /^([fp])\d{1,2}-((?:19|20)\d{2})(?:-(?:19|20)\d{2})*$/i.exec(id.trim())
+  if (!match) return null
+  const gender = match[1].toLowerCase()
+  const years = Array.from(id.matchAll(/(?:19|20)\d{2}/g), (m) => Number(m[0]))
+  const candidates = teams.filter((team) => team.id.startsWith(gender) && /^[fp]\d/.test(team.id))
+  for (const year of years) {
+    const hit = candidates.find((team) => team.birthYears?.includes(year))
+    if (hit) return hit.id
+  }
+  return null
+}
+
+// True when a match's class label ("P12 (2014/2015)") is played by players from a team
+// with these birth years. Both sides must name a gender and birth years.
+export const matchLabelFitsTeam = (label: string | null | undefined, team: Pick<ClubTeamMetadata, "name" | "birthYears">) => {
+  const teamGender = teamClassOf(team.name)?.gender
+  const labelGender = teamClassOf(label)?.gender
+  const years = birthYearsInLabel(label)
+  if (!teamGender || !labelGender || teamGender !== labelGender) return false
+  if (!team.birthYears?.length || years.length === 0) return false
+  return years.some((year) => team.birthYears!.includes(year))
+}
 
 // Youth classes are named by the age players turn during the season, so the birth years
 // behind "P16" move every season. Mirrors seasonalTeamLabel in the API

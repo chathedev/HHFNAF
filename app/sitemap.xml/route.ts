@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server"
 
+import { getClubTeams } from "@/lib/club-teams"
+
+export const revalidate = 3600
+
 export async function GET() {
   const baseUrl = "https://www.harnosandshf.se"
 
@@ -8,36 +12,17 @@ export async function GET() {
     { url: "/lag", priority: "0.8", changefreq: "weekly" },
     { url: "/matcher", priority: "0.8", changefreq: "daily" },
     { url: "/kontakt", priority: "0.7", changefreq: "monthly" },
+    { url: "/tabeller", priority: "0.7", changefreq: "daily" },
+    { url: "/partners", priority: "0.5", changefreq: "monthly" },
     { url: "/links", priority: "0.6", changefreq: "monthly" },
   ]
 
-  // Add team pages
-  const teamPages = [
-    { url: "/lag/dam-utv", priority: "0.9", changefreq: "weekly" },
-    { url: "/lag/a-lag-herrar", priority: "0.9", changefreq: "weekly" },
-    { url: "/lag/f19", priority: "0.85", changefreq: "weekly" },
-    { url: "/lag/fritids-teknikskola", priority: "0.6", changefreq: "monthly" },
-    { url: "/lag/flickor-16-f08-09", priority: "0.8", changefreq: "weekly" },
-    { url: "/lag/f-10", priority: "0.7", changefreq: "weekly" },
-    { url: "/lag/f-11", priority: "0.7", changefreq: "weekly" },
-    { url: "/lag/f-12", priority: "0.7", changefreq: "weekly" },
-    { url: "/lag/f-13", priority: "0.7", changefreq: "weekly" },
-    { url: "/lag/f-14", priority: "0.7", changefreq: "weekly" },
-    { url: "/lag/f-15", priority: "0.7", changefreq: "weekly" },
-    { url: "/lag/f-16", priority: "0.7", changefreq: "weekly" },
-    { url: "/lag/f-17", priority: "0.7", changefreq: "weekly" },
-    { url: "/lag/f-18", priority: "0.7", changefreq: "weekly" },
-    { url: "/lag/pojkar-16-p08-09", priority: "0.8", changefreq: "weekly" },
-    { url: "/lag/p16-09-10", priority: "0.85", changefreq: "weekly" },
-    { url: "/lag/p-11", priority: "0.7", changefreq: "weekly" },
-    { url: "/lag/p-12", priority: "0.7", changefreq: "weekly" },
-    { url: "/lag/p-13", priority: "0.7", changefreq: "weekly" },
-    { url: "/lag/p-14", priority: "0.7", changefreq: "weekly" },
-    { url: "/lag/p-15", priority: "0.7", changefreq: "weekly" },
-    { url: "/lag/p-16", priority: "0.7", changefreq: "weekly" },
-    { url: "/lag/p-17", priority: "0.7", changefreq: "weekly" },
-    { url: "/lag/p-18", priority: "0.7", changefreq: "weekly" }
-  ];
+  // Team pages follow laget.se (see lib/club-teams.ts).
+  const teamPages = (await getClubTeams()).map((team) => ({
+    url: `/lag/${team.id}`,
+    priority: team.category === "Övrigt" ? "0.6" : "0.7",
+    changefreq: "weekly",
+  }))
 
   // Combine static and dynamic pages
   const allPages = [...staticPages, ...teamPages];

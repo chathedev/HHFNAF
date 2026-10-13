@@ -1,6 +1,7 @@
 import Link from "next/link"
 
 import lagContent from "@/public/content/lag.json"
+import { getClubTeams } from "@/lib/club-teams"
 import Footer from "@/components/footer"
 import { Header } from "@/components/header"
 import {
@@ -10,85 +11,24 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
-import { CLUB_TEAM_METADATA, currentTeamLabel, extendTeamDisplayName } from "@/lib/team-display"
 import { Card } from "@/components/ui/card"
 
-const PLACEHOLDER_HERO = "/placeholder.jpg"
-
-const slugify = (value: string) =>
-  value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "")
-
-const encodeAssetPath = (path: string) => {
-  if (!path) {
-    return PLACEHOLDER_HERO
-  }
-  const segments = path.split("/").map((segment, index) => (index === 0 ? segment : encodeURIComponent(segment)))
-  return segments.join("/")
-}
-
-const contentTeamEntries = lagContent.teamCategories.flatMap((category) => {
-  const categoryTeams = Array.isArray(category.teams) ? category.teams : []
-  return categoryTeams.map((team) => {
-    const rawId = (team as { id?: string })?.id?.trim()
-    const id = rawId && rawId.length > 0 ? rawId : slugify(team.name)
-    return { id, category: category.name, team }
-  })
-})
-
-const contentTeamMap = new Map(contentTeamEntries.map((entry) => [entry.id, entry]))
-
-const teams = CLUB_TEAM_METADATA.map((meta) => {
-  const content = contentTeamMap.get(meta.id) ?? contentTeamMap.get(slugify(meta.name))
-  const resolvedCategory = meta.category || content?.category || "Övrigt"
-  const resolvedLink = meta.link ?? (content?.team as { link?: string })?.link ?? ""
-  const resolvedInstagram = meta.instagramLink ?? (content?.team as { instagramLink?: string })?.instagramLink ?? ""
-  const resolvedHero =
-    meta.heroImage ??
-    (content?.team as { heroImage?: string })?.heroImage ??
-    PLACEHOLDER_HERO
-  const resolvedHeroAlt =
-    meta.heroImageAlt ??
-    (content?.team as { heroImageAlt?: string })?.heroImageAlt ??
-    `Lagbild ${meta.displayName}`
-  const resolvedDescription =
-    meta.description ?? (content?.team && typeof content.team.description === "string" ? content.team.description : "") ?? ""
-
-  return {
-    ...meta,
-    category: resolvedCategory,
-    link: resolvedLink,
-    instagramLink: resolvedInstagram,
-    heroImage: encodeAssetPath(resolvedHero),
-    heroImageAlt: resolvedHeroAlt,
-    description: resolvedDescription,
-  }
-})
+// Follows laget.se: the team list is rebuilt from the API at most every few minutes.
+export const revalidate = 300
 
 const CATEGORY_ORDER = ["Dam", "Herr", "Övrigt"]
 
-const categoryStats = CATEGORY_ORDER
-  .map((cat) => {
-    const count = teams.filter((t) => t.category === cat).length
-    return { name: cat, count }
-  })
-  .filter((s) => s.count > 0)
+export default async function LagPage() {
+  const teams = await getClubTeams()
+  const totalTeams = teams.length
+  const teamsByCategory = CATEGORY_ORDER
+    .map((cat) => ({
+      category: cat,
+      description: cat === "Dam" ? "Damlag och flicklag" : cat === "Herr" ? "Herrlag och pojklag" : "Övriga lag och verksamheter",
+      items: teams.filter((t) => t.category === cat),
+    }))
+    .filter((g) => g.items.length > 0)
 
-const totalTeams = teams.length
-
-const teamsByCategory = CATEGORY_ORDER
-  .map((cat) => ({
-    category: cat,
-    description: cat === "Dam" ? "Damlag och flicklag" : cat === "Herr" ? "Herrlag och pojklag" : "Övriga lag och verksamheter",
-    items: teams.filter((t) => t.category === cat),
-  }))
-  .filter((g) => g.items.length > 0)
-
-export default function LagPage() {
   return (
     <>
       <Header />
@@ -162,7 +102,7 @@ export default function LagPage() {
                             {team.category}
                           </p>
                           <h3 className="text-sm font-semibold tracking-tight text-gray-900">
-                            {currentTeamLabel(team.name) !== team.name ? currentTeamLabel(team.name) : extendTeamDisplayName(team.displayName ?? team.name)}
+                            {team.displayName}
                           </h3>
                           {team.link && (
                             <span className="inline-flex w-full items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white">
