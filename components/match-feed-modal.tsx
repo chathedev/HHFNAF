@@ -30,6 +30,9 @@ export type MatchFeedEvent = {
   teamId?: number
   isTeamEvent?: boolean
   isComment?: boolean
+  /** Team official (coach/leader), not a player; staffLetter is A-D from the line-up. */
+  isStaff?: boolean
+  staffLetter?: string
   score?: string
   scoringTeam?: string
   isHomeGoal?: boolean
@@ -77,6 +80,8 @@ export type MatchPenalty = {
   /** Set by the API when a suspension from the previous period is still being served. */
   isForPreviousPeriod?: boolean
   fullTimeExpulsion?: boolean
+  isStaff?: boolean
+  staffLetter?: string | null
 }
 
 type MatchFeedModalProps = {
@@ -401,6 +406,8 @@ const normalizeTimelineEvent = (event: any): MatchFeedEvent => ({
   eventId: event?.eventId ?? event?.eventIndex,
   eventTypeId: typeof event?.eventTypeId === "number" ? event.eventTypeId : undefined,
   isComment: event?.isComment === true ? true : undefined,
+  isStaff: event?.isStaff === true ? true : undefined,
+  staffLetter: typeof event?.staffLetter === "string" ? event.staffLetter : undefined,
   payload: event?.payload,
 })
 
@@ -1572,7 +1579,9 @@ export function MatchFeedModal({
                 {activePenalties.map((item, index) => (
                   <div key={`${item.team || "team"}-${item.player || "player"}-${index}`} className="flex items-center justify-between gap-3 py-1">
                     <p className="min-w-0 truncate text-sm text-slate-500">
-                      {item.player || "Spelare"}{item.playerNumber ? ` #${item.playerNumber}` : ""} <span className="text-slate-300">·</span> {item.team || "Lag"}
+                      {item.player || "Spelare"}
+                      {item.isStaff ? ` (ledare${item.staffLetter ? ` ${item.staffLetter}` : ""})` : item.playerNumber ? ` #${item.playerNumber}` : ""}{" "}
+                      <span className="text-slate-300">·</span> {item.team || "Lag"}
                     </p>
                     <span className="font-mono text-sm font-black tabular-nums text-slate-900">
                       {formatSecondsAsClock(item.remaining)}
@@ -1812,8 +1821,17 @@ export function MatchFeedModal({
                             </p>
                             {event.player && (
                               <p className="text-[13px] leading-snug text-slate-500">
-                                {event.playerNumber && <span className="font-bold text-slate-700">{event.playerNumber}</span>}
-                                {event.playerNumber && "  "}{event.player}
+                                {event.isStaff ? (
+                                  <>
+                                    <span className="font-bold text-slate-700">{event.staffLetter || "Ledare"}</span>{"  "}
+                                    {event.player} <span className="text-slate-400">· ledare</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    {event.playerNumber && <span className="font-bold text-slate-700">{event.playerNumber}</span>}
+                                    {event.playerNumber && "  "}{event.player}
+                                  </>
+                                )}
                               </p>
                             )}
                             {!event.player && !isGoal && !isTimeout &&
