@@ -1,0 +1,1895 @@
+"use client"
+
+import { memo, startTransition, useEffect, useMemo, useRef, useState } from "react"
+import { ChevronDown, X } from "lucide-react"
+import type { NormalizedMatch } from "@/lib/use-match-data"
+import { preferRicherTimeline, resolvePreferredTimeline } from "@/lib/match-timeline"
+import {
+  MatchCourt,
+  type CourtEvent,
+  type CourtLineupPlayer,
+  type CourtPenalty,
+  type CourtPlayerStats,
+  type CourtTeamStats,
+} from "@/components/match-court"
+import { TrackingCourt2D, useTrackingForMatch } from "@/components/tracking-court-2d"
+
+export type MatchFeedEvent = {
+  time?: string
+  type?: string
+  team?: string
+  player?: string
+  playerNumber?: string
+  playerId?: number
+  description?: string
+  homeScore?: number
+  awayScore?: number
+  period?: number
+  eventTypeId?: number
+  teamId?: number
+  isTeamEvent?: boolean
+  isComment?: boolean
+  activatedCount?: number
+  /** Players registered in the match squad ("Spelare aktiverad"), collapsed into one row. */
+  squadPlayers?: { name: string; number?: string }[]
+  score?: string
+  scoringTeam?: string
+  isHomeGoal?: boolean
+  eventId?: string | number
+  payload?: {
+    description?: string
+    [key: string]: unknown
+  }
+}
+
+export type MatchClockState = {
+  running?: boolean
+  reason?: "running" | "timeout" | "stopped" | "no_events" | string
+  period?: number
+  currentSeconds?: number
+  clock?: string
+  timeout?: {
+    timeoutStartsAt?: number
+    timeoutEndsAt?: number
+    timeoutSecondsLeft?: number
+  }
+  source?: {
+    startedAt?: string
+    latestEventAt?: string
+    latestEventTime?: number
+    usedEventTime?: boolean
+    driftSeconds?: number
+  }
+}
+
+export type MatchPenalty = {
+  team?: string
+  player?: string
+  playerNumber?: string
+  period?: number
+  startSeconds?: number
+  endSeconds?: number
+  durationSeconds?: number
+  remainingSeconds?: number
+  active?: boolean
+  /** Set by the API when a suspension from the previous period is still being served. */
+  isForPreviousPeriod?: boolean
+  fullTimeExpulsion?: boolean
+}
+
+type MatchFeedModalProps = {
+  isOpen: boolean
+  onClose: () => void
+  matchFeed: MatchFeedEvent[]
+  clockState?: MatchClockState | null
+  penalties?: MatchPenalty[]
+  homeTeam: string
+  awayTeam: string
+  finalScore?: string
+  matchStatus?: "live" | "finished" | "upcoming" | "halftime"
+  matchId?: string
+  onRefresh?: () => Promise<void>
+  matchData?: NormalizedMatch
+  topScorers?: Array<{
+    team: string
+    player: string
+    playerNumber?: string
+    goals: number
+    goalTimes?: string[]
+    sevenMeterGoals?: number
+  }>
+}
+
+const API_BASE_URL =
+  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
+  "https://api.harnosandshf.se"
+
+// Last detail payload per match: reopening a match (or opening one that was prefetched
+// from its card) renders instantly from here while a fresh fetch runs in the background.
+const DETAIL_CACHE_MAX = 40
+const matchDetailCache = new Map<string, { payload: any; at: number }>()
+const matchDetailInflight = new Map<string, Promise<any | null>>()
+
+const storeMatchDetail = (apiMatchId: string, payload: any) => {
+  matchDetailCache.delete(apiMatchId)
+  matchDetailCache.set(apiMatchId, { payload, at: Date.now() })
+  if (matchDetailCache.size > DETAIL_CACHE_MAX) {
+    const oldest = matchDetailCache.keys().next().value
+    if (oldest !== undefined) matchDetailCache.delete(oldest)
+  }
+}
+
+const requestMatchDetail = (apiMatchId: string, timeoutMs = 8_000): Promise<any | null> => {
+  const inflight = matchDetailInflight.get(apiMatchId)
+  if (inflight) return inflight
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+  const request = fetch(`${API_BASE_URL}/matcher/match/${encodeURIComponent(apiMatchId)}?includeEvents=1`, {
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+    signal: controller.signal,
+  })
+    .then(async (response) => {
+      if (!response.ok) return null
+      const payload = await response.json()
+      storeMatchDetail(apiMatchId, payload)
+      return payload
+    })
+    .catch(() => null)
+    .finally(() => {
+      clearTimeout(timeoutId)
+      matchDetailInflight.delete(apiMatchId)
+    })
+  matchDetailInflight.set(apiMatchId, request)
+  return request
+}
+
+/** Shared, de-duplicated detail request; also fills the modal's cache. */
+export const loadMatchDetail = (apiMatchId: string) => requestMatchDetail(apiMatchId)
+
+/** Warm the detail cache (e.g. on card hover/touch) so the modal opens with data. */
+export const prefetchMatchDetail = (apiMatchId?: string | null) => {
+  if (!apiMatchId) return
+  const cached = matchDetailCache.get(apiMatchId)
+  if (cached && Date.now() - cached.at < 15_000) return
+  void requestMatchDetail(apiMatchId)
+}
+
+type StripSide = "home" | "away"
+
+// Live match summary shown on top of the timeline. Bars animate (width transitions) as
+// events arrive, so the numbers "flow" with the game instead of jumping.
+const TimelineStatsStrip = memo(function TimelineStatsStrip({
+  events,
+  homeTeam,
+  awayTeam,
+}: {
+  events: MatchFeedEvent[]
+  homeTeam: string
+  awayTeam: string
+}) {
+  const stats = useMemo(() => {
+    const blank = () => ({ goals: 0, seven: 0, suspensions: 0, timeouts: 0 })
+    const bySide: Record<StripSide, ReturnType<typeof blank>> = { home: blank(), away: blank() }
+    const goalRun: StripSide[] = []
+    const chronological = [...events].sort(
+      (a, b) => (parseEventTimeToSeconds(a.time) ?? 0) - (parseEventTimeToSeconds(b.time) ?? 0),
+    )
+    for (const event of chronological) {
+      const side = getResolvedEventSide(event, homeTeam, awayTeam)
+      if (side === "center") continue
+      const type = getEventSemanticType(event)
+      const text = getEventCombinedText(event)
+      if (type === "goal" && !text.includes("miss") && !text.includes("räddad")) {
+        bySide[side].goals += 1
+        if (text.includes("7-m") || text.includes("7m") || text.includes("straff")) bySide[side].seven += 1
+        goalRun.push(side)
+      } else if (type === "suspension") {
+        bySide[side].suspensions += 1
+      } else if (type === "timeout") {
+        bySide[side].timeouts += 1
+      }
+    }
+    return { bySide, lastGoals: goalRun.slice(-8) }
+  }, [events, homeTeam, awayTeam])
+
+  const rows: Array<{ label: string; key: keyof (typeof stats.bySide)["home"] }> = [
+    { label: "Mål", key: "goals" },
+    { label: "7-m mål", key: "seven" },
+    { label: "Utvisningar", key: "suspensions" },
+    { label: "Timeouts", key: "timeouts" },
+  ]
+  // HHF in club green on whichever side it plays; the opponent in neutral grey.
+  const homeIsHHF = isHHFName(homeTeam) && !isHHFName(awayTeam)
+  const colorFor = (side: StripSide) =>
+    (side === "home") === homeIsHHF ? "bg-emerald-600" : "bg-slate-400"
+  const hasAny = rows.some((row) => stats.bySide.home[row.key] + stats.bySide.away[row.key] > 0)
+  if (!hasAny) return null
+
+  return (
+    <div className="border-b border-slate-100 px-5 py-4">
+      <div className="space-y-2.5">
+        {rows.map((row) => {
+          const home = stats.bySide.home[row.key]
+          const away = stats.bySide.away[row.key]
+          const total = home + away
+          const homePct = total > 0 ? (home / total) * 100 : 50
+          return (
+            <div key={row.key} className="grid grid-cols-[2rem_1fr_2rem] items-center gap-2">
+              <span className="text-right text-sm font-bold tabular-nums text-slate-900">{home}</span>
+              <div>
+                <div className="mb-1 text-center text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                  {row.label}
+                </div>
+                <div className="flex h-1.5 overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className={`h-full ${colorFor("home")} transition-[width] duration-700 ease-out`}
+                    style={{ width: total > 0 ? `${homePct}%` : "0%" }}
+                  />
+                  <div
+                    className={`ml-auto h-full ${colorFor("away")} transition-[width] duration-700 ease-out`}
+                    style={{ width: total > 0 ? `${100 - homePct}%` : "0%" }}
+                  />
+                </div>
+              </div>
+              <span className="text-sm font-bold tabular-nums text-slate-900">{away}</span>
+            </div>
+          )
+        })}
+      </div>
+      {stats.lastGoals.length > 0 && (
+        <div className="mt-3 flex items-center justify-center gap-2">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Senaste mål</span>
+          <div className="flex gap-1">
+            {stats.lastGoals.map((side, index) => (
+              <span
+                key={`${index}-${side}`}
+                title={side === "home" ? homeTeam : awayTeam}
+                className={`h-2.5 w-2.5 rounded-full transition-colors duration-500 ${colorFor(side)}`}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+})
+
+const isZeroScore = (value?: string) => {
+  const normalized = (value || "").replace(/\s/g, "").replace("–", "-")
+  return normalized === "0-0"
+}
+
+const normalizeTeamIdentity = (value?: string) =>
+  (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+
+const stripTeamOrdinal = (value: string) => value.replace(/\b\d+\b/g, "").replace(/\s+/g, " ").trim()
+
+const getTeamMatchStrength = (candidate?: string, reference?: string) => {
+  const candidateName = normalizeTeamIdentity(candidate)
+  const referenceName = normalizeTeamIdentity(reference)
+  if (!candidateName || !referenceName) return 0
+  if (candidateName === referenceName) return 4
+
+  const candidateBase = stripTeamOrdinal(candidateName)
+  const referenceBase = stripTeamOrdinal(referenceName)
+  if (candidateBase && candidateBase === referenceBase) {
+    const candidateHasOrdinal = candidateBase !== candidateName
+    const referenceHasOrdinal = referenceBase !== referenceName
+    if (candidateHasOrdinal === referenceHasOrdinal) return 3
+    return 0
+  }
+
+  if (candidateName.includes(referenceName) || referenceName.includes(candidateName)) {
+    return 1
+  }
+
+  return 0
+}
+
+// Is this our club? Used to highlight the Härnösands HF side in the header.
+const isHHFName = (name: string | undefined): boolean =>
+  /h[äa]rn[öo]sand/i.test(name ?? "")
+
+const resolveTeamSide = (teamName: string | undefined, homeTeam: string, awayTeam: string): "home" | "away" | null => {
+  const homeStrength = getTeamMatchStrength(teamName, homeTeam)
+  const awayStrength = getTeamMatchStrength(teamName, awayTeam)
+  if (homeStrength === 0 && awayStrength === 0) return null
+  if (homeStrength === awayStrength) return null
+  return homeStrength > awayStrength ? "home" : "away"
+}
+
+const inferSideFromGoalFlag = (event: MatchFeedEvent): "home" | "away" | null => {
+  if (typeof event.isHomeGoal !== "boolean") return null
+  return event.isHomeGoal ? "home" : "away"
+}
+
+const getResolvedEventSide = (event: MatchFeedEvent, homeTeam: string, awayTeam: string): "home" | "away" | "center" => {
+  if (isCommentEvent(event)) return "center"
+  if (isLifecycleEvent(event)) return "center"
+
+  const text = getEventCombinedText(event)
+  if (text.includes("timeout")) {
+    const timeoutSide = resolveTeamSide(event.team, homeTeam, awayTeam)
+    return timeoutSide ?? "center"
+  }
+
+  const scoringSide = resolveTeamSide(event.scoringTeam, homeTeam, awayTeam)
+  if (scoringSide) return scoringSide
+
+  const teamSide = resolveTeamSide(event.team, homeTeam, awayTeam)
+  if (teamSide) return teamSide
+
+  const goalFlagSide = inferSideFromGoalFlag(event)
+  if (goalFlagSide) return goalFlagSide
+
+  return "center"
+}
+
+const parseEventTimeToSeconds = (value?: string) => {
+  if (!value) return 0
+  const normalized = value.replace(/[^\d:+]/g, "")
+  const [base = "0:0", extra = "0"] = normalized.split("+")
+  const [min = "0", sec = "0"] = base.split(":")
+  const minutes = Number.parseInt(min, 10)
+  const seconds = Number.parseInt(sec, 10)
+  const extraMinutes = Number.parseInt(extra, 10)
+  const safeMinutes = Number.isFinite(minutes) ? minutes : 0
+  const safeSeconds = Number.isFinite(seconds) ? seconds : 0
+  const safeExtra = Number.isFinite(extraMinutes) ? extraMinutes : 0
+  return (safeMinutes + safeExtra) * 60 + safeSeconds
+}
+
+const formatSecondsAsClock = (totalSeconds: number) => {
+  const safe = Math.max(totalSeconds, 0)
+  const minutes = Math.floor(safe / 60)
+  const seconds = safe % 60
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
+}
+
+const normalizeTimelineEvent = (event: any): MatchFeedEvent => ({
+  time: event?.time ?? "",
+  type:
+    event?.type ??
+    event?.eventType ??
+    event?.payload?.type ??
+    event?.payload?.eventType ??
+    event?.payload?.eventTypeName ??
+    "Händelse",
+  team: event?.team ?? event?.payload?.team,
+  player: event?.player ?? event?.payload?.player,
+  playerNumber: event?.playerNumber ?? event?.payload?.playerNumber,
+  description:
+    event?.payload?.description?.toString().trim() ||
+    event?.description?.toString().trim() ||
+    event?.payload?.eventText?.toString().trim() ||
+    event?.type?.toString().trim() ||
+    "Händelse",
+  homeScore: typeof event?.homeScore === "number" ? event.homeScore : undefined,
+  awayScore: typeof event?.awayScore === "number" ? event.awayScore : undefined,
+  period: typeof event?.period === "number" ? event.period : undefined,
+  score: event?.score,
+  eventId: event?.eventId ?? event?.eventIndex,
+  eventTypeId: typeof event?.eventTypeId === "number" ? event.eventTypeId : undefined,
+  isComment: event?.isComment === true ? true : undefined,
+  payload: event?.payload,
+})
+
+// Profixio free-text comments from the secretariat (eventTypeId 215). Older payloads carry
+// type/description "Text" with the real message missing; those are hidden.
+const isCommentEvent = (event: MatchFeedEvent) =>
+  event.isComment === true ||
+  event.eventTypeId === 215 ||
+  normalizeText(event.type) === "kommentar"
+
+const getCommentText = (event: MatchFeedEvent) => {
+  const text = `${event.description ?? ""}`.trim()
+  return /^(text|kommentar|händelse)?$/i.test(text) ? "" : text
+}
+
+const isActivationEvent = (event: MatchFeedEvent) =>
+  !isCommentEvent(event) &&
+  (event.eventTypeId === 221 || getEventCombinedText(event).includes("spelare aktiverad"))
+
+const normalizeText = (value?: string) => (value ?? "").trim().toLowerCase()
+
+const getEventSemanticType = (event: MatchFeedEvent) => {
+  if (isCommentEvent(event)) return "comment"
+  const text = getEventCombinedText(event)
+  if (text.includes("spelare aktiverad")) return "activated"
+  if (text.includes("tilldömd 7-m")) return "seven_awarded"
+  if (text.includes("timeout")) return "timeout"
+  if (text.includes("utvisning")) return "suspension"
+  if (text.includes("fulltid") || text.includes("slutresultat") || text.includes("matchen är slut")) return "fulltime"
+  if (text.includes("1:a halvlek är slut") || text.includes("första halvlek slut") || text.includes("halvtid")) return "halftime"
+  if (text.includes("2:a halvlek startades") || text.includes("start andra halvlek")) return "second_half_start"
+  if (text.includes("start första halvlek")) return "first_half_start"
+  if (text.includes("mål") || text.includes("goal")) return "goal"
+  return normalizeText(event.type) || normalizeText(event.description) || "event"
+}
+
+const getEventRichnessScore = (event: MatchFeedEvent) => {
+  let score = 0
+  if (event.eventId !== undefined) score += 5
+  if (event.player) score += 4
+  if (event.playerNumber) score += 2
+  if (typeof event.homeScore === "number" && typeof event.awayScore === "number") score += 3
+  if (!isGenericEventLabel(event.type)) score += 1
+  if (!isGenericEventLabel(event.description)) score += 1
+  return score
+}
+
+const getEventDeduplicationKey = (event: MatchFeedEvent) => {
+  if (event.eventId !== undefined) {
+    return `id:${event.eventId}`
+  }
+
+  const semanticType = getEventSemanticType(event)
+  const base = [
+    normalizeText(event.time),
+    event.period ?? inferPeriodFromTime(event.time),
+    normalizeText(event.team),
+    normalizeText(event.player),
+    normalizeText(event.playerNumber),
+    semanticType,
+  ]
+
+  if (semanticType === "comment") {
+    base.push(normalizeText(event.description))
+  }
+
+  if (semanticType === "goal") {
+    base.push(String(event.homeScore ?? ""))
+    base.push(String(event.awayScore ?? ""))
+  }
+
+  return base.join("|")
+}
+
+const dedupeTimelineEvents = (events: MatchFeedEvent[]) => {
+  const bestByKey = new Map<string, { event: MatchFeedEvent; index: number }>()
+
+  events.forEach((event, index) => {
+    const key = getEventDeduplicationKey(event)
+    const existing = bestByKey.get(key)
+    if (!existing) {
+      bestByKey.set(key, { event, index })
+      return
+    }
+
+    if (getEventRichnessScore(event) > getEventRichnessScore(existing.event)) {
+      bestByKey.set(key, { event, index: existing.index })
+    }
+  })
+
+  return [...bestByKey.values()]
+    .sort((a, b) => a.index - b.index)
+    .map((entry) => entry.event)
+}
+
+const getEventCombinedText = (event: MatchFeedEvent) =>
+  isCommentEvent(event)
+    ? "kommentar"
+    : `${event.type || ""} ${event.description || ""} ${event.payload?.description || ""}`.toLowerCase()
+
+const isLifecycleEvent = (event: MatchFeedEvent) => {
+  const text = getEventCombinedText(event)
+  return (
+    text.includes("start första halvlek") ||
+    text.includes("start andra halvlek") ||
+    text.includes("2:a halvlek startades") ||
+    text.includes("första halvlek slut") ||
+    text.includes("halvlek är slut") ||
+    text.includes("matchen är slut") ||
+    text.includes("slutresultat") ||
+    text.includes("fulltid") ||
+    text.includes("spelare aktiverad")
+  )
+}
+
+const buildTimelineIdentityKey = (event: MatchFeedEvent) =>
+  [
+    event.time ?? "",
+    event.period ?? "",
+    event.team ?? "",
+    event.type ?? "",
+    event.description ?? "",
+    event.player ?? "",
+    event.playerNumber ?? "",
+    event.homeScore ?? "",
+    event.awayScore ?? "",
+  ].join("|")
+
+const parseClockMinutes = (value?: string) => {
+  if (!value) return 0
+  const normalized = value.replace(/[^\d:+]/g, "")
+  const [base = "0:0", extra = "0"] = normalized.split("+")
+  const [min = "0"] = base.split(":")
+  const minutes = Number.parseInt(min, 10)
+  const extraMinutes = Number.parseInt(extra, 10)
+  return (Number.isFinite(minutes) ? minutes : 0) + (Number.isFinite(extraMinutes) ? extraMinutes : 0)
+}
+
+const inferPeriodFromTime = (time?: string, fallbackPeriod?: number) => {
+  if (typeof fallbackPeriod === "number" && fallbackPeriod > 0) {
+    return fallbackPeriod
+  }
+
+  const minutes = parseClockMinutes(time)
+  if (minutes <= 0) {
+    return 1
+  }
+
+  return minutes > 25 ? 2 : 1
+}
+
+const getGoalLookupKey = (team?: string, time?: string, variant?: "goal" | "seven") =>
+  `${team ?? ""}|${time ?? ""}|${variant ?? "goal"}`
+
+const buildGoalLookup = (players: any[] = []) => {
+  const lookup = new Map<string, { player: string; playerNumber?: string }>()
+
+  players.forEach((player) => {
+    const team = player?.teamName ? String(player.teamName) : ""
+    const playerName = player?.name ? String(player.name) : ""
+    const playerNumber = player?.number ? String(player.number) : undefined
+    if (!team || !playerName) {
+      return
+    }
+
+    const goalTimes = Array.isArray(player?.goalTimes) ? player.goalTimes : []
+    goalTimes.forEach((time) => {
+      const key = getGoalLookupKey(team, String(time), "goal")
+      if (!lookup.has(key)) {
+        lookup.set(key, { player: playerName, playerNumber })
+      }
+    })
+
+    const sevenMeterTimes = Array.isArray(player?.sevenMeterTimes) ? player.sevenMeterTimes : []
+    sevenMeterTimes.forEach((time) => {
+      const key = getGoalLookupKey(team, String(time), "seven")
+      if (!lookup.has(key)) {
+        lookup.set(key, { player: playerName, playerNumber })
+      }
+    })
+  })
+
+  return lookup
+}
+
+const enrichTimelineWithMatchDetails = (payload: any, fallbackTimeline: MatchFeedEvent[]) => {
+  const baseSource = payload?.match ?? payload
+  const rawTimeline = resolvePreferredTimeline(baseSource, fallbackTimeline)
+  const normalizedBase = dedupeTimelineEvents(rawTimeline.map((event: any) => normalizeTimelineEvent(event)))
+  const goalLookup = buildGoalLookup(payload?.match?.playerStats?.players)
+
+  const enhancedBase = normalizedBase.map((event) => {
+    const typeText = `${event.type || ""}`.toLowerCase()
+    const variant = typeText.includes("7-m") ? "seven" : "goal"
+    const goalLookupEntry =
+      !event.player && event.team && event.time && (typeText.includes("mål") || typeText.includes("goal"))
+        ? goalLookup.get(getGoalLookupKey(event.team, event.time, variant))
+        : undefined
+
+    return {
+      ...event,
+      player: event.player ?? goalLookupEntry?.player,
+      playerNumber: event.playerNumber ?? goalLookupEntry?.playerNumber,
+    }
+  })
+
+  const existingKeys = new Set(enhancedBase.map(buildTimelineIdentityKey))
+  const supplemental: MatchFeedEvent[] = []
+  const pushSupplemental = (event: MatchFeedEvent) => {
+    const key = buildTimelineIdentityKey(event)
+    if (existingKeys.has(key)) {
+      return
+    }
+    existingKeys.add(key)
+    supplemental.push(event)
+  }
+
+  const rootTimeline = resolvePreferredTimeline(payload, []).map((event: any) => normalizeTimelineEvent(event))
+  rootTimeline.forEach(pushSupplemental)
+
+  const penaltyEvents = Array.isArray(payload?.match?.eventSummary?.penaltyEvents) ? payload.match.eventSummary.penaltyEvents : []
+  penaltyEvents.forEach((event: any) => {
+    pushSupplemental({
+      time: event?.time ?? "",
+      type: event?.description ?? "Utvisning",
+      description: event?.description ?? "Utvisning",
+      team: event?.team ?? undefined,
+      player: event?.player ?? undefined,
+      playerNumber: event?.number ? String(event.number) : undefined,
+      period: inferPeriodFromTime(event?.time),
+      eventTypeId: typeof event?.eventTypeId === "number" ? event.eventTypeId : undefined,
+    })
+  })
+
+  const timeoutEvents = Array.isArray(payload?.match?.eventSummary?.timeoutEvents) ? payload.match.eventSummary.timeoutEvents : []
+  timeoutEvents.forEach((event: any) => {
+    pushSupplemental({
+      time: event?.time ?? "",
+      type: "Timeout",
+      description: event?.team ? `Timeout ${event.team}` : "Timeout",
+      team: event?.team ?? undefined,
+      period: inferPeriodFromTime(event?.time, typeof event?.period === "number" ? event.period : undefined),
+    })
+  })
+
+  const sevenMeterDetails = Array.isArray(payload?.match?.eventSummary?.sevenMeterDetails)
+    ? payload.match.eventSummary.sevenMeterDetails
+    : []
+  sevenMeterDetails
+    .filter((event: any) => event?.outcome === "awarded")
+    .forEach((event: any) => {
+      pushSupplemental({
+        time: event?.time ?? "",
+        type: "Straff",
+        description: event?.description ?? "Tilldömd 7-m",
+        team: event?.team ?? undefined,
+        player: event?.player ?? undefined,
+        period: inferPeriodFromTime(event?.time),
+      })
+    })
+
+  // scoreTimeline carries every goal even when the feed never loaded (Profixio
+  // 403 fallback matches). Merge its goals in wherever the base timeline lacks a
+  // goal at that moment — matched semantically on time+team, since identity keys
+  // differ between the feed shape (eventId, player) and the scoreTimeline shape.
+  const goalMomentKey = (time?: string, team?: string) =>
+    `${normalizeText(time)}|${normalizeText(team)}`
+  const baseGoalMoments = new Set(
+    enhancedBase
+      .filter((event) => getEventSemanticType(event) === "goal")
+      .map((event) => goalMomentKey(event.time, event.team)),
+  )
+  const scoreTimelineEntries = Array.isArray(payload?.match?.scoreTimeline)
+    ? payload.match.scoreTimeline
+    : []
+  scoreTimelineEntries.forEach((entry: any) => {
+    const normalized = normalizeTimelineEvent(entry)
+    if (getEventSemanticType(normalized) !== "goal") return
+    if (baseGoalMoments.has(goalMomentKey(normalized.time, normalized.team))) return
+    const typeText = `${normalized.type || ""}`.toLowerCase()
+    const variant = typeText.includes("7-m") ? "seven" : "goal"
+    const lookupEntry =
+      normalized.team && normalized.time
+        ? goalLookup.get(getGoalLookupKey(normalized.team, normalized.time, variant))
+        : undefined
+    baseGoalMoments.add(goalMomentKey(normalized.time, normalized.team))
+    pushSupplemental({
+      ...normalized,
+      player: normalized.player ?? lookupEntry?.player,
+      playerNumber: normalized.playerNumber ?? lookupEntry?.playerNumber,
+    })
+  })
+
+  const mergedTimeline = [...enhancedBase, ...supplemental]
+  const hasSecondHalfStart = mergedTimeline.some((event) => {
+    const text = getEventCombinedText(event)
+    return text.includes("2:a halvlek startades") || text.includes("start andra halvlek")
+  })
+  const hasFirstHalfEnd = mergedTimeline.some((event) => {
+    const text = getEventCombinedText(event)
+    return text.includes("första halvlek slut") || text.includes("1:a halvlek är slut") || text.includes("halvlek är slut")
+  })
+
+  if (hasSecondHalfStart && !hasFirstHalfEnd) {
+    pushSupplemental({
+      time: "25:00",
+      type: "Halvtid",
+      description: "Första halvlek slut",
+      period: 1,
+    })
+  }
+
+  return dedupeTimelineEvents([...enhancedBase, ...supplemental])
+}
+
+const isLowFidelityTimeline = (timeline: MatchFeedEvent[]) => {
+  if (timeline.length === 0) {
+    return true
+  }
+
+  const hasNamedPlayer = timeline.some((event) => Boolean(event.player))
+  const hasPenaltyOrTimeout = timeline.some((event) => {
+    const text = `${event.type || ""} ${event.description || ""}`.toLowerCase()
+    return text.includes("utvisning") || text.includes("timeout") || text.includes("7-m")
+  })
+
+  return !hasNamedPlayer && !hasPenaltyOrTimeout
+}
+
+const isGoalEvent = (event: MatchFeedEvent) => {
+  if (isCommentEvent(event)) return false
+  const text = getEventCombinedText(event)
+  if (text.includes("mål") || text.includes("goal")) return true
+  return typeof event.homeScore === "number" && typeof event.awayScore === "number"
+}
+
+const isPeriodOrMatchEndEvent = (event: MatchFeedEvent) => {
+  const text = getEventCombinedText(event)
+  return (
+    text.includes("halvlek är slut") ||
+    text.includes("halvlek slut") ||
+    text.includes("matchen är slut") ||
+    text.includes("matchen slut") ||
+    text.includes("match slut")
+  )
+}
+
+const isMatchEndEvent = (event: MatchFeedEvent) => {
+  const text = getEventCombinedText(event)
+  return (
+    text.includes("matchen är slut") ||
+    text.includes("matchen slut") ||
+    text.includes("match slut") ||
+    text.includes("slutresultat") ||
+    text.includes("fulltid")
+  )
+}
+
+const getEventGroupKey = (event: MatchFeedEvent) => {
+  if (isMatchEndEvent(event)) {
+    return 3
+  }
+  return event.period ?? 0
+}
+
+const getEventDisplayText = (event: MatchFeedEvent) => {
+  const payloadDescription = event.payload?.description?.toString().trim()
+  if (payloadDescription) return payloadDescription
+  const description = event.description?.toString().trim()
+  if (description) return description
+  const eventType = event.type?.toString().trim() || "Händelse"
+  const score = event.score?.toString().trim()
+  return score ? `${eventType} (${score})` : eventType
+}
+
+const buildSemanticKey = (event: MatchFeedEvent) =>
+  [
+    event.time ?? "",
+    event.period ?? "",
+    (event.team ?? "").toLowerCase(),
+    (event.player ?? "").toLowerCase(),
+    event.homeScore ?? "",
+    event.awayScore ?? "",
+  ].join("|")
+
+const isGenericEventLabel = (value?: string) => {
+  const text = (value ?? "").trim().toLowerCase()
+  return text === "" || text === "händelse"
+}
+
+const getEventTypeLabel = (event: MatchFeedEvent) => {
+  if (isCommentEvent(event)) return "Kommentar"
+  const text = `${event.type || ""} ${event.description || ""} ${event.payload?.description || ""}`.toLowerCase()
+  if (text.includes("spelare aktiverad")) return "Aktiverad"
+  if (text.includes("mål") || text.includes("goal")) return "Mål"
+  if (text.includes("utvisning")) return "Utvisning"
+  if (text.includes("varning")) return "Varning"
+  if (text.includes("timeout")) return "Timeout"
+  if (text.includes("fulltid") || text.includes("matchen är slut") || text.includes("slutresultat")) return "Slut"
+  if (text.includes("halvtid")) return "Halvtid"
+  if (text.includes("straff")) return "Straff"
+  if (text.includes("7-m")) return "Straff"
+  if (text.includes("start")) return "Start"
+  return event.type?.trim() || "Händelse"
+}
+
+const getPeriodLabel = (period?: number) => {
+  if (period === 3) return "Matchslut"
+  if (period === 1) return "Första halvlek"
+  if (period === 2) return "Andra halvlek"
+  return "Övriga händelser"
+}
+
+const getEventTeamLabel = (event: MatchFeedEvent) => {
+  if (event.team) {
+    return event.team
+  }
+
+  if (isLifecycleEvent(event)) {
+    return "Match"
+  }
+
+  return "Neutral"
+}
+
+const getScoreFromEvent = (event: MatchFeedEvent) => {
+  if (typeof event.homeScore === "number" && typeof event.awayScore === "number") {
+    return `${event.homeScore}-${event.awayScore}`
+  }
+  return event.score?.toString().trim() || null
+}
+
+const isTechnicalPlaceholderEvent = (event: MatchFeedEvent) => {
+  const typeText = `${event.type || ""}`.trim().toLowerCase()
+  const descriptionText = `${event.description || ""}`.trim().toLowerCase()
+  const payloadText = `${event.payload?.description || ""}`.trim().toLowerCase()
+  const combined = `${typeText} ${descriptionText} ${payloadText}`
+
+  if (
+    combined.includes("timeline unavailable") ||
+    combined.includes("no timeline") ||
+    combined.includes("match update") ||
+    combined.includes("status update")
+  ) {
+    return true
+  }
+
+  const period = event.period ?? 0
+  const hasNoConcreteInfo =
+    !event.player &&
+    !event.team &&
+    typeof event.homeScore !== "number" &&
+    typeof event.awayScore !== "number" &&
+    isGenericEventLabel(typeText) &&
+    isGenericEventLabel(descriptionText)
+
+  if (period <= 0 && hasNoConcreteInfo) {
+    return true
+  }
+
+  return false
+}
+
+const getRowStyle = (event: MatchFeedEvent, homeTeam: string, awayTeam: string) => {
+  const type = (event.type || "").toLowerCase()
+  const isGoal = type.includes("mål") || type.includes("goal")
+  const isPenalty = type.includes("utvisning") || type.includes("varning")
+  const eventSide = getResolvedEventSide(event, homeTeam, awayTeam)
+  const teamTone = eventSide === "center" ? "neutral" : eventSide
+
+  if (isPenalty) {
+    return {
+      tone: "border-slate-200 bg-white",
+      dot: "bg-amber-500",
+      teamClass: "text-amber-700",
+      kindLabel: "UTVISNING",
+      side: teamTone === "neutral" ? "home" as const : teamTone,
+    }
+  }
+
+  if (isGoal && teamTone === "home") {
+    return {
+      tone: "border-slate-200 bg-white",
+      dot: "bg-slate-900",
+      teamClass: "text-slate-900",
+      kindLabel: "MÅL",
+      side: "home" as const,
+    }
+  }
+
+  if (isGoal && teamTone !== "home") {
+    return {
+      tone: "border-slate-200 bg-white",
+      dot: teamTone === "away" ? "bg-slate-400" : "bg-slate-300",
+      teamClass: "text-slate-500",
+      kindLabel: "MÅL",
+      side: teamTone === "away" ? "away" as const : "home" as const,
+    }
+  }
+
+  return {
+    tone: "border-slate-100 bg-white",
+    dot: "bg-slate-300",
+    teamClass: "text-slate-500",
+    kindLabel: "HÄNDELSE",
+    side: teamTone === "away" ? "away" as const : "home" as const,
+  }
+}
+
+const getEventSide = (event: MatchFeedEvent, homeTeam: string, awayTeam: string): "home" | "away" | "center" => {
+  return getResolvedEventSide(event, homeTeam, awayTeam)
+}
+
+export function MatchFeedModal({
+  isOpen,
+  onClose,
+  matchFeed,
+  clockState,
+  penalties = [],
+  homeTeam,
+  awayTeam,
+  finalScore,
+  matchStatus,
+  matchData,
+  onRefresh,
+  topScorers = [],
+}: MatchFeedModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null)
+  const [activeTab, setActiveTab] = useState<"plan" | "timeline" | "scorers">("timeline")
+  const refreshInFlightRef = useRef(false)
+  // The match whose details the modal currently shows; late responses for another match are dropped.
+  const openMatchIdRef = useRef<string | undefined>(undefined)
+  const [detailTimeline, setDetailTimeline] = useState<MatchFeedEvent[] | null>(null)
+  const [detailClockState, setDetailClockState] = useState<MatchClockState | null>(null)
+  const [detailPenalties, setDetailPenalties] = useState<MatchPenalty[]>([])
+  const [detailLineup, setDetailLineup] = useState<{ home?: CourtLineupPlayer[]; away?: CourtLineupPlayer[] } | null>(null)
+  const [detailPlayers, setDetailPlayers] = useState<CourtPlayerStats[] | null>(null)
+  const [detailTeamStats, setDetailTeamStats] = useState<CourtTeamStats[] | null>(null)
+  const [isTimelineLoading, setIsTimelineLoading] = useState(false)
+  // True once this match's detail has been received (from cache or network). Until then
+  // the timeline shows a skeleton — never the "no timeline" message for a match whose
+  // data simply has not arrived yet.
+  const [hasDetailData, setHasDetailData] = useState(false)
+  const detailFailuresRef = useRef(0)
+  const [displayedFeed, setDisplayedFeed] = useState<MatchFeedEvent[]>([])
+  const [isFeedTransitioning, setIsFeedTransitioning] = useState(false)
+  const [clockTick, setClockTick] = useState(0)
+  // When the countdown values currently in state were received from the server.
+  // Local interpolation is measured from this instant rather than from a tick counter,
+  // so a slow or missed refresh can never make the countdown drift below the truth and
+  // then visibly jump back up when the match clock stops.
+  const [countdownAnchorAt, setCountdownAnchorAt] = useState<number>(() => Date.now())
+  const allowAutoRefresh = matchStatus === "live" || matchStatus === "halftime"
+  const canFetchDetailedTimeline = matchData?.timelineAvailable !== false || matchData?.eventsAvailable !== false
+  const modalRefreshIntervalMs = matchData?.provider === "procup" ? 5_000 : 3_000
+  const effectiveClockState = detailClockState ?? clockState ?? null
+  const effectivePenalties = detailPenalties.length > 0 ? detailPenalties : penalties
+  // Show best available timeline immediately — never block on detail fetch
+  const timelineSource = detailTimeline
+    ? preferRicherTimeline(detailTimeline, matchFeed)
+    : matchFeed
+  const hasClockData = Boolean(
+    effectiveClockState &&
+      (typeof effectiveClockState.currentSeconds === "number" || Boolean(effectiveClockState.clock)),
+  )
+  const clockRunning = Boolean(effectiveClockState?.running)
+  const clockReason = effectiveClockState?.reason ?? (clockRunning ? "running" : "stopped")
+  const timeoutBaseSecondsLeft = Math.max(0, effectiveClockState?.timeout?.timeoutSecondsLeft ?? 0)
+  // clockTick is only read to force a re-render once a second; the value subtracted is
+  // real elapsed time since the data arrived.
+  void clockTick
+  const secondsSinceCountdownData = Math.max(0, Math.floor((Date.now() - countdownAnchorAt) / 1000))
+  const timeoutSecondsLeft = Math.max(
+    0,
+    timeoutBaseSecondsLeft - (clockReason === "timeout" ? secondsSinceCountdownData : 0),
+  )
+  const activePenalties = useMemo(() => {
+    const currentPeriod = effectiveClockState?.period
+    const result: Array<(typeof effectivePenalties)[number] & { remaining: number }> = []
+    for (const item of effectivePenalties) {
+      if (!item.active) continue
+      // A suspension handed out late in a period carries its remaining time into the
+      // next one. The server recomputes that carry-over but keeps the original period on
+      // the event, so filtering strictly on period would hide it exactly when it matters.
+      const carriedOver = item.isForPreviousPeriod === true || item.fullTimeExpulsion === true
+      if (typeof currentPeriod === "number" && item.period !== currentPeriod && !carriedOver) continue
+      const remaining = Math.max(
+        0,
+        (item.remainingSeconds ?? 0) - (clockRunning ? secondsSinceCountdownData : 0),
+      )
+      if (remaining > 0) result.push({ ...item, remaining })
+    }
+    return result
+  }, [effectivePenalties, effectiveClockState?.period, clockRunning, secondsSinceCountdownData])
+
+  // urgent: render in the same frame (cached data on open); otherwise as a transition so
+  // background refreshes never block interaction.
+  const applyDetailPayload = (payload: any, urgent = false) => {
+    const normalized = enrichTimelineWithMatchDetails(payload, matchFeed)
+    const run = urgent ? (fn: () => void) => fn() : startTransition
+    run(() => {
+      setDetailTimeline(normalized)
+      setDetailClockState((payload?.clockState as MatchClockState) ?? null)
+      setDetailPenalties(Array.isArray(payload?.penalties) ? payload.penalties : [])
+      const detailMatch = payload?.match
+      if (detailMatch?.lineup && typeof detailMatch.lineup === "object") setDetailLineup(detailMatch.lineup)
+      if (Array.isArray(detailMatch?.playerStats?.players)) setDetailPlayers(detailMatch.playerStats.players)
+      if (Array.isArray(detailMatch?.teamStats)) setDetailTeamStats(detailMatch.teamStats)
+      setClockTick(0)
+      setCountdownAnchorAt(Date.now())
+      setHasDetailData(true)
+    })
+  }
+
+  const fetchDetailData = async () => {
+    const apiMatchId = matchData?.apiMatchId
+    if (!apiMatchId) return
+    setIsTimelineLoading(true)
+    try {
+      const payload = await requestMatchDetail(apiMatchId)
+      if (openMatchIdRef.current !== apiMatchId) return
+      if (!payload) {
+        detailFailuresRef.current += 1
+        // Two failed attempts in a row: stop showing a skeleton and fall back to the
+        // empty state; the live poll keeps retrying in the background.
+        if (detailFailuresRef.current >= 2) setHasDetailData(true)
+        else setTimeout(() => {
+          if (openMatchIdRef.current === apiMatchId) fetchDetailData().catch(() => undefined)
+        }, 1_500)
+        return
+      }
+      detailFailuresRef.current = 0
+      applyDetailPayload(payload)
+    } finally {
+      setIsTimelineLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose()
+    }
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        onClose()
+      }
+    }
+
+    const previousBodyOverflow = document.body.style.overflow
+    const previousHtmlOverflow = document.documentElement.style.overflow
+    const previousBodyTouchAction = document.body.style.touchAction
+    const previousHtmlOverscroll = document.documentElement.style.overscrollBehavior
+
+    document.body.style.overflow = "hidden"
+    document.documentElement.style.overflow = "hidden"
+    document.body.style.touchAction = "none"
+    document.documentElement.style.overscrollBehavior = "none"
+    document.addEventListener("keydown", handleEscape)
+    document.addEventListener("mousedown", handleOutsideClick)
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow
+      document.documentElement.style.overflow = previousHtmlOverflow
+      document.body.style.touchAction = previousBodyTouchAction
+      document.documentElement.style.overscrollBehavior = previousHtmlOverscroll
+      document.removeEventListener("keydown", handleEscape)
+      document.removeEventListener("mousedown", handleOutsideClick)
+    }
+  }, [isOpen, onClose])
+
+  useEffect(() => {
+    if (!isOpen) {
+      openMatchIdRef.current = undefined
+      return
+    }
+    openMatchIdRef.current = matchData?.apiMatchId
+    setActiveTab("timeline")
+    setDetailTimeline(null)
+    setDetailClockState(null)
+    setDetailPenalties([])
+    setDetailLineup(null)
+    setDetailPlayers(null)
+    setDetailTeamStats(null)
+    setClockTick(0)
+    setCountdownAnchorAt(Date.now())
+    detailFailuresRef.current = 0
+    const cached = matchData?.apiMatchId ? matchDetailCache.get(matchData.apiMatchId) : undefined
+    if (cached) {
+      applyDetailPayload(cached.payload, true)
+    } else {
+      setHasDetailData(!canFetchDetailedTimeline)
+    }
+    if (canFetchDetailedTimeline) {
+      fetchDetailData().catch(() => undefined)
+    }
+  }, [isOpen, matchData?.apiMatchId, canFetchDetailedTimeline])
+
+  useEffect(() => {
+    if (!isOpen) return
+    if (!clockRunning && clockReason !== "timeout") return
+    const timer = globalThis.setInterval(() => {
+      setClockTick((prev) => prev + 1)
+    }, 1_000)
+    return () => globalThis.clearInterval(timer)
+  }, [isOpen, clockRunning, clockReason])
+
+  const sortedFeed = useMemo(() => {
+    const feed = timelineSource ?? []
+    const indexedFeed = feed.map((event, index) => ({ event, index }))
+
+    const hasSpecificForKey = new Set<string>()
+    indexedFeed.forEach(({ event }) => {
+      const typeText = `${event.type || ""}`.trim()
+      const descriptionText = `${event.description || ""}`.trim()
+      const specific =
+        !isGenericEventLabel(typeText) ||
+        !isGenericEventLabel(descriptionText) ||
+        Boolean(event.player) ||
+        Boolean(event.eventTypeId)
+      if (specific) {
+        hasSpecificForKey.add(buildSemanticKey(event))
+      }
+    })
+
+    const withoutNoise = indexedFeed.filter(({ event }) => {
+      if (isCommentEvent(event)) {
+        return Boolean(getCommentText(event))
+      }
+      if (isTechnicalPlaceholderEvent(event)) {
+        return false
+      }
+      const typeText = `${event.type || ""}`.trim().toLowerCase()
+      const descriptionText = `${event.description || ""}`.trim().toLowerCase()
+      const isGeneric =
+        isGenericEventLabel(typeText) &&
+        isGenericEventLabel(descriptionText) &&
+        !event.player &&
+        !event.eventTypeId
+      if (isGeneric && hasSpecificForKey.has(buildSemanticKey(event))) {
+        return false
+      }
+      if (isGeneric && isLifecycleEvent(event)) {
+        return true
+      }
+      return !isGeneric
+    })
+
+    // "Spelare aktiverad" registers a player in the match squad (not on court). One row per
+    // team and period lists the squad instead of one row per player.
+    type SquadGroup = { event: MatchFeedEvent; index: number; players: Map<string, { name: string; number?: string }> }
+    const addSquadPlayer = (group: SquadGroup, event: MatchFeedEvent) => {
+      const name = event.player?.trim()
+      if (!name) return
+      group.players.set(name.toLowerCase(), { name, number: event.playerNumber?.toString().trim() || undefined })
+    }
+    const activationGroups = new Map<string, SquadGroup>()
+    const filtered: { event: MatchFeedEvent; index: number }[] = []
+    withoutNoise.forEach((entry) => {
+      if (!isActivationEvent(entry.event)) {
+        filtered.push(entry)
+        return
+      }
+      const key = `${entry.event.period ?? inferPeriodFromTime(entry.event.time)}|${normalizeText(entry.event.team)}`
+      const group = activationGroups.get(key)
+      if (group) {
+        addSquadPlayer(group, entry.event)
+        return
+      }
+      const created: SquadGroup = { event: entry.event, index: entry.index, players: new Map() }
+      addSquadPlayer(created, entry.event)
+      activationGroups.set(key, created)
+      filtered.push(created)
+    })
+    activationGroups.forEach((group) => {
+      const team = group.event.team?.trim()
+      const squadPlayers = Array.from(group.players.values()).sort(
+        (a, b) => (Number(a.number) || 999) - (Number(b.number) || 999) || a.name.localeCompare(b.name, "sv"),
+      )
+      const count = Math.max(squadPlayers.length, 1)
+      const label = `Trupp · ${count} spelare`
+      group.event = {
+        ...group.event,
+        player: undefined,
+        playerNumber: undefined,
+        activatedCount: count,
+        squadPlayers,
+        description: team ? `${team} · ${label}` : label,
+        payload: undefined,
+      }
+    })
+
+    return [...filtered]
+      .sort((a, b) => {
+      const eventA = a.event
+      const eventB = b.event
+      const groupA = getEventGroupKey(eventA)
+      const groupB = getEventGroupKey(eventB)
+      if (groupA !== groupB) return groupB - groupA
+      const timeDiff = parseEventTimeToSeconds(eventB.time) - parseEventTimeToSeconds(eventA.time)
+      if (timeDiff !== 0) return timeDiff
+
+      // Same period + same time: goal first, end-events last, then keep backend order.
+      const priorityA = isGoalEvent(eventA) ? 0 : isPeriodOrMatchEndEvent(eventA) ? 2 : 1
+      const priorityB = isGoalEvent(eventB) ? 0 : isPeriodOrMatchEndEvent(eventB) ? 2 : 1
+      if (priorityA !== priorityB) return priorityA - priorityB
+      return a.index - b.index
+    })
+      .map(({ event }) => event)
+  }, [timelineSource])
+
+  useEffect(() => {
+    if (!isOpen) {
+      setDisplayedFeed([])
+      setIsFeedTransitioning(false)
+      return
+    }
+
+    // Element-wise early-exit comparison instead of building O(n) join keys
+    // on every update — same exactness, no string allocation.
+    const feedsAreIdentical =
+      sortedFeed.length === displayedFeed.length &&
+      sortedFeed.every(
+        (event, index) => buildTimelineIdentityKey(event) === buildTimelineIdentityKey(displayedFeed[index]),
+      )
+    if (feedsAreIdentical) {
+      return
+    }
+
+    if (displayedFeed.length === 0 || sortedFeed.length === 0) {
+      setDisplayedFeed(sortedFeed)
+      setIsFeedTransitioning(false)
+      return
+    }
+
+    setIsFeedTransitioning(true)
+    const frame = requestAnimationFrame(() => {
+      setDisplayedFeed(sortedFeed)
+      setIsFeedTransitioning(false)
+    })
+
+    return () => cancelAnimationFrame(frame)
+  }, [isOpen, sortedFeed, displayedFeed])
+
+  const latestScore = useMemo(() => {
+    const eventWithScore = displayedFeed.find(
+      (event) => typeof event.homeScore === "number" && typeof event.awayScore === "number",
+    )
+    if (!eventWithScore) return null
+    return `${eventWithScore.homeScore}-${eventWithScore.awayScore}`
+  }, [displayedFeed])
+
+  const scoreboard = useMemo(() => {
+    if (matchStatus === "upcoming") {
+      return "-"
+    }
+    if (latestScore) {
+      return latestScore
+    }
+    if (finalScore && !isZeroScore(finalScore)) {
+      return finalScore
+    }
+    if (finalScore && (matchStatus === "live" || matchStatus === "halftime" || matchStatus === "finished")) {
+      return finalScore
+    }
+    return "-"
+  }, [finalScore, latestScore, matchStatus])
+
+  const groupedByPeriod = useMemo(() => {
+    return displayedFeed.reduce<Record<number, MatchFeedEvent[]>>((acc, event) => {
+      const key = getEventGroupKey(event)
+      if (!acc[key]) acc[key] = []
+      acc[key].push(event)
+      return acc
+    }, {})
+  }, [displayedFeed])
+
+  const emptyTimelineMessage = useMemo(() => {
+    if (matchData?.timelineAvailable === false && matchData?.provider === "procup") {
+      return matchStatus === "live" || matchStatus === "halftime"
+        ? "Livescore uppdateras, men ProCup har ingen publik play-by-play-tidslinje för den här matchen."
+        : "ProCup har ingen publik play-by-play-tidslinje för den här matchen."
+    }
+    if (matchStatus === "upcoming") {
+      return "Matchen har inte startat ännu."
+    }
+    if (matchStatus === "live" || matchStatus === "halftime") {
+      return "Väntar på att matchhändelser ska komma in."
+    }
+    return "Ingen tidslinje är tillgänglig för den här matchen."
+  }, [matchStatus])
+
+  const periodKeys = useMemo(() => {
+    return Object.keys(groupedByPeriod)
+      .map(Number)
+      .sort((a, b) => b - a)
+  }, [groupedByPeriod])
+  const hasVisibleTimeline = displayedFeed.length > 0
+  const showTimelineSkeleton = !hasVisibleTimeline && !hasDetailData
+  const hasTimelineUpdates = displayedFeed.length > 0
+  const isNoLiveUpdatesIssue = !hasTimelineUpdates || clockReason === "no_events"
+  const showTimeoutTimer = clockReason === "timeout" && timeoutSecondsLeft > 0
+  const showPenaltyTimers = activePenalties.length > 0
+  const showClockAndTimers = matchStatus !== "finished" && !isNoLiveUpdatesIssue && (showTimeoutTimer || showPenaltyTimers)
+
+  type ScorerRow = { player: string; playerNumber?: string; goals: number; goalTimes?: string[]; sevenMeterGoals?: number }
+
+  const calculatedTopScorersByTeam = useMemo(() => {
+    const goalEvents = displayedFeed.filter((event) => (event.type || "").toLowerCase().includes("mål") && event.player)
+    const grouped = goalEvents.reduce<Record<string, Record<string, ScorerRow>>>((acc, event) => {
+      const team = event.team || "Okänt lag"
+      const scorerKey = `${event.player}|${event.playerNumber || ""}`
+      if (!acc[team]) acc[team] = {}
+      if (!acc[team][scorerKey]) {
+        acc[team][scorerKey] = {
+          player: event.player || "Okänd",
+          playerNumber: event.playerNumber,
+          goals: 0,
+          goalTimes: [],
+        }
+      }
+      acc[team][scorerKey].goals += 1
+      if (event.time) {
+        acc[team][scorerKey].goalTimes = [...(acc[team][scorerKey].goalTimes ?? []), event.time]
+      }
+      return acc
+    }, {})
+
+    return Object.entries(grouped).reduce<Record<string, ScorerRow[]>>((acc, [team, scorers]) => {
+      acc[team] = Object.values(scorers).sort((a, b) => b.goals - a.goals)
+      return acc
+    }, {})
+  }, [displayedFeed])
+
+  const topScorersByTeam = useMemo(() => {
+    if (!topScorers.length) {
+      return calculatedTopScorersByTeam
+    }
+
+    const grouped = topScorers.reduce<Record<string, ScorerRow[]>>((acc, scorer) => {
+      if (!acc[scorer.team]) acc[scorer.team] = []
+      acc[scorer.team].push({
+        player: scorer.player,
+        playerNumber: scorer.playerNumber,
+        goals: scorer.goals,
+        goalTimes: Array.isArray(scorer.goalTimes) ? [...scorer.goalTimes] : undefined,
+        sevenMeterGoals: scorer.sevenMeterGoals,
+      })
+      return acc
+    }, {})
+    Object.keys(grouped).forEach((team) => {
+      grouped[team] = grouped[team].sort((a, b) => b.goals - a.goals)
+    })
+    return grouped
+  }, [topScorers, calculatedTopScorersByTeam])
+
+  const totalGoalsByTeam = useMemo(() => {
+    const totals: Record<string, number> = {}
+    Object.entries(topScorersByTeam).forEach(([team, scorers]) => {
+      totals[team] = scorers.reduce((sum, s) => sum + s.goals, 0)
+    })
+    return totals
+  }, [topScorersByTeam])
+
+  const suspensionsCount = useMemo(
+    () =>
+      displayedFeed.filter((event) => {
+        const t = (event.type || "").toLowerCase()
+        return t.includes("utvisning") || t.includes("varning")
+      }).length,
+    [displayedFeed],
+  )
+  const timeoutsCount = useMemo(
+    () => displayedFeed.filter((event) => (event.type || "").toLowerCase().includes("timeout")).length,
+    [displayedFeed],
+  )
+
+  const hhfSide = isHHFName(homeTeam) ? "home" : isHHFName(awayTeam) ? "away" : null
+  const courtEvents = useMemo<CourtEvent[]>(
+    () =>
+      displayedFeed.map((event) => ({
+        side: getResolvedEventSide(event, homeTeam, awayTeam),
+        time: event.time,
+        type: event.type,
+        player: event.player,
+        playerNumber: event.playerNumber,
+        homeScore: event.homeScore,
+        awayScore: event.awayScore,
+      })),
+    [displayedFeed, homeTeam, awayTeam],
+  )
+  const courtPenalties = useMemo<CourtPenalty[]>(
+    () =>
+      activePenalties.map((item) => ({
+        side: resolveTeamSide(item.team, homeTeam, awayTeam),
+        player: item.player,
+        playerNumber: item.playerNumber,
+        remaining: item.remaining,
+      })),
+    [activePenalties, homeTeam, awayTeam],
+  )
+  // a video analysis of this match (2D positions from our own camera at the home court),
+  // when one is released; every other match shows statistics without a court
+  const trackingId = useTrackingForMatch(isOpen ? matchData?.apiMatchId : null)
+  const hasCourtData =
+    Boolean(trackingId) ||
+    displayedFeed.length > 0 ||
+    Boolean(detailLineup?.home?.length || detailLineup?.away?.length) ||
+    Boolean(detailPlayers?.length)
+  const visibleTab = activeTab === "plan" && !hasCourtData ? "timeline" : activeTab
+  const showTabs = !isNoLiveUpdatesIssue || hasCourtData
+
+  const refreshNow = async () => {
+    if (refreshInFlightRef.current) return
+    try {
+      refreshInFlightRef.current = true
+      // Run parent refresh (updates cards + page data) and detail fetch in parallel
+      // so both the modal timeline and the match cards update simultaneously
+      const tasks: Promise<void>[] = []
+      if (onRefresh) {
+        tasks.push(onRefresh().catch(() => undefined))
+      }
+      if (canFetchDetailedTimeline) {
+        tasks.push(fetchDetailData().catch(() => undefined))
+      }
+      await Promise.all(tasks)
+    } finally {
+      refreshInFlightRef.current = false
+    }
+  }
+
+  useEffect(() => {
+    if (!isOpen || !allowAutoRefresh) {
+      return
+    }
+
+    const kickOff = globalThis.setTimeout(() => {
+      refreshNow()
+    }, 150)
+
+    const interval = globalThis.setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return
+      }
+      refreshNow()
+    }, modalRefreshIntervalMs)
+
+    return () => {
+      globalThis.clearTimeout(kickOff)
+      globalThis.clearInterval(interval)
+    }
+  }, [isOpen, onRefresh, allowAutoRefresh, matchData?.apiMatchId, canFetchDetailedTimeline, modalRefreshIntervalMs])
+
+  if (!isOpen) return null
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-3"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        ref={modalRef}
+        className="flex h-[96dvh] w-full max-w-xl flex-col overflow-hidden bg-white sm:h-[90vh] sm:border sm:border-slate-200"
+      >
+        {/* Header — minimal, matches the home page idiom */}
+        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white px-5 py-4 sm:px-6">
+          {/* Top row: series/context, close */}
+          <div className="flex items-center justify-between gap-3">
+            <span className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+              {matchData?.series || "Matchcenter"}
+            </span>
+            <button
+              type="button"
+              onClick={onClose}
+              className="-mr-1 shrink-0 p-1.5 text-slate-400 transition hover:text-slate-900"
+              aria-label="Stäng"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Scoreboard: HOME · score · AWAY, HHF side emphasized */}
+          <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+            <p
+              className={`min-w-0 truncate text-right text-sm font-semibold leading-tight ${
+                isHHFName(homeTeam) ? "text-slate-950" : "text-slate-500"
+              }`}
+            >
+              {homeTeam}
+            </p>
+            <div className="flex flex-col items-center">
+              <p className="text-4xl font-black leading-none tabular-nums tracking-tight text-slate-950 sm:text-5xl">{scoreboard}</p>
+              <span className="mt-1.5 inline-flex items-center gap-1.5">
+                {(matchStatus === "live" || matchStatus === "halftime") ? (
+                  <>
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-500" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-rose-600">Live</span>
+                  </>
+                ) : (
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                    {matchStatus === "finished" ? "Slut" : "Kommande"}
+                  </span>
+                )}
+              </span>
+            </div>
+            <p
+              className={`min-w-0 truncate text-left text-sm font-semibold leading-tight ${
+                isHHFName(awayTeam) ? "text-slate-950" : "text-slate-500"
+              }`}
+            >
+              {awayTeam}
+            </p>
+          </div>
+        </header>
+
+        {/* Timeout/Penalty timers */}
+        {showClockAndTimers && (
+          <div className="border-b border-slate-100 bg-white px-5 py-3 sm:px-6">
+            {showTimeoutTimer && (
+              <div className="flex items-center justify-center gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Timeout</span>
+                <span className="font-mono text-xl font-black tabular-nums text-slate-900">
+                  {formatSecondsAsClock(timeoutSecondsLeft)}
+                </span>
+              </div>
+            )}
+            {showPenaltyTimers && (
+              <div className={showTimeoutTimer ? "mt-2" : ""}>
+                {activePenalties.map((item, index) => (
+                  <div key={`${item.team || "team"}-${item.player || "player"}-${index}`} className="flex items-center justify-between gap-3 py-1">
+                    <p className="min-w-0 truncate text-sm text-slate-500">
+                      {item.player || "Spelare"}{item.playerNumber ? ` #${item.playerNumber}` : ""} <span className="text-slate-300">·</span> {item.team || "Lag"}
+                    </p>
+                    <span className="font-mono text-sm font-black tabular-nums text-slate-900">
+                      {formatSecondsAsClock(item.remaining)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tabs */}
+        {showTabs && (
+          <nav className="z-10 flex justify-center gap-6 border-b border-slate-100 bg-white px-5" role="tablist" aria-label="Matchvy">
+            <button
+              type="button"
+              role="tab"
+                aria-selected={visibleTab === "timeline"}
+                onClick={() => setActiveTab("timeline")}
+              className={`py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
+                visibleTab === "timeline" ? "border-emerald-600 text-emerald-700" : "border-transparent text-slate-300 hover:text-slate-500"
+              }`}
+            >
+              Tidslinje
+            </button>
+            {hasCourtData && (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={visibleTab === "plan"}
+                onClick={() => setActiveTab("plan")}
+                className={`py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
+                  visibleTab === "plan" ? "border-emerald-600 text-emerald-700" : "border-transparent text-slate-300 hover:text-slate-500"
+                }`}
+              >
+                {trackingId ? "Plan" : "Statistik"}
+              </button>
+            )}
+            
+            <button
+              type="button"
+              role="tab"
+                aria-selected={visibleTab === "scorers"}
+                onClick={() => setActiveTab("scorers")}
+              className={`py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
+                visibleTab === "scorers" ? "border-emerald-600 text-emerald-700" : "border-transparent text-slate-300 hover:text-slate-500"
+              }`}
+            >
+              Målskyttar
+            </button>
+          </nav>
+        )}
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto bg-white">
+          {visibleTab === "plan" && trackingId && (
+            <div className="px-3 pt-4 sm:px-5">
+              <TrackingCourt2D id={trackingId} compact />
+            </div>
+          )}
+          {visibleTab === "plan" && (
+            <MatchCourt
+              homeTeam={homeTeam}
+              awayTeam={awayTeam}
+              hhfSide={hhfSide}
+              lineup={detailLineup}
+              players={detailPlayers}
+              teamStats={detailTeamStats}
+              events={courtEvents}
+              penalties={courtPenalties}
+              isLive={matchStatus === "live" || matchStatus === "halftime"}
+              periodSeconds={
+                typeof (effectiveClockState?.source as { periodLengthSeconds?: unknown } | undefined)?.periodLengthSeconds === "number"
+                  ? ((effectiveClockState?.source as { periodLengthSeconds: number }).periodLengthSeconds)
+                  : undefined
+              }
+            />
+          )}
+
+          {visibleTab === "timeline" && (
+            <div>
+              {!showTimelineSkeleton && displayedFeed.length > 0 && (
+                <TimelineStatsStrip events={displayedFeed} homeTeam={homeTeam} awayTeam={awayTeam} />
+              )}
+              {showTimelineSkeleton && (
+                <div className="py-6">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <div key={`timeline-skeleton-${index}`} className="flex items-center justify-center py-4">
+                      <div className="h-4 w-12 bg-slate-50" />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!showTimelineSkeleton && displayedFeed.length === 0 && (
+                <div className="flex flex-col items-center gap-4 px-5 py-16 text-center">
+                  <p className="text-sm text-slate-500">{emptyTimelineMessage}</p>
+                  {(matchData?.displayDate || matchData?.date || matchData?.time || matchData?.venue || matchData?.series) && (
+                    <dl className="mt-2 grid w-full max-w-sm grid-cols-1 gap-2 text-left text-sm">
+                      {(matchData?.displayDate || matchData?.time) && (
+                        <div className="flex items-center justify-between border-b border-slate-100 py-1.5">
+                          <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">Datum</dt>
+                          <dd className="text-slate-700">
+                            {[matchData?.displayDate, matchData?.time].filter(Boolean).join(" · ")}
+                          </dd>
+                        </div>
+                      )}
+                      {matchData?.venue && (
+                        <div className="flex items-center justify-between border-b border-slate-100 py-1.5">
+                          <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">Arena</dt>
+                          <dd className="text-slate-700">{matchData.venue}</dd>
+                        </div>
+                      )}
+                      {matchData?.series && (
+                        <div className="flex items-center justify-between border-b border-slate-100 py-1.5">
+                          <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">Serie</dt>
+                          <dd className="text-slate-700">{matchData.series}</dd>
+                        </div>
+                      )}
+                    </dl>
+                  )}
+                </div>
+              )}
+              {!showTimelineSkeleton && displayedFeed.length > 0 && (
+                <>
+                  {matchStatus === "finished" && (suspensionsCount > 0 || timeoutsCount > 0 || Object.keys(totalGoalsByTeam).length > 0) && (
+                    <div className="flex flex-wrap items-center justify-center gap-3 border-b border-slate-100 bg-slate-50/60 px-3 py-2 text-[11px] font-semibold uppercase tracking-widest text-slate-500 sm:gap-5">
+                      {Object.keys(totalGoalsByTeam).length > 0 && (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="text-slate-400">Mål</span>
+                          <span className="tabular-nums text-slate-700">
+                            {Object.values(totalGoalsByTeam).reduce((a, b) => a + b, 0)}
+                          </span>
+                        </span>
+                      )}
+                      {suspensionsCount > 0 && (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="text-slate-400">Utvisningar</span>
+                          <span className="tabular-nums text-slate-700">{suspensionsCount}</span>
+                        </span>
+                      )}
+                      {timeoutsCount > 0 && (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="text-slate-400">Timeouts</span>
+                          <span className="tabular-nums text-slate-700">{timeoutsCount}</span>
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-[1fr_52px_1fr] items-center border-b border-slate-100 bg-white px-2 py-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400 sm:px-4">
+                    <p className="truncate pr-3 text-right">{homeTeam}</p>
+                    <p className="text-center text-slate-300">Tid</p>
+                    <p className="truncate pl-3 text-left">{awayTeam}</p>
+                  </div>
+                </>
+              )}
+              {periodKeys.map((period) => (
+                <section key={period}>
+                  {/* Period header */}
+                  <div className="sticky top-0 z-10 bg-emerald-50/90 backdrop-blur-sm border-y border-emerald-100/70 py-1.5">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700/70 text-center">{getPeriodLabel(period)}</p>
+                  </div>
+                  {/* Two-column timeline */}
+                  <div className="relative px-2 sm:px-4">
+                    {/* Center vertical line */}
+                    <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-emerald-100 -translate-x-1/2" />
+                    <ul>
+                      {groupedByPeriod[period].map((event, index) => {
+                        const style = getRowStyle(event, homeTeam, awayTeam)
+                        const score = getScoreFromEvent(event)
+                        const typeLabel = getEventTypeLabel(event)
+                        const side = getEventSide(event, homeTeam, awayTeam)
+                        const isGoal = typeLabel === "Mål"
+                        const isSuspension = typeLabel === "Utvisning"
+                        const isTimeout = typeLabel === "Timeout"
+
+                        /* Center-only events (halftime, fulltime, timeout, etc.) */
+                        if (event.squadPlayers && event.squadPlayers.length > 0) {
+                          const squadSide = resolveTeamSide(event.team, homeTeam, awayTeam)
+                          return (
+                            <li key={`squad-${event.team ?? "team"}-${event.period ?? 0}-${index}`} className="relative flex justify-center py-2">
+                              <details className="group relative z-10 w-full max-w-[90%] rounded-md border border-slate-200 bg-white text-xs">
+                                <summary className="flex cursor-pointer list-none items-center justify-center gap-2 px-3 py-1.5 [&::-webkit-details-marker]:hidden">
+                                  <span className={`h-1.5 w-1.5 shrink-0 ${squadSide === "home" ? "bg-slate-500" : squadSide === "away" ? "bg-slate-400" : "bg-slate-300"}`} />
+                                  <span className="truncate font-semibold text-slate-500">{event.team || "Lag"}</span>
+                                  <span className="shrink-0 text-slate-400">· Trupp {event.squadPlayers.length}</span>
+                                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-300 transition group-open:rotate-180" />
+                                </summary>
+                                <ul className="grid grid-cols-1 gap-x-4 gap-y-0.5 border-t border-slate-100 px-3 py-2 sm:grid-cols-2">
+                                  {event.squadPlayers.map((p) => (
+                                    <li key={`${p.number ?? ""}-${p.name}`} className="flex min-w-0 items-baseline gap-2 text-slate-600">
+                                      <span className="w-5 shrink-0 text-right font-bold tabular-nums text-slate-800">{p.number ?? ""}</span>
+                                      <span className="truncate">{p.name}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </details>
+                            </li>
+                          )
+                        }
+
+                        if (isCommentEvent(event)) {
+                          return (
+                            <li key={`${event.eventId ?? "idx"}-${index}`} className="relative flex justify-center py-2">
+                              <div className="relative z-10 flex max-w-[85%] items-start gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5">
+                                <svg aria-hidden viewBox="0 0 16 16" className="mt-0.5 h-3.5 w-3.5 shrink-0 fill-slate-400"><path d="M2 2h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H6l-3.5 2.5V12H2a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" /></svg>
+                                <span className="text-xs leading-snug text-slate-600">{getCommentText(event)}</span>
+                                {event.time && <span className="shrink-0 text-xs tabular-nums text-slate-300">{event.time}</span>}
+                              </div>
+                            </li>
+                          )
+                        }
+
+                        if (side === "center") {
+                          return (
+                            <li key={`${event.eventId ?? "idx"}-${index}`} className="relative flex justify-center py-2">
+                              <div className="relative z-10 flex items-center gap-2 bg-white px-3 py-1">
+                                <span className="h-1.5 w-1.5 bg-slate-300 shrink-0" />
+                                <span className="text-xs font-semibold text-slate-400">{getEventDisplayText(event)}</span>
+                                {event.time && <span className="text-xs tabular-nums text-slate-300">{event.time}</span>}
+                              </div>
+                            </li>
+                          )
+                        }
+
+                        const isSevenMeterGoal =
+                          isGoal && `${event.type || ""} ${event.description || ""}`.toLowerCase().includes("7-m")
+                        const goalLabel = isSevenMeterGoal ? "Mål (7m)" : typeLabel
+                        const [homeDigits, awayDigits] = score ? score.split(/[-–]/) : [null, null]
+                        const renderScore = (align: "left" | "right") =>
+                          score && (
+                            <p className={`text-lg font-black tabular-nums leading-tight ${align === "right" ? "text-right" : ""}`}>
+                              <span className={isGoal && side === "home" ? "text-emerald-600" : "text-slate-900"}>{homeDigits}</span>
+                              <span className="text-slate-300">–</span>
+                              <span className={isGoal && side === "away" ? "text-emerald-600" : "text-slate-900"}>{awayDigits}</span>
+                            </p>
+                          )
+                        const renderBody = (align: "left" | "right") => (
+                          <div className={align === "right" ? "text-right" : ""}>
+                            {renderScore(align)}
+                            <p className={`text-[13px] font-bold leading-snug ${isGoal ? "text-emerald-700" : isSuspension ? "text-amber-600" : "text-slate-600"}`}>
+                              {isGoal ? goalLabel : typeLabel}
+                            </p>
+                            {event.player && (
+                              <p className="text-[13px] leading-snug text-slate-500">
+                                {event.playerNumber && <span className="font-bold text-slate-700">{event.playerNumber}</span>}
+                                {event.playerNumber && "  "}{event.player}
+                              </p>
+                            )}
+                            {!event.player && !isGoal && !isTimeout && (
+                              <p className="text-[13px] leading-snug text-slate-400">{getEventDisplayText(event)}</p>
+                            )}
+                          </div>
+                        )
+
+                        return (
+                          <li key={`${event.eventId ?? "idx"}-${index}`} className="relative">
+                            <div className="grid grid-cols-[1fr_52px_1fr] items-center">
+                              {/* Left column (home team) */}
+                              <div className="relative flex justify-end pr-3 py-1.5">
+                                {side === "home" && (
+                                  <>
+                                    <span
+                                      aria-hidden
+                                      className={`absolute right-0 top-1/2 h-px w-2.5 -translate-y-1/2 ${isGoal ? "bg-emerald-200" : isSuspension ? "bg-amber-200" : "bg-slate-200"}`}
+                                    />
+                                    {renderBody("right")}
+                                  </>
+                                )}
+                              </div>
+
+                              {/* Center: dot + time */}
+                              <div className="flex flex-col items-center justify-center z-10 py-1.5 px-1">
+                                <span className={`shrink-0 rounded-sm ${
+                                  isGoal ? "h-3 w-3 bg-emerald-500" : isSuspension ? "h-2.5 w-2.5 bg-amber-500" : `h-2 w-2 ${style.dot}`
+                                }`} />
+                                <p className="mt-1 whitespace-nowrap text-center text-[11px] font-semibold tabular-nums text-slate-400 leading-none">{event.time || ""}</p>
+                              </div>
+
+                              {/* Right column (away team) */}
+                              <div className="relative pl-3 py-1.5">
+                                {side === "away" && (
+                                  <>
+                                    <span
+                                      aria-hidden
+                                      className={`absolute left-0 top-1/2 h-px w-2.5 -translate-y-1/2 ${isGoal ? "bg-emerald-200" : isSuspension ? "bg-amber-200" : "bg-slate-200"}`}
+                                    />
+                                    {renderBody("left")}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </div>
+                </section>
+              ))}
+            </div>
+          )}
+
+          {visibleTab === "scorers" && (
+            <div className="px-5 py-6 sm:px-6">
+              {Object.keys(topScorersByTeam).length === 0 && (
+                <p className="py-10 text-center text-sm text-slate-400">Inga registrerade målskyttar än.</p>
+              )}
+              {Object.entries(topScorersByTeam).map(([team, scorers]) => {
+                const teamTotal = scorers.reduce((sum, s) => sum + s.goals, 0)
+                const rankMedal = (idx: number) => (idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : null)
+                return (
+                  <section key={team} className="mb-8 last:mb-0">
+                    <div className="mb-3 flex items-baseline justify-between">
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{team}</p>
+                      {teamTotal > 0 && (
+                        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+                          Totalt <span className="tabular-nums text-slate-700">{teamTotal}</span> mål
+                        </p>
+                      )}
+                    </div>
+                    <ul>
+                      {scorers.map((scorer, index) => {
+                        const medal = rankMedal(index)
+                        const times = Array.isArray(scorer.goalTimes) ? scorer.goalTimes.filter(Boolean) : []
+                        return (
+                          <li
+                            key={`${team}-${scorer.player}-${index}`}
+                            className={`py-3 border-b border-slate-50 last:border-0 ${index < 3 ? "" : "opacity-80"}`}
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex min-w-0 items-center gap-2">
+                                {medal ? (
+                                  <span className="text-lg leading-none" aria-hidden>{medal}</span>
+                                ) : (
+                                  <span className="w-5 text-center text-[11px] font-semibold tabular-nums text-slate-400">
+                                    {index + 1}
+                                  </span>
+                                )}
+                                <p className="truncate text-base text-slate-900">
+                                  {scorer.playerNumber && (
+                                    <span className="mr-2 font-bold text-slate-700">#{scorer.playerNumber}</span>
+                                  )}
+                                  {scorer.player}
+                                </p>
+                              </div>
+                              <p className="shrink-0 text-base font-black tabular-nums text-slate-900">
+                                {scorer.goals} <span className="text-xs font-semibold text-slate-400">mål</span>
+                              </p>
+                            </div>
+                            {times.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1.5 pl-7">
+                                {times.map((t, tIdx) => (
+                                  <span
+                                    key={`${team}-${scorer.player}-time-${tIdx}`}
+                                    className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-emerald-700"
+                                  >
+                                    {t}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {typeof scorer.sevenMeterGoals === "number" && scorer.sevenMeterGoals > 0 && (
+                              <p className="mt-1 pl-7 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                                varav <span className="tabular-nums text-slate-600">{scorer.sevenMeterGoals}</span> 7-m
+                              </p>
+                            )}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </section>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default memo(MatchFeedModal)
