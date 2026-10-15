@@ -28,6 +28,8 @@ export type MatchFeedEvent = {
   eventTypeId?: number
   teamId?: number
   isTeamEvent?: boolean
+  isComment?: boolean
+  activatedCount?: number
   score?: string
   scoringTeam?: string
   isHomeGoal?: boolean
@@ -306,6 +308,7 @@ const inferSideFromGoalFlag = (event: MatchFeedEvent): "home" | "away" | null =>
 }
 
 const getResolvedEventSide = (event: MatchFeedEvent, homeTeam: string, awayTeam: string): "home" | "away" | "center" => {
+  if (isCommentEvent(event)) return "center"
   if (isLifecycleEvent(event)) return "center"
 
   const text = getEventCombinedText(event)
@@ -371,12 +374,30 @@ const normalizeTimelineEvent = (event: any): MatchFeedEvent => ({
   score: event?.score,
   eventId: event?.eventId ?? event?.eventIndex,
   eventTypeId: typeof event?.eventTypeId === "number" ? event.eventTypeId : undefined,
+  isComment: event?.isComment === true ? true : undefined,
   payload: event?.payload,
 })
+
+// Profixio free-text comments from the secretariat (eventTypeId 215). Older payloads carry
+// type/description "Text" with the real message missing; those are hidden.
+const isCommentEvent = (event: MatchFeedEvent) =>
+  event.isComment === true ||
+  event.eventTypeId === 215 ||
+  normalizeText(event.type) === "kommentar"
+
+const getCommentText = (event: MatchFeedEvent) => {
+  const text = `${event.description ?? ""}`.trim()
+  return /^(text|kommentar|händelse)?$/i.test(text) ? "" : text
+}
+
+const isActivationEvent = (event: MatchFeedEvent) =>
+  !isCommentEvent(event) &&
+  (event.eventTypeId === 221 || getEventCombinedText(event).includes("spelare aktiverad"))
 
 const normalizeText = (value?: string) => (value ?? "").trim().toLowerCase()
 
 const getEventSemanticType = (event: MatchFeedEvent) => {
+  if (isCommentEvent(event)) return "comment"
   const text = getEventCombinedText(event)
   if (text.includes("spelare aktiverad")) return "activated"
   if (text.includes("tilldömd 7-m")) return "seven_awarded"
@@ -416,6 +437,10 @@ const getEventDeduplicationKey = (event: MatchFeedEvent) => {
     semanticType,
   ]
 
+  if (semanticType === "comment") {
+    base.push(normalizeText(event.description))
+  }
+
   if (semanticType === "goal") {
     base.push(String(event.homeScore ?? ""))
     base.push(String(event.awayScore ?? ""))
@@ -446,7 +471,9 @@ const dedupeTimelineEvents = (events: MatchFeedEvent[]) => {
 }
 
 const getEventCombinedText = (event: MatchFeedEvent) =>
-  `${event.type || ""} ${event.description || ""} ${event.payload?.description || ""}`.toLowerCase()
+  isCommentEvent(event)
+    ? "kommentar"
+    : `${event.type || ""} ${event.description || ""} ${event.payload?.description || ""}`.toLowerCase()
 
 const isLifecycleEvent = (event: MatchFeedEvent) => {
   const text = getEventCombinedText(event)
@@ -678,6 +705,7 @@ const isLowFidelityTimeline = (timeline: MatchFeedEvent[]) => {
 }
 
 const isGoalEvent = (event: MatchFeedEvent) => {
+  if (isCommentEvent(event)) return false
   const text = getEventCombinedText(event)
   if (text.includes("mål") || text.includes("goal")) return true
   return typeof event.homeScore === "number" && typeof event.awayScore === "number"
@@ -738,6 +766,7 @@ const isGenericEventLabel = (value?: string) => {
 }
 
 const getEventTypeLabel = (event: MatchFeedEvent) => {
+  if (isCommentEvent(event)) return "Kommentar"
   const text = `${event.type || ""} ${event.description || ""} ${event.payload?.description || ""}`.toLowerCase()
   if (text.includes("spelare aktiverad")) return "Aktiverad"
   if (text.includes("mål") || text.includes("goal")) return "Mål"
@@ -1073,7 +1102,10 @@ export function MatchFeedModal({
       }
     })
 
-    const filtered = indexedFeed.filter(({ event }) => {
+    const withoutNoise = indexedFeed.filter(({ event }) => {
+      if (isCommentEvent(event)) {
+        return Boolean(getCommentText(event))
+      }
       if (isTechnicalPlaceholderEvent(event)) {
         return false
       }
@@ -1091,6 +1123,37 @@ export function MatchFeedModal({
         return true
       }
       return !isGeneric
+    })
+
+    // One row per team and period for line-up activations instead of one row per player.
+    const activationGroups = new Map<string, { event: MatchFeedEvent; index: number; count: number }>()
+    const filtered: { event: MatchFeedEvent; index: number }[] = []
+    withoutNoise.forEach((entry) => {
+      if (!isActivationEvent(entry.event)) {
+        filtered.push(entry)
+        return
+      }
+      const key = `${entry.event.period ?? inferPeriodFromTime(entry.event.time)}|${normalizeText(entry.event.team)}`
+      const group = activationGroups.get(key)
+      if (group) {
+        group.count += 1
+        return
+      }
+      const created = { event: entry.event, index: entry.index, count: 1 }
+      activationGroups.set(key, created)
+      filtered.push(created)
+    })
+    activationGroups.forEach((group) => {
+      const team = group.event.team?.trim()
+      const label = group.count === 1 ? "1 spelare aktiverad" : `${group.count} spelare aktiverade`
+      group.event = {
+        ...group.event,
+        player: undefined,
+        playerNumber: undefined,
+        activatedCount: group.count,
+        description: team ? `${team} · ${label}` : label,
+        payload: undefined,
+      }
     })
 
     return [...filtered]
@@ -1610,6 +1673,18 @@ export function MatchFeedModal({
                         const isTimeout = typeLabel === "Timeout"
 
                         /* Center-only events (halftime, fulltime, timeout, etc.) */
+                        if (isCommentEvent(event)) {
+                          return (
+                            <li key={`${event.eventId ?? "idx"}-${index}`} className="relative flex justify-center py-2">
+                              <div className="relative z-10 flex max-w-[85%] items-start gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5">
+                                <svg aria-hidden viewBox="0 0 16 16" className="mt-0.5 h-3.5 w-3.5 shrink-0 fill-slate-400"><path d="M2 2h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H6l-3.5 2.5V12H2a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" /></svg>
+                                <span className="text-xs leading-snug text-slate-600">{getCommentText(event)}</span>
+                                {event.time && <span className="shrink-0 text-xs tabular-nums text-slate-300">{event.time}</span>}
+                              </div>
+                            </li>
+                          )
+                        }
+
                         if (side === "center") {
                           return (
                             <li key={`${event.eventId ?? "idx"}-${index}`} className="relative flex justify-center py-2">
