@@ -654,7 +654,7 @@ const enrichTimelineWithMatchDetails = (payload: any, fallbackTimeline: MatchFee
     .forEach((event: any) => {
       pushSupplemental({
         time: event?.time ?? "",
-        type: "Straff",
+        type: "Tilldömd 7-m",
         description: event?.description ?? "Tilldömd 7-m",
         team: event?.team ?? undefined,
         player: event?.player ?? undefined,
@@ -795,6 +795,9 @@ const getEventTypeLabel = (event: MatchFeedEvent) => {
   if (isCommentEvent(event)) return "Kommentar"
   const text = `${event.type || ""} ${event.description || ""} ${event.payload?.description || ""}`.toLowerCase()
   if (text.includes("spelare aktiverad")) return "Aktiverad"
+  // 7-m events named the way Profixio names them.
+  if (/7-?m\s*miss/.test(text)) return "7-m miss"
+  if (text.includes("tilldömd 7")) return "Tilldömd 7-m"
   if (text.includes("mål") || text.includes("goal")) return "Mål"
   if (text.includes("utvisning")) return "Utvisning"
   if (text.includes("varning")) return "Varning"
@@ -1804,7 +1807,7 @@ export function MatchFeedModal({
                         const renderBody = (align: "left" | "right") => (
                           <div className={align === "right" ? "text-right" : ""}>
                             {renderScore(align)}
-                            <p className={`text-[13px] font-bold leading-snug ${isGoal ? "text-emerald-700" : isSuspension ? "text-amber-600" : "text-slate-600"}`}>
+                            <p className={`text-[13px] font-bold leading-snug ${isGoal ? "text-emerald-700" : isSuspension ? "text-amber-600" : typeLabel === "7-m miss" ? "text-rose-600" : "text-slate-600"}`}>
                               {isGoal ? goalLabel : typeLabel}
                             </p>
                             {event.player && (
@@ -1813,7 +1816,8 @@ export function MatchFeedModal({
                                 {event.playerNumber && "  "}{event.player}
                               </p>
                             )}
-                            {!event.player && !isGoal && !isTimeout && (
+                            {!event.player && !isGoal && !isTimeout &&
+                              getEventDisplayText(event).trim().toLowerCase() !== typeLabel.toLowerCase() && (
                               <p className="text-[13px] leading-snug text-slate-400">{getEventDisplayText(event)}</p>
                             )}
                           </div>
