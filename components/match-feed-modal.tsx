@@ -2,6 +2,7 @@
 
 import { memo, startTransition, useEffect, useMemo, useRef, useState } from "react"
 import { X } from "lucide-react"
+import { setOpenMatchForRestore } from "@/components/build-refresh"
 import type { NormalizedMatch } from "@/lib/use-match-data"
 import { preferRicherTimeline, resolvePreferredTimeline } from "@/lib/match-timeline"
 import {
@@ -44,6 +45,8 @@ export type MatchClockState = {
   reason?: "running" | "timeout" | "stopped" | "no_events" | string
   period?: number
   currentSeconds?: number
+  /** Unrounded reading at the moment the server answered; keeps the local clock in phase. */
+  currentSecondsExact?: number
   periodEndSeconds?: number
   serverNow?: number
   clock?: string
@@ -118,6 +121,26 @@ const storeMatchDetail = (apiMatchId: string, payload: any) => {
   }
 }
 
+// Browser clock minus server clock, learned from fresh responses (includes one-way latency).
+// Lets a clock reading of any age (cache, list poll) be advanced by its true age.
+let serverClockOffsetMs: number | null = null
+
+const noteServerNow = (serverNow: unknown) => {
+  if (typeof serverNow !== "number" || !Number.isFinite(serverNow)) return
+  const offset = Date.now() - serverNow
+  // Keep the smallest recent offset: the sample with the least network delay.
+  serverClockOffsetMs =
+    serverClockOffsetMs === null || offset < serverClockOffsetMs || offset - serverClockOffsetMs > 5_000
+      ? offset
+      : serverClockOffsetMs
+}
+
+/** How old a clock reading is, in ms; null when it cannot be told. */
+const clockReadingAgeMs = (clockState: MatchClockState | null | undefined): number | null => {
+  if (!clockState || typeof clockState.serverNow !== "number" || serverClockOffsetMs === null) return null
+  return Math.max(0, Date.now() - serverClockOffsetMs - clockState.serverNow)
+}
+
 const requestMatchDetail = (apiMatchId: string, timeoutMs = 8_000): Promise<any | null> => {
   const inflight = matchDetailInflight.get(apiMatchId)
   if (inflight) return inflight
@@ -131,6 +154,7 @@ const requestMatchDetail = (apiMatchId: string, timeoutMs = 8_000): Promise<any 
     .then(async (response) => {
       if (!response.ok) return null
       const payload = await response.json()
+      noteServerNow(payload?.clockState?.serverNow)
       storeMatchDetail(apiMatchId, payload)
       return payload
     })
@@ -890,6 +914,53 @@ const getEventSide = (event: MatchFeedEvent, homeTeam: string, awayTeam: string)
   return getResolvedEventSide(event, homeTeam, awayTeam)
 }
 
+// Match clock in the popup header. Profixio's reading arrives every few seconds; between
+// readings it advances on its own (smooth, 4 checks a second so whole seconds flip on time)
+// and it never steps back by a second or two because of network jitter. A real correction
+// (clock stopped/adjusted by the secretariat) is shown at once.
+function LiveGameClock({ clockState, anchorAt }: { clockState: MatchClockState | null; anchorAt: number }) {
+  const running = Boolean(clockState?.running)
+  const [, setTick] = useState(0)
+  const lastShownRef = useRef<{ seconds: number; period?: number } | null>(null)
+
+  useEffect(() => {
+    if (!running) return
+    const id = globalThis.setInterval(() => setTick((t) => t + 1), 250)
+    return () => globalThis.clearInterval(id)
+  }, [running])
+
+  if (!clockState) return null
+  if (clockState.reason === "intermission") {
+    lastShownRef.current = null
+    return <span className="text-sm font-bold leading-none text-slate-400">Paus</span>
+  }
+  const base =
+    typeof clockState.currentSecondsExact === "number"
+      ? clockState.currentSecondsExact
+      : typeof clockState.currentSeconds === "number"
+        ? clockState.currentSeconds
+        : null
+  if (base === null) return null
+  const cap =
+    typeof clockState.periodEndSeconds === "number" ? Math.max(clockState.periodEndSeconds, base) : Infinity
+  const ageMs = clockReadingAgeMs(clockState) ?? Math.max(0, Date.now() - anchorAt)
+  let seconds = Math.floor(Math.min(base + (running ? ageMs / 1000 : 0), cap))
+  const last = lastShownRef.current
+  if (running && last && last.period === clockState.period && seconds < last.seconds && last.seconds - seconds <= 2) {
+    seconds = last.seconds
+  }
+  lastShownRef.current = { seconds, period: clockState.period }
+  const label = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`
+  return (
+    <span
+      className={`text-sm font-bold tabular-nums leading-none ${running ? "text-slate-900" : "text-slate-400"}`}
+      aria-label={running ? `Matchtid ${label}` : `Matchtid ${label}, klockan stoppad`}
+    >
+      {label}
+    </span>
+  )
+}
+
 function ActivationLabel({ event }: { event: MatchFeedEvent }) {
   return (
     <p className="truncate text-[12px] leading-snug text-slate-400">
@@ -910,6 +981,7 @@ export function MatchFeedModal({
   awayTeam,
   finalScore,
   matchStatus,
+  matchId,
   matchData,
   onRefresh,
   topScorers = [],
@@ -958,27 +1030,12 @@ export function MatchFeedModal({
   // clockTick is only read to force a re-render once a second; the value subtracted is
   // real elapsed time since the data arrived.
   void clockTick
-  const secondsSinceCountdownData = Math.max(0, Math.floor((Date.now() - countdownAnchorAt) / 1000))
+  const countdownAgeMs = clockReadingAgeMs(effectiveClockState) ?? Date.now() - countdownAnchorAt
+  const secondsSinceCountdownData = Math.max(0, Math.floor(countdownAgeMs / 1000))
   const timeoutSecondsLeft = Math.max(
     0,
     timeoutBaseSecondsLeft - (clockReason === "timeout" ? secondsSinceCountdownData : 0),
   )
-  // Game clock: the server sends Profixio's clock reading; while it runs it advances locally
-  // from the moment the reading arrived, capped at the end of the period.
-  const clockBaseSeconds =
-    typeof effectiveClockState?.currentSeconds === "number" ? effectiveClockState.currentSeconds : null
-  const clockCapSeconds =
-    typeof effectiveClockState?.periodEndSeconds === "number" ? effectiveClockState.periodEndSeconds : Infinity
-  const gameClockSeconds =
-    clockBaseSeconds === null
-      ? null
-      : Math.min(clockBaseSeconds + (clockRunning ? secondsSinceCountdownData : 0), Math.max(clockCapSeconds, clockBaseSeconds))
-  const gameClockLabel =
-    clockReason === "intermission"
-      ? "Paus"
-      : gameClockSeconds === null
-        ? null
-        : `${Math.floor(gameClockSeconds / 60)}:${String(Math.floor(gameClockSeconds % 60)).padStart(2, "0")}`
   const activePenalties = useMemo(() => {
     const currentPeriod = effectiveClockState?.period
     const result: Array<(typeof effectivePenalties)[number] & { remaining: number }> = []
@@ -1075,6 +1132,14 @@ export function MatchFeedModal({
       document.removeEventListener("mousedown", handleOutsideClick)
     }
   }, [isOpen, onClose])
+
+  // Lets a release reload reopen this popup (components/build-refresh.tsx).
+  useEffect(() => {
+    if (!isOpen) return
+    const restoreId = matchId ?? (matchData?.apiMatchId != null ? String(matchData.apiMatchId) : null)
+    setOpenMatchForRestore(restoreId ?? null)
+    return () => setOpenMatchForRestore(null)
+  }, [isOpen, matchId, matchData?.apiMatchId])
 
   useEffect(() => {
     if (!isOpen) {
@@ -1461,15 +1526,10 @@ export function MatchFeedModal({
                   <>
                     <span className={`h-1.5 w-1.5 rounded-full bg-rose-500 ${clockRunning ? "animate-pulse" : "opacity-50"}`} />
                     <span className="text-[10px] font-bold uppercase tracking-widest text-rose-600">Live</span>
-                    {gameClockLabel && (
+                    {hasClockData && (
                       <>
                         <span className="text-[10px] text-slate-300">·</span>
-                        <span
-                          className={`text-sm font-bold tabular-nums leading-none ${clockRunning ? "text-slate-900" : "text-slate-400"}`}
-                          aria-label="Matchtid"
-                        >
-                          {gameClockLabel}
-                        </span>
+                        <LiveGameClock clockState={effectiveClockState} anchorAt={countdownAnchorAt} />
                         {clockReason === "timeout" && (
                           <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600">Timeout</span>
                         )}

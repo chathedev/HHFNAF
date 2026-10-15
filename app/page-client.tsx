@@ -43,6 +43,7 @@ import { useMatchData, forceMatchDataPoll, normalizeStatusValue, getMatchEndTime
 import { AnimatedScore } from "@/components/animated-score"
 import { MatchCardCTA } from "@/components/match-card-cta"
 import { InstagramFeed } from "@/components/instagram-feed"
+import { useRestoreOpenMatch } from "@/components/build-refresh"
 import { MatchFeedModal, loadMatchDetail, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
 import { SHOP_URL, useShopStatus } from "@/components/shop-status-provider"
 import type { EnhancedMatchData } from "@/lib/use-match-data"
@@ -423,6 +424,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     },
     [fetchMatchTimeline],
   )
+  useRestoreOpenMatch(allHomeMatches, openMatchModal)
 
   const getMergedTimeline = useCallback(
     (match: NormalizedMatch) => {

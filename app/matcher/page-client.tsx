@@ -8,6 +8,7 @@ import { getMatchEndTime, useMatchData, forceMatchDataPoll, type NormalizedMatch
 import { MatchCard } from "@/components/matcher/match-card"
 import { SelectMenu } from "@/components/ui/select-menu"
 import { prefetchTracking } from "@/components/tracking-court-2d"
+import { useRestoreOpenMatch } from "@/components/build-refresh"
 import { MatchFeedModal, type MatchClockState, type MatchFeedEvent, type MatchPenalty } from "@/components/match-feed-modal"
 import { normalizeMatchKey } from "@/lib/matches"
 import { extendTeamDisplayName, createTeamMatchKeySet, seasonalTeamLabel, teamClassKey } from "@/lib/team-display"
@@ -456,6 +457,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     },
     [fetchMatchTimeline],
   )
+  useRestoreOpenMatch(allMatches, openMatchModal)
 
   const prefetchMatchTimeline = useCallback(
     (match: NormalizedMatch) => {

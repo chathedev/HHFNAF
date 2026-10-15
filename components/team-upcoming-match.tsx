@@ -7,6 +7,7 @@ import { extendTeamDisplayName } from "@/lib/team-display"
 import { Card } from "@/components/ui/card"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
+import { useRestoreOpenMatch } from "@/components/build-refresh"
 import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
 import { canOpenMatchTimeline, getMatchProviderBadge, getProviderHelperText, getMatchWatchLabel } from "@/lib/match-card-utils"
 
@@ -113,6 +114,7 @@ export function TeamUpcomingMatch({ teamLabels }: TeamUpcomingMatchProps) {
       return true
     })
   }, [currentMatches, finishedMatches])
+  useRestoreOpenMatch(matches, setSelectedMatch)
 
   const nextMatch = useMemo(() => {
     if (teamKeys.length === 0) {

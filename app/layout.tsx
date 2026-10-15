@@ -6,6 +6,8 @@ import "./globals.css"
 import "../styles/real-time-updates.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ScrollMemory } from "@/components/scroll-memory"
+import { BuildRefresh } from "@/components/build-refresh"
+import { getServerBuildId } from "@/lib/build-id"
 import { AnalyticsBeacon } from "@/components/analytics-beacon"
 import { ShopStatusProvider } from "@/components/shop-status-provider"
 import { ClubAssistantMount } from "@/components/club-assistant"
@@ -160,6 +162,7 @@ export default async function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ShopStatusProvider>
             <ScrollMemory />
+            <BuildRefresh initialBuildId={getServerBuildId()} />
             <AnalyticsBeacon />
             {children}
             <ClubAssistantMount />

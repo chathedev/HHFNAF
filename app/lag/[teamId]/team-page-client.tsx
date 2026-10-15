@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card"
 import { normalizeMatchKey } from "@/lib/matches"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
 import { MatchFeedModal } from "@/components/match-feed-modal"
+import { useRestoreOpenMatch } from "@/components/build-refresh"
 import {
   birthYearsInLabel,
   createTeamMatchKeySet,
@@ -113,6 +114,7 @@ export default function TeamPageClient({ team }: { team: ClubTeamMetadata }) {
       })
       .slice(0, 2)
   }, [allMatches, teamMatchKeys, teamClass, usesBirthYears, yearlessAllowed, team])
+  useRestoreOpenMatch(teamMatches, setSelectedMatch)
   const descriptionFallback =
     "Härnösands HF samlar spelare, ledare och supportrar i ett starkt lagbygge. Följ laget via våra kanaler och uppdateringar nedan."
   const loading = currentLoading || finishedLoading
