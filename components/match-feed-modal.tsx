@@ -1,7 +1,7 @@
 "use client"
 
 import { memo, startTransition, useEffect, useMemo, useRef, useState } from "react"
-import { X } from "lucide-react"
+import { ChevronDown, X } from "lucide-react"
 import type { NormalizedMatch } from "@/lib/use-match-data"
 import { preferRicherTimeline, resolvePreferredTimeline } from "@/lib/match-timeline"
 import {
@@ -30,6 +30,8 @@ export type MatchFeedEvent = {
   isTeamEvent?: boolean
   isComment?: boolean
   activatedCount?: number
+  /** Players registered in the match squad ("Spelare aktiverad"), collapsed into one row. */
+  squadPlayers?: { name: string; number?: string }[]
   score?: string
   scoringTeam?: string
   isHomeGoal?: boolean
@@ -1125,8 +1127,15 @@ export function MatchFeedModal({
       return !isGeneric
     })
 
-    // One row per team and period for line-up activations instead of one row per player.
-    const activationGroups = new Map<string, { event: MatchFeedEvent; index: number; count: number }>()
+    // "Spelare aktiverad" registers a player in the match squad (not on court). One row per
+    // team and period lists the squad instead of one row per player.
+    type SquadGroup = { event: MatchFeedEvent; index: number; players: Map<string, { name: string; number?: string }> }
+    const addSquadPlayer = (group: SquadGroup, event: MatchFeedEvent) => {
+      const name = event.player?.trim()
+      if (!name) return
+      group.players.set(name.toLowerCase(), { name, number: event.playerNumber?.toString().trim() || undefined })
+    }
+    const activationGroups = new Map<string, SquadGroup>()
     const filtered: { event: MatchFeedEvent; index: number }[] = []
     withoutNoise.forEach((entry) => {
       if (!isActivationEvent(entry.event)) {
@@ -1136,21 +1145,27 @@ export function MatchFeedModal({
       const key = `${entry.event.period ?? inferPeriodFromTime(entry.event.time)}|${normalizeText(entry.event.team)}`
       const group = activationGroups.get(key)
       if (group) {
-        group.count += 1
+        addSquadPlayer(group, entry.event)
         return
       }
-      const created = { event: entry.event, index: entry.index, count: 1 }
+      const created: SquadGroup = { event: entry.event, index: entry.index, players: new Map() }
+      addSquadPlayer(created, entry.event)
       activationGroups.set(key, created)
       filtered.push(created)
     })
     activationGroups.forEach((group) => {
       const team = group.event.team?.trim()
-      const label = group.count === 1 ? "1 spelare aktiverad" : `${group.count} spelare aktiverade`
+      const squadPlayers = Array.from(group.players.values()).sort(
+        (a, b) => (Number(a.number) || 999) - (Number(b.number) || 999) || a.name.localeCompare(b.name, "sv"),
+      )
+      const count = Math.max(squadPlayers.length, 1)
+      const label = `Trupp · ${count} spelare`
       group.event = {
         ...group.event,
         player: undefined,
         playerNumber: undefined,
-        activatedCount: group.count,
+        activatedCount: count,
+        squadPlayers,
         description: team ? `${team} · ${label}` : label,
         payload: undefined,
       }
@@ -1673,6 +1688,30 @@ export function MatchFeedModal({
                         const isTimeout = typeLabel === "Timeout"
 
                         /* Center-only events (halftime, fulltime, timeout, etc.) */
+                        if (event.squadPlayers && event.squadPlayers.length > 0) {
+                          const squadSide = resolveTeamSide(event.team, homeTeam, awayTeam)
+                          return (
+                            <li key={`squad-${event.team ?? "team"}-${event.period ?? 0}-${index}`} className="relative flex justify-center py-2">
+                              <details className="group relative z-10 w-full max-w-[90%] rounded-md border border-slate-200 bg-white text-xs">
+                                <summary className="flex cursor-pointer list-none items-center justify-center gap-2 px-3 py-1.5 [&::-webkit-details-marker]:hidden">
+                                  <span className={`h-1.5 w-1.5 shrink-0 ${squadSide === "home" ? "bg-slate-500" : squadSide === "away" ? "bg-slate-400" : "bg-slate-300"}`} />
+                                  <span className="truncate font-semibold text-slate-500">{event.team || "Lag"}</span>
+                                  <span className="shrink-0 text-slate-400">· Trupp {event.squadPlayers.length}</span>
+                                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-300 transition group-open:rotate-180" />
+                                </summary>
+                                <ul className="grid grid-cols-1 gap-x-4 gap-y-0.5 border-t border-slate-100 px-3 py-2 sm:grid-cols-2">
+                                  {event.squadPlayers.map((p) => (
+                                    <li key={`${p.number ?? ""}-${p.name}`} className="flex min-w-0 items-baseline gap-2 text-slate-600">
+                                      <span className="w-5 shrink-0 text-right font-bold tabular-nums text-slate-800">{p.number ?? ""}</span>
+                                      <span className="truncate">{p.name}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </details>
+                            </li>
+                          )
+                        }
+
                         if (isCommentEvent(event)) {
                           return (
                             <li key={`${event.eventId ?? "idx"}-${index}`} className="relative flex justify-center py-2">
