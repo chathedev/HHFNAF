@@ -1209,40 +1209,38 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                 )}
 
                 {homeMatchFlow.items.length > 0 && (
-                  <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-                    <Link
-                      href="/matcher"
-                      className="inline-flex items-center gap-2 border border-slate-900 px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-900 hover:text-white"
-                    >
-                      Alla matcher
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
-                    <Link
-                      href="/tabeller"
-                      className="inline-flex items-center gap-2 border border-emerald-700 px-5 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-700 hover:text-white"
-                    >
-                      Tabeller
-                    </Link>
-                    <Link
-                      href="/scout"
-                      className="inline-flex items-center gap-2 border border-emerald-700 px-5 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-700 hover:text-white"
-                    >
-                      Scout
-                    </Link>
-                    {shopVisible ? (
-                      <Link
-                        href={SHOP_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm font-medium text-slate-500 underline-offset-2 transition hover:text-slate-900 hover:underline"
-                      >
-                        Besök butiken
-                      </Link>
-                    ) : (
-                      <span aria-disabled="true" className="text-sm font-medium text-slate-300 cursor-not-allowed">
-                        Butiken ej tillgänglig
-                      </span>
-                    )}
+                  <div className="mt-8">
+                    <div className="mx-auto grid max-w-md grid-cols-3 gap-px border border-slate-900 bg-slate-900">
+                      {[
+                        { href: "/matcher", label: "Alla matcher" },
+                        { href: "/tabeller", label: "Tabeller" },
+                        { href: "/scout", label: "Scout" },
+                      ].map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className="flex items-center justify-center bg-white px-2 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-900 hover:text-white"
+                        >
+                          {item.label}
+                        </Link>
+                      ))}
+                    </div>
+                    <p className="mt-3 text-center">
+                      {shopVisible ? (
+                        <Link
+                          href={SHOP_URL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-medium text-slate-500 underline-offset-2 transition hover:text-slate-900 hover:underline"
+                        >
+                          Besök butiken
+                        </Link>
+                      ) : (
+                        <span aria-disabled="true" className="cursor-not-allowed text-sm font-medium text-slate-300">
+                          Butiken ej tillgänglig
+                        </span>
+                      )}
+                    </p>
                   </div>
                 )}
               </div>

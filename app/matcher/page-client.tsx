@@ -716,11 +716,11 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
 
         <div className="sticky top-16 z-30 mt-5 sm:top-[72px]">
           <div className="rounded-2xl border border-slate-200/90 bg-white/90 p-2.5 shadow-[0_8px_28px_rgba(15,23,42,0.06)] backdrop-blur-md">
-            <div className="flex flex-col gap-2.5 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
               <div
                 role="tablist"
                 aria-label="Filtrera matchvy"
-                className={`grid grid-cols-4 gap-1 rounded-xl bg-slate-100/80 p-1 transition md:flex md:shrink-0`}
+                className={`grid grid-cols-4 gap-1 rounded-xl bg-slate-100/80 p-1 transition lg:flex lg:shrink-0`}
               >
                 {STATUS_OPTIONS.map((option) => {
                   const isActive = statusFilter === option.value
@@ -731,7 +731,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                       role="tab"
                       aria-selected={isActive}
                       onClick={() => setStatusFilter(option.value)}
-                      className={`relative inline-flex min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-1.5 py-1.5 text-xs font-semibold transition sm:px-3 sm:text-sm md:px-4 ${
+                      className={`relative inline-flex min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-1.5 py-1.5 text-xs font-semibold transition sm:px-3 sm:text-sm lg:px-4 ${
                         isActive ? "bg-slate-950 text-white shadow-sm" : "text-slate-600 hover:bg-white"
                       }`}
                     >
@@ -758,13 +758,13 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                 })}
               </div>
 
-              <div className="flex min-w-0 flex-1 items-center gap-2 md:justify-end">
+              <div className="flex min-w-0 flex-1 items-center gap-2 lg:justify-end">
                 <SelectMenu
                   id="team-filter"
                   ariaLabel="Filtrera lag"
                   value={selectedTeam}
                   onChange={setSelectedTeam}
-                  className="flex-1 md:w-60 md:flex-none"
+                  className="min-w-0 flex-1 lg:w-60 lg:flex-none"
                   options={[{ value: "all", label: "Alla lag" }, ...teamOptions.map((team) => ({ value: team.value, label: team.label }))]}
                 />
                 <Link
@@ -775,15 +775,6 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 6h18M3 14h18M3 18h18" />
                   </svg>
                   Tabeller
-                </Link>
-                <Link
-                  href="/scout"
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-900 bg-slate-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-                >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3v18h18M7 15l4-4 3 3 5-6" />
-                  </svg>
-                  Scout
                 </Link>
               </div>
             </div>

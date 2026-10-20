@@ -1519,10 +1519,10 @@ export function MatchFeedModal({
             {scoutHref && (
               <Link
                 href={scoutHref}
-                className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-950 px-2.5 py-1 text-[11px] font-bold text-white transition hover:bg-slate-800"
+                className="ml-auto inline-flex shrink-0 items-center gap-1 border border-slate-300 px-2.5 py-1 text-[11px] font-semibold text-slate-700 transition hover:border-slate-900 hover:text-slate-950"
               >
                 <ScoutIcon className="h-3.5 w-3.5" aria-hidden />
-                {matchStatus === "upcoming" ? "Scouta motståndaren" : "Matchanalys"}
+                {matchStatus === "upcoming" ? "Scouta motståndaren" : "Scout"}
               </Link>
             )}
             <button
@@ -1716,15 +1716,6 @@ export function MatchFeedModal({
                         </div>
                       )}
                     </dl>
-                  )}
-                  {scoutHref && matchStatus === "upcoming" && (
-                    <Link
-                      href={scoutHref}
-                      className="mt-2 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800"
-                    >
-                      <ScoutIcon className="h-4 w-4" aria-hidden />
-                      Scouta motståndaren i HHF Scout
-                    </Link>
                   )}
                 </div>
               )}
