@@ -224,7 +224,7 @@ export default async function ScoutMatchPage({ params }: { params: Promise<Param
 
           {hhf && opponent && (
             <Section id="jamforelse" eyebrow="Jämförelse" title="Lag mot lag" description="Den här säsongen, alla tävlingar. Mittkolumnen är snittet i serien. Fetstil = bäst av de två.">
-              <Comparison a={{ name: hhf.name, isHhf: true }} b={{ name: opponent.name, isHhf: opponent.isHhf }} metrics={comparisonMetrics(hhf, opponent, data.category)} />
+              <Comparison a={{ name: hhf.name, isHhf: hhf.isHhf }} b={{ name: opponent.name, isHhf: opponent.isHhf }} metrics={comparisonMetrics(hhf, opponent, data.category)} />
             </Section>
           )}
 
