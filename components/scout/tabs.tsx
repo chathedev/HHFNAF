@@ -14,7 +14,7 @@ export function Tabs({ tabs, initial = 0 }: { tabs: { id: string; label: ReactNo
       <div
         role="tablist"
         aria-label="Välj serie"
-        className="mb-4 flex gap-1 overflow-x-auto rounded-2xl bg-slate-100/80 p-1"
+        className="mb-5 flex gap-5 overflow-x-auto border-b border-slate-200"
         onKeyDown={(event) => {
           if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return
           event.preventDefault()
@@ -33,8 +33,8 @@ export function Tabs({ tabs, initial = 0 }: { tabs: { id: string; label: ReactNo
             aria-controls={`${base}-panel-${index}`}
             tabIndex={index === active ? 0 : -1}
             onClick={() => setActive(index)}
-            className={`shrink-0 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
-              index === active ? "bg-slate-950 text-white shadow-sm" : "text-slate-600 hover:bg-white hover:text-slate-900"
+            className={`-mb-px shrink-0 border-b-2 pb-2 text-xs font-semibold transition ${
+              index === active ? "border-slate-950 text-slate-950" : "border-transparent text-slate-500 hover:text-slate-900"
             }`}
           >
             {tab.label}

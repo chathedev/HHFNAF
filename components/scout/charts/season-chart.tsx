@@ -57,7 +57,7 @@ export function SeasonChart({ points, height = 170 }: { points: SeasonPoint[]; h
               {data.map((p) => (
                 <Cell
                   key={p.id}
-                  fill={p.outcome === "W" ? CHART.win : p.outcome === "L" ? CHART.loss : CHART.against}
+                  fill={p.outcome === "W" ? CHART.win : p.outcome === "L" ? CHART.loss : CHART.draw}
                   radius={(p.gd >= 0 ? [4, 4, 0, 0] : [0, 0, 4, 4]) as unknown as number}
                 />
               ))}
@@ -67,7 +67,7 @@ export function SeasonChart({ points, height = 170 }: { points: SeasonPoint[]; h
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
         <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: CHART.win }} /> Vinst</span>
-        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: CHART.against }} /> Oavgjort</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: CHART.draw }} /> Oavgjort</span>
         <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: CHART.loss }} /> Förlust</span>
         <span>Målskillnad per match, äldst till vänster</span>
       </div>

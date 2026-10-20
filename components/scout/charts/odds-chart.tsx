@@ -9,7 +9,7 @@ import { AXIS_TICK, CHART } from "./theme"
 
 export type OddsRow = { key: string; name: string; isHhf: boolean; pFirst: number; pTop3: number; expectedPosition: number; expectedPoints: number }
 
-const pct = (v: number) => `${Math.round(v * 100)} %`
+const pct = (v: number) => (v > 0.995 && v < 1 ? ">99\u00a0%" : v < 0.005 && v > 0 ? "<1\u00a0%" : `${Math.round(v * 100)}\u00a0%`)
 
 export function OddsChart({ rows }: { rows: OddsRow[] }) {
   if (!rows.length) return null

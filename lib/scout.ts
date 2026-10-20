@@ -384,6 +384,14 @@ export function pct(value: number | null | undefined, digits = 0): string {
   return `${(value * 100).toFixed(digits).replace(".", ",")}${NBSP}%`
 }
 
+// A model probability is never certain: show "<1 %" / ">99 %" at the ends.
+export function prob(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return "–"
+  if (value < 0.005) return `<1${NBSP}%`
+  if (value > 0.995) return `>99${NBSP}%`
+  return `${Math.round(value * 100)}${NBSP}%`
+}
+
 export function num(value: number | null | undefined, digits = 1): string {
   if (value == null || !Number.isFinite(value)) return "–"
   return value.toFixed(digits).replace(".", ",")

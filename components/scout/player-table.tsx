@@ -37,24 +37,24 @@ export function PlayerTable({ players, highlight = false, limit = 25 }: { player
   const visible = showAll ? sorted : sorted.slice(0, limit)
   if (!players.length) return <p className="text-sm text-slate-500">Inga spelare med matchlogg ännu.</p>
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+    <div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-              <th className="w-10 px-3 py-2.5">#</th>
-              <th className="px-3 py-2.5">Spelare</th>
+            <tr className="border-b border-slate-200 text-left text-[11px] font-medium text-slate-400">
+              <th className="w-10 py-2 pr-2">#</th>
+              <th className="py-2 pr-2">Spelare</th>
               {COLUMNS.map((col) => (
                 <th
                   key={col.key}
-                  className={`whitespace-nowrap px-2 py-2.5 text-center ${col.className ?? ""}`}
+                  className={`whitespace-nowrap px-2 py-2 text-center ${col.className ?? ""}`}
                   aria-sort={sort === col.key ? "descending" : "none"}
                   title={col.title}
                 >
                   <button
                     type="button"
                     onClick={() => setSort(col.key)}
-                    className={`inline-flex items-center gap-1 rounded px-1 uppercase tracking-wider transition hover:text-slate-900 ${sort === col.key ? "text-slate-950" : ""}`}
+                    className={`inline-flex items-center gap-1 px-1 transition hover:text-slate-900 ${sort === col.key ? "font-semibold text-slate-950" : ""}`}
                   >
                     {col.label}
                     {sort === col.key && <span aria-hidden>▾</span>}
@@ -63,23 +63,23 @@ export function PlayerTable({ players, highlight = false, limit = 25 }: { player
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 tabular-nums">
+          <tbody className="tabular-nums">
             {visible.map((p, index) => (
-              <tr key={`${p.name}-${p.no}-${index}`} className={`transition hover:bg-slate-50/80 ${index === 0 && sort === "goals" && highlight ? "bg-emerald-50/40" : ""}`}>
-                <td className="px-3 py-2.5 text-xs font-bold text-slate-400">{p.no ?? "–"}</td>
-                <td className="whitespace-nowrap px-3 py-2.5 font-medium text-slate-900">
+              <tr key={`${p.name}-${p.no}-${index}`} className="border-b border-slate-100">
+                <td className="py-2 pr-2 text-xs text-slate-400">{p.no ?? "–"}</td>
+                <td className="whitespace-nowrap py-2 pr-2 font-medium text-slate-900">
                   {p.name}
-                  {p.keeper && <span className="ml-1.5 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-slate-500">MV</span>}
-                  {p.captain && <span className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-slate-500">C</span>}
+                  {p.keeper && <span className="ml-1.5 text-[10px] font-semibold uppercase text-slate-400">MV</span>}
+                  {p.captain && <span className="ml-1 text-[10px] font-semibold uppercase text-slate-400">C</span>}
                 </td>
-                <td className="px-2 py-2.5 text-center text-slate-600">{p.games}</td>
-                <td className="px-2 py-2.5 text-center font-black text-slate-950">{p.goals}</td>
-                <td className="px-2 py-2.5 text-center text-slate-700">{p.gpg.toFixed(1).replace(".", ",")}</td>
-                <td className="hidden px-2 py-2.5 text-center text-slate-600 sm:table-cell">{p.share}&nbsp;%</td>
-                <td className="px-2 py-2.5 text-center text-slate-600">{p.penAtt ? `${p.pen}/${p.penAtt}` : "–"}</td>
-                <td className="px-2 py-2.5 text-center text-slate-600">{p.susp || "–"}</td>
-                <td className="hidden px-2 py-2.5 text-center text-slate-600 md:table-cell">{p.recent.length ? p.recent.join(" · ") : "–"}</td>
-                <td className="hidden whitespace-nowrap px-2 py-2.5 text-center text-slate-500 lg:table-cell" title={p.prev ? p.prev.teams.map((t) => `${t.team} (${t.classKey}): ${t.goals} mål på ${t.games}`).join("\n") : undefined}>
+                <td className="px-2 py-2 text-center text-slate-600">{p.games}</td>
+                <td className="px-2 py-2 text-center font-black text-slate-950">{p.goals}</td>
+                <td className="px-2 py-2 text-center text-slate-700">{p.gpg.toFixed(1).replace(".", ",")}</td>
+                <td className="hidden px-2 py-2 text-center text-slate-600 sm:table-cell">{p.share}&nbsp;%</td>
+                <td className="px-2 py-2 text-center text-slate-600">{p.penAtt ? `${p.pen}/${p.penAtt}` : "–"}</td>
+                <td className="px-2 py-2 text-center text-slate-600">{p.susp || "–"}</td>
+                <td className="hidden px-2 py-2 text-center text-slate-600 md:table-cell">{p.recent.length ? p.recent.join(" · ") : "–"}</td>
+                <td className="hidden whitespace-nowrap px-2 py-2 text-center text-slate-500 lg:table-cell" title={p.prev ? p.prev.teams.map((t) => `${t.team} (${t.classKey}): ${t.goals} mål på ${t.games}`).join("\n") : undefined}>
                   {p.prev ? `${p.prev.goals} på ${p.prev.games}` : "–"}
                 </td>
               </tr>
@@ -91,7 +91,7 @@ export function PlayerTable({ players, highlight = false, limit = 25 }: { player
         <button
           type="button"
           onClick={() => setShowAll((v) => !v)}
-          className="w-full border-t border-slate-100 px-4 py-2.5 text-xs font-semibold text-emerald-700 transition hover:bg-slate-50"
+          className="w-full py-2.5 text-xs font-medium text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline"
         >
           {showAll ? "Visa färre" : `Visa alla ${sorted.length} spelare`}
         </button>
