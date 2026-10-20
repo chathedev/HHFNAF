@@ -44,6 +44,41 @@ function Header() {
     }
   }, [])
 
+  // Mobile menu: close on navigation.
+  useEffect(() => {
+    setIsMenuOpen(false)
+  }, [pathname])
+
+  // While the mobile menu is open, the page behind it is frozen (no background scrolling,
+  // also on iOS) and Escape closes the menu. The scroll position is restored on close.
+  useEffect(() => {
+    if (!isMenuOpen) return
+    const scrollY = window.scrollY
+    const body = document.body
+    const prev = { position: body.style.position, top: body.style.top, width: body.style.width, overflow: body.style.overflow }
+    body.style.position = "fixed"
+    body.style.top = `-${scrollY}px`
+    body.style.width = "100%"
+    body.style.overflow = "hidden"
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsMenuOpen(false)
+    }
+    const onResize = () => {
+      if (window.innerWidth >= 768) setIsMenuOpen(false)
+    }
+    window.addEventListener("keydown", onKey)
+    window.addEventListener("resize", onResize)
+    return () => {
+      body.style.position = prev.position
+      body.style.top = prev.top
+      body.style.width = prev.width
+      body.style.overflow = prev.overflow
+      window.scrollTo(0, scrollY)
+      window.removeEventListener("keydown", onKey)
+      window.removeEventListener("resize", onResize)
+    }
+  }, [isMenuOpen])
+
   // The header used to be gated by a hardcoded allow-list, which silently dropped it
   // from any page added later - /tabeller, /partners and /links all render <Header />
   // and got nothing. Only the internal tools opt out now; every public page that mounts
@@ -99,7 +134,8 @@ function Header() {
             className="md:hidden p-2"
             size="icon"
             variant="ghost"
-            aria-label="Toggle navigation menu"
+            aria-expanded={isMenuOpen}
+            aria-label={isMenuOpen ? "Stäng meny" : "Öppna meny"}
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
@@ -162,11 +198,11 @@ function Header() {
       </header>
 
       <div
-        className={`fixed top-20 left-0 w-full z-40 md:hidden transition-[opacity,transform] duration-300 ease-in-out ${
+        className={`fixed inset-x-0 top-20 bottom-0 z-[46] md:hidden transition-[opacity,transform] duration-300 ease-in-out ${
           isMenuOpen ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 -translate-y-4 pointer-events-none"
         }`}
       >
-        <div className="bg-black/95 border-t border-gray-800 shadow-xl">
+        <div className="h-full overflow-y-auto overscroll-contain bg-black border-t border-gray-800">
           <div className="container mx-auto px-4 py-6">
             <nav className="flex flex-col gap-1">
               {navLinks.map((link) => (
