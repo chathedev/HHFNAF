@@ -51,9 +51,9 @@ export default async function ScoutSeriesPage({ params }: { params: Promise<Para
       <Header />
       <main className="min-h-screen bg-white">
         <div className="h-24" />
-        <div className="container mx-auto max-w-4xl px-4 pb-16 pt-6">
+        <div className="container mx-auto max-w-4xl px-4 pb-14 pt-4">
           <PageHeader back={{ href: "/scout", label: "HHF Scout" }} title={c.name} sub={`${classLabel(c.classKey)} · säsong ${seasonLabel(c.season)}`} />
-          <div className="space-y-12">
+          <div className="space-y-10">
             {!c.resultsHidden && (
               <Figures
                 items={[

@@ -121,7 +121,7 @@ export default async function ScoutMatchPage({ params }: { params: Promise<Param
       <Header />
       <main className="min-h-screen bg-white">
         <div className="h-24" />
-        <div className="container mx-auto max-w-4xl px-4 pb-16 pt-6">
+        <div className="container mx-auto max-w-4xl px-4 pb-14 pt-4">
           <PageHeader
             back={hhf?.isHhf && hhf.slug ? { href: `/scout/${hhf.slug}`, label: match.teamType ?? "Laget" } : { href: "/scout", label: "HHF Scout" }}
             title={`${match.home.name} – ${match.away.name}`}
@@ -129,7 +129,7 @@ export default async function ScoutMatchPage({ params }: { params: Promise<Param
             right={played ? <p className="text-4xl font-black tabular-nums text-slate-950">{match.hs}–{match.as}</p> : undefined}
           />
 
-          <div className="space-y-12">
+          <div className="space-y-10">
             <section>
               {probs ? (
                 <>

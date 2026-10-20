@@ -68,7 +68,7 @@ export default async function ScoutProfilePage({ params }: { params: Promise<Par
       <Header />
       <main className="min-h-screen bg-white">
         <div className="h-24" />
-        <div className="container mx-auto max-w-4xl px-4 pb-16 pt-6">
+        <div className="container mx-auto max-w-4xl px-4 pb-14 pt-4">
           <PageHeader
             back={{ href: "/scout", label: "HHF Scout" }}
             title={entity.name}
@@ -76,7 +76,7 @@ export default async function ScoutProfilePage({ params }: { params: Promise<Par
             right={rec.played > 0 ? <FormChips form={rec.form.map((f) => f.outcome)} /> : undefined}
           />
 
-          <div className="space-y-12">
+          <div className="space-y-10">
             {(entity.isHhf && entity.slug && isCurrent) || entity.nextSameName ? (
               <p className="-mt-6 flex gap-4 text-sm">
                 {entity.isHhf && entity.slug && isCurrent && (

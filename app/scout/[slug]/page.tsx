@@ -74,7 +74,7 @@ export default async function ScoutTeamPage({ params }: { params: Promise<Params
       <Header />
       <main className="min-h-screen bg-white">
         <div className="h-24" />
-        <div className="container mx-auto max-w-4xl px-4 pb-16 pt-6">
+        <div className="container mx-auto max-w-4xl px-4 pb-14 pt-4">
           <PageHeader
             back={{ href: "/scout", label: "HHF Scout" }}
             title={team.label}
@@ -90,7 +90,7 @@ export default async function ScoutTeamPage({ params }: { params: Promise<Params
             ))}
           </nav>
 
-          <div className="space-y-12">
+          <div className="space-y-10">
             {resultsHidden ? (
               <p className="border-y border-slate-200 py-4 text-sm text-slate-600">
                 Förbundet publicerar inga resultat för de yngsta lagen. Därför visar Scout bara spelschemat här – inga tabeller, styrkor eller vinstchanser.

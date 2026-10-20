@@ -56,7 +56,7 @@ export function MatchList({
           .join(" · ")
         return (
           <li key={m.id}>
-            <Link href={`/scout/match/${m.id}`} className="flex items-center gap-4 border-b border-slate-200 py-3.5 transition hover:bg-slate-50">
+            <Link href={`/scout/match/${m.id}`} className="flex items-center gap-4 border-b border-slate-200 py-3 transition hover:bg-slate-50">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-slate-950 sm:text-[15px]">
                   {showTeam && m.teamType ? <span className="mr-2 text-[11px] font-medium text-slate-400">{m.teamType}</span> : null}
@@ -71,9 +71,14 @@ export function MatchList({
                     {outcome && <OutcomeChip outcome={outcome} />}
                   </div>
                 ) : probs && !hideOdds ? (
-                  <p className="text-xs text-slate-500">
-                    <span className="text-sm font-bold tabular-nums text-slate-950">{prob(probs.win)}</span> vinstchans
-                  </p>
+                  <div className="w-28 sm:w-36">
+                    <p className="text-xs text-slate-500">
+                      <span className="text-sm font-bold tabular-nums text-slate-950">{prob(probs.win)}</span> vinst
+                    </p>
+                    <div className="mt-1">
+                      <ProbabilityBar size="sm" left={{ label: "Vinst", p: probs.win, tone: "hhf" }} draw={probs.draw} right={{ label: "Förlust", p: probs.loss, tone: "team" }} />
+                    </div>
+                  </div>
                 ) : hideOdds ? null : m.played || m.resultHidden ? (
                   <p className="text-xs text-slate-400">Resultat publiceras ej</p>
                 ) : (

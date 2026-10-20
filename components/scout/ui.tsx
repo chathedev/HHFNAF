@@ -7,7 +7,7 @@ import { OUTCOME_LABEL, OUTCOME_TEXT, type Insight, type Outcome } from "@/lib/s
 
 export function PageHeader({ back, title, sub, right }: { back?: { href: string; label: string }; title: string; sub?: ReactNode; right?: ReactNode }) {
   return (
-    <header className="mb-8">
+    <header className="mb-6">
       {back && (
         <Link href={back.href} className="text-xs font-medium text-slate-500 transition hover:text-slate-900">
           ← {back.label}
@@ -15,7 +15,7 @@ export function PageHeader({ back, title, sub, right }: { back?: { href: string;
       )}
       <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{title}</h1>
+          <h1 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">{title}</h1>
           {sub && <p className="mt-1.5 max-w-2xl text-sm text-slate-500">{sub}</p>}
         </div>
         {right}
@@ -41,11 +41,11 @@ export function Section({ title, children, right, id, note }: { title: string; c
 // A row of plain figures (label above value), no boxes.
 export function Figures({ items }: { items: { label: string; value: ReactNode; sub?: ReactNode }[] }) {
   return (
-    <dl className="grid grid-cols-2 gap-x-6 gap-y-4 border-y border-slate-200 py-4 sm:grid-cols-4">
+    <dl className="grid grid-cols-2 gap-x-6 gap-y-4 border-y border-slate-200 py-3 sm:grid-cols-4">
       {items.map((item) => (
         <div key={item.label} className="min-w-0">
           <dt className="text-[11px] font-medium text-slate-400">{item.label}</dt>
-          <dd className="mt-0.5 text-xl font-black tabular-nums text-slate-950">{item.value}</dd>
+          <dd className="mt-0.5 text-lg font-black tabular-nums text-slate-950">{item.value}</dd>
           {item.sub && <dd className="text-xs text-slate-500">{item.sub}</dd>}
         </div>
       ))}
