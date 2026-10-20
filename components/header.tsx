@@ -58,8 +58,11 @@ function Header() {
     { name: "Lag", href: "/lag" },
     { name: "Matcher", href: "/matcher" },
     { name: "Tabeller", href: "/tabeller" },
+    { name: "Scout", href: "/scout" },
     { name: "Kontakt", href: "/kontakt" },
   ]
+  // /scout has sub pages (teams, match previews); keep its link active on all of them.
+  const isActive = (href: string) => pathname === href || (href === "/scout" && pathname.startsWith("/scout/"))
 
   return (
     <>
@@ -109,13 +112,13 @@ function Header() {
                 key={link.href}
                 href={link.href}
                 className={`relative text-base font-medium py-2 group transition-colors duration-300
-                  ${pathname === link.href ? "text-orange-500" : "text-white hover:text-gray-300"}
+                  ${isActive(link.href) ? "text-orange-500" : "text-white hover:text-gray-300"}
                 `}
               >
                 {link.name}
                 <span
                   className={`absolute bottom-0 left-0 h-[3px] bg-orange-500 transition-[width] duration-300 ease-out
-                    ${pathname === link.href ? "w-full" : "w-0 group-hover:w-full"}
+                    ${isActive(link.href) ? "w-full" : "w-0 group-hover:w-full"}
                   `}
                 />
               </Link>
@@ -172,7 +175,7 @@ function Header() {
                   href={link.href}
                   className={`relative text-lg font-medium py-3 px-4 rounded-lg transition-all duration-200
                     ${
-                      pathname === link.href
+                      isActive(link.href)
                         ? "text-orange-500 bg-orange-500/10"
                         : "text-white hover:text-gray-300 hover:bg-white/5"
                     }

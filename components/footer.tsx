@@ -79,6 +79,9 @@ export default function Footer() {
                 <Link href="/matcher" className="text-sm text-white/70 transition hover:text-white">Matcher</Link>
               </li>
               <li>
+                <Link href="/scout" className="text-sm text-white/70 transition hover:text-white">HHF Scout</Link>
+              </li>
+              <li>
                 <Link href="/kontakt" className="text-sm text-white/70 transition hover:text-white">Kontakt</Link>
               </li>
             </ul>

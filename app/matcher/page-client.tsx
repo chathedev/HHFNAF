@@ -776,6 +776,15 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                   </svg>
                   Tabeller
                 </Link>
+                <Link
+                  href="/scout"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-900 bg-slate-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3v18h18M7 15l4-4 3 3 5-6" />
+                  </svg>
+                  Scout
+                </Link>
               </div>
             </div>
             <div className="mt-2.5">

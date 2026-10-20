@@ -13,6 +13,7 @@ export async function GET() {
     { url: "/matcher", priority: "0.8", changefreq: "daily" },
     { url: "/kontakt", priority: "0.7", changefreq: "monthly" },
     { url: "/tabeller", priority: "0.7", changefreq: "daily" },
+    { url: "/scout", priority: "0.7", changefreq: "daily" },
     { url: "/partners", priority: "0.5", changefreq: "monthly" },
     { url: "/links", priority: "0.6", changefreq: "monthly" },
   ]

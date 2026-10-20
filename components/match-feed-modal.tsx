@@ -1,7 +1,8 @@
 "use client"
 
 import { memo, startTransition, useEffect, useMemo, useRef, useState } from "react"
-import { X } from "lucide-react"
+import Link from "next/link"
+import { LineChart as ScoutIcon, X } from "lucide-react"
 import { setOpenMatchForRestore } from "@/components/build-refresh"
 import type { NormalizedMatch } from "@/lib/use-match-data"
 import { preferRicherTimeline, resolvePreferredTimeline } from "@/lib/match-timeline"
@@ -1023,6 +1024,11 @@ export function MatchFeedModal({
   const [countdownAnchorAt, setCountdownAnchorAt] = useState<number>(() => Date.now())
   const allowAutoRefresh = matchStatus === "live" || matchStatus === "halftime"
   const canFetchDetailedTimeline = matchData?.timelineAvailable !== false || matchData?.eventsAvailable !== false
+  // HHF Scout covers every Profixio league match (not ProCup tournaments).
+  const scoutHref =
+    matchData?.apiMatchId && matchData?.provider !== "procup" && /^\d+$/.test(String(matchData.apiMatchId))
+      ? `/scout/match/${matchData.apiMatchId}`
+      : null
   const modalRefreshIntervalMs = matchData?.provider === "procup" ? 5_000 : 3_000
   const effectiveClockState = detailClockState ?? clockState ?? null
   const effectivePenalties = detailPenalties.length > 0 ? detailPenalties : penalties
@@ -1510,6 +1516,15 @@ export function MatchFeedModal({
             <span className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
               {matchData?.series || "Matchcenter"}
             </span>
+            {scoutHref && (
+              <Link
+                href={scoutHref}
+                className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-950 px-2.5 py-1 text-[11px] font-bold text-white transition hover:bg-slate-800"
+              >
+                <ScoutIcon className="h-3.5 w-3.5" aria-hidden />
+                {matchStatus === "upcoming" ? "Scouta motståndaren" : "Matchanalys"}
+              </Link>
+            )}
             <button
               type="button"
               onClick={onClose}
@@ -1701,6 +1716,15 @@ export function MatchFeedModal({
                         </div>
                       )}
                     </dl>
+                  )}
+                  {scoutHref && matchStatus === "upcoming" && (
+                    <Link
+                      href={scoutHref}
+                      className="mt-2 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800"
+                    >
+                      <ScoutIcon className="h-4 w-4" aria-hidden />
+                      Scouta motståndaren i HHF Scout
+                    </Link>
                   )}
                 </div>
               )}

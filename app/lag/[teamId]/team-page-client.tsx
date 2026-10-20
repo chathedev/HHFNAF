@@ -44,7 +44,13 @@ const extractOpponentName = (opponent: string) => opponent.replace(/\s*\((hemma|
 const buildScheduleLine = (match: NormalizedMatch) =>
   [match.displayDate, match.time, match.venue].filter((item): item is string => Boolean(item)).join(" • ")
 
-export default function TeamPageClient({ team }: { team: ClubTeamMetadata }) {
+export default function TeamPageClient({
+  team,
+  scoutLinks = [],
+}: {
+  team: ClubTeamMetadata
+  scoutLinks?: { slug: string; label: string }[]
+}) {
   const teamDisplayName = team.displayName
 
   const [selectedMatch, setSelectedMatch] = useState<NormalizedMatch | null>(null);
@@ -255,6 +261,19 @@ export default function TeamPageClient({ team }: { team: ClubTeamMetadata }) {
               <div className="text-center">
                 <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-700">Lagets matcher</p>
                 <h2 className="mt-2 text-2xl font-bold text-gray-900">{teamDisplayName}</h2>
+                {scoutLinks.length > 0 && (
+                  <div className="mt-4 flex flex-wrap justify-center gap-2">
+                    {scoutLinks.map((link) => (
+                      <Link
+                        key={link.slug}
+                        href={`/scout/${link.slug}`}
+                        className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white transition hover:bg-slate-800"
+                      >
+                        HHF Scout{scoutLinks.length > 1 ? ` · ${link.label}` : ""}: motståndare och vinstchanser →
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {teamMatches.map((match) => {
