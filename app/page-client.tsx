@@ -1209,7 +1209,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                 )}
 
                 {homeMatchFlow.items.length > 0 && (
-                  <div className="mt-8 flex items-center justify-center gap-4">
+                  <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
                     <Link
                       href="/matcher"
                       className="inline-flex items-center gap-2 border border-slate-900 px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-900 hover:text-white"
@@ -1222,6 +1222,12 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                       className="inline-flex items-center gap-2 border border-emerald-700 px-5 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-700 hover:text-white"
                     >
                       Tabeller
+                    </Link>
+                    <Link
+                      href="/scout"
+                      className="inline-flex items-center gap-2 border border-emerald-700 px-5 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-700 hover:text-white"
+                    >
+                      Scout
                     </Link>
                     {shopVisible ? (
                       <Link
