@@ -388,7 +388,7 @@ export function pct(value: number | null | undefined, digits = 0): string {
 export function prob(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return "–"
   if (value < 0.005) return `<1${NBSP}%`
-  if (value > 0.995) return `>99${NBSP}%`
+  if (value >= 0.995) return `>99${NBSP}%`
   return `${Math.round(value * 100)}${NBSP}%`
 }
 

@@ -8,7 +8,7 @@ import { AXIS_TICK, CHART } from "./theme"
 
 type Bin = { from: number; to: number; n: number; predicted: number; actual: number }
 
-const pct = (v: number) => (v > 0.995 && v < 1 ? ">99\u00a0%" : v < 0.005 && v > 0 ? "<1\u00a0%" : `${Math.round(v * 100)}\u00a0%`)
+const pct = (v: number) => (v >= 0.995 && v < 1 ? ">99\u00a0%" : v < 0.005 && v > 0 ? "<1\u00a0%" : `${Math.round(v * 100)}\u00a0%`)
 
 export function CalibrationChart({ bins, height = 220 }: { bins: Bin[]; height?: number }) {
   const data = bins.filter((b) => b.n > 0).map((b) => ({ ...b, x: b.predicted, y: b.actual }))
