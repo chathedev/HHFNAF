@@ -5,6 +5,7 @@ import {
   outcomeFor,
   prob,
   probsFor,
+  realVenueLabel,
   scoreFor,
   sideOf,
   signed,
@@ -48,7 +49,7 @@ export function MatchList({
         const pre = probsFor(m.preMatch, side)
         const meta = [
           `${matchDate(m, Boolean(m.ts && m.ts < recentCutoff))}${m.time ? ` ${m.time}` : ""}`,
-          side === "home" ? "hemma" : "borta",
+          realVenueLabel(m, side),
           showSeries && m.category ? m.category.name : null,
           m.hs == null ? m.venue : null,
         ]

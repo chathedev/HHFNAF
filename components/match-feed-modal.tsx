@@ -15,6 +15,7 @@ import {
   type CourtTeamStats,
 } from "@/components/match-court"
 import { TrackingCourt2D, useTrackingForMatch } from "@/components/tracking-court-2d"
+import { LiveWinOdds } from "@/components/live-win-odds"
 
 export type MatchFeedEvent = {
   time?: string
@@ -1576,6 +1577,16 @@ export function MatchFeedModal({
               {awayTeam}
             </p>
           </div>
+          <LiveWinOdds
+            matchId={matchId ?? (matchData?.apiMatchId != null ? String(matchData.apiMatchId) : null)}
+            homeTeam={homeTeam}
+            awayTeam={awayTeam}
+            homeIsHhf={isHHFName(homeTeam)}
+            awayIsHhf={isHHFName(awayTeam)}
+            score={scoreboard}
+            clockState={effectiveClockState}
+            matchStatus={matchStatus}
+          />
         </header>
 
         {/* Timeout/Penalty timers */}

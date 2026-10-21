@@ -18,6 +18,9 @@ export type Prediction = {
   sigma: number
   homeGames: number
   awayGames: number
+  hv?: number
+  homePrior?: "cohort" | "club" | null
+  awayPrior?: "cohort" | "club" | null
 }
 
 export type Rating = {
@@ -67,6 +70,10 @@ export type ScoutMatch = {
   hasLog: boolean
   resultHidden?: boolean
   venue: string | null
+  /** Real home side: 1 listed home team plays in its own hall, 0 neutral court, -1 reversed. */
+  hv?: number
+  /** Where hv comes from: hall | arranger | same-club | fixture (no data, listed side assumed). */
+  hvSource?: string
   matchNo: string | null
   playUrl: string | null
   hhfSide: "home" | "away" | null
@@ -382,6 +389,16 @@ const NBSP = " "
 export function pct(value: number | null | undefined, digits = 0): string {
   if (value == null || !Number.isFinite(value)) return "–"
   return `${(value * 100).toFixed(digits).replace(".", ",")}${NBSP}%`
+}
+
+// Where the match is really played, seen from one side: "hemma", "borta" or "neutral plan".
+// The fixture's home side is only trusted when Scout has no hall or arranger data.
+export function realVenueLabel(m: Pick<ScoutMatch, "hv" | "hvSource">, side: "home" | "away"): string {
+  if (m.hvSource && m.hvSource !== "fixture" && typeof m.hv === "number") {
+    const own = side === "home" ? m.hv : -m.hv
+    return own > 0 ? "hemma" : own < 0 ? "borta" : "neutral plan"
+  }
+  return side === "home" ? "hemma" : "borta"
 }
 
 // A model probability is never certain: show "<1 %" / ">99 %" at the ends.

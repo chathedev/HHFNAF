@@ -15,6 +15,7 @@ import {
   outcomeFor,
   pct,
   probsFor,
+  realVenueLabel,
   scoreFor,
   scoutFetch,
   seasonLabel,
@@ -143,6 +144,28 @@ export default async function ScoutMatchPage({ params }: { params: Promise<Param
                     . Bygger på {gamesUs} och {gamesThem} spelade matcher i år, så säkerheten är <span className="font-semibold text-slate-950">{certainty}</span>. Förra säsongen pekade
                     samma metod ut rätt vinnare i {pct(data.model.previous.accuracy)} av matcherna.
                   </p>
+                  {(() => {
+                    const notes: string[] = []
+                    const us = side === "home" ? match.home : match.away
+                    const them = side === "home" ? match.away : match.home
+                    const venue = realVenueLabel(match, side)
+                    if (match.hvSource && match.hvSource !== "fixture") {
+                      notes.push(
+                        venue === "neutral plan"
+                          ? `Matchen spelas på neutral plan${match.venue ? ` (${match.venue})` : ""}, så ingen hemmafördel räknas in.`
+                          : venue === "hemma"
+                            ? `${us.name} spelar i egen hall${match.venue ? ` (${match.venue})` : ""} och får en liten hemmafördel.`
+                            : `${them.name} spelar i egen hall${match.venue ? ` (${match.venue})` : ""} och får en liten hemmafördel.`,
+                      )
+                    }
+                    const priorUs = side === "home" ? pred?.homePrior : pred?.awayPrior
+                    const priorThem = side === "home" ? pred?.awayPrior : pred?.homePrior
+                    const priorText = (name: string, src?: string | null) =>
+                      src === "cohort" ? `${name} startade säsongen från förra årets resultat med samma spelare` : src === "club" ? `${name} startade säsongen från klubbens nivå förra året` : null
+                    const pri = [priorText(us.name, priorUs), priorText(them.name, priorThem)].filter(Boolean)
+                    if (pri.length) notes.push(`${pri.join(" och ")}, och årets matcher tar snabbt över.`)
+                    return notes.length ? <p className="mt-2 text-sm text-slate-500">{notes.join(" ")}</p> : null
+                  })()}
                 </>
               ) : (
                 <p className="border-y border-slate-200 py-4 text-sm text-slate-600">
