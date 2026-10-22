@@ -19,8 +19,8 @@ export type Prediction = {
   homeGames: number
   awayGames: number
   hv?: number
-  homePrior?: "cohort" | "club" | null
-  awayPrior?: "cohort" | "club" | null
+  homePrior?: "cohort" | "club" | "club-form" | null
+  awayPrior?: "cohort" | "club" | "club-form" | null
 }
 
 export type Rating = {

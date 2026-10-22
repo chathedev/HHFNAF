@@ -161,7 +161,7 @@ export default async function ScoutMatchPage({ params }: { params: Promise<Param
                     const priorUs = side === "home" ? pred?.homePrior : pred?.awayPrior
                     const priorThem = side === "home" ? pred?.awayPrior : pred?.homePrior
                     const priorText = (name: string, src?: string | null) =>
-                      src === "cohort" ? `${name} startade säsongen från förra årets resultat med samma spelare` : src === "club" ? `${name} startade säsongen från klubbens nivå förra året` : null
+                      src === "cohort" ? `${name} startade säsongen från klubbens lag i samma åldersgrupp förra året` : src === "club" ? `${name} startade säsongen från klubbens nivå förra året` : src === "club-form" ? `${name} bedöms utifrån hur klubbens andra lag spelat i år` : null
                     const pri = [priorText(us.name, priorUs), priorText(them.name, priorThem)].filter(Boolean)
                     if (pri.length) notes.push(`${pri.join(" och ")}, och årets matcher tar snabbt över.`)
                     return notes.length ? <p className="mt-2 text-sm text-slate-500">{notes.join(" ")}</p> : null
