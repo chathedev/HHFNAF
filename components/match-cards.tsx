@@ -1,5 +1,6 @@
 "use client"
 
+import { apiFetch } from "@/lib/api-client"
 import { Calendar, Trophy, Zap } from "lucide-react"
 import { useEffect, useState } from "react"
 import type { ReactNode } from "react"
@@ -25,7 +26,6 @@ interface Match {
   elapsedMinutes?: number | null
 }
 
-const API_BASE_URL = "https://api.harnosandshf.se/matcher"
 
 const removeHomeAwaySuffix = (value?: string) => {
   if (!value) return ""
@@ -119,7 +119,7 @@ export default function MatchCards() {
         const controller = new AbortController()
         const timeoutId = window.setTimeout(() => controller.abort(), 3000)
 
-        const response = await fetch(`${API_BASE_URL}/data/current`, {
+        const response = await apiFetch(`/matcher/data/current`, {
           signal: controller.signal,
           headers: {
             Accept: "application/json",

@@ -1,9 +1,9 @@
 "use client"
 
+import { apiFetch } from "@/lib/api-client"
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 
 export const SHOP_URL = "https://shop.harnosandshf.se"
-const SHOP_STATUS_URL = "https://api.harnosandshf.se/shop/status"
 const REFRESH_INTERVAL_MS = 60_000
 
 type ShopStatusContextValue = {
@@ -30,7 +30,7 @@ export function ShopStatusProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const response = await fetch(SHOP_STATUS_URL, {
+      const response = await apiFetch("/shop/status", {
         cache: "no-store",
         headers: {
           "Cache-Control": "no-cache, must-revalidate",

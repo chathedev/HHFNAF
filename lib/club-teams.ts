@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-client"
 import lagContent from "@/public/content/lag.json"
 import { CLUB_TEAM_METADATA, type ClubTeamMetadata } from "@/lib/team-display"
 
@@ -9,9 +10,6 @@ import { CLUB_TEAM_METADATA, type ClubTeamMetadata } from "@/lib/team-display"
 
 export const TEAMS_REVALIDATE_SECONDS = 300
 
-const API_BASE_URL =
-  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
-  "https://api.harnosandshf.se"
 
 const PLACEHOLDER_HERO = "/placeholder.jpg"
 const PHOTO_DIR = "/HarnosandsHF/Gruppfoto/Härnösands HF - "
@@ -147,7 +145,7 @@ const finish = (teams: ClubTeamMetadata[]) => withYearlessOwnership(withUniqueId
 
 export async function getClubTeamsWithSource(): Promise<{ teams: ClubTeamMetadata[]; live: boolean }> {
   try {
-    const response = await fetch(`${API_BASE_URL}/teams`, {
+    const response = await apiFetch(`/teams`, {
       next: { revalidate: TEAMS_REVALIDATE_SECONDS },
       signal: AbortSignal.timeout(5000),
     })

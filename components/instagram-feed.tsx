@@ -1,5 +1,6 @@
 "use client"
 
+import { apiFetch } from "@/lib/api-client"
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
 
@@ -29,9 +30,6 @@ type InstagramPayload = {
   items?: InstagramPost[]
 }
 
-const INSTAGRAM_API_BASE =
-  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
-  "https://api.harnosandshf.se"
 
 const PLACEHOLDER_IMAGE =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='800'><rect width='100%25' height='100%25' fill='%23f1f5f9'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2364748b' font-family='Arial' font-size='28'>Instagram-bild</text></svg>"
@@ -86,7 +84,7 @@ export function InstagramFeed() {
       }
 
       try {
-        const response = await fetch(`${INSTAGRAM_API_BASE}/instagram/posts?limit=${MAX_POSTS}`, {
+        const response = await apiFetch(`/instagram/posts?limit=${MAX_POSTS}`, {
           headers: { Accept: "application/json" },
         })
 

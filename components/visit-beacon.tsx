@@ -1,9 +1,9 @@
 "use client"
 
+import { apiFetch } from "@/lib/api-client"
 import { useEffect, useRef } from "react"
 import { usePathname } from "next/navigation"
 
-const VISIT_ENDPOINT = "https://api.harnosandshf.se/sys/diagnostics/v1/visit-6f2a9d3b5c"
 
 export function VisitBeacon() {
   const pathname = usePathname()
@@ -14,7 +14,7 @@ export function VisitBeacon() {
     if (lastSentPathRef.current === pathname) return
     lastSentPathRef.current = pathname
 
-    fetch(VISIT_ENDPOINT, {
+    apiFetch("/sys/diagnostics/v1/visit-6f2a9d3b5c", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

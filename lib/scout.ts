@@ -1,10 +1,8 @@
+import { apiFetch } from "@/lib/api-client"
 // HHF Scout: types, data fetching and formatting shared by the /scout pages.
 // Data comes from the API's /scout endpoints (SERVERF routes/scout.js), which serve the
 // snapshot built by the scout worker from every Profixio match in HHF's series.
 
-export const SCOUT_API_BASE =
-  (typeof process !== "undefined" && (process.env.SCOUT_API_BASE || process.env.NEXT_PUBLIC_MATCH_API_BASE)?.replace(/\/$/, "")) ||
-  "https://api.harnosandshf.se"
 
 export type Outcome = "W" | "D" | "L"
 
@@ -373,7 +371,7 @@ export class ScoutUnavailable extends Error {}
 export async function scoutFetch<T>(path: string): Promise<T | null> {
   let res: Response
   try {
-    res = await fetch(`${SCOUT_API_BASE}/scout${path}`, { next: { revalidate: 60 } })
+    res = await apiFetch(`/scout${path}`, { next: { revalidate: 60 } })
   } catch {
     throw new ScoutUnavailable("network")
   }

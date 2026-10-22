@@ -4,14 +4,11 @@
 // every 30s while the tab is visible. No cookies — a per-tab session id in
 // sessionStorage; the server stores IPs only as a salted daily hash.
 
+import { apiFetch } from "@/lib/api-client"
 import { useEffect, useRef } from "react"
 import { usePathname } from "next/navigation"
 
-const API_BASE_URL =
-  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
-  "https://api.harnosandshf.se"
 
-const COLLECT_URL = `${API_BASE_URL}/analytics/collect`
 const HEARTBEAT_MS = 30_000
 
 const getSessionId = () => {
@@ -36,11 +33,7 @@ const send = (data: Record<string, unknown>) => {
       webdriver: Boolean((navigator as any).webdriver),
       match: (window as any).__hhfMatchContext || undefined,
     })
-    if (navigator.sendBeacon) {
-      navigator.sendBeacon(COLLECT_URL, body)
-    } else {
-      fetch(COLLECT_URL, { method: "POST", body, keepalive: true, headers: { "Content-Type": "text/plain" } }).catch(() => {})
-    }
+    apiFetch("/analytics/collect", { method: "POST", body, keepalive: true, headers: { "Content-Type": "text/plain" } }).catch(() => {})
   } catch {
     // analytics must never break the page
   }

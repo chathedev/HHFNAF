@@ -1,5 +1,6 @@
 "use client"
 
+import { apiFetch } from "@/lib/api-client"
 import { memo, startTransition, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { LineChart as ScoutIcon, X } from "lucide-react"
@@ -109,9 +110,6 @@ type MatchFeedModalProps = {
   }>
 }
 
-const API_BASE_URL =
-  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
-  "https://api.harnosandshf.se"
 
 // Last detail payload per match: reopening a match (or opening one that was prefetched
 // from its card) renders instantly from here while a fresh fetch runs in the background.
@@ -153,7 +151,7 @@ const requestMatchDetail = (apiMatchId: string, timeoutMs = 8_000): Promise<any 
   if (inflight) return inflight
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-  const request = fetch(`${API_BASE_URL}/matcher/match/${encodeURIComponent(apiMatchId)}?includeEvents=1`, {
+  const request = apiFetch(`/matcher/match/${encodeURIComponent(apiMatchId)}?includeEvents=1`, {
     cache: "no-store",
     headers: { Accept: "application/json" },
     signal: controller.signal,

@@ -1,12 +1,10 @@
 "use client"
 
+import { apiFetch } from "@/lib/api-client"
 import { useEffect, useMemo, useState } from "react"
 import { liveOdds, type PreMatch } from "@/lib/live-odds"
 import { prob } from "@/lib/scout"
 
-const API_BASE_URL =
-  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
-  "https://api.harnosandshf.se"
 
 type ClockLike = {
   running?: boolean
@@ -47,7 +45,7 @@ export function LiveWinOdds({ matchId, homeTeam, awayTeam, homeIsHhf, awayIsHhf,
     // Never show the previous match's odds while this one loads.
     setData(null)
     let cancelled = false
-    fetch(`${API_BASE_URL}/scout/match/${encodeURIComponent(matchId)}`)
+    apiFetch(`/scout/match/${encodeURIComponent(matchId)}`)
       .then((res) => {
         if (res.status === 404) {
           preCache.set(matchId, null)

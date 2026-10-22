@@ -1,5 +1,6 @@
 "use client"
 
+import { apiFetch } from "@/lib/api-client"
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react"
 import { usePathname } from "next/navigation"
 import { ArrowDown, ArrowUp, RotateCcw, Square, X } from "lucide-react"
@@ -9,7 +10,6 @@ import styles from "./club-assistant.module.css"
 
 type ChatMessage = { id: string; role: "user" | "assistant"; content: string; error?: boolean; notice?: string }
 
-const API_BASE = (process.env.NEXT_PUBLIC_MATCH_API_BASE || "https://api.harnosandshf.se").replace(/\/$/, "")
 const STORAGE_KEY = "hhf-assistant:v1"
 // Set when the visitor closes the hello with its ✕; it then stays away for the visit.
 const HELLO_DISMISSED_KEY = "hhf-assistant:hello-dismissed"
@@ -197,7 +197,7 @@ export function ClubAssistant() {
   useEffect(() => {
     if (!open || teamsLoadedRef.current) return
     teamsLoadedRef.current = true
-    fetch(`${API_BASE}/chat/status`)
+    apiFetch("/chat/status")
       .then((response) => (response.ok ? response.json() : null))
       .then((data) => {
         if (Array.isArray(data?.quickPicks) && data.quickPicks.length) setTeams(data.quickPicks)
@@ -384,7 +384,7 @@ export function ClubAssistant() {
       const controller = new AbortController()
       abortRef.current = controller
       try {
-        const response = await fetch(`${API_BASE}/chat`, {
+        const response = await apiFetch("/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ messages: history }),

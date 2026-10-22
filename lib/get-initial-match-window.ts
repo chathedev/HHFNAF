@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-client"
 import type { EnhancedMatchData, NormalizedMatch } from "@/lib/use-match-data"
 import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
 import { resolvePreferredTimeline } from "@/lib/match-timeline"
@@ -83,11 +84,8 @@ type ApiMatchLike = {
   awayScore?: number
 }
 
-const API_BASE_URL =
-  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
-  "https://api.harnosandshf.se"
 
-const MATCH_DATA_ENDPOINT = `${API_BASE_URL}/matcher/data`
+const MATCH_DATA_ENDPOINT = "/matcher/data"
 
 const STOCKHOLM_DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Europe/Stockholm",
@@ -433,11 +431,9 @@ type InitialMatchWindowOptions = {
 }
 
 const fetchMatchWindow = async (cursorDate: string, chunkDays = 1) => {
-  const url = new URL(MATCH_DATA_ENDPOINT)
-  url.searchParams.set("cursorDate", cursorDate)
-  url.searchParams.set("chunkDays", String(chunkDays))
+  const query = new URLSearchParams({ cursorDate, chunkDays: String(chunkDays) })
 
-  const response = await fetch(url.toString(), {
+  const response = await apiFetch(`${MATCH_DATA_ENDPOINT}?${query.toString()}`, {
     next: { revalidate: 30 },
     headers: {
       Accept: "application/json",

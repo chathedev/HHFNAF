@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-client"
 import { type NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 
@@ -5,7 +6,6 @@ import { cookies } from "next/headers"
 // ANALYTICS_ADMIN_TOKEN never reaches the browser — it is attached here,
 // server-side, after the editor-auth cookie has been validated.
 
-const API_BASE = (process.env.NEXT_PUBLIC_MATCH_API_BASE || "https://api.harnosandshf.se").replace(/\/$/, "")
 const ALLOWED = new Set(["overview", "minutely", "live", "matches"])
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string[] }> }) {
@@ -27,11 +27,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: "analytics token not configured" }, { status: 500 })
   }
 
-  const upstream = new URL(`${API_BASE}/analytics/admin/${endpoint}`)
-  request.nextUrl.searchParams.forEach((value, key) => upstream.searchParams.set(key, value))
+  const query = new URLSearchParams()
+  request.nextUrl.searchParams.forEach((value, key) => query.set(key, value))
+  const upstream = `/analytics/admin/${endpoint}${query.size ? `?${query.toString()}` : ""}`
 
   try {
-    const response = await fetch(upstream.toString(), {
+    const response = await apiFetch(upstream, {
       headers: { "x-admin-token": adminToken },
       cache: "no-store",
     })

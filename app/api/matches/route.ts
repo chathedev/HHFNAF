@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-client"
 import { NextResponse } from "next/server"
 
 interface Match {
@@ -12,13 +13,13 @@ interface Match {
 }
 
 async function fetchMatchesFromAPI(): Promise<Match[]> {
-  const url = `https://api.harnosandshf.se/api/events?limit=25&days=365`
+  const url = `/api/events?limit=25&days=365`
 
   try {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 8000) // 8 second timeout
 
-    const response = await fetch(url, {
+    const response = await apiFetch(url, {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; HHF/1.0)",
         Accept: "application/json",

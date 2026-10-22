@@ -1,5 +1,6 @@
 "use client"
 
+import { apiFetch, LiveSocket, liveSocketAvailable } from "@/lib/api-client"
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { matchStateManager } from "./match-state-manager"
 import { mapVenueIdToName } from "./venue-mapper"
@@ -248,9 +249,6 @@ type SharedMatchCacheEntry = {
   timestamp: number
 }
 
-const API_BASE_URL =
-  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
-  "https://api.harnosandshf.se"
 
 type DataType = "liveUpcoming" | "live" | "old"
 type QueryParams = Record<string, string | number | boolean | undefined>
@@ -275,7 +273,8 @@ const buildQueryMeta = (params?: QueryParams) => {
   }
 }
 
-const getDataEndpoint = () => `${API_BASE_URL}/matcher/data`
+// API paths go through apiFetch (encrypted in the browser), so endpoints are plain paths.
+const getDataEndpoint = () => "/matcher/data"
 
 const WINDOW_PARAM_KEYS = ["from", "to", "date", "day", "cursorDate", "chunkDays"] as const
 
@@ -1713,7 +1712,7 @@ const createMatchDataChannel = () => {
     }
     fullPollInFlight = true
     try {
-      const response = await fetch(CHANNEL_ENDPOINT, {
+      const response = await apiFetch(CHANNEL_ENDPOINT, {
         cache: "no-store",
         headers: { Accept: "application/json" },
       })
@@ -1738,7 +1737,7 @@ const createMatchDataChannel = () => {
     eventPollInFlight = true
     try {
       const since = Number(lastEventId) > 0 ? Number(lastEventId) : 0
-      const response = await fetch(`${API_BASE_URL}/matcher/events?since=${since}&limit=500`, {
+      const response = await apiFetch(`/matcher/events?since=${since}&limit=500`, {
         cache: "no-store",
         headers: { Accept: "application/json" },
       })
@@ -1762,30 +1761,27 @@ const createMatchDataChannel = () => {
   const WS_RECONNECT_MIN_MS = 1_000
   const WS_RECONNECT_MAX_MS = 15_000
   const SAFETY_POLL_EVERY_N_TICKS = 6 // 6 × 10s = one full poll per minute while WS is healthy
-  let ws: WebSocket | null = null
+  let ws: LiveSocket | null = null
   let wsWanted = false
   let wsReconnectDelay = WS_RECONNECT_MIN_MS
   let wsReconnectTimer: ReturnType<typeof setTimeout> | null = null
   let fullPollTick = 0
 
-  const wsIsOpen = () => ws !== null && ws.readyState === WebSocket.OPEN
+  const wsIsOpen = () => ws !== null && ws.readyState === LiveSocket.OPEN
 
-  const buildWsUrl = () => {
-    const base = API_BASE_URL.replace(/^http/i, "ws")
-    const since = Number(lastEventId) > 0 ? `?sinceEventId=${Number(lastEventId)}` : ""
-    return `${base}/matcher/ws${since}`
-  }
+  // Encrypted live channel (www.harnosandshf.se/_v/ws); only the query is ours to set.
+  const buildWsQuery = () => (Number(lastEventId) > 0 ? `sinceEventId=${Number(lastEventId)}` : "")
 
   const connectWebSocket = () => {
     // Guard on ANY existing socket (CONNECTING included) — connecting again while
     // a socket is mid-handshake creates a duplicate whose handlers then close or
     // null out the wrong instance via the shared `ws` binding.
-    if (!isBrowser || !wsWanted || ws !== null || typeof WebSocket === "undefined") {
+    if (!isBrowser || !wsWanted || ws !== null || !liveSocketAvailable()) {
       return
     }
-    let socket: WebSocket
+    let socket: LiveSocket
     try {
-      socket = new WebSocket(buildWsUrl())
+      socket = new LiveSocket(buildWsQuery())
     } catch {
       scheduleWsReconnect()
       return
@@ -2052,7 +2048,7 @@ export const getMatchData = async (
       const timeoutId = setTimeout(() => controller.abort(), 5000)
 
       try {
-        const response = await fetch(endpoint, {
+        const response = await apiFetch(endpoint, {
           cache: "no-store",
           signal: controller.signal,
           headers: {

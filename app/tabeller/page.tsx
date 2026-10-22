@@ -1,16 +1,16 @@
 export const dynamic = "force-dynamic"
 
+import { apiFetch } from "@/lib/api-client"
 import { Header } from "@/components/header"
 import Footer from "@/components/footer"
 import { TabellerClient } from "./tabeller-client"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "") || "https://api.harnosandshf.se"
 
 async function getStandings() {
   try {
     // ?meta=1 also carries the season list, so the season picker is there on first
     // paint instead of popping in after the client's first fetch.
-    const res = await fetch(`${API_BASE_URL}/matcher/standings?meta=1`, {
+    const res = await apiFetch(`/matcher/standings?meta=1`, {
       cache: "no-store",
       next: { revalidate: 0 },
     })

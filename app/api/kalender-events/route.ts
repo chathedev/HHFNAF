@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-client"
 import { NextResponse } from "next/server"
 
 interface Event {
@@ -7,10 +8,10 @@ interface Event {
 }
 
 async function fetchEventsFromAPI(): Promise<Event[]> {
-  const url = `https://api.harnosandshf.se/api/events`
+  const url = `/api/events`
 
   try {
-    const response = await fetch(url, {
+    const response = await apiFetch(url, {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; HHF/1.0)",
         Accept: "application/json",

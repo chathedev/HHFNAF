@@ -1,10 +1,10 @@
 "use client"
 
+import { apiFetch } from "@/lib/api-client"
 import { useState, useMemo, useEffect } from "react"
 import { SelectMenu } from "@/components/ui/select-menu"
 import Link from "next/link"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "") || "https://api.harnosandshf.se"
 const STANDINGS_REFRESH_MS = 90_000
 
 type StandingsTeam = {
@@ -71,7 +71,7 @@ export function TabellerClient({
     let cancelled = false
     const load = () => {
       const query = selectedSeason ? `&season=${encodeURIComponent(selectedSeason)}` : ""
-      fetch(`${API_BASE_URL}/matcher/standings?meta=1${query}`, { cache: "no-store" })
+      apiFetch(`/matcher/standings?meta=1${query}`, { cache: "no-store" })
         .then((res) => (res.ok ? res.json() : Promise.reject("Failed")))
         .then((payload) => {
           if (cancelled) return

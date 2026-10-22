@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-client"
 import { NextResponse } from "next/server"
 
 interface NewsApiResponse {
@@ -65,7 +66,7 @@ function cleanHtmlContent(html: string): string {
 
 export async function GET() {
   try {
-    const response = await fetch("https://api.harnosandshf.se/api/news?limit=20", {
+    const response = await apiFetch("/api/news?limit=20", {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; HHF/1.0)",
         Accept: "application/json",

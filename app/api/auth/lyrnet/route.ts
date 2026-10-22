@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-client"
 import { type NextRequest, NextResponse } from "next/server"
 import { cookies, headers } from "next/headers"
 
@@ -6,7 +7,6 @@ import { cookies, headers } from "next/headers"
 // vhost bound to 10.44.0.11; the public vhost force-clears them. Servers on
 // lyrnet (tag:server) and everything else are rejected by the roster check.
 
-const API_BASE = (process.env.NEXT_PUBLIC_MATCH_API_BASE || "https://api.harnosandshf.se").replace(/\/$/, "")
 
 export async function GET(request: NextRequest) {
   const headerStore = await headers()
@@ -25,8 +25,8 @@ export async function GET(request: NextRequest) {
   if (!adminToken) return deny()
 
   try {
-    const verify = await fetch(
-      `${API_BASE}/analytics/lyrnet-verify?ip=${encodeURIComponent(clientIp)}`,
+    const verify = await apiFetch(
+      `/analytics/lyrnet-verify?ip=${encodeURIComponent(clientIp)}`,
       { headers: { "x-admin-token": adminToken }, cache: "no-store" },
     )
     const result = await verify.json()

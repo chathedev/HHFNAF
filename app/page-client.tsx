@@ -115,9 +115,6 @@ const resolveMatchEndedAt = (match: NormalizedMatch): number | null => {
   return start + ASSUMED_MATCH_DURATION_MS
 }
 
-const API_BASE_URL =
-  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
-  "https://api.harnosandshf.se"
 
 
 const getInitialVariant = (): SiteVariant => {

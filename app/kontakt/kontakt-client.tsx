@@ -1,5 +1,6 @@
 "use client"
 
+import { apiFetch } from "@/lib/api-client"
 import type React from "react"
 
 import { Header } from "@/components/header"
@@ -41,7 +42,7 @@ export default function KontaktClient({ content }: { content: any }) {
     setFormStatus("loading")
 
     try {
-      const response = await fetch("https://api.harnosandshf.se/contact", {
+      const response = await apiFetch("/contact", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

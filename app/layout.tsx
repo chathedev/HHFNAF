@@ -118,8 +118,6 @@ export default async function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content={themeColor} />
         <meta name="format-detection" content="telephone=no" />
-        <link rel="preconnect" href="https://api.harnosandshf.se" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://api.harnosandshf.se" />
       </head>
       <body className={`${inter.className} ${spaceGrotesk.className} bg-white ${themeVariant === "pink" ? "hhf-staging" : ""}`}>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({

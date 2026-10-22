@@ -1,5 +1,6 @@
 "use client"
 
+import { apiFetch } from "@/lib/api-client"
 import { useMemo, useState, useEffect, useCallback, useRef, type ReactNode } from "react"
 import Link from "next/link"
 
@@ -106,9 +107,6 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
 
 const FINISHED_PAGE_SIZE = 12
 
-const API_BASE_URL =
-  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MATCH_API_BASE?.replace(/\/$/, "")) ||
-  "https://api.harnosandshf.se"
 
 const DAY_LABEL_FORMATTER = new Intl.DateTimeFormat("sv-SE", {
   weekday: "long",
@@ -405,7 +403,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
 
     const request = (async () => {
       const fetchTimelinePayload = async (url: string) => {
-        const response = await fetch(url, {
+        const response = await apiFetch(url, {
           cache: "no-store",
           headers: { Accept: "application/json" },
         })
@@ -415,7 +413,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
         return response.json()
       }
 
-      const payload = await fetchTimelinePayload(`${API_BASE_URL}/matcher/match/${encodeURIComponent(apiMatchId)}?includeEvents=1`)
+      const payload = await fetchTimelinePayload(`/matcher/match/${encodeURIComponent(apiMatchId)}?includeEvents=1`)
       const rawTimeline = resolvePreferredTimeline(payload ?? {}, match.matchFeed ?? [])
 
       if (!payload) {
