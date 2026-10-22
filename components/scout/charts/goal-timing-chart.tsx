@@ -39,7 +39,17 @@ export function GoalTimingChart({
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} stackOffset="sign" margin={{ top: 8, right: 4, bottom: 0, left: -18 }} barCategoryGap="22%">
             <CartesianGrid vertical={false} stroke={CHART.muted} />
-            <XAxis dataKey="label" tick={AXIS_TICK} tickLine={false} axisLine={false} interval={0} fontSize={10} />
+            {/* Only the start minute on the axis ("10" not "10–15"): ten full ranges do not fit on a
+                phone. The full range is in the tooltip and the table. */}
+            <XAxis
+              dataKey="label"
+              tick={AXIS_TICK}
+              tickLine={false}
+              axisLine={false}
+              interval={0}
+              fontSize={10}
+              tickFormatter={(v: string) => `${String(v).split("–")[0]}'`}
+            />
             <YAxis
               tick={AXIS_TICK}
               tickLine={false}
