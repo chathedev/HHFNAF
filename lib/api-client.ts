@@ -62,19 +62,195 @@ function concat(parts: Uint8Array[]): Uint8Array {
   return out
 }
 
+// ---------- proof of work (the server's challenge before a session) ----------
+// Pure SHA-256 in a worker: find nonce so sha256(challenge + ":" + nonce) starts with <bits> zeros.
+const POW_SOURCE = `
+const K=new Uint32Array([0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2]);
+const W=new Uint32Array(64);
+function first32(bytes){
+  const len=bytes.length, total=((len+9+63)>>6)<<6, m=new Uint8Array(total);
+  m.set(bytes); m[len]=0x80; const bits=len*8;
+  m[total-4]=bits>>>24; m[total-3]=(bits>>>16)&255; m[total-2]=(bits>>>8)&255; m[total-1]=bits&255;
+  let h0=0x6a09e667,h1=0xbb67ae85,h2=0x3c6ef372,h3=0xa54ff53a,h4=0x510e527f,h5=0x9b05688c,h6=0x1f83d9ab,h7=0x5be0cd19;
+  for(let o=0;o<total;o+=64){
+    for(let i=0;i<16;i++)W[i]=(m[o+i*4]<<24)|(m[o+i*4+1]<<16)|(m[o+i*4+2]<<8)|m[o+i*4+3];
+    for(let i=16;i<64;i++){const a=W[i-15],b=W[i-2];W[i]=(((a>>>7)|(a<<25))^((a>>>18)|(a<<14))^(a>>>3))+W[i-7]+(((b>>>17)|(b<<15))^((b>>>19)|(b<<13))^(b>>>10))+W[i-16];}
+    let a=h0,b=h1,c=h2,d=h3,e=h4,f=h5,g=h6,h=h7;
+    for(let i=0;i<64;i++){const t1=(h+(((e>>>6)|(e<<26))^((e>>>11)|(e<<21))^((e>>>25)|(e<<7)))+((e&f)^(~e&g))+K[i]+W[i])|0;const t2=((((a>>>2)|(a<<30))^((a>>>13)|(a<<19))^((a>>>22)|(a<<10)))+((a&b)^(a&c)^(b&c)))|0;h=g;g=f;f=e;e=(d+t1)|0;d=c;c=b;b=a;a=(t1+t2)|0;}
+    h0=(h0+a)|0;h1=(h1+b)|0;h2=(h2+c)|0;h3=(h3+d)|0;h4=(h4+e)|0;h5=(h5+f)|0;h6=(h6+g)|0;h7=(h7+h)|0;
+  }
+  return h0>>>0;
+}
+function solve(challenge,bits){
+  const prefix=new TextEncoder().encode(challenge+":"); const limit=bits>=32?0:(0xffffffff>>>bits);
+  const buf=new Uint8Array(prefix.length+10); buf.set(prefix); const digits=new Uint8Array(10);
+  for(let n=0;n<0xffffffff;n++){
+    let x=n,d=0; do{digits[d++]=48+(x%10);x=Math.floor(x/10);}while(x>0);
+    for(let i=0;i<d;i++)buf[prefix.length+i]=digits[d-1-i];
+    if(first32(buf.subarray(0,prefix.length+d))<=limit) return n;
+  }
+  return -1;
+}
+self.onmessage=(e)=>{ self.postMessage(solve(e.data.challenge,e.data.bits)); };
+`
+
+function solveOnMainThread(challenge: string, bits: number): number {
+  // eslint-disable-next-line no-new-func
+  const solve = new Function(`${POW_SOURCE.replace(/self\.onmessage[\s\S]*$/, "")}; return solve;`)() as (c: string, b: number) => number
+  return solve(challenge, bits)
+}
+
+function solveWork(challenge: string): Promise<number> {
+  const bits = Number(challenge.split(".")[3]) || 14
+  return new Promise((resolve, reject) => {
+    let settled = false
+    const finish = (fn: () => void) => {
+      if (settled) return
+      settled = true
+      fn()
+    }
+    // Workers can fail late (CSP, blocked blob URLs): fall back to the main thread then.
+    const fallback = () =>
+      finish(() => {
+        try {
+          const nonce = solveOnMainThread(challenge, bits)
+          if (nonce >= 0) resolve(nonce)
+          else reject(new Error("vault: no proof of work"))
+        } catch (error) {
+          reject(error)
+        }
+      })
+    try {
+      const url = URL.createObjectURL(new Blob([POW_SOURCE], { type: "text/javascript" }))
+      const worker = new Worker(url)
+      const done = () => {
+        clearTimeout(timer)
+        worker.terminate()
+        URL.revokeObjectURL(url)
+      }
+      const timer = setTimeout(() => {
+        done()
+        fallback()
+      }, 30_000)
+      worker.onmessage = (event) => {
+        done()
+        const nonce = Number(event.data)
+        finish(() => (nonce >= 0 ? resolve(nonce) : reject(new Error("vault: no proof of work"))))
+      }
+      worker.onerror = () => {
+        done()
+        fallback()
+      }
+      worker.postMessage({ challenge, bits })
+    } catch {
+      fallback()
+    }
+  })
+}
+
+// ---------- persisted session ----------
+// The AES key is a non-extractable CryptoKey: IndexedDB can keep it, but nobody (not even
+// our own code) can read its bytes. The server lets a token live 2 h; we reuse it for 110 min.
+const SESSION_REUSE_MS = 110 * 60 * 1000
+const IDB_NAME = "hhf-vault"
+
+let idbPromise: Promise<IDBDatabase | null> | null = null
+function idb(): Promise<IDBDatabase | null> {
+  if (!idbPromise) idbPromise = openIdb()
+  return idbPromise
+}
+function openIdb(): Promise<IDBDatabase | null> {
+  return new Promise((resolve) => {
+    // Some Safari versions never answer indexedDB.open: give up after 800 ms, memory works too.
+    const timer = setTimeout(() => resolve(null), 800)
+    const done = (db: IDBDatabase | null) => {
+      clearTimeout(timer)
+      resolve(db)
+    }
+    try {
+      const request = indexedDB.open(IDB_NAME, 1)
+      request.onupgradeneeded = () => request.result.createObjectStore("s")
+      request.onsuccess = () => done(request.result)
+      request.onerror = () => done(null)
+    } catch {
+      done(null)
+    }
+  })
+}
+
+async function loadSession(): Promise<Session | null> {
+  const db = await idb()
+  if (!db) return null
+  return new Promise((resolve) => {
+    try {
+      const get = db.transaction("s", "readonly").objectStore("s").get("session")
+      get.onsuccess = () => {
+        const v = get.result as { key?: CryptoKey; token?: Uint8Array; at?: number } | undefined
+        resolve(v?.key && v.token && v.at && Date.now() - v.at < SESSION_REUSE_MS ? { key: v.key, token: v.token } : null)
+      }
+      get.onerror = () => resolve(null)
+    } catch {
+      resolve(null)
+    }
+  })
+}
+
+async function storeSession(session: Session | null) {
+  const db = await idb()
+  if (!db) return
+  try {
+    const store = db.transaction("s", "readwrite").objectStore("s")
+    if (session) store.put({ key: session.key, token: session.token, at: Date.now() }, "session")
+    else store.delete("session")
+  } catch {
+    // private mode etc: the in-memory session still works
+  }
+}
+
+// A refused challenge (expired: 428) or a rate limit (429) gets a fresh attempt after a pause.
 async function handshake(): Promise<Session> {
+  const pauses = [400, 1500, 4000]
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await handshakeOnce()
+    } catch (error) {
+      const status = (error as { status?: number })?.status
+      if (attempt >= pauses.length || (status !== 428 && status !== 429 && status !== 502 && status !== 503)) throw error
+      await new Promise((r) => setTimeout(r, pauses[attempt]))
+    }
+  }
+}
+
+function httpError(message: string, status: number) {
+  return Object.assign(new Error(message), { status })
+}
+
+async function handshakeOnce(): Promise<Session> {
   const subtle = globalThis.crypto?.subtle
   if (!subtle) throw new Error("vault: WebCrypto is not available on this origin")
-  const pair = await subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, false, ["deriveBits"])
+  const stored = await loadSession()
+  if (stored) return stored
+  const challengeResponse = await fetch("/_v/c", { method: "POST", cache: "no-store", credentials: "omit" })
+  if (!challengeResponse.ok) throw httpError(`vault: challenge ${challengeResponse.status}`, challengeResponse.status)
+  const challenge = await challengeResponse.text()
+  const [pair, nonce] = await Promise.all([
+    subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, false, ["deriveBits"]),
+    solveWork(challenge),
+  ])
   const clientPub = new Uint8Array(await subtle.exportKey("raw", pair.publicKey))
+  const challengeBytes = te.encode(challenge)
+  const hello = new Uint8Array(65 + 4 + challengeBytes.length)
+  hello.set(clientPub, 0)
+  new DataView(hello.buffer).setUint32(65, nonce)
+  hello.set(challengeBytes, 69)
   const response = await fetch("/_v/h", {
     method: "POST",
-    body: clientPub as BufferSource,
+    body: hello as BufferSource,
     headers: { "Content-Type": "application/octet-stream" },
     cache: "no-store",
     credentials: "omit",
   })
-  if (!response.ok) throw new Error(`vault: handshake ${response.status}`)
+  if (!response.ok) throw httpError(`vault: handshake ${response.status}`, response.status)
   const reply = new Uint8Array(await response.arrayBuffer())
   const serverPub = reply.slice(0, 65)
   const token = reply.slice(65)
@@ -88,7 +264,9 @@ async function handshake(): Promise<Session> {
     false,
     ["encrypt", "decrypt"],
   )
-  return { key, token }
+  const session = { key, token }
+  storeSession(session).catch(() => {})
+  return session
 }
 
 let refreshingFrom: Session | null = null
@@ -110,7 +288,7 @@ function refreshSession(stale: Session): Promise<Session> {
   if (refreshingFrom === stale && sessionPromise) return sessionPromise
   refreshingFrom = stale
   sessionPromise = null
-  return getSession()
+  return storeSession(null).then(getSession, getSession)
 }
 
 async function sealCall(session: Session, call: unknown): Promise<Uint8Array> {

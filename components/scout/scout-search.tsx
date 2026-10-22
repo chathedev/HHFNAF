@@ -1,5 +1,6 @@
 "use client"
 
+import { withSealed } from "@/components/sealed"
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import { Search } from "lucide-react"
@@ -69,3 +70,5 @@ export function ScoutSearch({ index, dark = false }: { index: IndexEntry[]; dark
     </div>
   )
 }
+
+export const ScoutSearchSealed = withSealed(ScoutSearch, "ScoutSearch")

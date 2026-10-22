@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { ProfixioCard } from "./profixio-card"
 
 type Overview = {
   days: number
@@ -335,6 +336,8 @@ export function AdminDashboard() {
             </table>
           </div>
         </section>
+
+        <ProfixioCard />
 
         <p className="mt-6 text-xs text-slate-400">
           Förstapartsmätning utan cookies. IP-adresser sparas endast som saltad daghash. Bottar filtreras bort vid insamling.

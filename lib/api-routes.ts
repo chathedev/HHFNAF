@@ -11,7 +11,7 @@ const GET: RegExp[] = [
   /^\/instagram\/posts$/,
   /^\/shop\/status$/,
 ]
-const POST: RegExp[] = [/^\/chat$/, /^\/contact$/, /^\/analytics\/collect$/, /^\/sys\/diagnostics\/v1\/visit-6f2a9d3b5c$/]
+const POST: RegExp[] = [/^\/chat$/, /^\/contact$/, /^\/analytics\/collect$/, /^\/sys\/diagnostics\/v1\/visit-6f2a9d3b5c$/, /^\/seal\/open$/, /^\/seal\/props$/]
 
 export function browserRouteAllowed(method: string, path: string): boolean {
   if (path.length > 2048 || !path.startsWith("/") || /[\s\\\x00-\x1f\x7f]/.test(path)) return false

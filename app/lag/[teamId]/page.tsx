@@ -3,7 +3,8 @@ import { notFound } from "next/navigation"
 import { getClubTeams } from "@/lib/club-teams"
 import { matchLabelFitsTeam } from "@/lib/team-display"
 import { scoutFetch, type OverviewPayload } from "@/lib/scout"
-import TeamPageClient from "./team-page-client"
+import { TeamPageClientSealed } from "./team-page-client"
+import { Seal } from "@/lib/seal-server"
 
 // Follows laget.se like /lag: new or renamed teams get a page without a release. Ids from
 // earlier seasons are 308-redirected in proxy.ts before rendering starts.
@@ -31,5 +32,5 @@ export default async function TeamPage({ params }: TeamPageProps) {
   } catch {
     scoutLinks = []
   }
-  return <TeamPageClient team={team} scoutLinks={scoutLinks} />
+  return <Seal as={TeamPageClientSealed} team={team} scoutLinks={scoutLinks} />
 }

@@ -1,5 +1,6 @@
 "use client"
 
+import { withSealed } from "@/components/sealed"
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { AXIS_TICK, CHART } from "./theme"
 
@@ -71,3 +72,5 @@ export function CalibrationChart({ bins, height = 220 }: { bins: Bin[]; height?:
     </div>
   )
 }
+
+export const CalibrationChartSealed = withSealed(CalibrationChart, "CalibrationChart")

@@ -1,5 +1,6 @@
 "use client"
 
+import { withSealed } from "@/components/sealed"
 import { useRouter } from "next/navigation"
 import { Bar, BarChart, Cell, LabelList, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { AXIS_TICK, CHART } from "./theme"
@@ -112,3 +113,5 @@ export function PowerRankingChart({ rows, highlightKey }: { rows: PowerRow[]; hi
     </div>
   )
 }
+
+export const PowerRankingChartSealed = withSealed(PowerRankingChart, "PowerRankingChart")

@@ -1,3 +1,4 @@
+import { Seal } from "@/lib/seal-server"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -6,10 +7,10 @@ import Footer from "@/components/footer"
 import { EmptyNote, ExternalLink, FormChips, InsightList, PageHeader, Section } from "@/components/scout/ui"
 import { Comparison, MatchList, PredictionHero, comparisonMetrics } from "@/components/scout/blocks"
 import { CategoryPanel, ProfileTiles } from "@/components/scout/team-sections"
-import { PlayerTable } from "@/components/scout/player-table"
-import { GoalTimingChart } from "@/components/scout/charts/goal-timing-chart"
-import { ScorersChart } from "@/components/scout/charts/scorers-chart"
-import { SeasonChart, type SeasonPoint } from "@/components/scout/charts/season-chart"
+import { PlayerTable, PlayerTableSealed } from "@/components/scout/player-table"
+import { GoalTimingChart, GoalTimingChartSealed } from "@/components/scout/charts/goal-timing-chart"
+import { ScorersChart, ScorersChartSealed } from "@/components/scout/charts/scorers-chart"
+import { SeasonChart, SeasonChartSealed, type SeasonPoint } from "@/components/scout/charts/season-chart"
 import {
   matchDate,
   outcomeFor,
@@ -193,8 +194,8 @@ export default async function ScoutMatchPage({ params }: { params: Promise<Param
             <Section title={`Vem gör målen i ${oppName}?`} note={opponent?.logged ? `Från ${opponent.logged} matcher med matchlogg i år. Numret är tröjnumret spelaren oftast haft.` : undefined}>
               {opponent && opponent.players.length ? (
                 <div className="space-y-6">
-                  <ScorersChart players={opponent.players} tone="team" />
-                  <PlayerTable players={opponent.players} />
+                  <Seal as={ScorersChartSealed} players={opponent.players} tone="team" />
+                  <Seal as={PlayerTableSealed} players={opponent.players} />
                 </div>
               ) : (
                 <EmptyNote>Ingen matchlogg för {oppName} i år ännu.</EmptyNote>
@@ -204,7 +205,7 @@ export default async function ScoutMatchPage({ params }: { params: Promise<Param
             <Section title={`${oppName}s matcher i år`}>
               {data.opponentMatches.results.length ? (
                 <div className="space-y-4">
-                  <SeasonChart points={seasonPoints(data.opponentMatches.results, opponent?.key ?? "")} />
+                  <Seal as={SeasonChartSealed} points={seasonPoints(data.opponentMatches.results, opponent?.key ?? "")} />
                   <MatchList matches={data.opponentMatches.results} perspective={opponent?.key ?? ""} showSeries />
                 </div>
               ) : (
@@ -263,7 +264,7 @@ export default async function ScoutMatchPage({ params }: { params: Promise<Param
                     <div key={e.key}>
                       <p className="mb-2 text-sm font-semibold text-slate-900">{e.name}</p>
                       {e.profile ? (
-                        <GoalTimingChart scored={e.profile.timing.buckets} conceded={e.profile.timing.against} periodMinutes={e.profile.periodMinutes} matches={e.profile.matches} tone={e.isHhf ? "hhf" : "team"} height={180} />
+                        <Seal as={GoalTimingChartSealed} scored={e.profile.timing.buckets} conceded={e.profile.timing.against} periodMinutes={e.profile.periodMinutes} matches={e.profile.matches} tone={e.isHhf ? "hhf" : "team"} height={180} />
                       ) : (
                         <p className="text-sm text-slate-500">Ingen matchlogg ännu.</p>
                       )}

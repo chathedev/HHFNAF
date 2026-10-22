@@ -1,5 +1,6 @@
 "use client"
 
+import { withSealed } from "@/components/sealed"
 import { Bar, BarChart, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { AXIS_TICK, CHART } from "./theme"
 
@@ -66,3 +67,5 @@ export function ScorersChart({ players, tone = "team", limit = 10 }: { players: 
     </div>
   )
 }
+
+export const ScorersChartSealed = withSealed(ScorersChart, "ScorersChart")

@@ -1,5 +1,6 @@
 "use client"
 
+import { withSealed } from "@/components/sealed"
 import Link from "next/link"
 import Image from "next/image"
 import { useEffect, useMemo, useState } from "react"
@@ -472,3 +473,5 @@ export default function TeamPageClient({
     </>
   )
 }
+
+export const TeamPageClientSealed = withSealed(TeamPageClient, "TeamPageClient")

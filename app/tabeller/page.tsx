@@ -3,7 +3,8 @@ export const dynamic = "force-dynamic"
 import { apiFetch } from "@/lib/api-client"
 import { Header } from "@/components/header"
 import Footer from "@/components/footer"
-import { TabellerClient } from "./tabeller-client"
+import { TabellerClientSealed } from "./tabeller-client"
+import { sealProps } from "@/lib/page-seal"
 
 
 async function getStandings() {
@@ -32,18 +33,19 @@ async function getStandings() {
 
 export default async function TabellerPage() {
   const { standings, seasons, season, currentSeason } = await getStandings()
+  const sealed = await sealProps({
+    initialData: standings,
+    initialSeasons: seasons,
+    initialSeason: season,
+    initialCurrentSeason: currentSeason,
+  })
 
   return (
     <>
       <Header />
       <main className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_32%,#f8fafc_100%)]">
         <div className="h-24" />
-        <TabellerClient
-          initialData={standings}
-          initialSeasons={seasons}
-          initialSeason={season}
-          initialCurrentSeason={currentSeason}
-        />
+        <TabellerClientSealed sealed={sealed} />
       </main>
       <Footer />
     </>

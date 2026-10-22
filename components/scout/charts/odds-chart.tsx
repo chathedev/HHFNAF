@@ -1,5 +1,6 @@
 "use client"
 
+import { withSealed } from "@/components/sealed"
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { AXIS_TICK, CHART } from "./theme"
 
@@ -69,3 +70,5 @@ export function OddsChart({ rows }: { rows: OddsRow[] }) {
     </div>
   )
 }
+
+export const OddsChartSealed = withSealed(OddsChart, "OddsChart")

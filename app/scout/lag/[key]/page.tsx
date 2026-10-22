@@ -1,3 +1,4 @@
+import { Seal } from "@/lib/seal-server"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -7,10 +8,10 @@ import { EmptyNote, Figures, FormChips, InsightList, PageHeader, Section } from 
 import { MatchList } from "@/components/scout/blocks"
 import { Tabs } from "@/components/scout/tabs"
 import { CategoryPanel, ProfileTiles } from "@/components/scout/team-sections"
-import { PlayerTable } from "@/components/scout/player-table"
-import { GoalTimingChart } from "@/components/scout/charts/goal-timing-chart"
-import { ScorersChart } from "@/components/scout/charts/scorers-chart"
-import { SeasonChart, type SeasonPoint } from "@/components/scout/charts/season-chart"
+import { PlayerTable, PlayerTableSealed } from "@/components/scout/player-table"
+import { GoalTimingChart, GoalTimingChartSealed } from "@/components/scout/charts/goal-timing-chart"
+import { ScorersChart, ScorersChartSealed } from "@/components/scout/charts/scorers-chart"
+import { SeasonChart, SeasonChartSealed, type SeasonPoint } from "@/components/scout/charts/season-chart"
 import { classLabel, confidenceText, matchDate, num, outcomeFor, scoreFor, scoutFetch, seasonLabel, sideOf, signed, updatedLabel, ScoutUnavailable, type ProfilePayload } from "@/lib/scout"
 
 export const revalidate = 60
@@ -114,8 +115,8 @@ export default async function ScoutProfilePage({ params }: { params: Promise<Par
             <Section title="Vem gör målen?" note={`Från ${entity.logged} matcher med matchlogg.`}>
               {entity.players.length ? (
                 <div className="space-y-6">
-                  <ScorersChart players={entity.players} tone={tone} />
-                  <PlayerTable players={entity.players} />
+                  <Seal as={ScorersChartSealed} players={entity.players} tone={tone} />
+                  <Seal as={PlayerTableSealed} players={entity.players} />
                 </div>
               ) : (
                 <EmptyNote>Ingen matchlogg med spelare.</EmptyNote>
@@ -125,7 +126,7 @@ export default async function ScoutProfilePage({ params }: { params: Promise<Par
             <Section title="Alla matcher" note="Varje spelad match, alla tävlingar. Klicka för detaljer.">
               {points.length > 0 && (
                 <div className="mb-4">
-                  <SeasonChart points={points} />
+                  <Seal as={SeasonChartSealed} points={points} />
                 </div>
               )}
               <MatchList matches={results} perspective={entity.key} showSeries empty="Inga spelade matcher." />
@@ -140,7 +141,7 @@ export default async function ScoutProfilePage({ params }: { params: Promise<Par
             {entity.profile && (
               <Section title="Matchbild">
                 <div className="space-y-8">
-                  <GoalTimingChart scored={entity.profile.timing.buckets} conceded={entity.profile.timing.against} periodMinutes={entity.profile.periodMinutes} matches={entity.profile.matches} tone={tone} />
+                  <Seal as={GoalTimingChartSealed} scored={entity.profile.timing.buckets} conceded={entity.profile.timing.against} periodMinutes={entity.profile.periodMinutes} matches={entity.profile.matches} tone={tone} />
                   <ProfileTiles entity={entity} />
                 </div>
               </Section>

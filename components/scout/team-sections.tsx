@@ -1,7 +1,8 @@
+import { Seal } from "@/lib/seal-server"
 import { ExternalLink } from "./ui"
 import { StandingsTable } from "./blocks"
-import { PowerRankingChart } from "./charts/power-ranking-chart"
-import { OddsChart } from "./charts/odds-chart"
+import { PowerRankingChart, PowerRankingChartSealed } from "./charts/power-ranking-chart"
+import { OddsChart, OddsChartSealed } from "./charts/odds-chart"
 import { num, pct, prob, signed, type Entity, type ScoutCategory } from "@/lib/scout"
 
 // How a team plays, from its match logs. Plain figures, each with the sample it rests on.
@@ -75,7 +76,7 @@ export function CategoryPanel({ category, highlightKey, focusKey }: { category: 
         <div>
           <h3 className="mb-1 text-sm font-semibold text-slate-900">Styrka</h3>
           <p className="mb-2 text-xs text-slate-500">Hur många mål bättre eller sämre än ett genomsnittligt lag, räknat på alla resultat och vilka motståndare de mött.</p>
-          {powerRows.length ? <PowerRankingChart rows={powerRows} highlightKey={highlightKey ?? focusKey ?? null} /> : <p className="text-sm text-slate-500">Inga spelade matcher ännu.</p>}
+          {powerRows.length ? <Seal as={PowerRankingChartSealed} rows={powerRows} highlightKey={highlightKey ?? focusKey ?? null} /> : <p className="text-sm text-slate-500">Inga spelade matcher ännu.</p>}
         </div>
       </div>
       {odds.length > 0 && (
@@ -83,7 +84,7 @@ export function CategoryPanel({ category, highlightKey, focusKey }: { category: 
           <h3 className="mb-1 text-sm font-semibold text-slate-900">Chans att vinna serien</h3>
           <p className="mb-3 text-xs text-slate-500">Resten av serien ({category.upcomingCount} matcher) spelad 4 000 gånger med modellens procentsatser.</p>
           <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr]">
-            <OddsChart rows={odds} />
+            <Seal as={OddsChartSealed} rows={odds} />
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-[11px] font-medium text-slate-400">

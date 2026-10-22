@@ -1,5 +1,6 @@
 "use client"
 
+import { withSealed } from "@/components/sealed"
 import { useMemo, useState, useEffect, useCallback, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
@@ -1597,3 +1598,6 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     </ErrorBoundary>
   )
 }
+
+// Server pages pass this one sealed props (lib/page-seal.ts), so no match JSON sits in the page.
+export const HomePageClientSealed = withSealed(HomePageClient, "HomePageClient")

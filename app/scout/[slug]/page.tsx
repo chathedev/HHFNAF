@@ -1,3 +1,4 @@
+import { Seal } from "@/lib/seal-server"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -7,10 +8,10 @@ import { EmptyNote, Figures, FormChips, InsightList, PageHeader, Section } from 
 import { MatchList } from "@/components/scout/blocks"
 import { Tabs } from "@/components/scout/tabs"
 import { CategoryPanel, ProfileTiles } from "@/components/scout/team-sections"
-import { PlayerTable } from "@/components/scout/player-table"
-import { GoalTimingChart } from "@/components/scout/charts/goal-timing-chart"
-import { ScorersChart } from "@/components/scout/charts/scorers-chart"
-import { SeasonChart, type SeasonPoint } from "@/components/scout/charts/season-chart"
+import { PlayerTable, PlayerTableSealed } from "@/components/scout/player-table"
+import { GoalTimingChart, GoalTimingChartSealed } from "@/components/scout/charts/goal-timing-chart"
+import { ScorersChart, ScorersChartSealed } from "@/components/scout/charts/scorers-chart"
+import { SeasonChart, SeasonChartSealed, type SeasonPoint } from "@/components/scout/charts/season-chart"
 import { confidenceText, matchDate, num, outcomeFor, scoreFor, scoutFetch, seasonLabel, sideOf, signed, updatedLabel, ScoutUnavailable, type TeamPayload } from "@/lib/scout"
 
 export const revalidate = 60
@@ -127,7 +128,7 @@ export default async function ScoutTeamPage({ params }: { params: Promise<Params
                 <Section title="Spelade matcher">
                   {seasonPoints.length ? (
                     <div className="space-y-4">
-                      <SeasonChart points={seasonPoints} />
+                      <Seal as={SeasonChartSealed} points={seasonPoints} />
                       <MatchList matches={results} perspective={entity.key} showSeries />
                     </div>
                   ) : (
@@ -137,8 +138,8 @@ export default async function ScoutTeamPage({ params }: { params: Promise<Params
 
                 <Section title="Spelarna" note={`Från ${entity.logged} matcher med matchlogg. "Förra säsongen" räknar alla lag spelaren var med i.`}>
                   <div className="space-y-6">
-                    <ScorersChart players={entity.players} tone="hhf" />
-                    <PlayerTable players={entity.players} />
+                    <Seal as={ScorersChartSealed} players={entity.players} tone="hhf" />
+                    <Seal as={PlayerTableSealed} players={entity.players} />
                   </div>
                 </Section>
 
@@ -148,7 +149,7 @@ export default async function ScoutTeamPage({ params }: { params: Promise<Params
                     {entity.profile && (
                       <div>
                         <h3 className="mb-2 text-sm font-semibold text-slate-900">När målen kommer</h3>
-                        <GoalTimingChart scored={entity.profile.timing.buckets} conceded={entity.profile.timing.against} periodMinutes={entity.profile.periodMinutes} matches={entity.profile.matches} tone="hhf" />
+                        <Seal as={GoalTimingChartSealed} scored={entity.profile.timing.buckets} conceded={entity.profile.timing.against} periodMinutes={entity.profile.periodMinutes} matches={entity.profile.matches} tone="hhf" />
                       </div>
                     )}
                     <ProfileTiles entity={entity} />

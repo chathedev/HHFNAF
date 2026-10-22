@@ -1,4 +1,5 @@
-import { HomePageClient } from "./page-client"
+import { HomePageClientSealed } from "./page-client"
+import { sealProps } from "@/lib/page-seal"
 import { getInitialMatchWindow } from "@/lib/get-initial-match-window"
 import type { EnhancedMatchData, NormalizedMatch } from "@/lib/use-match-data"
 
@@ -32,5 +33,6 @@ export default async function HomePage() {
     maxDays: 21,
   })
 
-  return <HomePageClient initialData={stripHeavyMatchData(initialData)} />
+  const sealed = await sealProps({ initialData: stripHeavyMatchData(initialData) })
+  return <HomePageClientSealed sealed={sealed} />
 }

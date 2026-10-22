@@ -1,12 +1,13 @@
+import { Seal } from "@/lib/seal-server"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { Header } from "@/components/header"
 import Footer from "@/components/footer"
 import { EmptyNote, FormChips, PageHeader, Section } from "@/components/scout/ui"
 import { MatchList } from "@/components/scout/blocks"
-import { CalibrationChart } from "@/components/scout/charts/calibration-chart"
+import { CalibrationChart, CalibrationChartSealed } from "@/components/scout/charts/calibration-chart"
 import { ProbabilityBar } from "@/components/scout/charts/probability-bar"
-import { ScoutSearch } from "@/components/scout/scout-search"
+import { ScoutSearch, ScoutSearchSealed } from "@/components/scout/scout-search"
 import { matchDate, pct, prob, probsFor, scoutFetch, sideOf, updatedLabel, type OverviewPayload } from "@/lib/scout"
 
 export const revalidate = 60
@@ -92,7 +93,7 @@ export default async function ScoutHubPage() {
                 </li>
               </ol>
 
-              <ScoutSearch index={data.index} />
+              <Seal as={ScoutSearchSealed} index={data.index} />
 
               <Section title="Den här veckan" note="HHF:s matcher de kommande sju dagarna. Klicka på en match för att scouta motståndaren.">
                 {data.week.length ? (
@@ -192,7 +193,7 @@ export default async function ScoutHubPage() {
                   </div>
                   <div>
                     <p className="mb-2 text-xs text-slate-500">När modellen sa X %, hur ofta vann favoriten? Grå linje = perfekt.</p>
-                    {evalPrev?.calibration && evalPrev.calibration.length > 0 && <CalibrationChart bins={evalPrev.calibration} height={200} />}
+                    {evalPrev?.calibration && evalPrev.calibration.length > 0 && <Seal as={CalibrationChartSealed} bins={evalPrev.calibration} height={200} />}
                   </div>
                 </div>
               </Section>

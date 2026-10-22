@@ -6,7 +6,7 @@ import { cookies } from "next/headers"
 // ANALYTICS_ADMIN_TOKEN never reaches the browser — it is attached here,
 // server-side, after the editor-auth cookie has been validated.
 
-const ALLOWED = new Set(["overview", "minutely", "live", "matches"])
+const ALLOWED = new Set(["overview", "minutely", "live", "matches", "profixio"])
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string[] }> }) {
   const cookieToken = process.env.AUTH_COOKIE_TOKEN || "authenticated"

@@ -1,5 +1,6 @@
 "use client"
 
+import { withSealed } from "@/components/sealed"
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { AXIS_TICK, CHART } from "./theme"
 
@@ -74,3 +75,5 @@ export function SeasonChart({ points, height = 170 }: { points: SeasonPoint[]; h
     </div>
   )
 }
+
+export const SeasonChartSealed = withSealed(SeasonChart, "SeasonChart")

@@ -1,5 +1,6 @@
 "use client"
 
+import { withSealed } from "@/components/sealed"
 import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { AXIS_TICK, CHART } from "./theme"
 
@@ -130,3 +131,5 @@ export function GoalTimingChart({
     </div>
   )
 }
+
+export const GoalTimingChartSealed = withSealed(GoalTimingChart, "GoalTimingChart")

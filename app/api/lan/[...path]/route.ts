@@ -6,6 +6,7 @@ import { timingSafeEqual } from "crypto"
 import { NextRequest } from "next/server"
 import { apiFetch } from "@/lib/api-client"
 import { browserRouteAllowed } from "@/lib/api-routes"
+import { encodeProps as encodePropsForLan, openSealedSync } from "@/lib/page-seal"
 
 export const dynamic = "force-dynamic"
 
@@ -19,6 +20,17 @@ function fromLyrnet(request: NextRequest): boolean {
 async function forward(request: NextRequest, params: Promise<{ path: string[] }>) {
   if (process.env.NODE_ENV !== "development" && !fromLyrnet(request)) return new Response(null, { status: 404 })
   const { path } = await params
+  if (request.method === "POST" && path.join("/") === "seal/props") {
+    // Opens sealed page data for a browser without WebCrypto (plain http).
+    const body = (await request.json().catch(() => null)) as { s?: unknown } | null
+    if (typeof body?.s !== "string" || body.s.length > 2_000_000) return new Response(null, { status: 400 })
+    try {
+      // Re-sealed as Date-aware JSON text so the browser decodes it exactly like a vault reply.
+      return new Response(encodePropsForLan(openSealedSync(body.s)), { headers: { "content-type": "application/json", "cache-control": "no-store" } })
+    } catch {
+      return new Response(null, { status: 400 })
+    }
+  }
   const target = `/${path.map(encodeURIComponent).join("/")}${request.nextUrl.search}`
   if (!browserRouteAllowed(request.method, target)) return new Response(null, { status: 400 })
   const body = request.method === "POST" ? await request.text() : undefined

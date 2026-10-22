@@ -1,5 +1,6 @@
 "use client"
 
+import { withSealed } from "@/components/sealed"
 import { useMemo, useState } from "react"
 import type { Player } from "@/lib/scout"
 
@@ -99,3 +100,5 @@ export function PlayerTable({ players, highlight = false, limit = 25 }: { player
     </div>
   )
 }
+
+export const PlayerTableSealed = withSealed(PlayerTable, "PlayerTable")
