@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/quiet-link"
 import { Header } from "@/components/header"
 import { Home, CalendarDays, Instagram, ExternalLink, ChevronRight } from "lucide-react"
 

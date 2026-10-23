@@ -2,7 +2,7 @@
 
 import { apiFetch } from "@/lib/api-client"
 import { memo, startTransition, useEffect, useMemo, useRef, useState } from "react"
-import Link from "next/link"
+import Link from "@/components/quiet-link"
 import { LineChart as ScoutIcon, X } from "lucide-react"
 import { setOpenMatchForRestore } from "@/components/build-refresh"
 import type { NormalizedMatch } from "@/lib/use-match-data"

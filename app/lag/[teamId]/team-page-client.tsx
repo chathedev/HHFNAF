@@ -1,8 +1,8 @@
 "use client"
 
 import { withSealed } from "@/components/sealed"
-import Link from "next/link"
-import Image from "next/image"
+import Link from "@/components/quiet-link"
+import Image from "@/components/quiet-image"
 import { useEffect, useMemo, useState } from "react"
 
 import { Header } from "@/components/header"

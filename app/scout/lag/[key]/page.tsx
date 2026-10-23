@@ -1,6 +1,6 @@
 import { Seal } from "@/lib/seal-server"
 import type { Metadata } from "next"
-import Link from "next/link"
+import Link from "@/components/quiet-link"
 import { notFound } from "next/navigation"
 import { Header } from "@/components/header"
 import Footer from "@/components/footer"

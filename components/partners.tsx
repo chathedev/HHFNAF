@@ -1,9 +1,9 @@
 "use client"
 
 import { Card, CardContent } from "@/components/ui/card"
-import Image from "next/image"
+import Image from "@/components/quiet-image"
 import { useState } from "react"
-import Link from "next/link"
+import Link from "@/components/quiet-link"
 
 interface Partner {
   id: string

@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Link from "next/link"
-import Image from "next/image"
+import Link from "@/components/quiet-link"
+import Image from "@/components/quiet-image"
 import { Menu, X, Instagram, Facebook, ShoppingBag } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"

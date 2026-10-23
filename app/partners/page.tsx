@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic"
 
-import Image from "next/image"
-import Link from "next/link"
+import Image from "@/components/quiet-image"
+import Link from "@/components/quiet-link"
 import { Star } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"

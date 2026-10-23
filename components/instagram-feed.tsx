@@ -1,7 +1,7 @@
 "use client"
 
 import { apiFetch } from "@/lib/api-client"
-import Link from "next/link"
+import Link from "@/components/quiet-link"
 import { useEffect, useMemo, useState } from "react"
 
 type InstagramImage = {
@@ -192,7 +192,9 @@ export function InstagramFeed() {
     if (!picked) return PLACEHOLDER_IMAGE
     if (picked.startsWith(SHORTCODE_CANDIDATE_PREFIX)) {
       const shortcode = picked.slice(SHORTCODE_CANDIDATE_PREFIX.length)
-      return `/api/instagram-image?shortcode=${encodeURIComponent(shortcode)}&w=${width}`
+      return /^[A-Za-z0-9_-]{5,40}$/.test(shortcode)
+        ? `/ig/${width}/${shortcode}`
+        : `/api/instagram-image?shortcode=${encodeURIComponent(shortcode)}&w=${width}`
     }
     return getProxiedInstagramImageUrl(picked, width)
   }

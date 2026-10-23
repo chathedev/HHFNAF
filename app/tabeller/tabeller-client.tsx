@@ -4,7 +4,7 @@ import { withSealed } from "@/components/sealed"
 import { apiFetch } from "@/lib/api-client"
 import { useState, useMemo, useEffect } from "react"
 import { SelectMenu } from "@/components/ui/select-menu"
-import Link from "next/link"
+import Link from "@/components/quiet-link"
 
 const STANDINGS_REFRESH_MS = 90_000
 

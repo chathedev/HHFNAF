@@ -475,21 +475,22 @@ export class LiveSocket {
     const session = await getSession()
     if (this.closed) return
     const toHex = (bytes: Uint8Array) => Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")
-    const params = new URLSearchParams()
-    params.set("t", toHex(session.token))
-    // Our own query (sinceEventId) travels sealed too, so the URL has nothing readable.
+    // Token and query travel in the WebSocket protocol header, so the network tab shows a
+    // bare /_v/ws. The server answers with the "hhf" protocol.
+    const protocols = ["hhf", `t${toHex(session.token)}`]
+    // Our own query (sinceEventId) travels sealed too, so nothing readable is sent.
     const inner = Object.fromEntries(new URLSearchParams(query))
     if (Object.keys(inner).length) {
       const iv = globalThis.crypto.getRandomValues(new Uint8Array(12))
       const sealed = new Uint8Array(
         await globalThis.crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: te.encode("wq") }, session.key, te.encode(JSON.stringify(inner))),
       )
-      params.set("q", toHex(concat([iv, sealed])))
+      protocols.push(`q${toHex(concat([iv, sealed]))}`)
     }
-    if (!canInflate) params.set("z", "0")
+    if (!canInflate) protocols.push("z0")
     if (this.closed) return
     const scheme = location.protocol === "https:" ? "wss:" : "ws:"
-    const socket = new WebSocket(`${scheme}//${location.host}/_v/ws?${params.toString()}`)
+    const socket = new WebSocket(`${scheme}//${location.host}/_v/ws`, protocols)
     socket.binaryType = "arraybuffer"
     this.socket = socket
     socket.onopen = () => {

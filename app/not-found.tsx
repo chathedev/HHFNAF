@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/quiet-link"
 import { Home, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
 

@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { TRACKING_STAGING } from "@/lib/tracking-release"
-import Link from "next/link"
+import Link from "@/components/quiet-link"
 import { Header } from "@/components/header"
 import Footer from "@/components/footer"
 import { TrackingCourt2D } from "@/components/tracking-court-2d"

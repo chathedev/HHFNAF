@@ -1,6 +1,6 @@
 "use client"
 
-import Link from "next/link"
+import Link from "@/components/quiet-link"
 import { useEffect, useState } from "react"
 import { AnalysisCountdown } from "@/components/analysis-countdown"
 

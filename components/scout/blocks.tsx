@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/quiet-link"
 import {
   matchDate,
   num,

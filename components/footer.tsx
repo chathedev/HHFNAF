@@ -1,6 +1,6 @@
 "use client"
 
-import Link from "next/link"
+import Link from "@/components/quiet-link"
 import { ArrowUpRight, ShoppingBag } from "lucide-react"
 import { SHOP_URL, useShopStatus } from "@/components/shop-status-provider"
 

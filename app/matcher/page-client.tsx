@@ -3,7 +3,7 @@
 import { withSealed } from "@/components/sealed"
 import { apiFetch } from "@/lib/api-client"
 import { useMemo, useState, useEffect, useCallback, useRef, type ReactNode } from "react"
-import Link from "next/link"
+import Link from "@/components/quiet-link"
 
 import { getSimplifiedMatchStatus } from "@/lib/match-card-utils"
 import { getMatchEndTime, useMatchData, forceMatchDataPoll, type NormalizedMatch } from "@/lib/use-match-data"

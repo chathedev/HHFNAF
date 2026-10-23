@@ -98,8 +98,12 @@ export function BuildRefresh({ initialBuildId }: { initialBuildId?: string }) {
     let reloading = false
     let candidateBuild: string | null = null
 
-    const check = async () => {
+    // focus and visibilitychange often fire together: one check per 30 s is plenty.
+    let lastCheck = 0
+    const check = async (force?: unknown) => {
       if (stopped || reloading || document.visibilityState === "hidden") return
+      if (force !== true && Date.now() - lastCheck < 30_000) return
+      lastCheck = Date.now()
       try {
         const res = await fetch("/api/build-id", { cache: "no-store" })
         if (!res.ok) return
@@ -117,7 +121,7 @@ export function BuildRefresh({ initialBuildId }: { initialBuildId?: string }) {
         // only act once the same new build answers twice, a few seconds apart.
         if (candidateBuild !== buildId) {
           candidateBuild = buildId
-          window.setTimeout(check, CONFIRM_DELAY_MS)
+          window.setTimeout(() => check(true), CONFIRM_DELAY_MS)
           return
         }
         if (isUserBusy()) return
@@ -147,19 +151,29 @@ export function BuildRefresh({ initialBuildId }: { initialBuildId?: string }) {
       }
     }
 
-    check()
-    const interval = window.setInterval(check, CHECK_INTERVAL_MS)
+    // The page was rendered with the current build id, so there is nothing to compare yet;
+    // the first check runs after a minute (or when the tab comes back).
+    if (loadedBuildRef.current === null) check(true)
+    else lastCheck = Date.now()
+    const interval = window.setInterval(() => check(true), CHECK_INTERVAL_MS)
     const onVisible = () => {
       if (document.visibilityState === "visible") check()
     }
+    const onFocus = () => check()
+    // A page restored from the back/forward cache may carry an old build: check at once.
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) check(true)
+    }
     document.addEventListener("visibilitychange", onVisible)
-    window.addEventListener("focus", check)
+    window.addEventListener("focus", onFocus)
+    window.addEventListener("pageshow", onPageShow)
     return () => {
       stopped = true
       window.clearTimeout(staleTimer)
       window.clearInterval(interval)
       document.removeEventListener("visibilitychange", onVisible)
-      window.removeEventListener("focus", check)
+      window.removeEventListener("focus", onFocus)
+      window.removeEventListener("pageshow", onPageShow)
     }
   }, [])
 

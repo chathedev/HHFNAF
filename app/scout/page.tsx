@@ -1,6 +1,6 @@
 import { Seal } from "@/lib/seal-server"
 import type { Metadata } from "next"
-import Link from "next/link"
+import Link from "@/components/quiet-link"
 import { Header } from "@/components/header"
 import Footer from "@/components/footer"
 import { EmptyNote, FormChips, PageHeader, Section } from "@/components/scout/ui"

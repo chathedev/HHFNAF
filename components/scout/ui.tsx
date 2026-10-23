@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/quiet-link"
 import type { ReactNode } from "react"
 import { OUTCOME_LABEL, OUTCOME_TEXT, type Insight, type Outcome } from "@/lib/scout"
 

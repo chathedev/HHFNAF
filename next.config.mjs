@@ -73,6 +73,25 @@ const nextConfig = {
     ],
   },
   // Ticket sales via ClubMate ended 2026-10-01; old links and search results land on the match page.
+  // Short public URLs for images, so the network tab shows /i/1920/l2/123.jpg
+  // instead of long encoded query strings. Codes must match IMAGE_HOSTS in lib/image-loader.ts.
+  async rewrites() {
+    const hosts = {
+      l1: 'az316141.cdn.laget.se', l2: 'az729104.cdn.laget.se', lb: 'laget001.blob.core.windows.net',
+      ib: 'i.ibb.co', hc: 'highcon.se', wl: 'westerlinds.nu', cf: 'd3sjey3kqst1or.cloudfront.net',
+      bm: 'files.builder.misssite.com', us: 'images.unsplash.com', up: 'plus.unsplash.com',
+      va: 'assets.vercel.com', gh: 'avatars.githubusercontent.com', gg: 'lh3.googleusercontent.com',
+    };
+    return {
+      beforeFiles: [
+        ...Object.entries(hosts).map(([code, host]) => ({
+          source: `/i/:w(\\d{1,4})/${code}/:path+`,
+          destination: `/_next/image?url=https://${host}/:path*&w=:w&q=75`,
+        })),
+        { source: '/i/:w(\\d{1,4})/:path+', destination: '/_next/image?url=/:path*&w=:w&q=75' },
+      ],
+    };
+  },
   async redirects() {
     return [
       { source: '/kop-biljett', destination: '/matcher', permanent: true },

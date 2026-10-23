@@ -2,8 +2,8 @@
 
 import { withSealed } from "@/components/sealed"
 import { useMemo, useState, useEffect, useCallback, useRef } from "react"
-import Image from "next/image"
-import Link from "next/link"
+import Image from "@/components/quiet-image"
+import Link from "@/components/quiet-link"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"

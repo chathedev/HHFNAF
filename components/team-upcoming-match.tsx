@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useEffect, useRef, useState } from "react"
-import Link from "next/link"
+import Link from "@/components/quiet-link"
 import { extendTeamDisplayName } from "@/lib/team-display"
 
 import { Card } from "@/components/ui/card"

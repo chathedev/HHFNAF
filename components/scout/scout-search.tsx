@@ -1,7 +1,7 @@
 "use client"
 
 import { withSealed } from "@/components/sealed"
-import Link from "next/link"
+import Link from "@/components/quiet-link"
 import { useMemo, useState } from "react"
 import { Search } from "lucide-react"
 
