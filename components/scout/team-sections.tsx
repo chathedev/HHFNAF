@@ -60,7 +60,12 @@ export function CategoryPanel({ category, highlightKey, focusKey }: { category: 
     games: row.rating.games,
     confidence: row.rating.confidence,
   }))
-  const odds = category.simulation ?? []
+  const groups = category.groups && category.groups.length > 1 ? category.groups : null
+  const oddsBlocks = groups
+    ? groups.filter((g) => g.simulation && g.simulation.length).map((g) => ({ title: `Chans att vinna ${g.label.toLowerCase()}`, rows: g.simulation!, upcoming: g.upcomingCount, unit: "gruppen" }))
+    : category.simulation && category.simulation.length
+      ? [{ title: "Chans att vinna serien", rows: category.simulation, upcoming: category.upcomingCount, unit: "serien" }]
+      : []
   return (
     <div className="space-y-8">
       <p className="text-xs text-slate-500">
@@ -70,8 +75,19 @@ export function CategoryPanel({ category, highlightKey, focusKey }: { category: 
       </p>
       <div className="grid gap-8 lg:grid-cols-2">
         <div>
-          <h3 className="mb-1 text-sm font-semibold text-slate-900">Tabell</h3>
-          <StandingsTable category={category} highlightKey={highlightKey} />
+          <h3 className="mb-1 text-sm font-semibold text-slate-900">{groups ? "Tabeller" : "Tabell"}</h3>
+          {groups ? (
+            <div className="space-y-6">
+              {groups.map((group, i) => (
+                <div key={group.label}>
+                  <h4 className="mb-1 mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{group.label}</h4>
+                  <StandingsTable category={category} highlightKey={highlightKey} rows={group.standings} showWithdrawn={i === groups.length - 1} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <StandingsTable category={category} highlightKey={highlightKey} />
+          )}
         </div>
         <div>
           <h3 className="mb-1 text-sm font-semibold text-slate-900">Styrka</h3>
@@ -79,10 +95,10 @@ export function CategoryPanel({ category, highlightKey, focusKey }: { category: 
           {powerRows.length ? <Seal as={PowerRankingChartSealed} rows={powerRows} highlightKey={highlightKey ?? focusKey ?? null} /> : <p className="text-sm text-slate-500">Inga spelade matcher ännu.</p>}
         </div>
       </div>
-      {odds.length > 0 && (
-        <div>
-          <h3 className="mb-1 text-sm font-semibold text-slate-900">Chans att vinna serien</h3>
-          <p className="mb-3 text-xs text-slate-500">Resten av serien ({category.upcomingCount} matcher) spelad 4 000 gånger med modellens procentsatser.</p>
+      {oddsBlocks.map(({ title, rows: odds, upcoming, unit }) => (
+        <div key={title}>
+          <h3 className="mb-1 text-sm font-semibold text-slate-900">{title}</h3>
+          <p className="mb-3 text-xs text-slate-500">Resten av {unit} ({upcoming} matcher) spelad 4 000 gånger med modellens procentsatser.</p>
           <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr]">
             <Seal as={OddsChartSealed} rows={odds} />
             <table className="w-full text-sm">
@@ -105,7 +121,7 @@ export function CategoryPanel({ category, highlightKey, focusKey }: { category: 
             </table>
           </div>
         </div>
-      )}
+      ))}
     </div>
   )
 }

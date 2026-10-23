@@ -95,7 +95,17 @@ export function MatchList({
   )
 }
 
-export function StandingsTable({ category, highlightKey }: { category: ScoutCategory; highlightKey?: string | null }) {
+export function StandingsTable({
+  category,
+  highlightKey,
+  rows,
+  showWithdrawn = true,
+}: {
+  category: ScoutCategory
+  highlightKey?: string | null
+  rows?: ScoutCategory["standings"]
+  showWithdrawn?: boolean
+}) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -113,7 +123,7 @@ export function StandingsTable({ category, highlightKey }: { category: ScoutCate
           </tr>
         </thead>
         <tbody className="tabular-nums">
-          {category.standings.map((row) => (
+          {(rows ?? category.standings).map((row) => (
             <tr key={row.key} className={`border-b border-slate-100 ${row.isHhf ? "font-semibold text-slate-950" : row.key === highlightKey ? "bg-slate-50" : "text-slate-700"}`}>
               <td className="py-2 pr-2 text-xs text-slate-400">{row.position}</td>
               <td className="max-w-[220px] truncate whitespace-nowrap py-2 pr-2">
@@ -134,7 +144,7 @@ export function StandingsTable({ category, highlightKey }: { category: ScoutCate
           ))}
         </tbody>
       </table>
-      {category.withdrawn && category.withdrawn.length > 0 && (
+      {showWithdrawn && category.withdrawn && category.withdrawn.length > 0 && (
         <p className="mt-2 text-xs text-slate-500">Utgått ur serien (räknas inte, som hos Profixio): {category.withdrawn.map((w) => w.name).join(", ")}.</p>
       )}
     </div>

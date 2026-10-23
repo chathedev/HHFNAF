@@ -264,6 +264,7 @@ export type ScoutCategory = CategoryBrief & {
   fixtures?: ScoutMatch[]
   scorers?: (Player & { team: string; teamKey: string; isHhf: boolean })[]
   withdrawn?: { key: string; name: string }[]
+  groups?: { label: string; upcomingCount: number; standings: StandingRow[]; simulation: SimulationRow[] | null }[] | null
 }
 
 export type EvalSummary = {
