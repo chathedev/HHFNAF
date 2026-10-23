@@ -99,7 +99,7 @@ export default async function ScoutTeamPage({ params }: { params: Promise<Params
             ) : (
               <Figures
                 items={[
-                  { label: "Tabell", value: entity.position ? `${entity.position}:a` : "–", sub: entity.positionOf ? `av ${entity.positionOf}${mainCat ? ` i ${mainCat.name}` : ""}` : undefined },
+                  { label: "Tabell", value: entity.position ? `${entity.position}:a` : "–", sub: entity.positionOf ? `av ${entity.positionOf}${entity.positionGroup ? ` i grupp ${entity.positionGroup.replace(/^Grupp /, "")}` : ""}${mainCat ? `${entity.positionGroup ? ", " : " i "}${mainCat.name}` : ""}` : undefined },
                   { label: "Vinst–oavgjort–förlust", value: `${rec.won}–${rec.drawn}–${rec.lost}`, sub: `${rec.played} matcher, alla tävlingar` },
                   { label: "Mål", value: `${rec.gf}–${rec.ga}`, sub: `${num(rec.gfPerGame)} gjorda, ${num(rec.gaPerGame)} insläppta per match` },
                   {

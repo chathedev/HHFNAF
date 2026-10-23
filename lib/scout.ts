@@ -110,6 +110,7 @@ export type EntityBrief = {
   rating: Rating | null
   position: number | null
   positionOf: number | null
+  positionGroup?: string | null
   record: {
     played: number
     won: number
@@ -207,6 +208,7 @@ export type Entity = {
   rating: Rating | null
   position: number | null
   positionOf: number | null
+  positionGroup?: string | null
   record: TeamRecord
   logged: number
   profile: TeamProfile | null

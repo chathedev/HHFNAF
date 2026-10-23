@@ -95,7 +95,7 @@ export default async function ScoutProfilePage({ params }: { params: Promise<Par
 
             <Figures
               items={[
-                { label: "Tabell", value: entity.position ? `${entity.position}:a` : "–", sub: entity.positionOf ? `av ${entity.positionOf}` : undefined },
+                { label: "Tabell", value: entity.position ? `${entity.position}:a` : "–", sub: entity.positionOf ? `av ${entity.positionOf}${entity.positionGroup ? ` i grupp ${entity.positionGroup.replace(/^Grupp /, "")}` : ""}` : undefined },
                 { label: "Vinst–oavgjort–förlust", value: `${rec.won}–${rec.drawn}–${rec.lost}`, sub: `${rec.played} matcher` },
                 { label: "Mål", value: `${rec.gf}–${rec.ga}`, sub: `${num(rec.gfPerGame)} gjorda, ${num(rec.gaPerGame)} insläppta per match` },
                 { label: "Styrka", value: entity.rating ? signed(entity.rating.r) : "–", sub: entity.rating ? `${entity.rating.rank ?? "–"}:a av ${entity.rating.rankOf ?? "–"} · ${confidenceText(entity.rating)}` : "inga matcher" },
