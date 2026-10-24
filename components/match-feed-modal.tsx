@@ -15,7 +15,6 @@ import {
   type CourtPlayerStats,
   type CourtTeamStats,
 } from "@/components/match-court"
-import { TrackingCourt2D, useTrackingForMatch } from "@/components/tracking-court-2d"
 import { LiveWinOdds } from "@/components/live-win-odds"
 
 export type MatchFeedEvent = {
@@ -1444,11 +1443,8 @@ export function MatchFeedModal({
       })),
     [activePenalties, homeTeam, awayTeam],
   )
-  // a video analysis of this match (2D positions from our own camera at the home court),
-  // when one is released; every other match shows statistics without a court
-  const trackingId = useTrackingForMatch(isOpen ? matchData?.apiMatchId : null)
+  // the video-analysis plan (2D tracking) was retired 2026-10-24; the court shows statistics
   const hasCourtData =
-    Boolean(trackingId) ||
     displayedFeed.length > 0 ||
     Boolean(detailLineup?.home?.length || detailLineup?.away?.length) ||
     Boolean(detailPlayers?.length)
@@ -1641,7 +1637,7 @@ export function MatchFeedModal({
                   visibleTab === "plan" ? "border-emerald-600 text-emerald-700" : "border-transparent text-slate-300 hover:text-slate-500"
                 }`}
               >
-                {trackingId ? "Plan" : "Statistik"}
+                Statistik
               </button>
             )}
             
@@ -1661,11 +1657,6 @@ export function MatchFeedModal({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto bg-white">
-          {visibleTab === "plan" && trackingId && (
-            <div className="px-3 pt-4 sm:px-5">
-              <TrackingCourt2D id={trackingId} compact />
-            </div>
-          )}
           {visibleTab === "plan" && (
             <MatchCourt
               homeTeam={homeTeam}
