@@ -4,7 +4,7 @@ import { useId, useState, type ReactNode } from "react"
 
 // Accessible tab strip (role=tablist, arrow keys) in the site's pill style. Panels are
 // rendered on the server and passed in; only the visible one is mounted.
-export function Tabs({ tabs, initial = 0 }: { tabs: { id: string; label: ReactNode; content: ReactNode }[]; initial?: number }) {
+export function Tabs({ tabs, initial = 0, ariaLabel = "Välj serie" }: { tabs: { id: string; label: ReactNode; content: ReactNode }[]; initial?: number; ariaLabel?: string }) {
   const [active, setActive] = useState(Math.min(initial, Math.max(0, tabs.length - 1)))
   const base = useId()
   if (!tabs.length) return null
@@ -13,7 +13,7 @@ export function Tabs({ tabs, initial = 0 }: { tabs: { id: string; label: ReactNo
     <div>
       <div
         role="tablist"
-        aria-label="Välj serie"
+        aria-label={ariaLabel}
         className="mb-5 flex gap-5 overflow-x-auto border-b border-slate-200"
         onKeyDown={(event) => {
           if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return

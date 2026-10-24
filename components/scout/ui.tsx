@@ -1,5 +1,6 @@
 import Link from "@/components/quiet-link"
 import type { ReactNode } from "react"
+import { BackLink } from "@/components/nav-history"
 import { OUTCOME_LABEL, OUTCOME_TEXT, type Insight, type Outcome } from "@/lib/scout"
 
 // Minimal building blocks for HHF Scout, in the same flat style as the home page match list:
@@ -9,9 +10,7 @@ export function PageHeader({ back, title, sub, right }: { back?: { href: string;
   return (
     <header className="mb-6">
       {back && (
-        <Link href={back.href} className="text-xs font-medium text-slate-500 transition hover:text-slate-900">
-          ← {back.label}
-        </Link>
+        <BackLink href={back.href} label={back.label} className="inline-block max-w-full truncate text-xs font-medium text-slate-500 transition hover:text-slate-900" />
       )}
       <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">

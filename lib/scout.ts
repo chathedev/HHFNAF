@@ -225,6 +225,26 @@ export type Player = {
 
 export type Insight = { kind: string; tone: "strength" | "weakness" | "neutral"; text: string; n: number; weight: number }
 
+export type ModelHistoryPoint = {
+  id: number
+  day: string
+  ts: number | null
+  opponent: string
+  r: number
+  games: number
+  band: number
+  pWin: number | null
+  expUs: number
+  expThem: number
+  us: number
+  them: number
+}
+
+export type ModelHistory = {
+  points: ModelHistoryPoint[]
+  now: { r: number; games: number; band: number; at: string } | null
+}
+
 export type Entity = {
   key: string
   name: string
@@ -249,6 +269,8 @@ export type Entity = {
   previousSameName: EntityBrief | null
   nextSameName: EntityBrief | null
   squadHistory: { key: string; name: string; classKey: string; shared: number; brief: EntityBrief | null }[]
+  /** HHF teams this season: strength and uncertainty before each match, and now */
+  modelHistory?: ModelHistory | null
 }
 
 export type StandingRow = {

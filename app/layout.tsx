@@ -6,6 +6,7 @@ import "./globals.css"
 import "../styles/real-time-updates.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ScrollMemory } from "@/components/scroll-memory"
+import { NavHistoryTracker } from "@/components/nav-history"
 import { BuildRefresh } from "@/components/build-refresh"
 import { getServerBuildId } from "@/lib/build-id"
 import { AnalyticsBeacon } from "@/components/analytics-beacon"
@@ -160,6 +161,7 @@ export default async function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ShopStatusProvider>
             <ScrollMemory />
+            <NavHistoryTracker />
             <BuildRefresh initialBuildId={getServerBuildId()} />
             <AnalyticsBeacon />
             {children}
