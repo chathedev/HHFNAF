@@ -1,4 +1,5 @@
 import type React from "react"
+import { Suspense } from "react"
 import type { Metadata } from "next"
 import { headers } from "next/headers"
 import { Inter, Space_Grotesk } from "next/font/google"
@@ -161,7 +162,9 @@ export default async function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ShopStatusProvider>
             <ScrollMemory />
-            <NavHistoryTracker />
+            <Suspense fallback={null}>
+              <NavHistoryTracker />
+            </Suspense>
             <BuildRefresh initialBuildId={getServerBuildId()} />
             <AnalyticsBeacon />
             {children}

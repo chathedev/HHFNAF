@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, type MouseEvent } from "react"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import Link from "@/components/quiet-link"
 
 // Where did the reader come from? A small in-memory stack of the pages visited in this tab
@@ -25,10 +25,25 @@ function pageLabel(): string {
   return text.length > 42 ? `${text.slice(0, 40).trimEnd()}…` : text
 }
 
+// Set by the browser's popstate (back/forward button, or router.back() from a back link), read
+// once by the next recorded navigation. Link clicks never set it, so A -> B -> A by links is
+// recorded as a new page, exactly like the browser history.
+let poppedAt = 0
+if (typeof window !== "undefined") {
+  window.addEventListener("popstate", () => {
+    poppedAt = Date.now()
+  })
+}
+
 function record(url: string) {
-  const prev = stack[stack.length - 2]
-  if (prev && prev.url === url) stack.pop() // browser back, or our own back link
-  else if (stack[stack.length - 1]?.url !== url) {
+  const popped = Date.now() - poppedAt < 3000
+  poppedAt = 0
+  if (stack[stack.length - 1]?.url === url) {
+    // same page again (reload of state, hash change): nothing to do
+  } else if (popped) {
+    if (stack[stack.length - 2]?.url === url) stack.pop()
+    else stack.splice(0, stack.length, { url, label: "" }) // forward, or a jump we cannot follow: start over
+  } else {
     stack.push({ url, label: "" })
     if (stack.length > MAX_ENTRIES) stack.splice(0, stack.length - MAX_ENTRIES)
   }
@@ -44,6 +59,7 @@ function previousEntry(): Entry | null {
 
 export function NavHistoryTracker() {
   const pathname = usePathname()
+  const search = useSearchParams()?.toString() ?? ""
   useEffect(() => {
     const url = currentUrl()
     record(url)
@@ -56,11 +72,11 @@ export function NavHistoryTracker() {
       if (top && top.url === url && label) {
         top.label = label
         window.clearInterval(timer)
-      } else if (tries > 20) window.clearInterval(timer)
+      } else if (tries > 100) window.clearInterval(timer)
     }, 100)
     return () => window.clearInterval(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname])
+  }, [pathname, search])
   return null
 }
 
@@ -70,6 +86,7 @@ const LABEL_BY_PATH: [RegExp, string][] = [
   [/^\/scout\/match\//, "Matchen"],
   [/^\/scout\/serie\//, "Serien"],
   [/^\/scout\/lag\//, "Laget"],
+  [/^\/scout\/[^/]+$/, "Laget"],
   [/^\/matcher/, "Matcher"],
   [/^\/?$/, "Startsidan"],
 ]

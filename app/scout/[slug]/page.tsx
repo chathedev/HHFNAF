@@ -103,13 +103,17 @@ export default async function ScoutTeamPage({ params }: { params: Promise<Params
                     <MatchList matches={up} perspective={entity.key} hideOdds={resultsHidden} />
                   </div>
                 )}
-                <div>
-                  <p className="mb-1 text-xs font-semibold text-slate-500">Spelade</p>
-                  <MatchList matches={done} perspective={entity.key} empty="Inga spelade matcher i serien än." />
-                </div>
-                <a href="#serien" className="inline-block text-xs font-medium text-slate-500 hover:text-slate-900">
-                  {group ? `Tabell för ${group.toLowerCase()} ↓` : "Tabellen ↓"}
-                </a>
+                {!resultsHidden && (
+                  <div>
+                    <p className="mb-1 text-xs font-semibold text-slate-500">Spelade</p>
+                    <MatchList matches={done} perspective={entity.key} empty="Inga spelade matcher i serien än." />
+                  </div>
+                )}
+                {!resultsHidden && (
+                  <Link href={`/scout/serie/${category.id}`} className="inline-block text-xs font-medium text-slate-500 hover:text-slate-900">
+                    {group ? `Hela serien och tabellen för ${group.toLowerCase()} →` : "Hela serien och tabellen →"}
+                  </Link>
+                )}
               </div>
             ),
           }
@@ -147,7 +151,11 @@ export default async function ScoutTeamPage({ params }: { params: Promise<Params
     ? [
         ...history.points.map((p, i) => {
           const outcome = p.us > p.them ? "W" : p.us < p.them ? "L" : "D"
-          const guessed = p.pWin == null ? (p.expUs >= p.expThem ? "W" : "L") : p.pWin >= 0.5 ? "W" : p.expUs >= p.expThem ? "W" : "L"
+          // same rule as the register: the most likely of win, draw and loss
+          const win = p.pWin ?? 0
+          const draw = p.pDraw ?? 0
+          const loss = p.pLoss ?? 0
+          const guessed = p.pWin == null ? (p.expUs >= p.expThem ? "W" : "L") : win >= loss && win >= draw ? "W" : loss >= draw ? "L" : "D"
           return {
             id: p.id,
             label: String(i + 1),
@@ -229,11 +237,11 @@ export default async function ScoutTeamPage({ params }: { params: Promise<Params
                 </Section>
 
                 {history && history.now && modelPoints.length > 1 && (
-                  <Section title="Så har modellen lärt sig" id="modellen" note="Modellen tränas om automatiskt efter varje nytt resultat. Ju fler matcher laget spelar, desto mindre blir osäkerheten och desto säkrare blir procenten. Spelar laget bättre än väntat stiger styrkan, och då stiger vinstchansen i nästa match.">
+                  <Section title="Så har modellen lärt sig" id="modellen" note="Modellen tränas om automatiskt efter varje nytt resultat. Ju fler matcher laget spelar, desto mindre blir osäkerheten och desto säkrare blir procenten. Spelar laget bättre än väntat stiger styrkan, och då stiger vinstchansen i nästa match. De första matcherna utgår modellen från förra säsongen, så osäkerheten börjar krympa efter ett par matcher.">
                     <div className="space-y-5">
                       <Figures
                         items={[
-                          { label: "Styrka nu", value: signed(history.now.r), sub: firstPoint ? `från ${signed(firstPoint.r)} före första matchen` : "mål mot ett snittlag" },
+                          { label: "Styrka nu", value: signed(history.now.r), sub: firstPoint ? `från ${signed(firstPoint.r)} före första matchen med prognos` : "mål mot ett snittlag" },
                           { label: "Osäkerhet", value: `±${num(history.now.band)} mål`, sub: firstPoint ? `från ±${num(firstPoint.band)} i början` : undefined },
                           { label: "Lärt sig av", value: `${history.now.games} ${history.now.games === 1 ? "match" : "matcher"}`, sub: "i år" },
                           { label: "Senast omtränad", value: updatedLabel(history.now.at), sub: "efter nytt resultat" },

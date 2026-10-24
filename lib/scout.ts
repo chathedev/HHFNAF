@@ -234,6 +234,8 @@ export type ModelHistoryPoint = {
   games: number
   band: number
   pWin: number | null
+  pDraw: number | null
+  pLoss: number | null
   expUs: number
   expThem: number
   us: number
