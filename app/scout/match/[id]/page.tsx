@@ -26,8 +26,7 @@ import {
   ScoutUnavailable,
   type Entity,
   type MatchPayload,
-  type ScoutMatch,
-} from "@/lib/scout"
+  type ScoutMatch, guessScore } from "@/lib/scout"
 
 export const revalidate = 60
 
@@ -140,7 +139,12 @@ export default async function ScoutMatchPage({ params }: { params: Promise<Param
                   <p className="mt-4 text-sm text-slate-600">
                     Ungefärligt resultat:{" "}
                     <span className="font-semibold text-slate-950">
-                      {side === "home" ? `${Math.round(probs.us)}–${Math.round(probs.them)}` : `${Math.round(probs.them)}–${Math.round(probs.us)}`}
+                      {(() => {
+                        const g = guessScore(pred, side)
+                        if (!g) return "–"
+                        const [us, them] = g.split("–")
+                        return side === "home" ? `${us}–${them}` : `${them}–${us}`
+                      })()}
                     </span>
                     . Bygger på {gamesUs} och {gamesThem} spelade matcher i år, så säkerheten är <span className="font-semibold text-slate-950">{certainty}</span>. Förra säsongen pekade
                     samma metod ut rätt vinnare i {pct(data.model.previous.accuracy)} av matcherna.

@@ -499,11 +499,24 @@ export function probsFor(pred: Prediction | null | undefined, side: "home" | "aw
   return { win: pred.pHome, draw: pred.pDraw, loss: pred.pAway, us: pred.expHome, them: pred.expAway }
 }
 
-/** Our guess as a score from one side, e.g. "18–31" (rounded expected goals). */
+/** Rounded guessed score that never contradicts the guessed outcome: when the expected goals
+ *  round to a tie but we tipped a win or a loss, the favourite gets one goal more. */
+export function guessPair(us: number, them: number, guessed: Outcome): [number, number] {
+  let a = Math.round(us)
+  let b = Math.round(them)
+  if (a === b && guessed === "W") a += 1
+  else if (a === b && guessed === "L") b += 1
+  else if (guessed === "D") b = a
+  return [a, b]
+}
+
+/** Our guess as a score from one side, e.g. "18–31". */
 export function guessScore(pred: Prediction | null | undefined, side: "home" | "away" | null): string | null {
   const p = probsFor(pred, side)
   if (!p || !Number.isFinite(p.us) || !Number.isFinite(p.them)) return null
-  return `${Math.round(p.us)}–${Math.round(p.them)}`
+  const guessed: Outcome = p.win >= p.loss && p.win >= p.draw ? "W" : p.loss >= p.draw ? "L" : "D"
+  const [a, b] = guessPair(p.us, p.them, guessed)
+  return `${a}–${b}`
 }
 
 /** Did our pre-match favourite (win, draw or loss, from one side) match the result? */

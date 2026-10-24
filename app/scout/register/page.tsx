@@ -3,7 +3,7 @@ import Link from "@/components/quiet-link"
 import { Header } from "@/components/header"
 import Footer from "@/components/footer"
 import { EmptyNote, Figures, OutcomeChip, PageHeader, Section } from "@/components/scout/ui"
-import { matchDate, pct, prob, scoutFetch, seasonLabel, updatedLabel, type RegisterPayload } from "@/lib/scout"
+import { guessPair, matchDate, pct, prob, scoutFetch, seasonLabel, updatedLabel, type RegisterPayload } from "@/lib/scout"
 
 export const revalidate = 60
 
@@ -107,7 +107,7 @@ export default async function ScoutRegisterPage({ searchParams }: { searchParams
                             <div className="w-[4.5rem] shrink-0 text-right sm:w-32">
                               <p className="text-[11px] text-slate-400">Gissning</p>
                               <p className="text-sm font-semibold tabular-nums text-slate-700">
-                                {Math.round(r.expUs)}–{Math.round(r.expThem)}
+                                {guessPair(r.expUs, r.expThem, r.guessed).join("–")}
                               </p>
                               <p className="text-[11px] text-slate-400">
                                 {OUTCOME_WORD[r.guessed]} {prob(guessP)}
