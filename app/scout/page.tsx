@@ -3,12 +3,12 @@ import type { Metadata } from "next"
 import Link from "@/components/quiet-link"
 import { Header } from "@/components/header"
 import Footer from "@/components/footer"
-import { EmptyNote, FormChips, PageHeader, Section } from "@/components/scout/ui"
+import { EmptyNote, FormChips, OutcomeChip, PageHeader, Section } from "@/components/scout/ui"
 import { MatchList } from "@/components/scout/blocks"
 import { CalibrationChart, CalibrationChartSealed } from "@/components/scout/charts/calibration-chart"
 import { ProbabilityBar } from "@/components/scout/charts/probability-bar"
 import { ScoutSearch, ScoutSearchSealed } from "@/components/scout/scout-search"
-import { matchDate, pct, prob, probsFor, scoutFetch, sideOf, updatedLabel, type OverviewPayload } from "@/lib/scout"
+import { guessHit, guessScore, matchDate, outcomeFor, pct, prob, probsFor, scoreFor, scoutFetch, sideOf, updatedLabel, type OverviewPayload } from "@/lib/scout"
 
 export const revalidate = 60
 
@@ -30,6 +30,37 @@ function Odds({ probs }: { probs: Probs }) {
       <div className="mt-1">
         <ProbabilityBar size="sm" left={{ label: "Vinst", p: probs.win, tone: "hhf" }} draw={probs.draw} right={{ label: "Förlust", p: probs.loss, tone: "team" }} />
       </div>
+    </div>
+  )
+}
+
+type WeekMatch = OverviewPayload["week"][number]
+
+// A match from today that has been played: the result, and what we guessed before it.
+function PlayedToday({ m, side }: { m: WeekMatch; side: "home" | "away" }) {
+  const key = (side === "away" ? m.away.key : m.home.key) ?? ""
+  const outcome = outcomeFor(m, key)
+  const pre = m.preMatch ?? null
+  const guess = guessScore(pre, side)
+  const pre_ = probsFor(pre, side)
+  const us = side === "away" ? m.as : m.hs
+  const them = side === "away" ? m.hs : m.as
+  const hit = pre && us != null && them != null ? guessHit(pre, side, us, them) : null
+  return (
+    <div className="w-28 shrink-0 text-right sm:w-44">
+      <div className="flex items-center justify-end gap-2">
+        <span className="text-lg font-black tabular-nums text-slate-900">{scoreFor(m, key)}</span>
+        {outcome && <OutcomeChip outcome={outcome} />}
+      </div>
+      {guess && pre_ ? (
+        <p className="mt-0.5 text-[11px] text-slate-500">
+          Gissning {guess}
+          <span className="hidden sm:inline"> · {prob(pre_.win)} vinst</span>
+          {hit != null && <span className={hit ? " font-semibold text-emerald-700" : " font-semibold text-slate-400"}>{hit ? " · rätt" : " · fel"}</span>}
+        </p>
+      ) : (
+        <p className="mt-0.5 text-[11px] text-slate-400">Ingen gissning</p>
+      )}
     </div>
   )
 }
@@ -95,7 +126,7 @@ export default async function ScoutHubPage() {
 
               <Seal as={ScoutSearchSealed} index={data.index} />
 
-              <Section title="Den här veckan" note="HHF:s matcher de kommande sju dagarna. Klicka på en match för att scouta motståndaren.">
+              <Section title="Den här veckan" note="HHF:s matcher i dag och sju dagar framåt. Dagens spelade matcher visas med resultat och vår gissning till dagens slut." right={<Link href="/scout/register" className="text-xs font-medium text-slate-500 transition hover:text-slate-900">Register →</Link>}>
                 {data.week.length ? (
                   <div className="space-y-6">
                     {weekByDay(data.week).map(([day, list]) => (
@@ -118,7 +149,15 @@ export default async function ScoutHubPage() {
                                     </p>
                                     <p className="mt-0.5 truncate text-xs text-slate-500">{[m.category?.name, m.venue].filter(Boolean).join(" · ")}</p>
                                   </div>
-                                  <Odds probs={probs} />
+                                  {m.hs != null && m.as != null ? (
+                                    <PlayedToday m={m} side={side} />
+                                  ) : m.played || m.resultHidden ? (
+                                    <span className="w-24 shrink-0 text-right text-xs text-slate-400 sm:w-32">Spelad</span>
+                                  ) : m.ts && m.ts < Date.now() ? (
+                                    <span className="w-24 shrink-0 text-right text-xs text-slate-400 sm:w-32">Pågår</span>
+                                  ) : (
+                                    <Odds probs={probs} />
+                                  )}
                                 </Link>
                               </li>
                             )
@@ -175,7 +214,7 @@ export default async function ScoutHubPage() {
                 </div>
               </Section>
 
-              <Section title="Senaste resultaten">
+              <Section title="Senaste resultaten" right={<Link href="/scout/register" className="text-xs font-medium text-slate-500 transition hover:text-slate-900">Alla gissningar →</Link>}>
                 <MatchList matches={data.recent} perspective="hhf" showTeam showSeries empty="Inga spelade matcher än." />
               </Section>
 

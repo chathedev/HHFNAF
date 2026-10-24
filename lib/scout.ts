@@ -79,7 +79,37 @@ export type ScoutMatch = {
   profixioUrl: string
   prediction?: Prediction | null
   preMatch?: Prediction | null
+  /** saved = the guess the site showed before kick-off, backtest = computed afterwards from earlier matches only */
+  preMatchSource?: "saved" | "backtest" | null
   opponent?: EntityBrief | null
+}
+
+export type RegisterEntry = {
+  us: number
+  them: number
+  expUs: number
+  expThem: number
+  pWin: number
+  pDraw: number
+  pLoss: number
+  guessed: Outcome
+  actual: Outcome
+  hit: boolean
+  marginError: number | null
+  source: "saved" | "backtest"
+  savedAt: string | null
+}
+
+export type RegisterSummary = { n: number; hits: number; accuracy: number | null; meanMarginError: number | null; saved: number }
+
+export type RegisterPayload = {
+  generatedAt: string
+  season: string
+  currentSeason: string
+  previousSeason: string | null
+  summary: RegisterSummary
+  byTeam: (RegisterSummary & { label: string })[]
+  matches: (ScoutMatch & { register: RegisterEntry })[]
 }
 
 export type RecordSplit = { played: number; won: number; drawn: number; lost: number; gf: number; ga: number }
@@ -467,6 +497,22 @@ export function probsFor(pred: Prediction | null | undefined, side: "home" | "aw
   if (!pred) return null
   if (side === "away") return { win: pred.pAway, draw: pred.pDraw, loss: pred.pHome, us: pred.expAway, them: pred.expHome }
   return { win: pred.pHome, draw: pred.pDraw, loss: pred.pAway, us: pred.expHome, them: pred.expAway }
+}
+
+/** Our guess as a score from one side, e.g. "18–31" (rounded expected goals). */
+export function guessScore(pred: Prediction | null | undefined, side: "home" | "away" | null): string | null {
+  const p = probsFor(pred, side)
+  if (!p || !Number.isFinite(p.us) || !Number.isFinite(p.them)) return null
+  return `${Math.round(p.us)}–${Math.round(p.them)}`
+}
+
+/** Did our pre-match favourite (win, draw or loss, from one side) match the result? */
+export function guessHit(pred: Prediction | null | undefined, side: "home" | "away" | null, us: number, them: number): boolean | null {
+  const p = probsFor(pred, side)
+  if (!p) return null
+  const guessed: Outcome = p.win >= p.loss && p.win >= p.draw ? "W" : p.loss >= p.draw ? "L" : "D"
+  const actual: Outcome = us > them ? "W" : us < them ? "L" : "D"
+  return guessed === actual
 }
 
 export const OUTCOME_LABEL: Record<Outcome, string> = { W: "V", D: "O", L: "F" }

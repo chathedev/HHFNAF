@@ -1,5 +1,6 @@
 import Link from "@/components/quiet-link"
 import {
+  guessScore,
   matchDate,
   num,
   outcomeFor,
@@ -85,7 +86,11 @@ export function MatchList({
                 ) : (
                   <p className="text-xs text-slate-400">Ingen prognos än</p>
                 )}
-                {m.hs != null && pre && <p className="mt-0.5 text-[11px] text-slate-400">Prognos före: {prob(pre.win)} vinst</p>}
+                {m.hs != null && pre && (
+                  <p className="mt-0.5 text-[11px] text-slate-400">
+                    Gissning {guessScore(m.preMatch, side) ?? "–"} · {prob(pre.win)} vinst
+                  </p>
+                )}
               </div>
             </Link>
           </li>

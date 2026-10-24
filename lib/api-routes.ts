@@ -5,7 +5,7 @@ const GET: RegExp[] = [
   /^\/matcher\/match\/[0-9A-Za-z_-]+(\/events)?$/,
   /^\/matcher\/events$/,
   /^\/matcher\/standings$/,
-  /^\/scout\/(overview|status|search|team\/[^/]+|match\/[^/]+|lag\/[^/]+|serie\/[^/]+)$/,
+  /^\/scout\/(overview|status|search|register|team\/[^/]+|match\/[^/]+|lag\/[^/]+|serie\/[^/]+)$/,
   /^\/teams$/,
   /^\/chat\/status$/,
   /^\/instagram\/posts$/,
