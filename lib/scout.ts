@@ -552,6 +552,37 @@ export function guessHit(pred: Prediction | null | undefined, side: "home" | "aw
   return guessed === actual
 }
 
+/** How good a guess was: the outcome AND how far the guessed goal difference was from the real one.
+ *  "Rätt" alone is only used when the margin was within 3 goals, so 20–30 against 27–28 is never
+ *  shown as a plain hit. tone: good (rätt, nära) | ok (rätt utgång, 4–6 mål) | poor (rätt utgång,
+ *  7+ mål) | wrong (fel utgång). */
+export type GuessVerdict = { tone: "good" | "ok" | "poor" | "wrong"; label: string; goals: number; detail: string }
+
+export function guessVerdict(guess: [number, number], guessed: Outcome, us: number, them: number): GuessVerdict {
+  const actual: Outcome = us > them ? "W" : us < them ? "L" : "D"
+  const goals = Math.abs(us - them - (guess[0] - guess[1]))
+  const detail = goals === 0 ? "exakt målskillnad" : `${goals} mål ifrån`
+  if (guessed !== actual) return { tone: "wrong", label: "Fel", goals, detail }
+  if (goals <= 3) return { tone: "good", label: "Rätt", goals, detail }
+  return { tone: goals <= 6 ? "ok" : "poor", label: "Rätt utgång", goals, detail }
+}
+
+export const VERDICT_CLASS: Record<GuessVerdict["tone"], string> = {
+  good: "font-semibold text-emerald-700",
+  ok: "font-semibold text-emerald-700/80",
+  poor: "font-semibold text-amber-700",
+  wrong: "font-semibold text-rose-700",
+}
+
+/** The verdict for a pre-match prediction seen from one side, using the same rounded guess the
+ *  page shows. */
+export function guessVerdictFor(pred: Prediction | null | undefined, side: "home" | "away" | null, us: number, them: number): GuessVerdict | null {
+  const p = probsFor(pred, side)
+  if (!p || !Number.isFinite(p.us) || !Number.isFinite(p.them)) return null
+  const guessed: Outcome = p.win >= p.loss && p.win >= p.draw ? "W" : p.loss >= p.draw ? "L" : "D"
+  return guessVerdict(guessPair(p.us, p.them, guessed), guessed, us, them)
+}
+
 export const OUTCOME_LABEL: Record<Outcome, string> = { W: "V", D: "O", L: "F" }
 export const OUTCOME_TEXT: Record<Outcome, string> = { W: "Vinst", D: "Oavgjort", L: "Förlust" }
 

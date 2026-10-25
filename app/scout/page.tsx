@@ -8,7 +8,7 @@ import { MatchList } from "@/components/scout/blocks"
 import { CalibrationChart, CalibrationChartSealed } from "@/components/scout/charts/calibration-chart"
 import { ProbabilityBar } from "@/components/scout/charts/probability-bar"
 import { ScoutSearch, ScoutSearchSealed } from "@/components/scout/scout-search"
-import { guessHit, guessScore, matchDate, outcomeFor, pct, prob, probsFor, scoreFor, scoutFetch, sideOf, updatedLabel, type OverviewPayload } from "@/lib/scout"
+import { guessScore, guessVerdictFor, matchDate, outcomeFor, pct, prob, probsFor, realVenueLabel, scoreFor, scoutFetch, sideOf, updatedLabel, VERDICT_CLASS, type OverviewPayload } from "@/lib/scout"
 
 export const revalidate = 60
 
@@ -45,7 +45,7 @@ function PlayedToday({ m, side }: { m: WeekMatch; side: "home" | "away" }) {
   const pre_ = probsFor(pre, side)
   const us = side === "away" ? m.as : m.hs
   const them = side === "away" ? m.hs : m.as
-  const hit = pre && us != null && them != null ? guessHit(pre, side, us, them) : null
+  const verdict = pre && us != null && them != null ? guessVerdictFor(pre, side, us, them) : null
   return (
     <div className="w-28 shrink-0 text-right sm:w-44">
       <div className="flex items-center justify-end gap-2">
@@ -56,13 +56,27 @@ function PlayedToday({ m, side }: { m: WeekMatch; side: "home" | "away" }) {
         <p className="mt-0.5 text-[11px] text-slate-500">
           Gissning {guess}
           <span className="hidden sm:inline"> · {prob(pre_.win)} vinst</span>
-          {hit != null && <span className={hit ? " font-semibold text-emerald-700" : " font-semibold text-slate-400"}>{hit ? " · rätt" : " · fel"}</span>}
+          {verdict && (
+            <span className="block">
+              <span className={VERDICT_CLASS[verdict.tone]}>{verdict.label}</span>
+              <span className="hidden sm:inline"> · </span>
+              <span className="block sm:inline">{verdict.detail}</span>
+            </span>
+          )}
         </p>
       ) : (
         <p className="mt-0.5 text-[11px] text-slate-400">Ingen gissning</p>
       )}
     </div>
   )
+}
+
+// "hemma mot" / "borta mot" from where the match is really played, not from which side the
+// fixture lists HHF on (F16 can be listed home in the opponent's hall).
+function whereWord(m: WeekMatch, side: "home" | "away") {
+  if (m.home.isHhf && m.away.isHhf) return "mot"
+  const where = realVenueLabel(m, side)
+  return where === "hemma" ? "hemma mot" : where === "borta" ? "borta mot" : "mot"
 }
 
 const DAY_FMT = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Stockholm", weekday: "long", day: "numeric", month: "long" })
@@ -142,9 +156,9 @@ export default async function ScoutHubPage() {
                                 <Link href={`/scout/match/${m.id}`} className="flex items-center gap-4 border-b border-slate-100 py-3 transition hover:bg-slate-50">
                                   <span className="w-12 shrink-0 text-sm tabular-nums text-slate-500">{m.time ?? ""}</span>
                                   <div className="min-w-0 flex-1">
-                                    <p className="truncate text-sm text-slate-950">
+                                    <p className="line-clamp-2 text-sm leading-snug text-slate-950 sm:truncate">
                                       <span className="font-semibold">{m.teamType}</span>
-                                      <span className="text-slate-400"> {side === "home" ? "hemma mot" : "borta mot"} </span>
+                                      <span className="text-slate-400"> {whereWord(m, side)} </span>
                                       <span className="font-semibold">{opp.name}</span>
                                     </p>
                                     <p className="mt-0.5 truncate text-xs text-slate-500">{[m.category?.name, m.venue].filter(Boolean).join(" · ")}</p>

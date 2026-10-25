@@ -146,7 +146,14 @@ export default async function ScoutMatchPage({ params }: { params: Promise<Param
                         return side === "home" ? `${us}–${them}` : `${them}–${us}`
                       })()}
                     </span>
-                    . Bygger på {gamesUs} och {gamesThem} spelade matcher i år, så säkerheten är <span className="font-semibold text-slate-950">{certainty}</span>. Förra säsongen pekade
+                    .{" "}
+                    {pred && Number.isFinite(pred.sigma) && pred.sigma > 0 ? (
+                      <>
+                        Målskillnaden brukar landa inom <span className="font-semibold text-slate-950">±{Math.max(1, Math.round(1.28 * pred.sigma))} mål</span> från gissningen i 4 av 5
+                        matcher.{" "}
+                      </>
+                    ) : null}
+                    Bygger på {gamesUs} och {gamesThem} spelade matcher i år, så säkerheten är <span className="font-semibold text-slate-950">{certainty}</span>. Förra säsongen pekade
                     samma metod ut rätt vinnare i {pct(data.model.previous.accuracy)} av matcherna.
                   </p>
                   {(() => {

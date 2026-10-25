@@ -3,7 +3,7 @@ import Link from "@/components/quiet-link"
 import { Header } from "@/components/header"
 import Footer from "@/components/footer"
 import { EmptyNote, Figures, OutcomeChip, PageHeader, Section } from "@/components/scout/ui"
-import { guessPair, matchDate, pct, prob, scoutFetch, seasonLabel, updatedLabel, type RegisterPayload } from "@/lib/scout"
+import { guessPair, guessVerdict, matchDate, pct, prob, realVenueLabel, scoutFetch, seasonLabel, updatedLabel, VERDICT_CLASS, type RegisterPayload } from "@/lib/scout"
 
 export const revalidate = 60
 
@@ -26,6 +26,8 @@ export default async function ScoutRegisterPage({ searchParams }: { searchParams
     failed = true
   }
   const s = data?.summary
+  // How many guesses were within 3 goals of the real goal difference (with the right outcome).
+  const close = data ? data.matches.filter((m) => guessVerdict(guessPair(m.register.expUs, m.register.expThem, m.register.guessed), m.register.guessed, m.register.us, m.register.them).tone === "good").length : 0
 
   return (
     <>
@@ -59,7 +61,7 @@ export default async function ScoutRegisterPage({ searchParams }: { searchParams
                 items={[
                   { label: "Matcher", value: s.n },
                   { label: "Rätt utgång", value: pct(s.accuracy), sub: `${s.hits} av ${s.n}` },
-                  { label: "Miss i målskillnad", value: s.meanMarginError != null ? `${String(s.meanMarginError).replace(".", ",")} mål` : "–", sub: "i snitt per match" },
+                  { label: "Miss i målskillnad", value: s.meanMarginError != null ? `${String(s.meanMarginError).replace(".", ",")} mål` : "–", sub: `i snitt · ${close} av ${s.n} inom 3 mål` },
                   { label: "Sparade före avkast", value: s.saved, sub: s.saved < s.n ? "resten räknade i efterhand" : "alla" },
                 ]}
               />
@@ -80,7 +82,7 @@ export default async function ScoutRegisterPage({ searchParams }: { searchParams
                 </Section>
               )}
 
-              <Section title="Match för match" note="Siffrorna är sedda från HHF:s håll. Rätt betyder att den utgång vi trodde mest på (vinst, oavgjort eller förlust) blev verklighet.">
+              <Section title="Match för match" note="Siffrorna är sedda från HHF:s håll. Rätt betyder att den utgång vi trodde mest på (vinst, oavgjort eller förlust) blev verklighet och att målskillnaden var högst 3 mål fel. Rätt utgång betyder rätt vinnare men längre ifrån.">
                 {data.matches.length ? (
                   <ul>
                     {data.matches.map((m) => {
@@ -88,13 +90,16 @@ export default async function ScoutRegisterPage({ searchParams }: { searchParams
                       const side = m.hhfSide === "away" ? "away" : "home"
                       const opp = side === "away" ? m.home : m.away
                       const guessP = r.guessed === "W" ? r.pWin : r.guessed === "L" ? r.pLoss : r.pDraw
+                      const guess = guessPair(r.expUs, r.expThem, r.guessed)
+                      const verdict = guessVerdict(guess, r.guessed, r.us, r.them)
+                      const where = m.home.isHhf && m.away.isHhf ? "mot " : realVenueLabel(m, side) === "borta" ? "borta mot " : "mot "
                       return (
                         <li key={m.id}>
                           <Link href={`/scout/match/${m.id}`} className="flex items-center gap-3 border-b border-slate-200 py-3 transition hover:bg-slate-50 sm:gap-4">
                             <div className="min-w-0 flex-1">
                               {m.teamType ? <p className="truncate text-[11px] font-medium text-slate-400">{m.teamType}</p> : null}
                               <p className="line-clamp-2 text-sm font-semibold leading-snug text-slate-950 sm:text-[15px]">
-                                <span className="font-normal text-slate-400">{side === "home" ? "mot " : "borta mot "}</span>
+                                <span className="font-normal text-slate-400">{where}</span>
                                 {opp.name}
                               </p>
                               <p className="mt-0.5 line-clamp-2 text-xs text-slate-500 sm:truncate">
@@ -107,7 +112,7 @@ export default async function ScoutRegisterPage({ searchParams }: { searchParams
                             <div className="w-[4.5rem] shrink-0 text-right sm:w-32">
                               <p className="text-[11px] text-slate-400">Gissning</p>
                               <p className="text-sm font-semibold tabular-nums text-slate-700">
-                                {guessPair(r.expUs, r.expThem, r.guessed).join("–")}
+                                {guess.join("–")}
                               </p>
                               <p className="text-[11px] text-slate-400">
                                 {OUTCOME_WORD[r.guessed]} {prob(guessP)}
@@ -121,7 +126,10 @@ export default async function ScoutRegisterPage({ searchParams }: { searchParams
                                 </span>
                                 <OutcomeChip outcome={r.actual} />
                               </div>
-                              <p className={`text-[11px] font-semibold ${r.hit ? "text-emerald-700" : "text-slate-400"}`}>{r.hit ? "Rätt" : "Fel"}</p>
+                              <p className="text-[11px] leading-tight text-slate-500">
+                                <span className={VERDICT_CLASS[verdict.tone]}>{verdict.label}</span>
+                                <span className="block">{verdict.detail}</span>
+                              </p>
                             </div>
                           </Link>
                         </li>
