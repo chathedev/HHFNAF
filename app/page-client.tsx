@@ -877,21 +877,23 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
         ? [{ desktop: heroImages.desktop, mobile: heroImages.mobile, alt: "Härnösands HF Memorial - Laget Före Allt", credit: false, desktopPos: "center top" }]
         : [
             { desktop: "/hero/p16-skott-bred.webp", mobile: "/hero/p16-skott-bred-mobil.webp", alt: "HHF P16 hoppar in och skjuter mot mål", credit: true, desktopPos: "center center" },
-            { desktop: heroImages.desktop, mobile: heroImages.mobile, alt: "Härnösands HF herrlag och damlag 2025", credit: false, desktopPos: "center top" },
             { desktop: "/hero/p16-skott-malvakt.webp", mobile: "/hero/p16-skott-malvakt-mobil.webp", alt: "HHF P16 skjuter mot målvakten", credit: true, desktopPos: "center center" },
             { desktop: "/hero/p16-skott-hsta.webp", mobile: "/hero/p16-skott-hsta-mobil.webp", alt: "HHF P16 i hopp framför försvaret", credit: true, desktopPos: "center center" },
           ],
     [isPinkTheme, heroImages.desktop, heroImages.mobile],
   )
-  const [heroIndex, setHeroIndex] = useState(0)
+  // The incoming photo fades in ON TOP of the outgoing one, which stays fully visible
+  // underneath, so the hero never dips to dark mid-change. Only those two layers are painted.
+  const [hero, setHero] = useState({ index: 0, prev: -1 })
   useEffect(() => {
     if (heroSlides.length < 2) return
     if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return
     const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") setHeroIndex((i) => (i + 1) % heroSlides.length)
+      if (document.visibilityState === "visible") setHero((h) => ({ index: (h.index + 1) % heroSlides.length, prev: h.index }))
     }, 10000)
     return () => window.clearInterval(timer)
   }, [heroSlides.length])
+  const heroIndex = hero.index
   const activeHero = heroSlides[heroIndex % heroSlides.length]
   const heroOverlayClass = isPinkTheme
     ? "from-pink-900/40 via-pink-800/20 to-rose-900/60"
@@ -907,11 +909,14 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
             }`}>
             {heroSlides.map((slide, i) => {
               const active = i === heroIndex % heroSlides.length
+              const leaving = i === hero.prev
               return (
                 <div
                   key={slide.desktop}
                   aria-hidden={!active}
-                  className={`absolute inset-0 z-0 transition-opacity duration-[1400ms] ease-in-out ${active ? "opacity-100" : "opacity-0"}`}
+                  className={`absolute inset-0 ${
+                    active ? "z-[2] opacity-100 transition-opacity duration-1000 ease-out" : leaving ? "z-[1] opacity-100" : "z-0 opacity-0"
+                  }`}
                 >
                   {/* Mobile Image */}
                   <Image
@@ -964,7 +969,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                 href="https://www.instagram.com/niometerfoto/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="absolute right-3 top-32 z-30 rounded bg-black/35 px-2 py-1 text-[11px] font-medium tracking-wide text-white/80 backdrop-blur-sm transition hover:bg-black/55 hover:text-white sm:right-5 sm:top-24 sm:text-xs"
+                className="absolute right-3 top-32 z-30 rounded bg-black/35 px-2 py-1 text-[11px] font-medium tracking-wide text-white/85 transition hover:bg-black/55 hover:text-white sm:right-5 sm:top-24 sm:text-xs"
               >
                 Foto: @niometerfoto
               </a>
