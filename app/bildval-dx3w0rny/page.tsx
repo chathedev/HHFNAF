@@ -24,20 +24,6 @@ async function sitePhotos(): Promise<SitePhoto[]> {
   } catch {
     // content file missing: skip
   }
-  try {
-    const dir = path.join(process.cwd(), "public/HarnosandsHF/Gruppfoto")
-    const files = (await fs.readdir(dir)).filter((f) => /\.(jpe?g|png|webp)$/i.test(f)).sort((a, b) => a.localeCompare(b, "sv", { numeric: true }))
-    for (const file of files) {
-      out.push({
-        code: `S${out.length + 1}`,
-        where: "Lagsidor",
-        label: `Lagbild ${file.replace(/^Härnösands HF - /, "").replace(/\.[a-z]+$/i, "")}`,
-        src: `/HarnosandsHF/Gruppfoto/${encodeURIComponent(file)}`,
-      })
-    }
-  } catch {
-    // folder missing: skip
-  }
   return out
 }
 

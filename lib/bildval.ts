@@ -16,6 +16,7 @@ export type BildvalPhoto = {
   height: number
   bytes: number
   addedAt: number
+  no?: number // fixed display number, written the first time the photo is listed
 }
 
 export type NumberedPhoto = BildvalPhoto & { no: number; mini: string; web: string; thumb: string; orig: string }
@@ -46,6 +47,31 @@ export async function listPhotos(): Promise<NumberedPhoto[]> {
       // half-written or broken meta file: skip it
     }
   }
-  photos.sort((a, b) => a.addedAt - b.addedAt || a.album.localeCompare(b.album, "sv") || a.name.localeCompare(b.name, "sv", { numeric: true }))
-  return photos.map((photo, i) => ({ ...photo, no: i + 1, mini: imgUrl("mini", photo), web: imgUrl("web", photo), thumb: imgUrl("thumb", photo), orig: imgUrl("orig", photo) }))
+  // A photo keeps the number it was first shown with (stored in its meta file), so removing
+  // photos never renumbers the rest. New photos get the next free numbers, in folder then
+  // file-name order. Both web processes compute the same order, so a race writes the same value.
+  const byOrder = (a: BildvalPhoto, b: BildvalPhoto) =>
+    a.addedAt - b.addedAt || a.album.localeCompare(b.album, "sv", { numeric: true }) || a.name.localeCompare(b.name, "sv", { numeric: true })
+  const numbered = photos.filter((p) => Number.isInteger(p.no)).sort((a, b) => a.no! - b.no!)
+  const fresh = photos.filter((p) => !Number.isInteger(p.no)).sort(byOrder)
+  let next = numbered.reduce((max, p) => Math.max(max, p.no!), 0)
+  for (const photo of fresh) {
+    photo.no = ++next
+    try {
+      const target = path.join(BILDVAL_DIR, "meta", `${photo.id}.json`)
+      const tmp = `${target}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`
+      await fs.writeFile(tmp, JSON.stringify(photo))
+      await fs.rename(tmp, target)
+    } catch {
+      // read-only or racing: the number is still shown, and written on the next load
+    }
+  }
+  return [...numbered, ...fresh].map((photo) => ({
+    ...photo,
+    no: photo.no!,
+    mini: imgUrl("mini", photo),
+    web: imgUrl("web", photo),
+    thumb: imgUrl("thumb", photo),
+    orig: imgUrl("orig", photo),
+  }))
 }
