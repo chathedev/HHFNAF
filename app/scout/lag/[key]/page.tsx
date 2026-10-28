@@ -182,7 +182,7 @@ export default async function ScoutProfilePage({ params }: { params: Promise<Par
               </Section>
             )}
 
-            <p className="text-xs text-slate-400">Data från Profixio · uppdaterad {updatedLabel(data.generatedAt)}</p>
+            <p className="text-xs text-slate-400">Data från Profixio · uppdaterad {updatedLabel(data.generatedAt)} · <Link href="/scout#uppgifter" className="underline underline-offset-2 hover:text-slate-600">Om uppgifterna</Link></p>
           </div>
         </div>
       </main>

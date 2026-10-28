@@ -143,7 +143,7 @@ export default async function ScoutRegisterPage({ searchParams }: { searchParams
 
               <p className="text-xs text-slate-400">
                 Från och med 24 oktober 2026 sparas gissningen som den såg ut före avkast. Äldre matcher är räknade i efterhand med samma modell, där den bara fick se matcher
-                spelade innan. Data från Profixio · uppdaterad {updatedLabel(data.generatedAt)}
+                spelade innan. Data från Profixio · uppdaterad {updatedLabel(data.generatedAt)} · <Link href="/scout#uppgifter" className="underline underline-offset-2 hover:text-slate-600">Om uppgifterna</Link>
               </p>
             </div>
           )}

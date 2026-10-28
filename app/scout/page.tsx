@@ -251,6 +251,19 @@ export default async function ScoutHubPage() {
                 </div>
               </Section>
 
+              <Section id="uppgifter" title="Om uppgifterna">
+                  <div className="max-w-2xl space-y-2 text-sm text-slate-600">
+                    <p>Allt här kommer från Profixio, där förbundet redan visar matcherna öppet. Vi visar resultat, tabeller, laguppställningar och målskyttar.</p>
+                    <p>Vi använder uppgifterna bara för att lag och föräldrar ska kunna förbereda sig inför matcher. Inget säljs och inget används för reklam.</p>
+                    <p>Matcher för 12 år och yngre visas inte, eftersom förbundet inte publicerar de resultaten.</p>
+                    <p>
+                      Vill du att ditt eller ditt barns namn tas bort, eller har du frågor? Mejla{" "}
+                      <a href="mailto:kontakt@harnosandshf.se" className="font-medium text-slate-950 underline underline-offset-2">kontakt@harnosandshf.se</a> så tar vi bort det. Härnösands HF är ansvarig för uppgifterna på
+                      sidan.
+                    </p>
+                  </div>
+              </Section>
+
               <p className="text-xs text-slate-400">
                 Data från Profixio · uppdaterad {updatedLabel(data.generatedAt)} · {data.coverage.matches.toLocaleString("sv-SE")} matcher, {data.coverage.withLogs.toLocaleString("sv-SE")} med matchlogg
               </p>
