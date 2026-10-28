@@ -60,8 +60,8 @@ export default async function ScoutRegisterPage({ searchParams }: { searchParams
               <Figures
                 items={[
                   { label: "Matcher", value: s.n },
-                  { label: "Rätt utgång", value: pct(s.accuracy), sub: `${s.hits} av ${s.n}` },
-                  { label: "Miss i målskillnad", value: s.meanMarginError != null ? `${String(s.meanMarginError).replace(".", ",")} mål` : "–", sub: `i snitt · ${close} av ${s.n} inom 3 mål` },
+                  { label: "Rätt vinnare", value: pct(s.accuracy), sub: `${s.hits} av ${s.n}` },
+                  { label: "Miss i målskillnad", value: s.meanMarginError != null ? `${String(s.meanMarginError).replace(".", ",")} mål` : "–", sub: `i snitt · ${close} av ${s.n} rätt och inom 3 mål` },
                   { label: "Sparade före avkast", value: s.saved, sub: s.saved < s.n ? "resten räknade i efterhand" : "alla" },
                 ]}
               />
@@ -73,7 +73,7 @@ export default async function ScoutRegisterPage({ searchParams }: { searchParams
                       <li key={t.label} className="flex items-center justify-between gap-4 border-b border-slate-100 py-2 text-sm">
                         <span className="font-semibold text-slate-950">{t.label}</span>
                         <span className="tabular-nums text-slate-600">
-                          {t.hits} av {t.n} rätt · {pct(t.accuracy)}
+                          {t.hits} av {t.n} rätt vinnare · {pct(t.accuracy)}
                           {t.meanMarginError != null ? ` · miss ${String(t.meanMarginError).replace(".", ",")} mål` : ""}
                         </span>
                       </li>
@@ -82,7 +82,7 @@ export default async function ScoutRegisterPage({ searchParams }: { searchParams
                 </Section>
               )}
 
-              <Section title="Match för match" note="Siffrorna är sedda från HHF:s håll. Rätt betyder att den utgång vi trodde mest på (vinst, oavgjort eller förlust) blev verklighet och att målskillnaden var högst 3 mål fel. Rätt utgång betyder rätt vinnare men längre ifrån.">
+              <Section title="Match för match" note="Siffrorna är sedda från HHF:s håll. Rätt betyder att den utgång vi trodde mest på (vinst, oavgjort eller förlust) blev verklighet och att målskillnaden var högst 3 mål fel. Rätt vinnare betyder att utgången stämde men målskillnaden var längre ifrån.">
                 {data.matches.length ? (
                   <ul>
                     {data.matches.map((m) => {

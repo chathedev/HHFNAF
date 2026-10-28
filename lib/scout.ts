@@ -554,7 +554,7 @@ export function guessHit(pred: Prediction | null | undefined, side: "home" | "aw
 
 /** How good a guess was: the outcome AND how far the guessed goal difference was from the real one.
  *  "Rätt" alone is only used when the margin was within 3 goals, so 20–30 against 27–28 is never
- *  shown as a plain hit. tone: good (rätt, nära) | ok (rätt utgång, 4–6 mål) | poor (rätt utgång,
+ *  shown as a plain hit. tone: good (rätt, nära) | ok (rätt vinnare, 4–6 mål) | poor (rätt vinnare,
  *  7+ mål) | wrong (fel utgång). */
 export type GuessVerdict = { tone: "good" | "ok" | "poor" | "wrong"; label: string; goals: number; detail: string }
 
@@ -564,7 +564,7 @@ export function guessVerdict(guess: [number, number], guessed: Outcome, us: numb
   const detail = goals === 0 ? "exakt målskillnad" : `${goals} mål ifrån`
   if (guessed !== actual) return { tone: "wrong", label: "Fel", goals, detail }
   if (goals <= 3) return { tone: "good", label: "Rätt", goals, detail }
-  return { tone: goals <= 6 ? "ok" : "poor", label: "Rätt utgång", goals, detail }
+  return { tone: goals <= 6 ? "ok" : "poor", label: "Rätt vinnare", goals, detail }
 }
 
 export const VERDICT_CLASS: Record<GuessVerdict["tone"], string> = {
