@@ -869,9 +869,33 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       setHeroImages(getHeroImages(window.location.host))
     }
   }, [])
+  // Hero rotation (orange theme): the new P16 action photos by @niometerfoto take turns with
+  // the classic team photo. Pink theme keeps its single memorial image.
+  const heroSlides = useMemo(
+    () =>
+      isPinkTheme
+        ? [{ desktop: heroImages.desktop, mobile: heroImages.mobile, alt: "Härnösands HF Memorial - Laget Före Allt", credit: false, desktopPos: "center top" }]
+        : [
+            { desktop: "/hero/p16-skott-bred.webp", mobile: "/hero/p16-skott-bred-mobil.webp", alt: "HHF P16 hoppar in och skjuter mot mål", credit: true, desktopPos: "center center" },
+            { desktop: heroImages.desktop, mobile: heroImages.mobile, alt: "Härnösands HF herrlag och damlag 2025", credit: false, desktopPos: "center top" },
+            { desktop: "/hero/p16-skott-malvakt.webp", mobile: "/hero/p16-skott-malvakt-mobil.webp", alt: "HHF P16 skjuter mot målvakten", credit: true, desktopPos: "center center" },
+            { desktop: "/hero/p16-skott-hsta.webp", mobile: "/hero/p16-skott-hsta-mobil.webp", alt: "HHF P16 i hopp framför försvaret", credit: true, desktopPos: "center center" },
+          ],
+    [isPinkTheme, heroImages.desktop, heroImages.mobile],
+  )
+  const [heroIndex, setHeroIndex] = useState(0)
+  useEffect(() => {
+    if (heroSlides.length < 2) return
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") setHeroIndex((i) => (i + 1) % heroSlides.length)
+    }, 10000)
+    return () => window.clearInterval(timer)
+  }, [heroSlides.length])
+  const activeHero = heroSlides[heroIndex % heroSlides.length]
   const heroOverlayClass = isPinkTheme
     ? "from-pink-900/40 via-pink-800/20 to-rose-900/60"
-    : "from-black/80 via-black/55 to-black/45"
+    : "from-black/70 via-black/30 to-black/25"
 
   return (
     <ErrorBoundary>
@@ -881,60 +905,70 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
           {/* Hero Section */}
           <section className={`relative w-full h-screen flex items-center justify-center overflow-hidden ${isPinkTheme ? "bg-gradient-to-br from-pink-50 via-pink-100 to-rose-200" : ""
             }`}>
-            {/* Mobile Image */}
-            <Image
-              src={heroImages.mobile}
-              alt={isPinkTheme ? "Härnösands HF Memorial - Laget Före Allt" : "Härnösands HF herrlag och damlag 2025"}
-              fill
-              quality={78}
-              priority={true}
-              className="z-0 object-cover block sm:hidden will-change-auto"
-              sizes="100vw"
-              style={{
-                objectPosition: 'center center'
-              }}
-              onLoad={() => {
-                if (!showHeroContent) {
-                  setTimeout(() => setShowHeroContent(true), 500)
-                }
-              }}
-              onError={(e) => {
-                console.error('Mobile hero image failed to load:', heroImages.mobile)
-              }}
-            />
-
-            {/* Desktop Image */}
-            <Image
-              src={heroImages.desktop}
-              alt={isPinkTheme ? "Härnösands HF Memorial - Laget Före Allt" : "Härnösands HF herrlag och damlag 2025"}
-              fill
-              quality={78}
-              priority={true}
-              className="z-0 object-cover hidden sm:block"
-              sizes="(max-width: 1024px) 100vw, 100vw"
-              style={{
-                objectPosition: 'center top'
-              }}
-              onLoad={() => {
-                if (isPinkTheme && !showHeroContent) {
-                  setTimeout(() => setShowHeroContent(true), 1000)
-                }
-              }}
-              onError={(e) => {
-                console.error('Hero image failed to load:', heroImages.desktop)
-                if (isPinkTheme) {
-                  // Force reload attempt
-                  const img = e.target as HTMLImageElement
-                  setTimeout(() => {
-                    img.src = heroImages.desktop + '?v=' + Date.now()
-                  }, 1000)
-                }
-              }}
-              {...(isEditorMode && {
-                "data-editable": "true",
-                "data-field-path": "home.hero.imageUrl",
-              })}
-            />
+            {heroSlides.map((slide, i) => {
+              const active = i === heroIndex % heroSlides.length
+              return (
+                <div
+                  key={slide.desktop}
+                  aria-hidden={!active}
+                  className={`absolute inset-0 z-0 transition-opacity duration-[1400ms] ease-in-out ${active ? "opacity-100" : "opacity-0"}`}
+                >
+                  {/* Mobile Image */}
+                  <Image
+                    src={slide.mobile}
+                    alt={active ? slide.alt : ""}
+                    fill
+                    quality={78}
+                    priority={i === 0}
+                    className="object-cover block sm:hidden will-change-auto"
+                    sizes="100vw"
+                    style={{ objectPosition: "center center" }}
+                    onLoad={() => {
+                      if (i === 0 && !showHeroContent) {
+                        setTimeout(() => setShowHeroContent(true), 500)
+                      }
+                    }}
+                    onError={() => {
+                      console.error("Mobile hero image failed to load:", slide.mobile)
+                    }}
+                  />
+                  {/* Desktop Image */}
+                  <Image
+                    src={slide.desktop}
+                    alt={active ? slide.alt : ""}
+                    fill
+                    quality={78}
+                    priority={i === 0}
+                    className="object-cover hidden sm:block"
+                    sizes="100vw"
+                    style={{ objectPosition: slide.desktopPos }}
+                    onLoad={() => {
+                      if (i === 0 && isPinkTheme && !showHeroContent) {
+                        setTimeout(() => setShowHeroContent(true), 1000)
+                      }
+                    }}
+                    onError={() => {
+                      console.error("Hero image failed to load:", slide.desktop)
+                    }}
+                    {...(isEditorMode &&
+                      i === 0 && {
+                        "data-editable": "true",
+                        "data-field-path": "home.hero.imageUrl",
+                      })}
+                  />
+                </div>
+              )
+            })}
+            {activeHero?.credit && (
+              <a
+                href="https://www.instagram.com/niometerfoto/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute right-3 top-32 z-30 rounded bg-black/35 px-2 py-1 text-[11px] font-medium tracking-wide text-white/80 backdrop-blur-sm transition hover:bg-black/55 hover:text-white sm:right-5 sm:top-24 sm:text-xs"
+              >
+                Foto: @niometerfoto
+              </a>
+            )}
             <div className={`absolute inset-0 bg-gradient-to-t ${heroOverlayClass} z-10 ${isPinkTheme ? "" : ""
               }`} />
             {!isPinkTheme && (
@@ -942,7 +976,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
                 className="absolute inset-0 z-[11] pointer-events-none"
                 style={{
                   background:
-                    'radial-gradient(ellipse 60% 45% at 50% 50%, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.35) 45%, rgba(0,0,0,0) 75%)'
+                    'radial-gradient(ellipse 55% 40% at 50% 50%, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.22) 45%, rgba(0,0,0,0) 75%)'
                 }}
               />
             )}
