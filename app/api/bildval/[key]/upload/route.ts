@@ -53,12 +53,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const base = sharp(buf, { failOn: "none" }).rotate()
     const web = await base.clone().resize({ width: 2400, height: 2400, fit: "inside", withoutEnlargement: true }).webp({ quality: 82 }).toBuffer({ resolveWithObject: true })
     const thumb = await base.clone().resize({ width: 720, height: 720, fit: "inside", withoutEnlargement: true }).webp({ quality: 74 }).toBuffer()
+    const mini = await base.clone().resize({ width: 240, height: 240, fit: "inside", withoutEnlargement: true }).webp({ quality: 62 }).toBuffer()
     width = web.info.width
     height = web.info.height
     await fs.mkdir(path.join(BILDVAL_DIR, "web"), { recursive: true })
     await fs.mkdir(path.join(BILDVAL_DIR, "thumb"), { recursive: true })
     await fs.mkdir(path.join(BILDVAL_DIR, "orig"), { recursive: true })
     await fs.mkdir(path.join(BILDVAL_DIR, "meta"), { recursive: true })
+    await fs.mkdir(path.join(BILDVAL_DIR, "mini"), { recursive: true })
+    await fs.writeFile(path.join(BILDVAL_DIR, "mini", `${id}.webp`), mini)
     await fs.writeFile(path.join(BILDVAL_DIR, "web", `${id}.webp`), web.data)
     await fs.writeFile(path.join(BILDVAL_DIR, "thumb", `${id}.webp`), thumb)
     await fs.writeFile(path.join(BILDVAL_DIR, "orig", `${id}${ext || ".jpg"}`), buf)

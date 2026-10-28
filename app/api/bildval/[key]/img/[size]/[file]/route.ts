@@ -2,7 +2,9 @@ import { promises as fs } from "fs"
 import path from "path"
 import { type NextRequest, NextResponse } from "next/server"
 
-import { BILDVAL_DIR, BILDVAL_KEY } from "@/lib/bildval"
+import sharp from "sharp"
+
+import { BILDVAL_DIR, BILDVAL_KEY, BILDVAL_SIZES } from "@/lib/bildval"
 
 export const runtime = "nodejs"
 
@@ -20,11 +22,25 @@ const TYPES: Record<string, string> = {
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ key: string; size: string; file: string }> }) {
   const { key, size, file } = await params
-  if (key !== BILDVAL_KEY || !["web", "thumb", "orig"].includes(size) || !/^[a-f0-9]{20}\.[a-z]{3,4}$/.test(file)) {
+  if (key !== BILDVAL_KEY || !(BILDVAL_SIZES as readonly string[]).includes(size) || !/^[a-f0-9]{20}\.[a-z]{3,4}$/.test(file)) {
     return new NextResponse("not found", { status: 404 })
   }
   try {
-    const data = await fs.readFile(path.join(BILDVAL_DIR, size, file))
+    let data: Buffer
+    try {
+      data = await fs.readFile(path.join(BILDVAL_DIR, size, file))
+    } catch (err) {
+      // Photos uploaded before the 240px grid size existed: make it once from the 720px thumb.
+      if (size !== "mini") throw err
+      data = await sharp(await fs.readFile(path.join(BILDVAL_DIR, "thumb", file)))
+        .resize({ width: 240, height: 240, fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 62 })
+        .toBuffer()
+      await fs.mkdir(path.join(BILDVAL_DIR, "mini"), { recursive: true })
+      const tmp = path.join(BILDVAL_DIR, "mini", `${file}.${process.pid}.tmp`)
+      await fs.writeFile(tmp, data)
+      await fs.rename(tmp, path.join(BILDVAL_DIR, "mini", file))
+    }
     const ext = path.extname(file)
     return new NextResponse(new Uint8Array(data), {
       headers: {

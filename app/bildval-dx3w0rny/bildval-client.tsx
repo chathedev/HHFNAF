@@ -20,7 +20,7 @@ async function filesFromEntry(entry: FileSystemEntry, album: string, out: Pendin
   }
   if (entry.isDirectory) {
     const reader = (entry as FileSystemDirectoryEntry).createReader()
-    const name = album || entry.name
+    const name = album ? `${album}/${entry.name}` : entry.name
     for (;;) {
       const batch = await new Promise<FileSystemEntry[]>((resolve, reject) => reader.readEntries(resolve, reject))
       if (!batch.length) break
@@ -37,15 +37,49 @@ export function BildvalClient({ uploadKey, photos, site }: { uploadKey: string; 
   const [openSite, setOpenSite] = useState<SitePhoto | null>(null)
   const folderInput = useRef<HTMLInputElement>(null)
 
-  const albums = useMemo(() => {
-    const map = new Map<string, NumberedPhoto[]>()
-    for (const p of photos) {
-      if (!map.has(p.album)) map.set(p.album, [])
-      map.get(p.album)!.push(p)
+  const [big, setBig] = useState(false)
+  useEffect(() => {
+    try {
+      setBig(localStorage.getItem("bildval-size") === "big")
+    } catch {
+      // storage blocked: keep small
     }
-    return Array.from(map.entries())
+  }, [])
+  const toggleSize = () =>
+    setBig((v) => {
+      try {
+        localStorage.setItem("bildval-size", v ? "small" : "big")
+      } catch {
+        // storage blocked: still switch for this visit
+      }
+      return !v
+    })
+
+  // Main folder (first part of the album path) -> sub folders -> photos. Folders sort by name,
+  // so "Pojkar" comes before "Pojkar 2" and "Dag 1" before "Dag 2".
+  const groups = useMemo(() => {
+    const mains = new Map<string, Map<string, NumberedPhoto[]>>()
+    for (const p of photos) {
+      const [main, ...rest] = p.album.split("/")
+      const sub = rest.join(" / ")
+      if (!mains.has(main)) mains.set(main, new Map())
+      const subs = mains.get(main)!
+      if (!subs.has(sub)) subs.set(sub, [])
+      subs.get(sub)!.push(p)
+    }
+    return Array.from(mains.entries())
+      .sort((a, b) => a[0].localeCompare(b[0], "sv", { numeric: true }))
+      .map(([main, subs]) => {
+      const list = Array.from(subs.entries())
+        .sort((a, b) => a[0].localeCompare(b[0], "sv", { numeric: true }))
+        .map(([sub, items]) => ({ sub, items }))
+      return { main, subs: list, count: list.reduce((n, s) => n + s.items.length, 0) }
+    })
   }, [photos])
 
+  // The viewer steps through photos in the order they are shown on the page.
+  const ordered = useMemo(() => groups.flatMap((g) => g.subs.flatMap((s) => s.items)), [groups])
+  const position = useMemo(() => new Map(ordered.map((p, i) => [p.id, i])), [ordered])
   const upload = useCallback(
     async (items: Pending[]) => {
       if (!items.length) return
@@ -99,29 +133,52 @@ export function BildvalClient({ uploadKey, photos, site }: { uploadKey: string; 
       if (!(IMAGE_EXT.test(file.name) || file.type.startsWith("image/"))) continue
       const rel = (file as File & { webkitRelativePath?: string }).webkitRelativePath || ""
       const parts = rel.split("/")
-      out.push({ file, album: parts.length > 1 ? parts[parts.length - 2] : "Utan mapp" })
+      out.push({ file, album: parts.length > 1 ? parts.slice(0, -1).join("/") : "Utan mapp" })
     }
     upload(out)
   }
 
-  // Keyboard in the viewer: arrows step, Escape closes.
+  const total = ordered.length
+  const step = useCallback((d: number) => setOpen((i) => (i == null ? i : Math.min(total - 1, Math.max(0, i + d)))), [total])
+
+  // Viewer: arrows step, Escape closes, page behind does not scroll.
   useEffect(() => {
-    if (open == null) return
+    if (open == null && openSite == null) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(null)
-      if (e.key === "ArrowRight") setOpen((i) => (i == null ? i : Math.min(photos.length - 1, i + 1)))
-      if (e.key === "ArrowLeft") setOpen((i) => (i == null ? i : Math.max(0, i - 1)))
+      if (e.key === "Escape") {
+        setOpen(null)
+        setOpenSite(null)
+      }
+      if (open != null && e.key === "ArrowRight") step(1)
+      if (open != null && e.key === "ArrowLeft") step(-1)
     }
     window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [open, photos.length])
+    const overflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      window.removeEventListener("keydown", onKey)
+      document.body.style.overflow = overflow
+    }
+  }, [open, openSite, step])
 
-  const current = open != null ? photos[open] : null
+  const current = open != null ? ordered[open] : null
+
+  // Load the neighbours in the background so stepping is instant.
+  useEffect(() => {
+    if (open == null) return
+    for (const d of [1, -1, 2]) {
+      const p = ordered[open + d]
+      if (p) new window.Image().src = p.web
+    }
+  }, [open, ordered])
+
+  const touchX = useRef<number | null>(null)
   const busy = progress != null && progress.done < progress.total
+  const grid = big ? "grid-cols-3 sm:grid-cols-5 lg:grid-cols-7" : "grid-cols-5 sm:grid-cols-8 lg:grid-cols-12"
 
   return (
     <main
-      className="min-h-screen bg-white px-4 pb-16 pt-8"
+      className="min-h-screen bg-white px-3 pb-16 pt-6 sm:px-4"
       onDragOver={(e) => {
         e.preventDefault()
         setDragging(true)
@@ -131,30 +188,22 @@ export function BildvalClient({ uploadKey, photos, site }: { uploadKey: string; 
       }}
       onDrop={onDrop}
     >
-      <div className="mx-auto max-w-6xl">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-700">Härnösands HF</p>
-        <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-950">Bildval</h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-600">
-          Nya bilder har ett nummer, bilderna på sajten nu har en kod (S1, S2 …). Säg till exempel <span className="font-semibold text-slate-950">”byt S1 mot 12”</span>, så byter
-          jag. Sidan är inte länkad någonstans och syns inte på Google.
-        </p>
-
-        <div
-          className={`mt-6 flex flex-col items-center justify-center gap-3 border-2 border-dashed px-4 py-8 text-center transition ${
-            dragging ? "border-emerald-600 bg-emerald-50" : "border-slate-300 bg-slate-50"
-          }`}
-        >
-          <p className="text-sm font-semibold text-slate-950">Dra in mappar eller bilder här</p>
-          <div className="flex flex-wrap justify-center gap-2">
+      <div className="mx-auto max-w-7xl">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-700">Härnösands HF</p>
+            <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-950">Bildval</h1>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => folderInput.current?.click()}
-              className="bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+              className="bg-slate-950 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-slate-800"
             >
-              Välj mapp
+              Lägg till mapp
             </button>
-            <label className="cursor-pointer border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition hover:border-slate-950">
-              Välj bilder
+            <label className="cursor-pointer border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-950 transition hover:border-slate-950">
+              Lägg till bilder
               <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => onPick(e.target.files)} />
             </label>
             <input
@@ -166,59 +215,99 @@ export function BildvalClient({ uploadKey, photos, site }: { uploadKey: string; 
               {...({ webkitdirectory: "", directory: "" } as Record<string, string>)}
             />
           </div>
-          {progress && (
-            <div className="w-full max-w-sm">
-              <div className="h-1.5 w-full bg-slate-200">
-                <div className="h-1.5 bg-emerald-600 transition-all" style={{ width: `${(progress.done / Math.max(1, progress.total)) * 100}%` }} />
+        </div>
+        <p className="mt-2 max-w-3xl text-sm text-slate-600">
+          Nya bilder har ett nummer, bilderna på sajten nu har en kod (S1, S2 …). Säg till exempel <span className="font-semibold text-slate-950">”byt S1 mot 12”</span>. Klicka på
+          en bild för helskärm och bläddra med pilarna eller genom att svepa. Du kan också dra in mappar var som helst på sidan.
+        </p>
+
+        {(dragging || progress) && (
+          <div className={`mt-4 border-2 border-dashed px-4 py-4 text-center ${dragging ? "border-emerald-600 bg-emerald-50" : "border-slate-300 bg-slate-50"}`}>
+            {dragging && <p className="text-sm font-semibold text-slate-950">Släpp för att ladda upp</p>}
+            {progress && (
+              <div className="mx-auto w-full max-w-sm">
+                <div className="h-1.5 w-full bg-slate-200">
+                  <div className="h-1.5 bg-emerald-600 transition-all" style={{ width: `${(progress.done / Math.max(1, progress.total)) * 100}%` }} />
+                </div>
+                <p className="mt-1 text-xs text-slate-500">
+                  {busy ? `Laddar upp ${progress.done} av ${progress.total}` : `Klart: ${progress.total - progress.errors.length} av ${progress.total} bilder`}
+                </p>
+                {progress.errors.length > 0 && (
+                  <ul className="mt-1 text-left text-xs text-rose-700">
+                    {progress.errors.slice(0, 8).map((e) => (
+                      <li key={e}>{e}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
-              <p className="mt-1 text-xs text-slate-500">
-                {busy ? `Laddar upp ${progress.done} av ${progress.total}` : `Klart: ${progress.total - progress.errors.length} av ${progress.total} bilder`}
-              </p>
-              {progress.errors.length > 0 && (
-                <ul className="mt-1 text-left text-xs text-rose-700">
-                  {progress.errors.slice(0, 8).map((e) => (
-                    <li key={e}>{e}</li>
+            )}
+          </div>
+        )}
+
+        <nav className="sticky top-0 z-20 -mx-3 mt-5 flex items-center gap-2 overflow-x-auto border-b border-slate-200 bg-white/95 px-3 py-2 backdrop-blur sm:-mx-4 sm:px-4">
+          {groups.map((g, gi) => (
+            <a key={g.main} href={`#mapp-${gi}`} className="shrink-0 bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-800 hover:bg-slate-200">
+              {g.main} <span className="font-normal text-slate-500">{g.count}</span>
+            </a>
+          ))}
+          <a href="#pa-sajten" className="shrink-0 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 hover:bg-emerald-100">
+            På sajten nu <span className="font-normal text-emerald-700/70">{site.length}</span>
+          </a>
+          <button type="button" onClick={toggleSize} className="ml-auto shrink-0 border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:border-slate-950">
+            {big ? "Mindre bilder" : "Större bilder"}
+          </button>
+        </nav>
+
+        {!total && <p className="mt-6 text-sm text-slate-500">Inga bilder än. Dra in mappar på sidan.</p>}
+
+        {groups.map((g, gi) => (
+          <details key={g.main} id={`mapp-${gi}`} open className="group/main mt-6 scroll-mt-14">
+            <summary className="flex cursor-pointer list-none items-baseline gap-2 select-none">
+              <span className="text-slate-400 transition group-open/main:rotate-90">›</span>
+              <span className="text-lg font-black tracking-tight text-slate-950">{g.main}</span>
+              <span className="text-sm text-slate-500">{g.count} bilder</span>
+            </summary>
+            {g.subs.map((s) => (
+              <section key={s.sub} className="mt-3" style={{ contentVisibility: "auto", containIntrinsicSize: "auto 400px" }}>
+                {s.sub && (
+                  <p className="mb-1.5 text-xs font-semibold text-slate-700">
+                    {s.sub} <span className="font-normal text-slate-400">· {s.items.length}</span>
+                  </p>
+                )}
+                <ul className={`grid gap-1 ${grid}`}>
+                  {s.items.map((p) => (
+                    <li key={p.id}>
+                      <button
+                        type="button"
+                        onClick={() => setOpen(position.get(p.id) ?? 0)}
+                        className="relative block w-full overflow-hidden bg-slate-100 outline-offset-2 hover:opacity-90"
+                        title={`${p.no} · ${p.album}/${p.name}`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={big ? p.thumb : p.mini} alt={p.name} loading="lazy" decoding="async" width={240} height={240} className="aspect-square w-full object-cover" />
+                        <span className="absolute left-0 top-0 bg-slate-950/85 px-1 text-[10px] font-bold leading-4 tabular-nums text-white">{p.no}</span>
+                      </button>
+                    </li>
                   ))}
                 </ul>
-              )}
-            </div>
-          )}
-        </div>
+              </section>
+            ))}
+          </details>
+        ))}
 
-        <section className="mt-10">
-          <h2 className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">Nya bilder · {photos.length}</h2>
-          {!photos.length && <p className="mt-3 text-sm text-slate-500">Inga bilder än. Dra in mapparna ovanför.</p>}
-          {albums.map(([album, list]) => (
-            <div key={album} className="mt-5">
-              <p className="mb-2 text-sm font-semibold text-slate-950">
-                {album} <span className="font-normal text-slate-400">· {list.length}</span>
-              </p>
-              <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                {list.map((p) => (
-                  <li key={p.id}>
-                    <button type="button" onClick={() => setOpen(photos.indexOf(p))} className="group relative block w-full overflow-hidden bg-slate-100">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={p.thumb} alt={p.name} loading="lazy" className="aspect-[4/3] w-full object-cover transition group-hover:scale-[1.02]" />
-                      <span className="absolute left-1.5 top-1.5 bg-slate-950 px-2 py-0.5 text-sm font-black tabular-nums text-white">{p.no}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </section>
-
-        <section className="mt-12">
-          <h2 className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">Bilderna på sajten nu</h2>
-          <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+        <section id="pa-sajten" className="mt-10 scroll-mt-14">
+          <h2 className="text-lg font-black tracking-tight text-slate-950">
+            Bilderna på sajten nu <span className="text-sm font-normal text-slate-500">{site.length}</span>
+          </h2>
+          <ul className={`mt-2 grid gap-1 ${big ? "grid-cols-2 sm:grid-cols-4 lg:grid-cols-6" : "grid-cols-3 sm:grid-cols-6 lg:grid-cols-8"}`}>
             {site.map((s) => (
               <li key={s.code}>
-                <button type="button" onClick={() => setOpenSite(s)} className="relative block w-full overflow-hidden bg-slate-100 text-left">
+                <button type="button" onClick={() => setOpenSite(s)} className="relative block w-full overflow-hidden bg-slate-100 text-left hover:opacity-90">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={s.src} alt={s.label} loading="lazy" className="aspect-[4/3] w-full object-cover" />
-                  <span className="absolute left-1.5 top-1.5 bg-emerald-700 px-2 py-0.5 text-sm font-black text-white">{s.code}</span>
+                  <img src={s.src} alt={s.label} loading="lazy" decoding="async" className="aspect-[4/3] w-full object-cover" />
+                  <span className="absolute left-0 top-0 bg-emerald-700 px-1 text-[10px] font-bold leading-4 text-white">{s.code}</span>
                 </button>
-                <p className="mt-1 text-xs text-slate-600">
+                <p className="mt-0.5 truncate text-[11px] text-slate-600">
                   <span className="text-slate-400">{s.where} · </span>
                   {s.label}
                 </p>
@@ -229,59 +318,82 @@ export function BildvalClient({ uploadKey, photos, site }: { uploadKey: string; 
       </div>
 
       {current && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-black/95" onClick={() => setOpen(null)}>
-          <div className="flex items-center justify-between gap-3 px-4 py-3 text-white" onClick={(e) => e.stopPropagation()}>
-            <p className="min-w-0 truncate text-sm">
-              <span className="mr-2 bg-white px-2 py-0.5 font-black tabular-nums text-slate-950">{current.no}</span>
-              <span className="text-white/70">
-                {current.album} · {current.name}
+        <div
+          className="fixed inset-0 z-50 flex flex-col bg-black"
+          onClick={() => setOpen(null)}
+          onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
+          onTouchEnd={(e) => {
+            if (touchX.current == null) return
+            const dx = e.changedTouches[0].clientX - touchX.current
+            touchX.current = null
+            if (Math.abs(dx) > 45) step(dx < 0 ? 1 : -1)
+          }}
+        >
+          <div className="flex items-center justify-between gap-3 px-4 py-2.5 text-white" onClick={(e) => e.stopPropagation()}>
+            <p className="flex min-w-0 items-center gap-2 text-sm">
+              <span className="shrink-0 bg-white px-2 py-0.5 font-black tabular-nums text-slate-950">{current.no}</span>
+              <span className="truncate text-white/60">
+                {open! + 1} / {total}
               </span>
             </p>
             <div className="flex shrink-0 items-center gap-4 text-sm">
               <a href={current.orig} target="_blank" rel="noreferrer" className="text-white/70 underline-offset-2 hover:text-white hover:underline">
-                Original
+                Öppna fil
               </a>
               <button type="button" onClick={() => setOpen(null)} className="text-white/70 hover:text-white">
                 Stäng
               </button>
             </div>
           </div>
-          <div className="relative flex min-h-0 flex-1 items-center justify-center px-2 pb-4">
+          <div className="relative flex min-h-0 flex-1 items-center justify-center px-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={current.web} alt={current.name} className="max-h-full max-w-full object-contain" onClick={(e) => e.stopPropagation()} />
+            <img key={current.id} src={current.web} alt={current.name} className="max-h-full max-w-full object-contain" onClick={(e) => e.stopPropagation()} />
             {open! > 0 && (
               <button
                 type="button"
                 aria-label="Föregående"
                 onClick={(e) => {
                   e.stopPropagation()
-                  setOpen(open! - 1)
+                  step(-1)
                 }}
-                className="absolute left-0 top-0 h-full w-1/4 text-left text-4xl text-white/40 hover:text-white"
+                className="absolute left-0 top-0 hidden h-full w-1/5 text-left text-5xl text-white/30 hover:text-white sm:block"
               >
-                <span className="pl-3">‹</span>
+                <span className="pl-4">‹</span>
               </button>
             )}
-            {open! < photos.length - 1 && (
+            {open! < total - 1 && (
               <button
                 type="button"
                 aria-label="Nästa"
                 onClick={(e) => {
                   e.stopPropagation()
-                  setOpen(open! + 1)
+                  step(1)
                 }}
-                className="absolute right-0 top-0 h-full w-1/4 text-right text-4xl text-white/40 hover:text-white"
+                className="absolute right-0 top-0 hidden h-full w-1/5 text-right text-5xl text-white/30 hover:text-white sm:block"
               >
-                <span className="pr-3">›</span>
+                <span className="pr-4">›</span>
               </button>
             )}
+          </div>
+          <div className="grid gap-x-6 gap-y-0.5 px-4 py-2.5 text-xs text-white/60 sm:grid-cols-[auto_1fr]" onClick={(e) => e.stopPropagation()}>
+            <span className="text-white/40">Mapp</span>
+            <span className="truncate text-white/85">{current.album}</span>
+            <span className="text-white/40">Fil</span>
+            <span className="truncate">
+              {current.name} · {current.width}×{current.height}
+            </span>
+            <span className="text-white/40">På servern</span>
+            <span className="truncate font-mono text-[11px]">
+              /srv/hhf-bildval/orig/{current.id}
+              {(current.name.match(/\.[a-z0-9]+$/i)?.[0] || ".jpg").toLowerCase()}
+            </span>
           </div>
         </div>
       )}
 
       {openSite && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-black/95" onClick={() => setOpenSite(null)}>
-          <div className="flex items-center justify-between gap-3 px-4 py-3 text-white">
+        <div className="fixed inset-0 z-50 flex flex-col bg-black" onClick={() => setOpenSite(null)}>
+          <div className="flex items-center justify-between gap-3 px-4 py-2.5 text-white">
             <p className="min-w-0 truncate text-sm">
               <span className="mr-2 bg-emerald-600 px-2 py-0.5 font-black">{openSite.code}</span>
               <span className="text-white/70">
@@ -296,6 +408,7 @@ export function BildvalClient({ uploadKey, photos, site }: { uploadKey: string; 
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={openSite.src} alt={openSite.label} className="max-h-full max-w-full object-contain" />
           </div>
+          <p className="px-4 pb-3 font-mono text-[11px] text-white/50">/root/HHFNAF/public{decodeURIComponent(openSite.src)}</p>
         </div>
       )}
     </main>

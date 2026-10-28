@@ -18,9 +18,13 @@ export type BildvalPhoto = {
   addedAt: number
 }
 
-export type NumberedPhoto = BildvalPhoto & { no: number; web: string; thumb: string; orig: string }
+export type NumberedPhoto = BildvalPhoto & { no: number; mini: string; web: string; thumb: string; orig: string }
 
-export function imgUrl(size: "web" | "thumb" | "orig", photo: Pick<BildvalPhoto, "id" | "name">) {
+// Sizes on disk: mini 240px (grid), thumb 720px, web 2400px (viewer), orig (as uploaded).
+export const BILDVAL_SIZES = ["mini", "web", "thumb", "orig"] as const
+export type BildvalSize = (typeof BILDVAL_SIZES)[number]
+
+export function imgUrl(size: BildvalSize, photo: Pick<BildvalPhoto, "id" | "name">) {
   const ext = size === "orig" ? path.extname(photo.name).toLowerCase() || ".jpg" : ".webp"
   return `/api/bildval/${BILDVAL_KEY}/img/${size}/${photo.id}${ext}`
 }
@@ -43,5 +47,5 @@ export async function listPhotos(): Promise<NumberedPhoto[]> {
     }
   }
   photos.sort((a, b) => a.addedAt - b.addedAt || a.album.localeCompare(b.album, "sv") || a.name.localeCompare(b.name, "sv", { numeric: true }))
-  return photos.map((photo, i) => ({ ...photo, no: i + 1, web: imgUrl("web", photo), thumb: imgUrl("thumb", photo), orig: imgUrl("orig", photo) }))
+  return photos.map((photo, i) => ({ ...photo, no: i + 1, mini: imgUrl("mini", photo), web: imgUrl("web", photo), thumb: imgUrl("thumb", photo), orig: imgUrl("orig", photo) }))
 }
