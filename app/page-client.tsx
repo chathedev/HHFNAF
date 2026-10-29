@@ -888,31 +888,44 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   )
   // The incoming photo fades in ON TOP of the outgoing one, which stays fully visible
   // underneath, so the hero never dips to dark mid-change. Only those two layers are painted.
-  // Order is random: the first (preloaded) photo opens, then each pass shows every other photo
-  // once in a fresh shuffle, so nothing repeats back to back and none is left out for long.
+  // Order: the featured photo (slide 0) opens and comes back after every 3 other photos, so it
+  // is never gone for long; the others are drawn from a shuffled deck, so their order differs
+  // every round and every visit and nothing shows twice in a row.
   const [hero, setHero] = useState({ index: 0, prev: -1 })
   const heroIndexRef = useRef(0)
   heroIndexRef.current = hero.index
   useEffect(() => {
     if (heroSlides.length < 2) return
     if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return
+    const FEATURED_EVERY = 3
     let deck: number[] = []
-    let before = -1
-    const timer = window.setInterval(() => {
-      if (document.visibilityState !== "visible") return
-      const current = heroIndexRef.current % heroSlides.length
+    let lastOther = -1
+    let sinceFeatured = 0
+    const draw = () => {
       if (!deck.length) {
-        deck = Array.from({ length: heroSlides.length }, (_, i) => i).filter((i) => i !== current)
+        deck = Array.from({ length: heroSlides.length }, (_, i) => i).filter((i) => i !== 0)
         for (let i = deck.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1))
           ;[deck[i], deck[j]] = [deck[j], deck[i]]
         }
-        // The outgoing layer stays fully visible, so drawing it right back (X, Y, X) would
-        // swap without a fade. Keep the photo before `current` off the first draw.
-        if (deck.length > 1 && deck[deck.length - 1] === before) [deck[0], deck[deck.length - 1]] = [deck[deck.length - 1], deck[0]]
+        // Never open a new round with the photo that closed the last one.
+        if (deck.length > 1 && deck[deck.length - 1] === lastOther) [deck[0], deck[deck.length - 1]] = [deck[deck.length - 1], deck[0]]
       }
-      const next = deck.pop()!
-      before = current
+      return deck.pop()!
+    }
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return
+      const current = heroIndexRef.current % heroSlides.length
+      let next: number
+      if (current !== 0 && sinceFeatured >= FEATURED_EVERY) {
+        next = 0
+        sinceFeatured = 0
+      } else {
+        next = heroSlides.length > 2 || current === 0 ? draw() : 0
+        if (next === current) next = draw()
+        lastOther = next
+        sinceFeatured += 1
+      }
       heroIndexRef.current = next
       setHero({ index: next, prev: current })
     }, 5000)
