@@ -876,6 +876,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       isPinkTheme
         ? [{ desktop: heroImages.desktop, mobile: heroImages.mobile, alt: "Härnösands HF Memorial - Laget Före Allt", credit: "", desktopPos: "center top" }]
         : [
+            { desktop: "/hero/f16-skott-tpleiner.webp", mobile: "/hero/f16-skott-tpleiner-mobil.webp", alt: "HHF F16 hoppar upp till skott mot Eskilstunas försvar", credit: "tpleiner", desktopPos: "center center" },
             { desktop: "/hero/p16-skott-bred.webp", mobile: "/hero/p16-skott-bred-mobil.webp", alt: "HHF P16 hoppar in och skjuter mot mål", credit: "niometerfoto", desktopPos: "center center" },
             { desktop: "/hero/p16-skott-malvakt.webp", mobile: "/hero/p16-skott-malvakt-mobil.webp", alt: "HHF P16 skjuter mot målvakten", credit: "niometerfoto", desktopPos: "center center" },
             { desktop: "/hero/p16-skott-hsta.webp", mobile: "/hero/p16-skott-hsta-mobil.webp", alt: "HHF P16 i hopp framför försvaret", credit: "niometerfoto", desktopPos: "center center" },
