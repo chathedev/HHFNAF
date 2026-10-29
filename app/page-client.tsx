@@ -869,19 +869,19 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       setHeroImages(getHeroImages(window.location.host))
     }
   }, [])
-  // Hero rotation (orange theme): action photos take turns every 5 s; only the @niometerfoto
-  // ones (credit: true) show the photo tag. Pink theme keeps its single memorial image.
+  // Hero rotation (orange theme): action photos take turns every 5 s; each shows its
+  // photographer's Instagram tag (credit). Pink theme keeps its single memorial image.
   const heroSlides = useMemo(
     () =>
       isPinkTheme
-        ? [{ desktop: heroImages.desktop, mobile: heroImages.mobile, alt: "Härnösands HF Memorial - Laget Före Allt", credit: false, desktopPos: "center top" }]
+        ? [{ desktop: heroImages.desktop, mobile: heroImages.mobile, alt: "Härnösands HF Memorial - Laget Före Allt", credit: "", desktopPos: "center top" }]
         : [
-            { desktop: "/hero/p16-skott-bred.webp", mobile: "/hero/p16-skott-bred-mobil.webp", alt: "HHF P16 hoppar in och skjuter mot mål", credit: true, desktopPos: "center center" },
-            { desktop: "/hero/p16-skott-malvakt.webp", mobile: "/hero/p16-skott-malvakt-mobil.webp", alt: "HHF P16 skjuter mot målvakten", credit: true, desktopPos: "center center" },
-            { desktop: "/hero/p16-skott-hsta.webp", mobile: "/hero/p16-skott-hsta-mobil.webp", alt: "HHF P16 i hopp framför försvaret", credit: true, desktopPos: "center center" },
-            { desktop: "/hero/hhf-hopp-bla.webp", mobile: "/hero/hhf-hopp-bla-mobil.webp", alt: "HHF-spelare i hopp med bollen", credit: false, desktopPos: "center center" },
-            { desktop: "/hero/hhf-skott-hall.webp", mobile: "/hero/hhf-skott-hall-mobil.webp", alt: "HHF-spelare hoppar upp till skott", credit: false, desktopPos: "center center" },
-            { desktop: "/hero/hhf-forsvar.webp", mobile: "/hero/hhf-forsvar-mobil.webp", alt: "HHF-försvaret stoppar ett genombrott", credit: false, desktopPos: "center center" },
+            { desktop: "/hero/p16-skott-bred.webp", mobile: "/hero/p16-skott-bred-mobil.webp", alt: "HHF P16 hoppar in och skjuter mot mål", credit: "niometerfoto", desktopPos: "center center" },
+            { desktop: "/hero/p16-skott-malvakt.webp", mobile: "/hero/p16-skott-malvakt-mobil.webp", alt: "HHF P16 skjuter mot målvakten", credit: "niometerfoto", desktopPos: "center center" },
+            { desktop: "/hero/p16-skott-hsta.webp", mobile: "/hero/p16-skott-hsta-mobil.webp", alt: "HHF P16 i hopp framför försvaret", credit: "niometerfoto", desktopPos: "center center" },
+            { desktop: "/hero/hhf-hopp-bla.webp", mobile: "/hero/hhf-hopp-bla-mobil.webp", alt: "HHF-spelare i hopp med bollen", credit: "harnosandshf", desktopPos: "center center" },
+            { desktop: "/hero/hhf-skott-hall.webp", mobile: "/hero/hhf-skott-hall-mobil.webp", alt: "HHF-spelare hoppar upp till skott", credit: "harnosandshf", desktopPos: "center center" },
+            { desktop: "/hero/hhf-forsvar.webp", mobile: "/hero/hhf-forsvar-mobil.webp", alt: "HHF-försvaret stoppar ett genombrott", credit: "harnosandshf", desktopPos: "center center" },
           ],
     [isPinkTheme, heroImages.desktop, heroImages.mobile],
   )
@@ -969,12 +969,12 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
             })}
             {activeHero?.credit && (
               <a
-                href="https://www.instagram.com/niometerfoto/"
+                href={`https://www.instagram.com/${activeHero.credit}/`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="absolute right-3 top-32 z-30 rounded bg-black/35 px-2 py-1 text-[11px] font-medium tracking-wide text-white/85 transition hover:bg-black/55 hover:text-white sm:right-5 sm:top-24 sm:text-xs"
               >
-                Foto: @niometerfoto
+                Foto: @{activeHero.credit}
               </a>
             )}
             <div className={`absolute inset-0 bg-gradient-to-t ${heroOverlayClass} z-10 ${isPinkTheme ? "" : ""
