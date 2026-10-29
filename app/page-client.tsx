@@ -887,12 +887,33 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
   )
   // The incoming photo fades in ON TOP of the outgoing one, which stays fully visible
   // underneath, so the hero never dips to dark mid-change. Only those two layers are painted.
+  // Order is random: the first (preloaded) photo opens, then each pass shows every other photo
+  // once in a fresh shuffle, so nothing repeats back to back and none is left out for long.
   const [hero, setHero] = useState({ index: 0, prev: -1 })
+  const heroIndexRef = useRef(0)
+  heroIndexRef.current = hero.index
   useEffect(() => {
     if (heroSlides.length < 2) return
     if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return
+    let deck: number[] = []
+    let before = -1
     const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") setHero((h) => ({ index: (h.index + 1) % heroSlides.length, prev: h.index }))
+      if (document.visibilityState !== "visible") return
+      const current = heroIndexRef.current % heroSlides.length
+      if (!deck.length) {
+        deck = Array.from({ length: heroSlides.length }, (_, i) => i).filter((i) => i !== current)
+        for (let i = deck.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1))
+          ;[deck[i], deck[j]] = [deck[j], deck[i]]
+        }
+        // The outgoing layer stays fully visible, so drawing it right back (X, Y, X) would
+        // swap without a fade. Keep the photo before `current` off the first draw.
+        if (deck.length > 1 && deck[deck.length - 1] === before) [deck[0], deck[deck.length - 1]] = [deck[deck.length - 1], deck[0]]
+      }
+      const next = deck.pop()!
+      before = current
+      heroIndexRef.current = next
+      setHero({ index: next, prev: current })
     }, 5000)
     return () => window.clearInterval(timer)
   }, [heroSlides.length])
