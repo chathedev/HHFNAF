@@ -55,12 +55,47 @@ export function BildvalClient({ uploadKey, photos, site }: { uploadKey: string; 
       return !v
     })
 
-  // Main folder (first part of the album path) -> sub folders -> photos. Folders sort by name,
+  // Top level of every album path is the team folder (P16, F16 …), shown as tabs. Teams are
+  // ordered by their oldest photo, so a new team folder lands after the existing ones.
+  const teams = useMemo(() => {
+    const first = new Map<string, { count: number; minNo: number }>()
+    for (const p of photos) {
+      const t = p.album.split("/")[0] || "Utan mapp"
+      const cur = first.get(t) || { count: 0, minNo: Infinity }
+      first.set(t, { count: cur.count + 1, minNo: Math.min(cur.minNo, p.no) })
+    }
+    return Array.from(first.entries())
+      .sort((a, b) => a[1].minNo - b[1].minNo)
+      .map(([name, v]) => ({ name, count: v.count }))
+  }, [photos])
+
+  const [teamPick, setTeamPick] = useState<string | null>(null)
+  useEffect(() => {
+    try {
+      setTeamPick(localStorage.getItem("bildval-team"))
+    } catch {
+      // storage blocked: start on the first team
+    }
+  }, [])
+  const team = teams.some((t) => t.name === teamPick) ? teamPick! : teams[0]?.name || ""
+  const pickTeam = (name: string) => {
+    setTeamPick(name)
+    setOpen(null)
+    try {
+      localStorage.setItem("bildval-team", name)
+    } catch {
+      // storage blocked: still switch for this visit
+    }
+  }
+
+  // Inside the team: main folder -> sub folders -> photos. Folders sort by name,
   // so "Pojkar" comes before "Pojkar 2" and "Dag 1" before "Dag 2".
   const groups = useMemo(() => {
     const mains = new Map<string, Map<string, NumberedPhoto[]>>()
     for (const p of photos) {
-      const [main, ...rest] = p.album.split("/")
+      const [t, ...path] = p.album.split("/")
+      if ((t || "Utan mapp") !== team) continue
+      const [main = "Övrigt", ...rest] = path.length ? path : ["Övrigt"]
       const sub = rest.join(" / ")
       if (!mains.has(main)) mains.set(main, new Map())
       const subs = mains.get(main)!
@@ -75,7 +110,7 @@ export function BildvalClient({ uploadKey, photos, site }: { uploadKey: string; 
         .map(([sub, items]) => ({ sub, items }))
       return { main, subs: list, count: list.reduce((n, s) => n + s.items.length, 0) }
     })
-  }, [photos])
+  }, [photos, team])
 
   // The viewer steps through photos in the order they are shown on the page.
   const ordered = useMemo(() => groups.flatMap((g) => g.subs.flatMap((s) => s.items)), [groups])
@@ -91,7 +126,9 @@ export function BildvalClient({ uploadKey, photos, site }: { uploadKey: string; 
           const item = items[next++]
           const body = new FormData()
           body.append("file", item.file)
-          body.append("album", item.album)
+          // A dropped folder already named after a team (e.g. "F16") keeps its own path.
+          const own = teams.some((t) => t.name === item.album.split("/")[0])
+          body.append("album", team && !own ? `${team}/${item.album}` : item.album)
           try {
             const res = await fetch(`/api/bildval/${uploadKey}/upload`, { method: "POST", body })
             if (!res.ok) {
@@ -108,7 +145,7 @@ export function BildvalClient({ uploadKey, photos, site }: { uploadKey: string; 
       await Promise.all([worker(), worker(), worker()])
       router.refresh()
     },
-    [router, uploadKey],
+    [router, uploadKey, team, teams],
   )
 
   const onDrop = async (event: React.DragEvent) => {
@@ -218,7 +255,7 @@ export function BildvalClient({ uploadKey, photos, site }: { uploadKey: string; 
         </div>
         <p className="mt-2 max-w-3xl text-sm text-slate-600">
           Nya bilder har ett nummer, bilderna på sajten nu har en kod (S1, S2 …). Säg till exempel <span className="font-semibold text-slate-950">”byt S1 mot 12”</span>. Klicka på
-          en bild för helskärm och bläddra med pilarna eller genom att svepa. Du kan också dra in mappar var som helst på sidan.
+          en bild för helskärm och bläddra med pilarna eller genom att svepa. Du kan också dra in mappar var som helst på sidan, de hamnar under fliken du står på (P16, F16 …).
         </p>
 
         {(dragging || progress) && (
@@ -244,7 +281,26 @@ export function BildvalClient({ uploadKey, photos, site }: { uploadKey: string; 
           </div>
         )}
 
-        <nav className="sticky top-0 z-20 -mx-3 mt-5 flex items-center gap-2 overflow-x-auto border-b border-slate-200 bg-white/95 px-3 py-2 backdrop-blur sm:-mx-4 sm:px-4">
+        {teams.length > 0 && (
+          <div className="mt-5 flex gap-1" role="tablist" aria-label="Lag">
+            {teams.map((t) => (
+              <button
+                key={t.name}
+                type="button"
+                role="tab"
+                aria-selected={t.name === team}
+                onClick={() => pickTeam(t.name)}
+                className={`px-3 py-1.5 text-sm font-bold transition ${
+                  t.name === team ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                }`}
+              >
+                {t.name} <span className={`font-normal ${t.name === team ? "text-white/60" : "text-slate-500"}`}>{t.count}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        <nav className="sticky top-0 z-20 -mx-3 mt-2 flex items-center gap-2 overflow-x-auto border-b border-slate-200 bg-white/95 px-3 py-2 backdrop-blur sm:-mx-4 sm:px-4">
           {groups.map((g, gi) => (
             <a key={g.main} href={`#mapp-${gi}`} className="shrink-0 bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-800 hover:bg-slate-200">
               {g.main} <span className="font-normal text-slate-500">{g.count}</span>
