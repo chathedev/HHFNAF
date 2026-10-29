@@ -869,8 +869,8 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
       setHeroImages(getHeroImages(window.location.host))
     }
   }, [])
-  // Hero rotation (orange theme): the new P16 action photos by @niometerfoto take turns with
-  // the classic team photo. Pink theme keeps its single memorial image.
+  // Hero rotation (orange theme): action photos take turns every 5 s; only the @niometerfoto
+  // ones (credit: true) show the photo tag. Pink theme keeps its single memorial image.
   const heroSlides = useMemo(
     () =>
       isPinkTheme
@@ -879,6 +879,9 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
             { desktop: "/hero/p16-skott-bred.webp", mobile: "/hero/p16-skott-bred-mobil.webp", alt: "HHF P16 hoppar in och skjuter mot mål", credit: true, desktopPos: "center center" },
             { desktop: "/hero/p16-skott-malvakt.webp", mobile: "/hero/p16-skott-malvakt-mobil.webp", alt: "HHF P16 skjuter mot målvakten", credit: true, desktopPos: "center center" },
             { desktop: "/hero/p16-skott-hsta.webp", mobile: "/hero/p16-skott-hsta-mobil.webp", alt: "HHF P16 i hopp framför försvaret", credit: true, desktopPos: "center center" },
+            { desktop: "/hero/hhf-hopp-bla.webp", mobile: "/hero/hhf-hopp-bla-mobil.webp", alt: "HHF-spelare i hopp med bollen", credit: false, desktopPos: "center center" },
+            { desktop: "/hero/hhf-skott-hall.webp", mobile: "/hero/hhf-skott-hall-mobil.webp", alt: "HHF-spelare hoppar upp till skott", credit: false, desktopPos: "center center" },
+            { desktop: "/hero/hhf-forsvar.webp", mobile: "/hero/hhf-forsvar-mobil.webp", alt: "HHF-försvaret stoppar ett genombrott", credit: false, desktopPos: "center center" },
           ],
     [isPinkTheme, heroImages.desktop, heroImages.mobile],
   )
@@ -890,7 +893,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return
     const timer = window.setInterval(() => {
       if (document.visibilityState === "visible") setHero((h) => ({ index: (h.index + 1) % heroSlides.length, prev: h.index }))
-    }, 10000)
+    }, 5000)
     return () => window.clearInterval(timer)
   }, [heroSlides.length])
   const heroIndex = hero.index
