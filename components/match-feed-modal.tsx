@@ -1134,6 +1134,8 @@ export function MatchFeedModal({
     document.documentElement.style.overflow = "hidden"
     document.body.style.touchAction = "none"
     document.documentElement.style.overscrollBehavior = "none"
+    // On phones the page behind is hidden (globals.css), so nothing can show past the sheet.
+    document.documentElement.dataset.matchModal = "open"
     document.addEventListener("keydown", handleEscape)
     document.addEventListener("mousedown", handleOutsideClick)
 
@@ -1142,6 +1144,7 @@ export function MatchFeedModal({
       document.documentElement.style.overflow = previousHtmlOverflow
       document.body.style.touchAction = previousBodyTouchAction
       document.documentElement.style.overscrollBehavior = previousHtmlOverscroll
+      delete document.documentElement.dataset.matchModal
       document.removeEventListener("keydown", handleEscape)
       document.removeEventListener("mousedown", handleOutsideClick)
     }
@@ -1496,13 +1499,13 @@ export function MatchFeedModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-3"
+      className="visible fixed inset-0 z-50 flex items-end justify-center bg-white p-0 sm:items-center sm:bg-slate-950/60 sm:p-3"
       role="dialog"
       aria-modal="true"
     >
       <div
         ref={modalRef}
-        className="flex h-[96dvh] w-full max-w-xl flex-col overflow-hidden bg-white sm:h-[90vh] sm:border sm:border-slate-200"
+        className="flex h-full w-full max-w-xl flex-col overflow-hidden bg-white sm:h-[90vh] sm:border sm:border-slate-200"
       >
         {/* Header — minimal, matches the home page idiom */}
         <header className="sticky top-0 z-20 border-b border-slate-200 bg-white px-5 py-4 sm:px-6">

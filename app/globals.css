@@ -565,3 +565,15 @@ body.hhf-staging .bg-gradient-to-br.from-emerald-50.to-green-50 {
     transition: none;
   }
 }
+
+/* Match popup on phones: full screen, and the page behind is hidden while it is open, so no header,
+   card or scrolled content can show above, below or under the sheet (iPhone toolbar areas included).
+   The dialog sets visibility: visible itself. */
+@media (max-width: 639px) {
+  html[data-match-modal="open"] {
+    background: #fff;
+  }
+  html[data-match-modal="open"] body {
+    visibility: hidden;
+  }
+}
