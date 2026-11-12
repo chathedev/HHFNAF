@@ -36,7 +36,6 @@ export const CLUB_TEAM_METADATA: ClubTeamMetadata[] = [
   { id: "a-lag-herrar", name: "A-lag Herrar", displayName: "A-lag Herrar", category: "Herr", link: "https://www.laget.se/HarnosandsHFHerr" },
   { id: "fritids-teknikskola", name: "Fritids-Teknikskola", displayName: "Fritids-Teknikskola", category: "Övrigt", link: "https://www.laget.se/HarnosandsHK-Fritids-Teknikskola" },
   { id: "f19-senior", name: "F19", displayName: "F19-Senior", category: "Dam", link: "https://www.laget.se/HarnosandsHF-F19-senior" },
-  { id: "f19-2009", name: "F19", displayName: "F19 (2009)", category: "Dam", birthYears: [2009], link: "https://www.laget.se/F19-2009" },
   { id: "f16-2010", name: "F16", displayName: "F16 (2010)", category: "Dam", birthYears: [2010], link: "https://www.laget.se/F16-2010" },
   { id: "f15-2011", name: "F15", displayName: "F15 (2011)", category: "Dam", birthYears: [2011], link: "https://www.laget.se/F15-2011" },
   { id: "f14-2012", name: "F14", displayName: "F14 (2012)", category: "Dam", birthYears: [2012], link: "https://www.laget.se/F14-2012" },
@@ -79,7 +78,11 @@ export const resolveLegacyTeamId = (id: string, teams: Pick<ClubTeamMetadata, "i
     const score = (exact ? 1000 : 0) + overlap * 10 + (teamYears.includes(years[years.length - 1]) ? 1 : 0)
     if (!best || score > best.score) best = { id: team.id, score }
   }
-  return best?.id ?? null
+  if (best) return best.id
+  // No team holds those years: a combined team of the same class without birth years
+  // ("f19-2009" -> F19-Senior, which plays the F19 series for several cohorts).
+  const classPrefix = `${gender}${/^[fp](\d{1,2})-/i.exec(id.trim())?.[1]}-`
+  return candidates.find((team) => !team.birthYears?.length && team.id.toLowerCase().startsWith(classPrefix))?.id ?? null
 }
 
 // True when a match's class label ("P12 (2014/2015)") is played by players from a team

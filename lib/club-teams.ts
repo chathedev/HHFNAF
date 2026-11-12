@@ -21,7 +21,6 @@ const OLD_PHOTO = (name: string) => `/HarnosandsHF/Gruppfoto/Härnösands HF - $
 // Group photos are of a birth cohort, so they follow the players from class to class.
 // A team spanning several years shows the first year that has a photo.
 const COHORT_PHOTOS: Record<string, string> = {
-  F2009: OLD_PHOTO("F2009"),
   F2010: NEW_PHOTO("F2010"),
   F2011: NEW_PHOTO("F2011"),
   F2012: NEW_PHOTO("F2012"),
