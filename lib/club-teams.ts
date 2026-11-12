@@ -12,31 +12,41 @@ export const TEAMS_REVALIDATE_SECONDS = 300
 
 
 const PLACEHOLDER_HERO = "/placeholder.jpg"
-const PHOTO_DIR = "/HarnosandsHF/Gruppfoto/Härnösands HF - "
+// Team photos. This season's set (taken autumn 2026) is in Lagfoto-2026; a team without a
+// new photo keeps last season's from Gruppfoto. New files get new names, so no cache can
+// keep showing an old photo.
+const NEW_PHOTO = (name: string) => `/HarnosandsHF/Lagfoto-2026/Härnösands HF - ${name}.jpg`
+const OLD_PHOTO = (name: string) => `/HarnosandsHF/Gruppfoto/Härnösands HF - ${name}.jpg`
 
 // Group photos are of a birth cohort, so they follow the players from class to class.
+// A team spanning several years shows the first year that has a photo.
 const COHORT_PHOTOS: Record<string, string> = {
-  F2009: "F2009",
-  F2010: "F2010",
-  F2011: "F2011",
-  F2012: "F2012",
-  F2013: "F2013",
-  F2014: "F2014",
-  F2015: "F2015",
-  F2016: "F2016",
-  P2010: "P2009-2010",
-  P2011: "P2011",
-  P2012: "P2012",
-  P2013: "P2013",
-  P2015: "P2015",
-  P2016: "P2016",
-  P2017: "P2017",
+  F2009: OLD_PHOTO("F2009"),
+  F2010: NEW_PHOTO("F2010"),
+  F2011: NEW_PHOTO("F2011"),
+  F2012: NEW_PHOTO("F2012"),
+  F2013: NEW_PHOTO("F2013"),
+  F2014: NEW_PHOTO("F2014"),
+  F2015: NEW_PHOTO("F2015"),
+  F2016: NEW_PHOTO("F2016"),
+  F2017: NEW_PHOTO("F2017"),
+  F2019: NEW_PHOTO("F2019"),
+  P2007: NEW_PHOTO("P2007-09"),
+  P2010: NEW_PHOTO("P2010-11"),
+  P2011: OLD_PHOTO("P2011"),
+  P2012: NEW_PHOTO("P2012"),
+  P2014: NEW_PHOTO("P2014"),
+  P2015: NEW_PHOTO("P2015"),
+  P2016: OLD_PHOTO("P2016"),
+  P2017: NEW_PHOTO("P2017"),
+  P2018: NEW_PHOTO("P2018"),
+  P2019: NEW_PHOTO("P2019"),
 }
 
 const TEAM_PHOTOS: Record<string, string> = {
-  "dam-utv": "Dam",
-  "a-lag-herrar": "A-lag Herr",
-  "f19-senior": "F19",
+  "dam-utv": NEW_PHOTO("A-lag Dam"),
+  "a-lag-herrar": NEW_PHOTO("A-lag Herr"),
+  "f19-senior": OLD_PHOTO("F19"),
 }
 
 const COHORT_INSTAGRAM: Record<string, string> = {
@@ -83,7 +93,7 @@ const decorate = (team: ClubTeamMetadata): ClubTeamMetadata => {
     ...team,
     description: content?.description?.trim() || team.description || "",
     instagramLink: instagram,
-    heroImage: photo ? encodeAssetPath(`${PHOTO_DIR}${photo}.jpg`) : PLACEHOLDER_HERO,
+    heroImage: photo ? encodeAssetPath(photo) : PLACEHOLDER_HERO,
     heroImageAlt: `Lagbild ${team.displayName}`,
   }
 }
