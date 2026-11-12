@@ -50,7 +50,6 @@ export const CLUB_TEAM_METADATA: ClubTeamMetadata[] = [
   { id: "f6-2020", name: "F6", displayName: "F6 (2020)", category: "Dam", birthYears: [2020], link: "https://www.laget.se/HarnosandsHF-F62020" },
   { id: "p19-2007-2009", name: "P19", displayName: "P19 (2007–2009)", category: "Herr", birthYears: [2007, 2008, 2009], link: "https://www.laget.se/HarnosandsHF-P19-Senior" },
   { id: "p16-2010-2011", name: "P16", displayName: "P16 (2010/2011)", category: "Herr", birthYears: [2010, 2011], link: "https://www.laget.se/P16" },
-  { id: "p15-2011", name: "P15", displayName: "P15 (2011)", category: "Herr", birthYears: [2011], link: "https://www.laget.se/P15-2011" },
   { id: "p14-2012", name: "P14", displayName: "P14 (2012)", category: "Herr", birthYears: [2012], link: "https://www.laget.se/P14-2012" },
   { id: "p13-2013-2014", name: "P13", displayName: "P13 (2013/2014)", category: "Herr", birthYears: [2013, 2014], link: "https://www.laget.se/P13-2013" },
   { id: "p11-2015", name: "P11", displayName: "P11 (2015)", category: "Herr", birthYears: [2015], link: "https://www.laget.se/P11-2015" },
@@ -69,7 +68,7 @@ export const resolveLegacyTeamId = (id: string, teams: Pick<ClubTeamMetadata, "i
   const gender = match[1].toLowerCase()
   const years = Array.from(id.matchAll(/(?:19|20)\d{2}/g), (m) => Number(m[0]))
   const candidates = teams.filter((team) => team.id.toLowerCase().startsWith(gender) && /^[fp]\d/i.test(team.id))
-  // The same birth years exactly ("p14-2011" -> P15 (2011)); otherwise the team holding
+  // The same birth years exactly ("f13-2012" -> F14 (2012)); otherwise the team holding
   // most of them, ties going to the younger players (who stay together longest).
   let best: { id: string; score: number } | null = null
   for (const team of candidates) {
