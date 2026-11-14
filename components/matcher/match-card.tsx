@@ -227,7 +227,12 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
           ) : (
             <>
               <p className="text-[15px] font-bold leading-6 tabular-nums text-slate-950">{timeLabel}</p>
-              {showDate && dateLabel && <p className="truncate text-[11px] text-slate-400">{dateLabel}</p>}
+              {match.date.getTime() < Date.now() ? (
+                // Past kickoff but not started in Profixio yet (a delayed cup game).
+                <p className="text-[11px] font-semibold text-amber-600">Inväntar start</p>
+              ) : (
+                showDate && dateLabel && <p className="truncate text-[11px] text-slate-400">{dateLabel}</p>
+              )}
             </>
           )}
         </div>
