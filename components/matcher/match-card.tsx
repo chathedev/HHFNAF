@@ -13,6 +13,7 @@ import {
 } from "@/lib/match-card-utils"
 import type { NormalizedMatch } from "@/lib/use-match-data"
 import { extendTeamDisplayName, withSquad } from "@/lib/team-display"
+import { liveOdds } from "@/lib/live-odds"
 
 const cleanOpponentName = (value?: string) =>
   (value || "").replace(/\s*\((hemma|borta)\)\s*$/i, "").trim()
@@ -124,6 +125,28 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
   // The pre-match chance, so only before kickoff (some matches never flip to live in Profixio).
   const winChance =
     status === "upcoming" && typeof match.winChance === "number" && match.date.getTime() > Date.now() ? match.winChance : null
+  // Live: HHF Scout's pre-match prediction updated from the score and the time played
+  // (estimated from kickoff: two halves plus a 10 min break). Before the first goal the
+  // pre-match chance stands.
+  const liveChance = (() => {
+    const pre = match.scoutOdds
+    if (status !== "live" || !pre) return null
+    const hhfHome = isHHFName(homeName) && !isHHFName(awayName)
+    const hhfAway = isHHFName(awayName) && !isHHFName(homeName)
+    if (!hhfHome && !hhfAway) return null
+    const flip = (pre.hhfSide === "home") !== hhfHome
+    const oriented = flip
+      ? { pHome: pre.pAway, pDraw: pre.pDraw, pAway: pre.pHome, margin: -pre.margin, sigma: pre.sigma }
+      : pre
+    const senior = /^(dam|herr|a-lag)/i.test(teamTypeRaw)
+    const halfMinutes = senior ? 30 : 25
+    const played = Math.max(0, (Date.now() - match.date.getTime()) / 60_000)
+    const playing = played <= halfMinutes ? played : played <= halfMinutes + 10 ? halfMinutes : played - 10
+    const odds = scorePair
+      ? liveOdds(oriented, scorePair.home, scorePair.away, Math.min(0.97, playing / (2 * halfMinutes)))
+      : oriented
+    return { value: Math.round(100 * (hhfHome ? odds.pHome : odds.pAway)), now: Boolean(scorePair) }
+  })()
   const isProcup = match.provider === "procup"
   const infoUrl = /^https?:\/\//i.test(match.infoUrl ?? "") ? match.infoUrl! : null
   const profixioHref = infoUrl && /^https:\/\/(www\.)?profixio\.com\//i.test(infoUrl) ? infoUrl : null
@@ -244,8 +267,14 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
               Står som 0–0 fast matchen är slut. Kontrollera matchrapporten.
             </p>
           )}
-          {(hasPlayLink || scoutHref || profixioHref || otherInfoHref || winChance != null) && (
+          {(hasPlayLink || scoutHref || profixioHref || otherInfoHref || winChance != null || liveChance) && (
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold">
+              {liveChance && (
+                <span className="tabular-nums text-slate-900" title="HHF Scout, uppdateras med ställning och matchtid">
+                  {liveChance.value} % vinstchans
+                  <span className="font-normal text-slate-400"> {liveChance.now ? "just nu" : "före matchen"}</span>
+                </span>
+              )}
               {winChance != null && (
                 <span
                   className="tabular-nums text-slate-900"

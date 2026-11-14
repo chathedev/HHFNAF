@@ -141,6 +141,7 @@ type ApiMatch = {
   squad?: string | null
   winChance?: number | null
   expectedScore?: string | null
+  scoutOdds?: { pHome: number; pDraw: number; pAway: number; margin: number; sigma: number; hhfSide: "home" | "away" } | null
   opponent?: string
   isHome?: boolean
   scoreTimeline?: unknown
@@ -189,6 +190,7 @@ export type NormalizedMatch = {
   // HHF Scout, coming matches: HHF's win chance in % and the expected score (home-away).
   winChance?: number | null
   expectedScore?: string | null
+  scoutOdds?: { pHome: number; pDraw: number; pAway: number; margin: number; sigma: number; hhfSide: "home" | "away" } | null
   matchStatus?: "live" | "finished" | "upcoming" | "halftime"
   matchFeed?: MatchFeedEvent[]
   isHalftime?: boolean // Special flag for halftime breaks
@@ -848,6 +850,7 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     squad: match.squad ?? null,
     winChance: typeof match.winChance === "number" ? match.winChance : null,
     expectedScore: match.expectedScore ?? null,
+    scoutOdds: match.scoutOdds ?? null,
     opponent,
     normalizedTeam,
     date: parsedDate,
@@ -1340,6 +1343,7 @@ const createMatchDataChannel = () => {
     squad: match.squad ?? null,
     winChance: typeof match.winChance === "number" ? match.winChance : null,
     expectedScore: match.expectedScore ?? null,
+    scoutOdds: match.scoutOdds ?? null,
     opponent: match.opponent,
     isHome: match.isHome,
     provider: match.provider,
