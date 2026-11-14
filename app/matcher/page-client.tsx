@@ -1,6 +1,7 @@
 "use client"
 
 import { withSealed } from "@/components/sealed"
+import { PageSkeletonMain } from "@/components/page-skeleton"
 import { apiFetch } from "@/lib/api-client"
 import { useMemo, useState, useEffect, useCallback, useRef, type ReactNode } from "react"
 import Link from "@/components/quiet-link"
@@ -899,4 +900,4 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
 }
 
 // Server pages pass this one sealed props (lib/page-seal.ts), so no match JSON sits in the page.
-export const MatcherPageClientSealed = withSealed(MatcherPageClient, "MatcherPageClient")
+export const MatcherPageClientSealed = withSealed(MatcherPageClient, "MatcherPageClient", <PageSkeletonMain />)

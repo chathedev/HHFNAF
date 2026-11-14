@@ -27,7 +27,11 @@ class IslandBoundary extends ReactComponent<{ children: ReactNode }, { failed: b
   }
 }
 
-export function withSealed<P extends object>(Inner: ComponentType<P>, displayName?: string) {
+// fallback: what shows until the island is in place. React streams any finished boundary over
+// ~12.8 KB as a separate chunk after the rest of the page, so on a full page load the browser
+// paints this fallback first, then swaps the island in. With null, page-level islands showed
+// only the header and footer for a moment; they pass a skeleton shaped like the page instead.
+export function withSealed<P extends object>(Inner: ComponentType<P>, displayName?: string, fallback: ReactNode = null) {
   function Opened({ sealed }: { sealed: string }) {
     const props = typeof window === "undefined" ? openSealedSync<P>(sealed) : use(openSealed<P>(sealed))
     return <Inner {...props} />
@@ -35,7 +39,7 @@ export function withSealed<P extends object>(Inner: ComponentType<P>, displayNam
   function SealedIsland({ sealed }: { sealed: string }) {
     return (
       <IslandBoundary>
-        <Suspense fallback={null}>
+        <Suspense fallback={fallback}>
           <Opened sealed={sealed} />
         </Suspense>
       </IslandBoundary>

@@ -1,6 +1,7 @@
 "use client"
 
 import { withSealed } from "@/components/sealed"
+import { PageSkeletonMain } from "@/components/page-skeleton"
 import Link from "@/components/quiet-link"
 import Image from "@/components/quiet-image"
 import { useEffect, useMemo, useState } from "react"
@@ -364,4 +365,12 @@ export default function TeamPageClient({
   )
 }
 
-export const TeamPageClientSealed = withSealed(TeamPageClient, "TeamPageClient")
+export const TeamPageClientSealed = withSealed(
+  TeamPageClient,
+  "TeamPageClient",
+  <>
+    <Header />
+    <PageSkeletonMain />
+    <Footer />
+  </>,
+)

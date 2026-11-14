@@ -1677,4 +1677,12 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
 }
 
 // Server pages pass this one sealed props (lib/page-seal.ts), so no match JSON sits in the page.
-export const HomePageClientSealed = withSealed(HomePageClient, "HomePageClient")
+export const HomePageClientSealed = withSealed(
+  HomePageClient,
+  "HomePageClient",
+  // Same as app/loading.tsx: header over a dark hero-height block.
+  <>
+    <Header />
+    <div className="h-screen bg-slate-900" />
+  </>,
+)

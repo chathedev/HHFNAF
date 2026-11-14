@@ -1,7 +1,8 @@
 import { Header } from "@/components/header"
+import { RootLoadingBody } from "@/components/root-loading-body"
 
 /**
- * Fallback for the home route (every other public route has its own).
+ * Root fallback. It wraps every route, so the body depends on the path (see RootLoadingBody).
  *
  * The home hero is a full-height dark image, so the old plain slate panel read as a
  * bright flash when navigating back to the start page. A dark block of the same height
@@ -11,9 +12,7 @@ export default function Loading() {
   return (
     <>
       <Header />
-      <div className="min-h-screen bg-slate-900">
-        <div className="h-screen w-full animate-pulse bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900" />
-      </div>
+      <RootLoadingBody />
     </>
   )
 }

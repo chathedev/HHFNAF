@@ -1,6 +1,7 @@
 "use client"
 
 import { withSealed } from "@/components/sealed"
+import { SkeletonRows } from "@/components/page-skeleton"
 import { apiFetch } from "@/lib/api-client"
 import { useState, useMemo, useEffect } from "react"
 import { SelectMenu } from "@/components/ui/select-menu"
@@ -347,4 +348,4 @@ export function TabellerClient({
 }
 
 // Server pages pass this one sealed props (lib/page-seal.ts), so no match JSON sits in the page.
-export const TabellerClientSealed = withSealed(TabellerClient, "TabellerClient")
+export const TabellerClientSealed = withSealed(TabellerClient, "TabellerClient", <SkeletonRows />)
