@@ -158,6 +158,13 @@ export const isExtendedTeamKey = (value?: string | null) => {
   return Boolean(normalized && EXTENDED_TEAM_DISPLAY_BY_KEY[normalized])
 }
 
+// "F16 (2010/2011)" + "lag 2" -> "F16 (2010/2011) · lag 2": says which HHF team plays when the
+// club has several in one class (the API adds `squad` from the scout's squad matching).
+export const withSquad = (label: string, match?: unknown) => {
+  const squad = match && typeof match === "object" ? (match as { squad?: unknown }).squad : null
+  return typeof squad === "string" && squad.trim() ? `${label} · ${squad.trim()}` : label
+}
+
 export const extendTeamDisplayName = (value?: string | null) => {
   if (!value) {
     return value ?? ""

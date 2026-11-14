@@ -29,7 +29,7 @@ import { ErrorBoundary } from "@/components/error-boundary"
 import { defaultContent } from "@/lib/default-content"
 import type { FullContent, Partner } from "@/lib/content-types"
 import { deriveSiteVariant, type SiteVariant, getThemeVariant, getHeroImages, type ThemeVariant } from "@/lib/site-variant"
-import { extendTeamDisplayName } from "@/lib/team-display"
+import { extendTeamDisplayName, withSquad } from "@/lib/team-display"
 import { resolvePreferredTimeline } from "@/lib/match-timeline"
 import {
   buildMatchScheduleLabel,
@@ -464,7 +464,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     const showProfixioWarning = shouldShowProfixioTechnicalIssue(match)
     const showFinishedZeroZeroIssue = hasClientMatchData && shouldShowFinishedZeroZeroIssue(match)
     const teamTypeRaw = match.teamType?.trim() || ""
-    const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
+    const teamTypeLabel = withSquad(extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF", match)
     const liveScore = typeof match.result === "string" ? match.result.trim() : ""
     const stableScore = liveScore || stableScoreByMatchId[match.id] || ""
     const hasStarted = match.date.getTime() <= Date.now() + 60_000
@@ -596,7 +596,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     const scheduleLabel = buildMatchScheduleLabel(match)
     const matchupLabel = getMatchupLabel(match)
     const teamTypeRaw = match.teamType?.trim() || ""
-    const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
+    const teamTypeLabel = withSquad(extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF", match)
     const hasStream = match.hasStream === true && Boolean((match.playUrl ?? "").trim()) && (match.playUrl ?? "").trim().toLowerCase() !== "null"
     const dayLabel = match.display?.dateCard?.trim() || match.displayDate
     const timeLabel = match.display?.time?.trim() || match.time?.trim() || ""
@@ -656,7 +656,7 @@ export function HomePageClient({ initialData }: { initialData?: EnhancedMatchDat
     const scheduleLabel = buildMatchScheduleLabel(match)
     const matchupLabel = getMatchupLabel(match)
     const teamTypeRaw = match.teamType?.trim() || ""
-    const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
+    const teamTypeLabel = withSquad(extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF", match)
     const hasStream = match.hasStream === true && Boolean((match.playUrl ?? "").trim()) && (match.playUrl ?? "").trim().toLowerCase() !== "null"
     const liveScore = typeof match.result === "string" ? match.result.trim() : ""
     const stableScore = liveScore || stableScoreByMatchId[match.id] || ""

@@ -4,7 +4,7 @@ import { apiFetch } from "@/lib/api-client"
 import { Calendar, Trophy, Zap } from "lucide-react"
 import { useEffect, useState } from "react"
 import type { ReactNode } from "react"
-import { extendTeamDisplayName } from "@/lib/team-display"
+import { extendTeamDisplayName, withSquad } from "@/lib/team-display"
 
 interface Match {
   teamType?: string
@@ -254,7 +254,7 @@ export default function MatchCards() {
               ) : (
                 upcomingMatches.map((match, index) => {
                   const opponent = removeHomeAwaySuffix(match.opponent) || "Motståndare meddelas"
-                  const teamLabel = extendTeamDisplayName(match.teamType)
+                  const teamLabel = withSquad(extendTeamDisplayName(match.teamType), match)
                   const scheduleBits = [formatDate(match.date), normalizeTimeLabel(match.time), match.venue].filter(Boolean)
                   const isLive = match.matchStatus === "live"
                   const isFinished = match.matchStatus === "finished"

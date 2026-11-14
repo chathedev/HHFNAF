@@ -12,7 +12,7 @@ import {
 import type { NormalizedMatch } from "@/lib/use-match-data"
 import { AnimatedScore } from "@/components/animated-score"
 import { MatchCardCTA } from "@/components/match-card-cta"
-import { extendTeamDisplayName } from "@/lib/team-display"
+import { extendTeamDisplayName, withSquad } from "@/lib/team-display"
 
 const cleanOpponentName = (value?: string) =>
   (value || "").replace(/\s*\((hemma|borta)\)\s*$/i, "").trim()
@@ -43,7 +43,7 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
   const showFinishedZeroZeroIssue = hasClientMatchData && shouldShowFinishedZeroZeroIssue(match)
 
   const teamTypeRaw = match.teamType?.trim() || ""
-  const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
+  const teamTypeLabel = withSquad(extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF", match)
 
   const isHomeMatch = match.isHome !== false
   const opponentName = cleanOpponentName(match.opponent)

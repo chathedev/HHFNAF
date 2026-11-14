@@ -13,7 +13,7 @@ import {
   getSimplifiedMatchStatus,
 } from "@/lib/match-card-utils"
 import { compareMatchesByDateAscStable } from "@/lib/match-sort"
-import { extendTeamDisplayName } from "@/lib/team-display"
+import { extendTeamDisplayName, withSquad } from "@/lib/team-display"
 import type { NormalizedMatch } from "@/lib/use-match-data"
 
 type CompactCupScheduleProps = {
@@ -311,7 +311,7 @@ export function CompactCupSchedule({
                           const showStream = isStreamAvailable(match)
                           const status = getSimplifiedMatchStatus(match)
                           const teamTypeRaw = match.teamType?.trim() || ""
-                          const teamTypeLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
+                          const teamTypeLabel = withSquad(extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF", match)
                           const venueLabel = match.venue?.trim() || match.arena?.trim() || "Arena saknas"
 
                           return (

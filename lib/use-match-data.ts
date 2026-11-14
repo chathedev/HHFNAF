@@ -138,6 +138,7 @@ type ApiMatch = {
   matchStatus?: "live" | "finished" | "upcoming" | null
   matchFeed?: MatchFeedEvent[]
   teamType?: string
+  squad?: string | null
   opponent?: string
   isHome?: boolean
   scoreTimeline?: unknown
@@ -181,6 +182,8 @@ export type NormalizedMatch = {
   playUrl?: string
   infoUrl?: string
   teamType: string
+  // Which HHF squad ("lag 2") when HHF has several teams in the class; from the scout.
+  squad?: string | null
   matchStatus?: "live" | "finished" | "upcoming" | "halftime"
   matchFeed?: MatchFeedEvent[]
   isHalftime?: boolean // Special flag for halftime breaks
@@ -837,6 +840,7 @@ const normalizeMatch = (match: ApiMatch): NormalizedMatch | null => {
     homeTeam: match.home,
     awayTeam: match.away,
     teamType,
+    squad: match.squad ?? null,
     opponent,
     normalizedTeam,
     date: parsedDate,
@@ -1326,6 +1330,7 @@ const createMatchDataChannel = () => {
     matchStatus: match.matchStatus ?? undefined,
     matchFeed: match.matchFeed ?? undefined,
     teamType: match.teamType,
+    squad: match.squad ?? null,
     opponent: match.opponent,
     isHome: match.isHome,
     provider: match.provider,

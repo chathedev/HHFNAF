@@ -27,6 +27,7 @@ type ApiMatchLike = {
   events?: any[]
   scoreTimeline?: any[]
   teamType?: string
+  squad?: string | null
   opponent?: string
   isHome?: boolean
   provider?: MatchProvider
@@ -306,6 +307,7 @@ const normalizeMatch = (match: ApiMatchLike): NormalizedMatch | null => {
     homeTeam: match.home ?? "",
     awayTeam: match.away ?? "",
     teamType,
+    squad: match.squad ?? null,
     opponent,
     normalizedTeam,
     date: parsedDate,

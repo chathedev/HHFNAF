@@ -2,7 +2,7 @@
 
 import { useMemo, useEffect, useRef, useState } from "react"
 import Link from "@/components/quiet-link"
-import { extendTeamDisplayName } from "@/lib/team-display"
+import { extendTeamDisplayName, withSquad } from "@/lib/team-display"
 
 import { Card } from "@/components/ui/card"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
@@ -281,7 +281,7 @@ export function TeamUpcomingMatch({ teamLabels }: TeamUpcomingMatchProps) {
   
   // Don't show LIVE badge if match has been 0-0 for more than 60 minutes (likely stale data)
   const shouldShowLive = status === "live" && nextMatch.matchStatus !== "halftime" && !(isZeroZero && minutesSinceKickoff > 60)
-  const teamTypeLabel = extendTeamDisplayName(nextMatch.teamType)
+  const teamTypeLabel = withSquad(extendTeamDisplayName(nextMatch.teamType), nextMatch)
   const providerBadge = getMatchProviderBadge(nextMatch)
   const providerHelperText = getProviderHelperText(nextMatch)
   

@@ -18,6 +18,7 @@ import {
   extendTeamDisplayName,
   matchLabelFitsTeam,
   teamClassKey,
+  withSquad,
   type ClubTeamMetadata,
 } from "@/lib/team-display"
 import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
@@ -306,7 +307,7 @@ export default function TeamPageClient({
                 const canOpenTimeline = canOpenMatchTimeline(match)
                 const providerBadge = getMatchProviderBadge(match)
                 const providerHelperText = getProviderHelperText(match)
-                const matchTeamLabel = extendTeamDisplayName(match.teamType)
+                const matchTeamLabel = withSquad(extendTeamDisplayName(match.teamType), match)
 
                 // Don't show LIVE badge if match should be finished
                 const shouldShowLive = status === "live" && !matchShouldBeFinished
