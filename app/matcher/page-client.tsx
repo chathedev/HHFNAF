@@ -248,16 +248,11 @@ function SectionHeader({
   children?: ReactNode
 }) {
   return (
-    <div className="mb-3 flex items-center justify-between gap-3">
-      <div className="flex items-center gap-2.5">
-        {live && <span className="h-2 w-2 animate-pulse rounded-full bg-rose-500" aria-hidden />}
-        <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-950">{label}</h2>
-        {typeof count === "number" && (
-          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold tabular-nums text-slate-500">
-            {count}
-          </span>
-        )}
-      </div>
+    <div className="mb-3 flex items-center gap-3">
+      {live && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-500" aria-hidden />}
+      <h2 className={`text-[11px] font-semibold uppercase tracking-widest ${live ? "text-slate-950" : "text-slate-500"}`}>{label}</h2>
+      {typeof count === "number" && <span className="text-[11px] font-semibold tabular-nums text-slate-400">{count}</span>}
+      <div className="h-px flex-1 bg-slate-200" />
       {children}
     </div>
   )
@@ -274,10 +269,8 @@ function DayGroupList({
     <div className="space-y-5">
       {groups.map((group) => (
         <div key={group.key}>
-          <p className="mb-2 pl-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 first-letter:uppercase">
-            {group.label}
-          </p>
-          <div className="space-y-2.5">{group.matches.map((match) => renderMatch(match, false))}</div>
+          <p className="mb-1.5 text-xs font-semibold text-slate-900 first-letter:uppercase">{group.label}</p>
+          <div className="divide-y divide-slate-100 border border-slate-200">{group.matches.map((match) => renderMatch(match, false))}</div>
         </div>
       ))}
     </div>
@@ -635,12 +628,10 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
   )
 
   const emptySlimRow = (label: string, description: string) => (
-    <section className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:px-5">
-      <div className="flex min-w-0 items-baseline gap-3">
-        <p className="shrink-0 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">{label}</p>
-        <p className="truncate text-sm text-slate-400">{description}</p>
-      </div>
-      <span className="shrink-0 text-xs font-medium text-slate-400">Inga just nu</span>
+    <section className="flex items-center gap-3">
+      <p className="shrink-0 text-[11px] font-semibold uppercase tracking-widest text-slate-500">{label}</p>
+      <div className="h-px flex-1 bg-slate-200" />
+      <span className="shrink-0 text-xs text-slate-400" title={description}>Inga just nu</span>
     </section>
   )
 
@@ -649,12 +640,10 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
       <button
         type="button"
         onClick={() => (isSearching ? setSearchLimit((n) => n + SEARCH_PAGE_SIZE) : setFinishedLimit((prev) => prev + FINISHED_PAGE_SIZE))}
-        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700"
+        className="inline-flex items-center gap-2 border border-slate-900 bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-900 hover:text-white"
       >
         Visa fler resultat
-        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold tabular-nums text-slate-500">
-          {hiddenFinishedCount}
-        </span>
+        <span className="text-xs font-semibold tabular-nums opacity-60">{hiddenFinishedCount}</span>
       </button>
     </div>
   )
@@ -663,7 +652,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     liveCount > 0 ? (
       <section>
         <SectionHeader label="Live nu" count={liveCount} live />
-        <div className="space-y-2.5">{groupedMatches.live.map((match) => renderMatch(match, true))}</div>
+        <div className="divide-y divide-slate-100 border border-slate-900">{groupedMatches.live.map((match) => renderMatch(match, true))}</div>
       </section>
     ) : null
 
@@ -685,23 +674,23 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
     ) : null
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_36%,#f8fafc_100%)] pb-16">
+    <main className="min-h-screen bg-white pb-16">
       <div className="h-24" />
-      <div className="container mx-auto max-w-4xl px-4">
+      <div className="container mx-auto max-w-3xl px-4">
         <header className="pt-4 sm:pt-6">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-emerald-600">Matchcenter</p>
-              <h1 className="mt-1.5 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Matcher</h1>
-              <p className="mt-1.5 text-sm text-slate-500">Live, kommande matcher och resultat. Uppdateras automatiskt.</p>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Härnösands HF</p>
+              <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Matcher</h1>
+              <p className="mt-1 text-sm text-slate-500">Live, kommande och resultat för alla lag. Uppdateras automatiskt.</p>
             </div>
             {liveCount > 0 && (
               <button
                 type="button"
                 onClick={() => setStatusFilter("live")}
-                className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-600 transition hover:bg-rose-100"
+                className="inline-flex items-center gap-2 bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
               >
-                <span className="h-2 w-2 animate-pulse rounded-full bg-rose-500" aria-hidden />
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-500" aria-hidden />
                 {liveCount === 1 ? "1 match live" : `${liveCount} matcher live`}
               </button>
             )}
@@ -709,12 +698,12 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
         </header>
 
         <div className="sticky top-16 z-30 mt-5 sm:top-[72px]">
-          <div className="rounded-2xl border border-slate-200/90 bg-white/90 p-2.5 shadow-[0_8px_28px_rgba(15,23,42,0.06)] backdrop-blur-md">
-            <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="border-b border-slate-200 bg-white/95 pb-3 pt-2 backdrop-blur">
+            <div className="flex flex-col gap-2">
               <div
                 role="tablist"
                 aria-label="Filtrera matchvy"
-                className={`grid grid-cols-4 gap-1 rounded-xl bg-slate-100/80 p-1 transition lg:flex lg:shrink-0`}
+                className="grid grid-cols-4 gap-px border border-slate-900 bg-slate-900"
               >
                 {STATUS_OPTIONS.map((option) => {
                   const isActive = statusFilter === option.value
@@ -725,15 +714,15 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                       role="tab"
                       aria-selected={isActive}
                       onClick={() => setStatusFilter(option.value)}
-                      className={`relative inline-flex min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-1.5 py-1.5 text-xs font-semibold transition sm:px-3 sm:text-sm lg:px-4 ${
-                        isActive ? "bg-slate-950 text-white shadow-sm" : "text-slate-600 hover:bg-white"
+                      className={`relative inline-flex min-w-0 items-center justify-center gap-1.5 whitespace-nowrap px-1.5 py-2 text-xs font-semibold transition sm:px-3 sm:text-sm lg:px-4 ${
+                        isActive ? "bg-slate-950 text-white" : "bg-white text-slate-700 hover:bg-slate-50"
                       }`}
                     >
                       {option.label}
                       {tabCounts[option.value] != null && (
                         <span
-                          className={`hidden rounded-full px-1.5 text-[10px] font-bold tabular-nums sm:inline ${
-                            isActive ? "bg-white/15 text-white" : "bg-white text-slate-500"
+                          className={`hidden text-[10px] font-semibold tabular-nums sm:inline ${
+                            isActive ? "text-white/60" : "text-slate-400"
                           }`}
                         >
                           {tabCounts[option.value]}
@@ -741,9 +730,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                       )}
                       {option.value === "live" && liveCount > 0 && (
                         <span
-                          className={`absolute -right-0.5 -top-0.5 h-2 w-2 animate-pulse rounded-full ${
-                            isActive ? "bg-rose-400" : "bg-rose-500"
-                          }`}
+                          className="absolute right-1 top-1 h-1.5 w-1.5 animate-pulse rounded-full bg-rose-500"
                           aria-hidden
                         />
                       )}
@@ -752,18 +739,18 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                 })}
               </div>
 
-              <div className="flex min-w-0 flex-1 items-center gap-2 lg:justify-end">
+              <div className="flex min-w-0 items-center gap-2">
                 <SelectMenu
                   id="team-filter"
                   ariaLabel="Filtrera lag"
                   value={selectedTeam}
                   onChange={setSelectedTeam}
-                  className="min-w-0 flex-1 lg:w-60 lg:flex-none"
+                  className="min-w-0 flex-1 !rounded-none"
                   options={[{ value: "all", label: "Alla lag" }, ...teamOptions.map((team) => ({ value: team.value, label: team.label }))]}
                 />
                 <Link
                   href="/tabeller"
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50/80 px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                  className="inline-flex shrink-0 items-center gap-1.5 border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-900 hover:text-slate-950"
                 >
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 6h18M3 14h18M3 18h18" />
@@ -772,7 +759,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                 </Link>
               </div>
             </div>
-            <div className="mt-2.5">
+            <div className="mt-2">
                 <div className="relative">
                   <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
@@ -783,14 +770,14 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="Sök lag, motståndare, datum…"
                     aria-label="Sök matcher på lag, motståndare, hall, serie eller datum"
-                    className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none"
+                    className="w-full border border-slate-200 bg-white py-2.5 pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none"
                   />
                   {query && (
                     <button
                       type="button"
                       onClick={() => setQuery("")}
                       aria-label="Rensa sökningen"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-0.5 text-base leading-none text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 text-base leading-none text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                     >
                       ×
                     </button>
@@ -800,9 +787,9 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
           </div>
         </div>
 
-        <div className="mt-6 space-y-7">
+        <div className="mt-6 space-y-8">
           {activeError && (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
+            <div className="border border-red-200 bg-red-50 p-4">
               <div className="flex items-center gap-3">
                 <svg className="h-5 w-5 shrink-0 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -813,13 +800,15 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
           )}
 
           {(isLoading || (!activeError && !hasLoadedAnyMatches)) && filteredMatches.length === 0 && (
-            <div className="space-y-2.5" aria-label="Hämtar matcher" role="status">
+            <div className="divide-y divide-slate-100 border border-slate-200" aria-label="Hämtar matcher" role="status">
               {[0, 1, 2, 3, 4].map((i) => (
-                <div
-                  key={i}
-                  className="h-28 animate-pulse rounded-2xl border border-slate-200 bg-white"
-                  style={{ animationDelay: `${i * 100}ms` }}
-                />
+                <div key={i} className="flex animate-pulse gap-4 px-4 py-4" style={{ animationDelay: `${i * 100}ms` }}>
+                  <div className="h-5 w-12 bg-slate-100" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-2/3 bg-slate-100" />
+                    <div className="h-4 w-1/2 bg-slate-100" />
+                  </div>
+                </div>
               ))}
             </div>
           )}
@@ -831,11 +820,8 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
             hasResolvedActiveData &&
             hasLoadedAnyMatches &&
             (statusFilter === "finished" ? hasAttemptedOldFetch : hasAttemptedLiveFetch) && (
-            <div className="rounded-2xl border border-slate-200 bg-white px-6 py-16 text-center">
-              <svg className="mx-auto h-14 w-14 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <h2 className="mt-4 text-xl font-semibold text-slate-950">
+            <div className="border border-slate-200 bg-white px-6 py-14 text-center">
+              <h2 className="text-lg font-semibold text-slate-950">
                 {isSearching ? `Inga träffar på "${query.trim()}" här` : "Inga matcher hittades"}
               </h2>
               <p className="mt-2 text-sm text-slate-500">
@@ -850,10 +836,10 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                       key={o.value}
                       type="button"
                       onClick={() => setStatusFilter(o.value)}
-                      className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100"
+                      className="inline-flex items-center gap-2 border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-slate-900"
                     >
                       {o.label}
-                      <span className="rounded-full bg-white px-2 text-xs font-bold tabular-nums">{tabCounts[o.value]}</span>
+                      <span className="text-xs font-semibold tabular-nums text-slate-400">{tabCounts[o.value]}</span>
                     </button>
                   ))}
                 </div>
@@ -864,7 +850,7 @@ export function MatcherPageClient({ initialData }: { initialData?: EnhancedMatch
                   setStatusFilter("current")
                   setQuery("")
                 }}
-                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                className="mt-6 inline-flex items-center gap-2 bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
               >
                 Återställ filter
               </button>

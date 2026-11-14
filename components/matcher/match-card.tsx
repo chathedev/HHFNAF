@@ -1,17 +1,17 @@
 "use client"
 
 import { memo, type KeyboardEvent, type MouseEvent } from "react"
+import Link from "@/components/quiet-link"
 
 import {
   canOpenMatchTimeline,
   formatMatchTimeLabel,
+  getMatchWatchLabel,
   getSimplifiedMatchStatus,
   shouldShowFinishedZeroZeroIssue,
   shouldShowProfixioTechnicalIssue,
 } from "@/lib/match-card-utils"
 import type { NormalizedMatch } from "@/lib/use-match-data"
-import { AnimatedScore } from "@/components/animated-score"
-import { MatchCardCTA } from "@/components/match-card-cta"
 import { extendTeamDisplayName, withSquad } from "@/lib/team-display"
 
 const cleanOpponentName = (value?: string) =>
@@ -28,6 +28,8 @@ const parseScorePair = (result?: string) => {
 
 const isHHFName = (value: string) => /härnösand|harnosand/i.test(value)
 
+const SHORT_DATE = new Intl.DateTimeFormat("sv-SE", { day: "numeric", month: "short", timeZone: "Europe/Stockholm" })
+
 export type MatchCardProps = {
   match: NormalizedMatch
   hasClientMatchData: boolean
@@ -43,7 +45,12 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
   const showFinishedZeroZeroIssue = hasClientMatchData && shouldShowFinishedZeroZeroIssue(match)
 
   const teamTypeRaw = match.teamType?.trim() || ""
-  const teamTypeLabel = withSquad(extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF", match)
+  // "Flickor - F16 Mitt" -> "F16 Mitt": the class already says girls or boys.
+  const series = match.series?.trim().replace(/^(flickor|pojkar|damer|herrar)\s*-\s*/i, "") || null
+  const baseTeamLabel = extendTeamDisplayName(teamTypeRaw) || teamTypeRaw || "Härnösands HF"
+  // A squad named after its series ("Mitt") is already said by the series ("F14 Mitt").
+  const squadInSeries = Boolean(match.squad && !/^lag \d/i.test(match.squad) && series?.toLowerCase().includes(match.squad.toLowerCase()))
+  const teamTypeLabel = squadInSeries ? baseTeamLabel : withSquad(baseTeamLabel, match)
 
   const isHomeMatch = match.isHome !== false
   const opponentName = cleanOpponentName(match.opponent)
@@ -70,7 +77,8 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
 
   const scorePair = parseScorePair(scoreValue ?? undefined)
   const outcome = (() => {
-    if (status !== "finished" || !scorePair) return null
+    // Two HHF squads against each other: no "our" result to show.
+    if (status !== "finished" || !scorePair || (isHHFName(homeName) && isHHFName(awayName))) return null
     const our = isHomeMatch ? scorePair.home : scorePair.away
     const their = isHomeMatch ? scorePair.away : scorePair.home
     if (our > their) return "win" as const
@@ -78,27 +86,32 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
     return "draw" as const
   })()
 
-  const statusBadge =
-    status === "live"
-      ? { label: match.statusLabel ?? "LIVE", tone: "bg-rose-500 text-white" }
-      : status === "finished"
-        ? { label: match.statusLabel ?? "SLUT", tone: "bg-slate-100 text-slate-500" }
-        : { label: match.statusLabel ?? "Kommande", tone: "bg-sky-50 text-sky-700" }
+  const playUrl = (match.playUrl ?? "").trim()
+  const hasPlayLink = match.hasStream === true && Boolean(playUrl) && playUrl.toLowerCase() !== "null"
 
-  const outcomeText =
+  const outcomeChip =
     outcome === "win"
-      ? { label: "Vinst", tone: "text-emerald-600" }
+      ? { letter: "V", label: "Vinst", tone: "bg-slate-950 text-white" }
       : outcome === "loss"
-        ? { label: "Förlust", tone: "text-rose-500" }
+        ? { letter: "F", label: "Förlust", tone: "border border-slate-300 text-slate-500" }
         : outcome === "draw"
-          ? { label: "Oavgjort", tone: "text-slate-500" }
+          ? { letter: "O", label: "Oavgjort", tone: "bg-slate-100 text-slate-600" }
           : null
 
-  const metaParts = [
-    showDate ? match.display?.dateCard || match.displayDate : null,
-    status !== "upcoming" ? formatMatchTimeLabel(match) : null,
-    match.venue?.trim() || null,
-  ].filter((part): part is string => Boolean(part && part.length > 0))
+  const timeLabel = formatMatchTimeLabel(match)
+  // "15 nov": fits the narrow time column on a phone.
+  const dateLabel = SHORT_DATE.format(match.date).replace(/\.$/, "")
+  const scoutHref =
+    match.apiMatchId && match.provider !== "procup" && /^\d+$/.test(String(match.apiMatchId))
+      ? `/scout/match/${match.apiMatchId}`
+      : null
+  const winChance = status === "upcoming" && typeof match.winChance === "number" ? match.winChance : null
+  const profixioHref = /^https:\/\/(www\.)?profixio\.com\//i.test(match.infoUrl ?? "") ? match.infoUrl! : null
+  const liveLabel = match.statusLabel && !/^live$/i.test(match.statusLabel.trim()) ? match.statusLabel.trim() : null
+
+  const metaParts = [teamTypeLabel, series, match.venue?.trim() || null].filter(
+    (part): part is string => Boolean(part && part.length > 0),
+  )
 
   const handleActivate = (event: MouseEvent | KeyboardEvent) => {
     if (!canOpenTimeline) return
@@ -107,15 +120,40 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
     onOpen(match)
   }
 
+  // One side of the scoreboard: team name, its goals, the winner a shade darker.
+  const teamLine = (name: string, goals: number | null, other: number | null) => {
+    const ours = isHHFName(name)
+    const leads = goals != null && other != null && goals > other
+    return (
+      <div className="flex items-baseline justify-between gap-3">
+        <span
+          className={`min-w-0 truncate text-[15px] leading-6 ${ours ? "font-semibold text-slate-950" : "text-slate-600"}`}
+          title={name}
+        >
+          {name}
+        </span>
+        {goals != null && (
+          <span
+            className={`shrink-0 text-[15px] leading-6 tabular-nums ${
+              leads || (status === "live" && ours) ? "font-black text-slate-950" : "font-semibold text-slate-400"
+            }`}
+          >
+            {goals}
+          </span>
+        )}
+      </div>
+    )
+  }
+
   return (
     <article
       id={`match-card-${match.id}`}
       role={canOpenTimeline ? "button" : undefined}
       tabIndex={canOpenTimeline ? 0 : undefined}
       aria-label={canOpenTimeline ? `${homeName} mot ${awayName}, öppna matchhändelser` : undefined}
-      className={`group relative rounded-lg border border-slate-200 bg-white transition-colors ${
+      className={`group relative bg-white transition-colors ${
         canOpenTimeline
-          ? "cursor-pointer hover:border-slate-300 hover:bg-slate-50/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+          ? "cursor-pointer hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-900"
           : ""
       }`}
       onMouseEnter={() => {
@@ -132,74 +170,111 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
         }
       }}
     >
-      <div className="px-4 py-3.5 sm:px-5">
-        <div className="flex items-center justify-between gap-3">
-          <p className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-            {teamTypeLabel}
-            {match.series && (
-              <span className="ml-2 font-normal normal-case tracking-normal text-slate-400">{match.series}</span>
-            )}
-          </p>
-          <div className="flex shrink-0 items-center gap-2.5">
-            {outcomeText && (
-              <span className={`text-[10px] font-semibold uppercase tracking-widest ${outcomeText.tone}`}>
-                {outcomeText.label}
-              </span>
-            )}
-            <span
-              className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest tabular-nums ${statusBadge.tone} ${
-                status === "live" ? "live-badge" : ""
-              }`}
-            >
-              {status === "live" && <span className="h-1.5 w-1.5 rounded-full bg-white" aria-hidden />}
-              {statusBadge.label}
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-2 flex items-center justify-between gap-4">
-          <h3 className="min-w-0 truncate text-sm font-semibold leading-tight sm:text-[15px]" title={`${homeName} – ${awayName}`}>
-            <span className={isHHFName(homeName) ? "text-slate-950" : "text-slate-600"}>{homeName}</span>
-            <span className="text-slate-300"> – </span>
-            <span className={isHHFName(awayName) ? "text-slate-950" : "text-slate-600"}>{awayName}</span>
-          </h3>
-          <div className="shrink-0 text-right">
-            {scoreValue ? (
-              <AnimatedScore
-                value={scoreValue}
-                className="whitespace-nowrap text-xl font-black tabular-nums tracking-tight text-slate-950"
-              />
-            ) : status === "upcoming" ? (
-              <p className="text-xl font-black tabular-nums tracking-tight text-slate-950">
-                {formatMatchTimeLabel(match)}
+      {status === "live" && <span className="absolute inset-y-0 left-0 w-0.5 bg-rose-500" aria-hidden />}
+      <div className="flex gap-3 px-3 py-3 sm:gap-5 sm:px-5 sm:py-3.5">
+        {/* Left: when, or how far it has come */}
+        <div className="w-14 shrink-0 pt-0.5 sm:w-16">
+          {status === "live" ? (
+            <>
+              <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-rose-600">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-500" aria-hidden />
+                Live
               </p>
-            ) : awaitingFinishedResult ? (
-              <p className="text-xs font-medium text-slate-400">Resultat inväntas</p>
-            ) : null}
-          </div>
+              {liveLabel && <p className="mt-0.5 truncate text-[11px] text-slate-500">{liveLabel}</p>}
+            </>
+          ) : status === "finished" ? (
+            <>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">{match.statusLabel?.trim() || "Slut"}</p>
+              {showDate && dateLabel && <p className="mt-0.5 truncate text-[11px] text-slate-400">{dateLabel}</p>}
+            </>
+          ) : (
+            <>
+              <p className="text-[15px] font-bold leading-6 tabular-nums text-slate-950">{timeLabel}</p>
+              {showDate && dateLabel && <p className="truncate text-[11px] text-slate-400">{dateLabel}</p>}
+            </>
+          )}
         </div>
 
-        {metaParts.length > 0 && (
-          <p className="mt-1.5 text-xs text-slate-400">{metaParts.join(" · ")}</p>
-        )}
+        {/* Middle: the scoreboard */}
+        <div className="min-w-0 flex-1">
+          {teamLine(homeName, scorePair ? scorePair.home : null, scorePair ? scorePair.away : null)}
+          {teamLine(awayName, scorePair ? scorePair.away : null, scorePair ? scorePair.home : null)}
+          {metaParts.length > 0 && (
+            <p className="mt-1 truncate text-xs text-slate-400" title={metaParts.join(" · ")}>
+              {metaParts.join(" · ")}
+            </p>
+          )}
+          {showLivePendingScore && <p className="mt-1.5 text-xs text-slate-500">Livescore väntar på första målet i Profixio.</p>}
+          {awaitingFinishedResult && <p className="mt-1.5 text-xs text-slate-500">Resultat inväntas.</p>}
+          {showProfixioWarning && (
+            <p className="mt-1.5 border-l-2 border-amber-400 pl-2 text-xs text-amber-700">
+              Liveuppdateringen har tekniska problem just nu.
+            </p>
+          )}
+          {showFinishedZeroZeroIssue && (
+            <p className="mt-1.5 border-l-2 border-amber-400 pl-2 text-xs text-amber-700">
+              Står som 0–0 fast matchen är slut. Kontrollera matchrapporten.
+            </p>
+          )}
+          {(hasPlayLink || scoutHref || profixioHref || winChance != null) && (
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold">
+              {winChance != null && (
+                <span
+                  className="tabular-nums text-slate-900"
+                  title={match.expectedScore ? `HHF Scout: väntat ${match.expectedScore}` : "HHF Scout"}
+                >
+                  {winChance} % vinstchans
+                  {match.expectedScore && <span className="ml-1.5 font-normal text-slate-400">väntat {match.expectedScore}</span>}
+                </span>
+              )}
+              {hasPlayLink && (
+                <a
+                  href={playUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(event) => event.stopPropagation()}
+                  className="inline-flex items-center gap-1.5 text-slate-900 underline-offset-4 hover:underline"
+                >
+                  <img src="/handbollplay_mini.png" alt="" className="h-3.5 w-3.5 brightness-0" />
+                  {getMatchWatchLabel(status)}
+                </a>
+              )}
+              {scoutHref && (
+                <Link
+                  href={scoutHref}
+                  onClick={(event) => event.stopPropagation()}
+                  className="text-slate-500 underline-offset-4 hover:text-slate-950 hover:underline"
+                >
+                  Scout
+                </Link>
+              )}
+              {profixioHref && (
+                <a
+                  href={profixioHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(event) => event.stopPropagation()}
+                  className="text-slate-500 underline-offset-4 hover:text-slate-950 hover:underline"
+                >
+                  Profixio ↗
+                </a>
+              )}
+            </div>
+          )}
+        </div>
 
-        {showLivePendingScore && (
-          <p className="mt-2.5 border-l-2 border-sky-300 pl-3 text-xs text-sky-800">
-            Matchen är live men poängen har ännu inte publicerats.
-          </p>
-        )}
-        {showProfixioWarning && (
-          <p className="mt-2.5 border-l-2 border-amber-400 pl-3 text-xs text-amber-700">
-            Liveuppdateringen har tekniska problem för den här matchen just nu.
-          </p>
-        )}
-        {showFinishedZeroZeroIssue && (
-          <p className="mt-2.5 border-l-2 border-amber-400 pl-3 text-xs text-amber-700">
-            Misstänkt resultatfel: matchen är avslutad men står som 0–0. Kontrollera matchrapporten.
-          </p>
-        )}
-
-        <MatchCardCTA match={match} status={status} />
+        {/* Right: our result, at a glance */}
+        <div className="flex w-6 shrink-0 justify-end pt-0.5">
+          {outcomeChip && (
+            <span
+              className={`inline-flex h-6 w-6 items-center justify-center text-[11px] font-bold ${outcomeChip.tone}`}
+              title={outcomeChip.label}
+              aria-label={outcomeChip.label}
+            >
+              {outcomeChip.letter}
+            </span>
+          )}
+        </div>
       </div>
     </article>
   )

@@ -28,6 +28,8 @@ type ApiMatchLike = {
   scoreTimeline?: any[]
   teamType?: string
   squad?: string | null
+  winChance?: number | null
+  expectedScore?: string | null
   opponent?: string
   isHome?: boolean
   provider?: MatchProvider
@@ -308,6 +310,8 @@ const normalizeMatch = (match: ApiMatchLike): NormalizedMatch | null => {
     awayTeam: match.away ?? "",
     teamType,
     squad: match.squad ?? null,
+    winChance: typeof match.winChance === "number" ? match.winChance : null,
+    expectedScore: match.expectedScore ?? null,
     opponent,
     normalizedTeam,
     date: parsedDate,

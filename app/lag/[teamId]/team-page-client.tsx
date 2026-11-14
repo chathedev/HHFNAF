@@ -10,6 +10,9 @@ import Footer from "@/components/footer"
 import { Card } from "@/components/ui/card"
 import { normalizeMatchKey } from "@/lib/matches"
 import { useMatchData, type NormalizedMatch } from "@/lib/use-match-data"
+import { MatchCard } from "@/components/matcher/match-card"
+
+const noPrefetch = () => undefined
 import { MatchFeedModal } from "@/components/match-feed-modal"
 import { useRestoreOpenMatch } from "@/components/build-refresh"
 import {
@@ -56,7 +59,7 @@ export default function TeamPageClient({
   const teamDisplayName = team.displayName
 
   const [selectedMatch, setSelectedMatch] = useState<NormalizedMatch | null>(null);
-  const { matches: currentMatches, loading: currentLoading, error: currentError, refresh } = useMatchData({
+  const { matches: currentMatches, loading: currentLoading, error: currentError, refresh, hasClientData } = useMatchData({
     dataType: "liveUpcoming",
   });
   const { matches: finishedMatches, loading: finishedLoading, error: finishedError } = useMatchData({
@@ -261,179 +264,64 @@ export default function TeamPageClient({
             {/* Removed matcher button as requested */}
             <section aria-label="Lagets matcher" className="mt-10 space-y-6">
               <div className="text-center">
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-700">Lagets matcher</p>
-                <h2 className="mt-2 text-2xl font-bold text-gray-900">{teamDisplayName}</h2>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Lagets matcher</p>
+                <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">{teamDisplayName}</h2>
                 {scoutLinks.length > 0 && (
-                  <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                    <span className="text-xs text-slate-500">Motståndare och vinstchanser:</span>
                     {scoutLinks.map((link) => (
                       <Link
                         key={link.slug}
                         href={`/scout/${link.slug}`}
-                        className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white transition hover:bg-slate-800"
+                        className="inline-flex items-center gap-1 border border-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-900 transition hover:bg-slate-900 hover:text-white"
                       >
-                        HHF Scout{scoutLinks.length > 1 ? ` · ${link.label}` : ""}: motståndare och vinstchanser →
+                        {scoutLinks.length > 1 ? `Scout · ${link.label.split(" · ").slice(1).join(" · ") || link.label}` : "HHF Scout"} →
                       </Link>
                     ))}
                   </div>
                 )}
               </div>
 
-              {teamMatches.map((match) => {
-                const status = getDerivedStatus(match)
-                const opponentName = extractOpponentName(match.opponent)
-                const isHome = match.isHome !== false
-                const homeAwayLabel = isHome ? "hemma" : "borta"
-                const scheduleLine = buildScheduleLine(match)
-                const trimmedResult = match.result?.trim()
-
-                // Check if match should be finished based on time
-                const now = Date.now()
-                const minutesSinceKickoff = (now - match.date.getTime()) / (1000 * 60)
-                const normalizedResult = trimmedResult?.replace(/[–-]/g, '-').toLowerCase()
-                const isZeroZero = normalizedResult === "0-0" || normalizedResult === "00" || trimmedResult === "0-0" || trimmedResult === "0–0"
-
-                // A handball match typically lasts 60 minutes (2x30 min) + breaks ~10-15 min = ~75 minutes max
-                // Only consider finished if way past reasonable time (2+ hours) AND showing stale 0-0
-                const matchShouldBeFinished = minutesSinceKickoff > 120 && isZeroZero && status !== "live"
-                const isStaleZeroResult = isZeroZero && matchShouldBeFinished
-
-                const hasResult =
-                  Boolean(trimmedResult) &&
-                  trimmedResult?.toLowerCase() !== "inte publicerat" &&
-                  trimmedResult !== "0-0" &&
-                  trimmedResult !== "0–0"
-
-                const playLabel = getMatchWatchLabel(status)
-                const canOpenTimeline = canOpenMatchTimeline(match)
-                const providerBadge = getMatchProviderBadge(match)
-                const providerHelperText = getProviderHelperText(match)
-                const matchTeamLabel = withSquad(extendTeamDisplayName(match.teamType), match)
-
-                // Don't show LIVE badge if match should be finished
-                const shouldShowLive = status === "live" && !matchShouldBeFinished
-
+              {(() => {
+                // Same scoreboard rows as /matcher: what is coming first, then the results.
+                const open = teamMatches.filter((match) => getDerivedStatus(match) !== "finished")
+                const done = teamMatches.filter((match) => getDerivedStatus(match) === "finished")
+                const list = (label: string, items: NormalizedMatch[]) =>
+                  items.length ? (
+                    <div>
+                      <div className="mb-3 flex items-center gap-3">
+                        <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">{label}</h3>
+                        <span className="text-[11px] font-semibold tabular-nums text-slate-400">{items.length}</span>
+                        <div className="h-px flex-1 bg-slate-200" />
+                      </div>
+                      <div className="divide-y divide-slate-100 border border-slate-200 text-left">
+                        {items.map((match) => (
+                          <MatchCard
+                            key={match.id}
+                            match={match}
+                            hasClientMatchData={hasClientData}
+                            showDate
+                            onOpen={setSelectedMatch}
+                            onPrefetch={noPrefetch}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ) : null
                 return (
-                  <Card
-                    key={match.id}
-                    className={`group relative rounded-2xl border border-emerald-100/80 bg-white p-6 text-left shadow-sm transition ${canOpenTimeline ? "cursor-pointer hover:border-emerald-400 hover:shadow-lg" : ""
-                      }`}
-                    onClick={() => {
-                      if (canOpenTimeline) {
-                        setSelectedMatch(match)
-                      }
-                    }}
-                    role={canOpenTimeline ? "button" : undefined}
-                    tabIndex={canOpenTimeline ? 0 : undefined}
-                    onKeyDown={(event) => {
-                      if (!canOpenTimeline) {
-                      }
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault()
-                        setSelectedMatch(match)
-                      }
-                    }}
-                  >
-                    {canOpenTimeline && (
-                      <div className="absolute top-4 right-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                        <span className="inline-flex items-center gap-1.5 rounded bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-600">
-                          <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          Se matchhändelser
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="mb-2 flex items-center gap-3">
-                          {matchTeamLabel && (
-                            <span className="text-sm font-semibold text-emerald-700">{matchTeamLabel}</span>
-                          )}
-                          {providerBadge && (
-                            <span className={`inline-flex items-center rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] ${providerBadge.tone}`}>
-                              {providerBadge.label}
-                            </span>
-                          )}
-                          {shouldShowLive && (
-                            <span className="inline-flex items-center gap-1.5 rounded bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700">
-                              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-600" />
-                              LIVE
-                            </span>
-                          )}
-                        </div>
-                        <h3 className="text-xl font-bold text-gray-900">
-                          {isHome ? (
-                            <>
-                              Härnösands HF <span className="text-gray-400">vs</span> {opponentName} ({homeAwayLabel})
-                            </>
-                          ) : (
-                            <>
-                              {opponentName} <span className="text-gray-400">vs</span> Härnösands HF ({homeAwayLabel})
-                            </>
-                          )}
-                        </h3>
-                        {scheduleLine && <p className="mt-1 text-sm text-gray-600">{scheduleLine}</p>}
-                        {match.series && <p className="mt-1 text-xs text-gray-500">{match.series}</p>}
-                        {providerHelperText && <p className="mt-1 text-xs font-medium text-sky-700">{providerHelperText}</p>}
-                      </div>
-                      {match.infoUrl && (
-                        <Link
-                          href={match.infoUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-emerald-600 transition hover:text-emerald-700"
-                          onClick={(event) => event.stopPropagation()}
-                          title="Matchsida"
-                        >
-                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                        </Link>
-                      )}
-                    </div>
-
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-gray-100 pt-4">
-                      <div className="flex items-center gap-4">
-                        {hasResult ? (
-                          <span className="text-2xl font-bold text-gray-900" data-score-value="true">
-                            {match.result}
-                          </span>
-                        ) : isStaleZeroResult ? (
-                          <div className="flex flex-col">
-                            <span className="text-2xl font-bold text-gray-500">—</span>
-                            <span className="text-xs text-gray-500">Resultat ej publicerat</span>
-                          </div>
-                        ) : null}
-
-                        {match.playUrl && (
-                          <a
-                            href={match.playUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(event) => event.stopPropagation()}
-                            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-                            title={playLabel}
-                          >
-                            <img src="/handbollplay_mini.png" alt="" className="h-4 w-4 brightness-0 invert" />
-                            {playLabel}
-                          </a>
-                        )}
-                      </div>
-
-                    </div>
-                  </Card>
+                  <>
+                    {list("Kommande", open)}
+                    {list("Resultat", done)}
+                  </>
                 )
-              })}
+              })()}
 
               {showLoadingState && (
-                <Card className="rounded-xl border border-emerald-100/70 bg-white p-6 text-center text-sm text-gray-600 shadow-sm">
-                  Hämtar matcher…
-                </Card>
+                <p className="border border-slate-200 px-4 py-6 text-center text-sm text-slate-500">Hämtar matcher…</p>
               )}
 
               {showErrorState && (
-                <Card className="rounded-xl border border-red-200 bg-red-50 p-6 text-center text-sm text-red-700 shadow-sm">
+                <Card className="rounded-none border border-red-200 bg-red-50 p-6 text-center text-sm text-red-700 shadow-none">
                   {typeof error === "string"
                     ? error
                     : "Kunde inte hämta matcher just nu. Försök igen senare."}
@@ -441,9 +329,7 @@ export default function TeamPageClient({
               )}
 
               {showEmptyState && (
-                <Card className="rounded-xl border border-emerald-100/70 bg-white p-6 text-center text-sm text-gray-600 shadow-sm">
-                  Inga matcher planerade just nu.
-                </Card>
+                <p className="border border-slate-200 px-4 py-6 text-center text-sm text-slate-500">Inga matcher planerade just nu.</p>
               )}
             </section>
 

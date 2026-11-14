@@ -16,6 +16,7 @@ import {
   type CourtTeamStats,
 } from "@/components/match-court"
 import { LiveWinOdds } from "@/components/live-win-odds"
+import { extendTeamDisplayName, withSquad } from "@/lib/team-display"
 
 export type MatchFeedEvent = {
   time?: string
@@ -1027,6 +1028,33 @@ export function MatchFeedModal({
     matchData?.apiMatchId && matchData?.provider !== "procup" && /^\d+$/.test(String(matchData.apiMatchId))
       ? `/scout/match/${matchData.apiMatchId}`
       : null
+  const profixioHref = /^https:\/\/(www\.)?profixio\.com\//i.test(matchData?.infoUrl ?? "") ? matchData!.infoUrl! : null
+  const streamUrl = (matchData?.playUrl ?? "").trim()
+  const streamHref = matchData?.hasStream === true && streamUrl && streamUrl.toLowerCase() !== "null" ? streamUrl : null
+  const kickoffTime = /^\d{1,2}:\d{2}/.test(matchData?.time ?? "") ? matchData!.time!.slice(0, 5) : null
+  // "Flickor - F16 Mitt" -> "F16 Mitt": the class line already says girls or boys.
+  const seriesLabel = (matchData?.series ?? "").replace(/^(flickor|pojkar|damer|herrar)\s*-\s*/i, "").trim() || null
+  // A squad named after its series ("Mitt") is already said by the series ("F14 Mitt").
+  const squadInSeries = Boolean(matchData?.squad && !/^lag \d/i.test(matchData.squad) && seriesLabel?.toLowerCase().includes(matchData.squad.toLowerCase()))
+  const baseClassLabel = matchData?.teamType ? extendTeamDisplayName(matchData.teamType) || matchData.teamType : null
+  const classLabel = baseClassLabel ? (squadInSeries ? baseClassLabel : withSquad(baseClassLabel, matchData)) : null
+  const mapsHref = matchData?.venue ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(matchData.venue)}` : null
+  const [countdownNow, setCountdownNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (!isOpen || matchStatus !== "upcoming") return
+    const id = globalThis.setInterval(() => setCountdownNow(Date.now()), 30_000)
+    return () => globalThis.clearInterval(id)
+  }, [isOpen, matchStatus])
+  const countdown = (() => {
+    const start = matchData?.date instanceof Date ? matchData.date.getTime() : NaN
+    if (matchStatus !== "upcoming" || !Number.isFinite(start)) return null
+    const minutes = Math.round((start - countdownNow) / 60_000)
+    if (minutes <= 0) return "Startar strax"
+    if (minutes < 60) return `om ${minutes} min`
+    if (minutes < 24 * 60) return `om ${Math.floor(minutes / 60)} h ${minutes % 60} min`
+    const days = Math.round(minutes / (24 * 60))
+    return days === 1 ? "i morgon" : `om ${days} dagar`
+  })()
   const modalRefreshIntervalMs = matchData?.provider === "procup" ? 5_000 : 3_000
   const effectiveClockState = detailClockState ?? clockState ?? null
   const effectivePenalties = detailPenalties.length > 0 ? detailPenalties : penalties
@@ -1511,18 +1539,10 @@ export function MatchFeedModal({
         <header className="sticky top-0 z-20 border-b border-slate-200 bg-white px-5 py-4 sm:px-6">
           {/* Top row: series/context, close */}
           <div className="flex items-center justify-between gap-3">
-            <span className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-              {matchData?.series || "Matchcenter"}
-            </span>
-            {scoutHref && (
-              <Link
-                href={scoutHref}
-                className="ml-auto inline-flex shrink-0 items-center gap-1 border border-slate-300 px-2.5 py-1 text-[11px] font-semibold text-slate-700 transition hover:border-slate-900 hover:text-slate-950"
-              >
-                <ScoutIcon className="h-3.5 w-3.5" aria-hidden />
-                {matchStatus === "upcoming" ? "Scouta motståndaren" : "Scout"}
-              </Link>
-            )}
+            <p className="min-w-0 truncate text-xs">
+              <span className="font-semibold text-slate-900">{classLabel || "Match"}</span>
+              {seriesLabel && <span className="text-slate-400"> · {seriesLabel}</span>}
+            </p>
             <button
               type="button"
               onClick={onClose}
@@ -1536,14 +1556,16 @@ export function MatchFeedModal({
           {/* Scoreboard: HOME · score · AWAY, HHF side emphasized */}
           <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
             <p
-              className={`min-w-0 truncate text-right text-sm font-semibold leading-tight ${
+              className={`line-clamp-2 min-w-0 break-words text-right text-[15px] font-semibold leading-tight ${
                 isHHFName(homeTeam) ? "text-slate-950" : "text-slate-500"
               }`}
             >
               {homeTeam}
             </p>
             <div className="flex flex-col items-center">
-              <p className="text-4xl font-black leading-none tabular-nums tracking-tight text-slate-950 sm:text-5xl">{scoreboard}</p>
+              <p className="text-4xl font-black leading-none tabular-nums tracking-tight text-slate-950 sm:text-5xl">
+                {matchStatus === "upcoming" && kickoffTime ? kickoffTime : scoreboard}
+              </p>
               <span className="mt-1.5 inline-flex items-center gap-1.5">
                 {(matchStatus === "live" || matchStatus === "halftime") ? (
                   <>
@@ -1561,13 +1583,13 @@ export function MatchFeedModal({
                   </>
                 ) : (
                   <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-                    {matchStatus === "finished" ? "Slut" : "Kommande"}
+                    {matchStatus === "finished" ? "Slut" : countdown ?? "Kommande"}
                   </span>
                 )}
               </span>
             </div>
             <p
-              className={`min-w-0 truncate text-left text-sm font-semibold leading-tight ${
+              className={`line-clamp-2 min-w-0 break-words text-left text-[15px] font-semibold leading-tight ${
                 isHHFName(awayTeam) ? "text-slate-950" : "text-slate-500"
               }`}
             >
@@ -1575,7 +1597,7 @@ export function MatchFeedModal({
             </p>
           </div>
           <LiveWinOdds
-            matchId={matchId ?? (matchData?.apiMatchId != null ? String(matchData.apiMatchId) : null)}
+            matchId={matchData?.apiMatchId != null ? String(matchData.apiMatchId) : matchId ?? null}
             homeTeam={homeTeam}
             awayTeam={awayTeam}
             homeIsHhf={isHHFName(homeTeam)}
@@ -1584,6 +1606,40 @@ export function MatchFeedModal({
             clockState={effectiveClockState}
             matchStatus={matchStatus}
           />
+          {(streamHref || scoutHref || profixioHref) && (
+            <div className="mt-3 flex gap-2">
+              {streamHref && (
+                <a
+                  href={streamHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+                >
+                  <img src="/handbollplay_mini.png" alt="" className="h-3.5 w-3.5 brightness-0 invert" />
+                  {matchStatus === "finished" ? "Se repris" : matchStatus === "upcoming" ? "Se match" : "Se live"}
+                </a>
+              )}
+              {scoutHref && (
+                <Link
+                  href={scoutHref}
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-800 transition hover:border-slate-900"
+                >
+                  <ScoutIcon className="h-3.5 w-3.5" aria-hidden />
+                  Scout
+                </Link>
+              )}
+              {profixioHref && (
+                <a
+                  href={profixioHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex flex-1 items-center justify-center gap-1 border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-800 transition hover:border-slate-900"
+                >
+                  Profixio ↗
+                </a>
+              )}
+            </div>
+          )}
         </header>
 
         {/* Timeout/Penalty timers */}
@@ -1625,7 +1681,7 @@ export function MatchFeedModal({
                 aria-selected={visibleTab === "timeline"}
                 onClick={() => setActiveTab("timeline")}
               className={`py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
-                visibleTab === "timeline" ? "border-emerald-600 text-emerald-700" : "border-transparent text-slate-300 hover:text-slate-500"
+                visibleTab === "timeline" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-700"
               }`}
             >
               Tidslinje
@@ -1637,7 +1693,7 @@ export function MatchFeedModal({
                 aria-selected={visibleTab === "plan"}
                 onClick={() => setActiveTab("plan")}
                 className={`py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
-                  visibleTab === "plan" ? "border-emerald-600 text-emerald-700" : "border-transparent text-slate-300 hover:text-slate-500"
+                  visibleTab === "plan" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-700"
                 }`}
               >
                 Statistik
@@ -1650,7 +1706,7 @@ export function MatchFeedModal({
                 aria-selected={visibleTab === "scorers"}
                 onClick={() => setActiveTab("scorers")}
               className={`py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
-                visibleTab === "scorers" ? "border-emerald-600 text-emerald-700" : "border-transparent text-slate-300 hover:text-slate-500"
+                visibleTab === "scorers" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-700"
               }`}
             >
               Målskyttar
@@ -1702,20 +1758,27 @@ export function MatchFeedModal({
                         <div className="flex items-center justify-between border-b border-slate-100 py-1.5">
                           <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">Datum</dt>
                           <dd className="text-slate-700">
-                            {[matchData?.displayDate, matchData?.time].filter(Boolean).join(" · ")}
+                            {[matchData?.displayDate, kickoffTime ?? matchData?.time].filter(Boolean).join(" · ")}
                           </dd>
                         </div>
                       )}
                       {matchData?.venue && (
                         <div className="flex items-center justify-between border-b border-slate-100 py-1.5">
                           <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">Arena</dt>
-                          <dd className="text-slate-700">{matchData.venue}</dd>
+                          <dd className="text-right text-slate-700">
+                            {matchData.venue}
+                            {mapsHref && (
+                              <a href={mapsHref} target="_blank" rel="noreferrer" className="ml-2 text-xs font-semibold text-slate-500 underline-offset-4 hover:text-slate-950 hover:underline">
+                                Karta ↗
+                              </a>
+                            )}
+                          </dd>
                         </div>
                       )}
                       {matchData?.series && (
                         <div className="flex items-center justify-between border-b border-slate-100 py-1.5">
                           <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">Serie</dt>
-                          <dd className="text-slate-700">{matchData.series}</dd>
+                          <dd className="text-slate-700">{seriesLabel || matchData.series}</dd>
                         </div>
                       )}
                     </dl>
