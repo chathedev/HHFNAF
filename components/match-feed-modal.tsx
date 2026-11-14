@@ -1608,6 +1608,7 @@ export function MatchFeedModal({
             score={scoreboard}
             clockState={effectiveClockState}
             matchStatus={matchStatus}
+            expectedScore={matchData?.expectedScore ?? null}
           />
           {(streamHref || scoutHref || profixioHref) && (
             <div className="mt-3 flex gap-2">

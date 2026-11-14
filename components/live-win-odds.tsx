@@ -18,6 +18,7 @@ type ClockLike = {
 } | null | undefined
 
 type Props = {
+  expectedScore?: string | null
   matchId?: string | null
   homeTeam: string
   awayTeam: string
@@ -32,7 +33,7 @@ const preCache = new Map<string, { pre: PreMatch; hhfSide: "home" | "away" | nul
 
 // Win probability under the scoreboard: the Scout prediction before the match, updated from
 // score and match time while it is live. Hidden when Scout has no prediction for the match.
-export function LiveWinOdds({ matchId, homeTeam, awayTeam, homeIsHhf, awayIsHhf, score, clockState, matchStatus }: Props) {
+export function LiveWinOdds({ matchId, homeTeam, awayTeam, homeIsHhf, awayIsHhf, score, clockState, matchStatus, expectedScore }: Props) {
   const [data, setData] = useState(() => (matchId ? preCache.get(matchId) ?? null : null))
   const [readingAt, setReadingAt] = useState(() => Date.now())
   const [tick, setTick] = useState(0)
@@ -77,6 +78,17 @@ export function LiveWinOdds({ matchId, homeTeam, awayTeam, homeIsHhf, awayIsHhf,
     const id = globalThis.setInterval(() => setTick((t) => t + 1), 5_000)
     return () => globalThis.clearInterval(id)
   }, [live])
+
+  // The guess made before kickoff, oriented like the scoreboard; shown under the live bar.
+  const preOriented = useMemo(() => {
+    if (!data) return null
+    const feedSide = homeIsHhf && !awayIsHhf ? "home" : awayIsHhf && !homeIsHhf ? "away" : null
+    const flip = Boolean(data.hhfSide && feedSide && data.hhfSide !== feedSide)
+    return {
+      odds: flip ? { pHome: data.pre.pAway, pDraw: data.pre.pDraw, pAway: data.pre.pHome } : data.pre,
+      expected: expectedScore && flip ? expectedScore.split("–").reverse().join("–") : expectedScore ?? null,
+    }
+  }, [data, homeIsHhf, awayIsHhf, expectedScore])
 
   const odds = useMemo(() => {
     if (!data) return null
@@ -136,6 +148,15 @@ export function LiveWinOdds({ matchId, homeTeam, awayTeam, homeIsHhf, awayIsHhf,
           />
         ))}
       </div>
+      {live && preOriented && (
+        <div className="mt-1.5 flex items-baseline justify-between text-[11px] tabular-nums text-slate-400">
+          <span className={homeIsHhf ? "font-semibold text-slate-600" : ""}>{prob(preOriented.odds.pHome)}</span>
+          <span className="text-[10px] font-semibold uppercase tracking-widest">
+            Före matchen{preOriented.expected ? ` · väntat ${preOriented.expected}` : ""}
+          </span>
+          <span className={awayIsHhf ? "font-semibold text-slate-600" : ""}>{prob(preOriented.odds.pAway)}</span>
+        </div>
+      )}
     </div>
   )
 }

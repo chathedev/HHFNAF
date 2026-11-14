@@ -260,8 +260,8 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
           {(hasPlayLink || scoutHref || profixioHref || otherInfoHref || winChance != null || liveGuess) && (
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold">
               {liveGuess && (
-                <span className="tabular-nums text-slate-900" title="HHF Scouts gissning före avspark">
-                  Gissning: {liveGuess.value} % vinstchans
+                <span className="tabular-nums text-slate-900" title="HHF Scouts gissning för den här matchen, gjord före avspark">
+                  Före matchen: {liveGuess.value} % vinstchans
                   {liveGuess.expected && <span className="font-normal text-slate-400"> väntat {liveGuess.expected}</span>}
                 </span>
               )}
