@@ -25,7 +25,7 @@ import {
   type ClubTeamMetadata,
 } from "@/lib/team-display"
 import { compareMatchesByDateAscStable, compareMatchesByDateDescStable } from "@/lib/match-sort"
-import { canOpenMatchTimeline, getMatchProviderBadge, getProviderHelperText, getMatchWatchLabel } from "@/lib/match-card-utils"
+import { canOpenMatchTimeline, getMatchProviderBadge, getProviderHelperText, getMatchWatchLabel, getSimplifiedMatchStatus } from "@/lib/match-card-utils"
 
 const PLACEHOLDER_HERO = "/placeholder.jpg"
 
@@ -284,8 +284,10 @@ export default function TeamPageClient({
 
               {(() => {
                 // Same scoreboard rows as /matcher: what is coming first, then the results.
-                const open = teamMatches.filter((match) => getDerivedStatus(match) !== "finished")
-                const done = teamMatches.filter((match) => getDerivedStatus(match) === "finished")
+                // Grouped by the same status the rows show, so a row never says "Slut" under "Kommande".
+                const live = teamMatches.filter((match) => getSimplifiedMatchStatus(match) === "live")
+                const open = teamMatches.filter((match) => getSimplifiedMatchStatus(match) === "upcoming")
+                const done = teamMatches.filter((match) => getSimplifiedMatchStatus(match) === "finished")
                 const list = (label: string, items: NormalizedMatch[]) =>
                   items.length ? (
                     <div>
@@ -310,6 +312,7 @@ export default function TeamPageClient({
                   ) : null
                 return (
                   <>
+                    {list("Live nu", live)}
                     {list("Kommande", open)}
                     {list("Resultat", done)}
                   </>

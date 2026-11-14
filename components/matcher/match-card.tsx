@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, type KeyboardEvent, type MouseEvent } from "react"
+import { memo, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react"
 import Link from "@/components/quiet-link"
 
 import {
@@ -29,6 +29,21 @@ const parseScorePair = (result?: string) => {
 const isHHFName = (value: string) => /härnösand|harnosand/i.test(value)
 
 const SHORT_DATE = new Intl.DateTimeFormat("sv-SE", { day: "numeric", month: "short", timeZone: "Europe/Stockholm" })
+
+// A goal while live: the score blinks red for a moment.
+function useScoreFlash(value: string | null) {
+  const previous = useRef(value)
+  const [flash, setFlash] = useState(false)
+  useEffect(() => {
+    const before = previous.current
+    previous.current = value
+    if (!value || !before || value === before) return
+    setFlash(true)
+    const id = globalThis.setTimeout(() => setFlash(false), 1500)
+    return () => globalThis.clearTimeout(id)
+  }, [value])
+  return flash
+}
 
 export type MatchCardProps = {
   match: NormalizedMatch
@@ -76,6 +91,7 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
   const showLivePendingScore = status === "live" && (match.resultState === "live_pending" || isUnconfirmedZero)
 
   const scorePair = parseScorePair(scoreValue ?? undefined)
+  const flash = useScoreFlash(status === "live" ? scoreValue : null)
   const outcome = (() => {
     // Two HHF squads against each other: no "our" result to show.
     if (status !== "finished" || !scorePair || (isHHFName(homeName) && isHHFName(awayName))) return null
@@ -105,11 +121,17 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
     match.apiMatchId && match.provider !== "procup" && /^\d+$/.test(String(match.apiMatchId))
       ? `/scout/match/${match.apiMatchId}`
       : null
-  const winChance = status === "upcoming" && typeof match.winChance === "number" ? match.winChance : null
-  const profixioHref = /^https:\/\/(www\.)?profixio\.com\//i.test(match.infoUrl ?? "") ? match.infoUrl! : null
+  // The pre-match chance, so only before kickoff (some matches never flip to live in Profixio).
+  const winChance =
+    status === "upcoming" && typeof match.winChance === "number" && match.date.getTime() > Date.now() ? match.winChance : null
+  const isProcup = match.provider === "procup"
+  const infoUrl = /^https?:\/\//i.test(match.infoUrl ?? "") ? match.infoUrl! : null
+  const profixioHref = infoUrl && /^https:\/\/(www\.)?profixio\.com\//i.test(infoUrl) ? infoUrl : null
+  // Cups (ProCup and others) get their own match page link instead.
+  const otherInfoHref = infoUrl && !profixioHref ? infoUrl : null
   const liveLabel = match.statusLabel && !/^live$/i.test(match.statusLabel.trim()) ? match.statusLabel.trim() : null
 
-  const metaParts = [teamTypeLabel, series, match.venue?.trim() || null].filter(
+  const metaParts = [teamTypeLabel, series, match.venue?.trim() || null, isProcup ? "ProCup" : null].filter(
     (part): part is string => Boolean(part && part.length > 0),
   )
 
@@ -134,8 +156,9 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
         </span>
         {goals != null && (
           <span
-            className={`shrink-0 text-[15px] leading-6 tabular-nums ${
-              leads || (status === "live" && ours) ? "font-black text-slate-950" : "font-semibold text-slate-400"
+            className={`shrink-0 text-[15px] leading-6 tabular-nums transition-colors duration-700 ${
+              leads || (status === "live" && goals === other) ? "font-black text-slate-950" : "font-semibold text-slate-400"
+            } ${flash ? "text-rose-600" : ""}
             }`}
           >
             {goals}
@@ -164,6 +187,8 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
       }}
       onClick={handleActivate}
       onKeyDown={(event) => {
+        // Enter on the Scout/Profixio/stream links inside must follow the link, not open the popup.
+        if (event.target !== event.currentTarget) return
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault()
           handleActivate(event)
@@ -184,7 +209,7 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
             </>
           ) : status === "finished" ? (
             <>
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">{match.statusLabel?.trim() || "Slut"}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Slut</p>
               {showDate && dateLabel && <p className="mt-0.5 truncate text-[11px] text-slate-400">{dateLabel}</p>}
             </>
           ) : (
@@ -204,7 +229,11 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
               {metaParts.join(" · ")}
             </p>
           )}
-          {showLivePendingScore && <p className="mt-1.5 text-xs text-slate-500">Livescore väntar på första målet i Profixio.</p>}
+          {showLivePendingScore && (
+            <p className="mt-1.5 text-xs text-slate-500">
+              {isProcup ? "Pågår. ProCup visar ingen livescore för matchen." : "Livescore väntar på första målet i Profixio."}
+            </p>
+          )}
           {awaitingFinishedResult && <p className="mt-1.5 text-xs text-slate-500">Resultat inväntas.</p>}
           {showProfixioWarning && (
             <p className="mt-1.5 border-l-2 border-amber-400 pl-2 text-xs text-amber-700">
@@ -216,7 +245,7 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
               Står som 0–0 fast matchen är slut. Kontrollera matchrapporten.
             </p>
           )}
-          {(hasPlayLink || scoutHref || profixioHref || winChance != null) && (
+          {(hasPlayLink || scoutHref || profixioHref || otherInfoHref || winChance != null) && (
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold">
               {winChance != null && (
                 <span
@@ -224,7 +253,7 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
                   title={match.expectedScore ? `HHF Scout: väntat ${match.expectedScore}` : "HHF Scout"}
                 >
                   {winChance} % vinstchans
-                  {match.expectedScore && <span className="ml-1.5 font-normal text-slate-400">väntat {match.expectedScore}</span>}
+                  {match.expectedScore && <span className="ml-1.5 font-normal text-slate-400"> väntat {match.expectedScore}</span>}
                 </span>
               )}
               {hasPlayLink && (
@@ -257,6 +286,17 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
                   className="text-slate-500 underline-offset-4 hover:text-slate-950 hover:underline"
                 >
                   Profixio ↗
+                </a>
+              )}
+              {otherInfoHref && (
+                <a
+                  href={otherInfoHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(event) => event.stopPropagation()}
+                  className="text-slate-500 underline-offset-4 hover:text-slate-950 hover:underline"
+                >
+                  Matchsida ↗
                 </a>
               )}
             </div>

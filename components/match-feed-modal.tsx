@@ -1049,10 +1049,13 @@ export function MatchFeedModal({
     const start = matchData?.date instanceof Date ? matchData.date.getTime() : NaN
     if (matchStatus !== "upcoming" || !Number.isFinite(start)) return null
     const minutes = Math.round((start - countdownNow) / 60_000)
+    if (minutes <= -15) return "Inväntar livescore"
     if (minutes <= 0) return "Startar strax"
     if (minutes < 60) return `om ${minutes} min`
-    if (minutes < 24 * 60) return `om ${Math.floor(minutes / 60)} h ${minutes % 60} min`
-    const days = Math.round(minutes / (24 * 60))
+    // Calendar days in Stockholm: tomorrow at 20:00 is "i morgon", even 37 hours ahead.
+    const day = (ms: number) => new Date(ms).toLocaleDateString("sv-SE", { timeZone: "Europe/Stockholm" })
+    const days = Math.round((Date.parse(day(start)) - Date.parse(day(countdownNow))) / 86_400_000)
+    if (days <= 0) return `om ${Math.floor(minutes / 60)} h ${minutes % 60} min`
     return days === 1 ? "i morgon" : `om ${days} dagar`
   })()
   const modalRefreshIntervalMs = matchData?.provider === "procup" ? 5_000 : 3_000

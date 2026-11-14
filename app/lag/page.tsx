@@ -80,16 +80,24 @@ export default async function LagPage() {
                     <Link key={team.id} href={`/lag/${team.id}`} className="block group">
                       <Card className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition group-hover:-translate-y-1 group-hover:border-emerald-300 group-hover:shadow-lg h-full">
                         <div className="relative h-36 w-full overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
-                          <div
-                            className="h-full w-full transition group-hover:scale-[1.02]"
-                            style={{
-                              backgroundImage: `url(${team.heroImage})`,
-                              backgroundSize: "cover",
-                              backgroundPosition: "center top",
-                              backgroundRepeat: "no-repeat",
-                            }}
-                            aria-hidden
-                          />
+                          {team.heroImage && team.heroImage !== "/placeholder.jpg" ? (
+                            <div
+                              className="h-full w-full transition group-hover:scale-[1.02]"
+                              style={{
+                                backgroundImage: `url(${team.heroImage})`,
+                                backgroundSize: "cover",
+                                backgroundPosition: "center top",
+                                backgroundRepeat: "no-repeat",
+                              }}
+                              aria-hidden
+                            />
+                          ) : (
+                            // No photo of this season's squad yet: a quiet tile, never last year's team.
+                            <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-slate-50" aria-hidden>
+                              <span className="text-2xl font-black tracking-tight text-slate-300">{team.name}</span>
+                              <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-300">Lagbild kommer</span>
+                            </div>
+                          )}
                           <div className="absolute inset-0 flex items-center justify-center bg-emerald-800/85 opacity-0 transition group-hover:opacity-100">
                             <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.35em] text-emerald-700 shadow">
                               Visa lag →

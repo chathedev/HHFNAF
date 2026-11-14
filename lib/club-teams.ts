@@ -12,11 +12,10 @@ export const TEAMS_REVALIDATE_SECONDS = 300
 
 
 const PLACEHOLDER_HERO = "/placeholder.jpg"
-// Team photos. This season's set (taken autumn 2026) is in Lagfoto-2026; a team without a
-// new photo keeps last season's from Gruppfoto. New files get new names, so no cache can
-// keep showing an old photo.
+// Team photos: only this season's set (taken autumn 2026, Lagfoto-2026). A team without a
+// new photo shows none rather than last season's squad. New files get new names, so no cache
+// can keep showing an old photo.
 const NEW_PHOTO = (name: string) => `/HarnosandsHF/Lagfoto-2026/Härnösands HF - ${name}.jpg`
-const OLD_PHOTO = (name: string) => `/HarnosandsHF/Gruppfoto/Härnösands HF - ${name}.jpg`
 
 // Group photos are of a birth cohort, so they follow the players from class to class.
 // A team spanning several years shows the first year that has a photo.
@@ -35,7 +34,6 @@ const COHORT_PHOTOS: Record<string, string> = {
   P2012: NEW_PHOTO("P2012"),
   P2014: NEW_PHOTO("P2014"),
   P2015: NEW_PHOTO("P2015"),
-  P2016: OLD_PHOTO("P2016"),
   P2017: NEW_PHOTO("P2017"),
   P2018: NEW_PHOTO("P2018"),
   P2019: NEW_PHOTO("P2019"),
@@ -44,7 +42,6 @@ const COHORT_PHOTOS: Record<string, string> = {
 const TEAM_PHOTOS: Record<string, string> = {
   "dam-utv": NEW_PHOTO("A-lag Dam"),
   "a-lag-herrar": NEW_PHOTO("A-lag Herr"),
-  "f19-senior": OLD_PHOTO("F19"),
 }
 
 const COHORT_INSTAGRAM: Record<string, string> = {
