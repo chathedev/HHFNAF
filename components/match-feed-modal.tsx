@@ -853,6 +853,20 @@ const getEventTypeLabel = (event: MatchFeedEvent) => {
   return event.type?.trim() || "Händelse"
 }
 
+// Suspensions and red cards get their own loud treatment in the timeline. Duration comes
+// from Profixio's penalty block; "Utvisning x 2" without one is a double (4 min).
+const getSuspensionInfo = (event: MatchFeedEvent) => {
+  if (isCommentEvent(event)) return null
+  const text = `${event.type || ""} ${event.description || ""} ${event.payload?.description || ""}`.toLowerCase()
+  const penalty = event.payload?.penalty as { durationSeconds?: number; fullTimeExpulsion?: boolean } | undefined
+  const redCard = text.includes("rött kort") || text.includes("diskvalific") || penalty?.fullTimeExpulsion === true
+  if (!redCard && !text.includes("utvisning")) return null
+  const seconds = Number(penalty?.durationSeconds) || (/x\s*2/.test(text) ? 240 : 120)
+  return redCard
+    ? { redCard: true, label: text.includes("direkt") ? "Direkt rött kort" : "Rött kort", chip: "Ut resten av matchen" }
+    : { redCard: false, label: "Utvisning", chip: `${Math.round(seconds / 60)} min` }
+}
+
 const getPeriodLabel = (period?: number) => {
   if (period === 3) return "Matchslut"
   if (period === 1) return "Första halvlek"
@@ -1698,19 +1712,49 @@ export function MatchFeedModal({
               </div>
             )}
             {showPenaltyTimers && (
-              <div className={showTimeoutTimer ? "mt-2" : ""}>
-                {activePenalties.map((item, index) => (
-                  <div key={`${item.team || "team"}-${item.player || "player"}-${index}`} className="flex items-center justify-between gap-3 py-1">
-                    <p className="min-w-0 truncate text-sm text-slate-500">
-                      {item.player || "Spelare"}
-                      {item.isStaff ? ` (ledare${item.staffLetter ? ` ${item.staffLetter}` : ""})` : item.playerNumber ? ` #${item.playerNumber}` : ""}{" "}
-                      <span className="text-slate-300">·</span> {item.team || "Lag"}
-                    </p>
-                    <span className="font-mono text-sm font-black tabular-nums text-slate-900">
-                      {formatSecondsAsClock(item.remaining)}
-                    </span>
-                  </div>
-                ))}
+              <div className={`space-y-2 ${showTimeoutTimer ? "mt-3" : ""}`}>
+                {/* A running suspension is a big moment: loud red card, live countdown, draining bar. */}
+                {activePenalties.map((item, index) => {
+                  const duration = item.durationSeconds && item.durationSeconds > 0 ? item.durationSeconds : 120
+                  const share = Math.max(0, Math.min(1, item.remaining / duration))
+                  const finalSeconds = item.remaining <= 10
+                  return (
+                    <div
+                      key={`${item.team || "team"}-${item.player || "player"}-${index}`}
+                      className="relative overflow-hidden rounded-lg bg-gradient-to-r from-red-600 to-rose-600 px-4 pb-3.5 pt-3 text-white shadow-lg shadow-red-600/25"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-white">
+                            <span className="relative flex h-2.5 w-2.5 shrink-0">
+                              {clockRunning && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white/70" />}
+                              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-white" />
+                            </span>
+                            Utvisning · {Math.round(duration / 60)} min
+                            {!clockRunning && <span className="font-semibold normal-case tracking-normal text-white/70">klockan står</span>}
+                          </p>
+                          <p className="mt-1 truncate text-sm font-semibold text-white/95">
+                            {item.isStaff ? (
+                              <>{item.player || "Ledare"} (ledare{item.staffLetter ? ` ${item.staffLetter}` : ""})</>
+                            ) : (
+                              <>
+                                {item.playerNumber && <span className="font-black">#{item.playerNumber} </span>}
+                                {item.player || "Spelare"}
+                              </>
+                            )}
+                            <span className="text-white/60"> · {item.team || "Lag"}</span>
+                          </p>
+                        </div>
+                        <span className={`shrink-0 font-mono text-3xl font-black leading-none tabular-nums ${finalSeconds && clockRunning ? "animate-pulse" : ""}`}>
+                          {formatSecondsAsClock(item.remaining)}
+                        </span>
+                      </div>
+                      <div className="absolute inset-x-0 bottom-0 h-1 bg-black/20">
+                        <div className="h-full bg-white transition-[width] duration-1000 ease-linear" style={{ width: `${share * 100}%` }} />
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -1879,7 +1923,8 @@ export function MatchFeedModal({
                         const typeLabel = getEventTypeLabel(event)
                         const side = getEventSide(event, homeTeam, awayTeam)
                         const isGoal = typeLabel === "Mål"
-                        const isSuspension = typeLabel === "Utvisning"
+                        const suspension = getSuspensionInfo(event)
+                        const isSuspension = suspension !== null
                         const isTimeout = typeLabel === "Timeout"
 
                         /* Center-only events (halftime, fulltime, timeout, etc.) */
@@ -1938,33 +1983,56 @@ export function MatchFeedModal({
                               <span className={isGoal && side === "away" ? "text-emerald-600" : "text-slate-900"}>{awayDigits}</span>
                             </p>
                           )
-                        const renderBody = (align: "left" | "right") => (
-                          <div className={align === "right" ? "text-right" : ""}>
-                            {renderScore(align)}
-                            <p className={`text-[13px] font-bold leading-snug ${isGoal ? "text-emerald-700" : isSuspension ? "text-amber-600" : typeLabel === "7-m miss" ? "text-rose-600" : "text-slate-600"}`}>
-                              {isGoal ? goalLabel : typeLabel}
+                        const renderPlayer = (className: string) =>
+                          event.player && (
+                            <p className={className}>
+                              {event.isStaff ? (
+                                <>
+                                  <span className="font-bold text-slate-700">{event.staffLetter || "Ledare"}</span>{"  "}
+                                  {event.player} <span className="text-slate-400">· ledare</span>
+                                </>
+                              ) : (
+                                <>
+                                  {event.playerNumber && <span className="font-bold text-slate-700">{event.playerNumber}</span>}
+                                  {event.playerNumber && "  "}{event.player}
+                                </>
+                              )}
                             </p>
-                            {event.player && (
-                              <p className="text-[13px] leading-snug text-slate-500">
-                                {event.isStaff ? (
-                                  <>
-                                    <span className="font-bold text-slate-700">{event.staffLetter || "Ledare"}</span>{"  "}
-                                    {event.player} <span className="text-slate-400">· ledare</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    {event.playerNumber && <span className="font-bold text-slate-700">{event.playerNumber}</span>}
-                                    {event.playerNumber && "  "}{event.player}
-                                  </>
-                                )}
+                          )
+                        const renderBody = (align: "left" | "right") =>
+                          suspension ? (
+                            // Suspension / red card: a red card-like block, never a quiet text row.
+                            <div className={`inline-block rounded-lg border border-red-200 bg-red-50 px-2.5 py-2 shadow-sm shadow-red-100 ${align === "right" ? "text-right" : ""}`}>
+                              <p className={`flex flex-wrap items-center gap-x-1.5 gap-y-1 ${align === "right" ? "justify-end" : ""}`}>
+                                <span className="inline-flex items-center gap-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-white">
+                                  {suspension.redCard ? (
+                                    <span aria-hidden className="h-2.5 w-[7px] rounded-[1px] bg-white" />
+                                  ) : (
+                                    <svg aria-hidden viewBox="0 0 16 16" className="h-3 w-3 fill-none stroke-white" strokeWidth={2}>
+                                      <circle cx="8" cy="9" r="5.5" />
+                                      <path d="M8 6v3l2 1.5M6.5 1.5h3" strokeLinecap="round" />
+                                    </svg>
+                                  )}
+                                  {suspension.label}
+                                </span>
+                                <span className="text-[11px] font-black uppercase tracking-wide text-red-600">{suspension.chip}</span>
                               </p>
-                            )}
-                            {!event.player && !isGoal && !isTimeout &&
-                              getEventDisplayText(event).trim().toLowerCase() !== typeLabel.toLowerCase() && (
-                              <p className="text-[13px] leading-snug text-slate-400">{getEventDisplayText(event)}</p>
-                            )}
-                          </div>
-                        )
+                              {renderPlayer("mt-1 text-[13px] font-semibold leading-snug text-slate-800")}
+                              {score && <p className="mt-0.5 text-[11px] font-semibold tabular-nums text-red-400">vid {score}</p>}
+                            </div>
+                          ) : (
+                            <div className={align === "right" ? "text-right" : ""}>
+                              {renderScore(align)}
+                              <p className={`text-[13px] font-bold leading-snug ${isGoal ? "text-emerald-700" : typeLabel === "7-m miss" ? "text-rose-600" : "text-slate-600"}`}>
+                                {isGoal ? goalLabel : typeLabel}
+                              </p>
+                              {renderPlayer("text-[13px] leading-snug text-slate-500")}
+                              {!event.player && !isGoal && !isTimeout &&
+                                getEventDisplayText(event).trim().toLowerCase() !== typeLabel.toLowerCase() && (
+                                <p className="text-[13px] leading-snug text-slate-400">{getEventDisplayText(event)}</p>
+                              )}
+                            </div>
+                          )
 
                         return (
                           <li key={`${event.eventId ?? "idx"}-${index}`} className="relative">
@@ -1975,7 +2043,7 @@ export function MatchFeedModal({
                                   <>
                                     <span
                                       aria-hidden
-                                      className={`absolute right-0 top-1/2 h-px w-2.5 -translate-y-1/2 ${isGoal ? "bg-emerald-200" : isSuspension ? "bg-amber-200" : "bg-slate-200"}`}
+                                      className={`absolute right-0 top-1/2 h-px w-2.5 -translate-y-1/2 ${isGoal ? "bg-emerald-200" : isSuspension ? "bg-red-300" : "bg-slate-200"}`}
                                     />
                                     {renderBody("right")}
                                   </>
@@ -1985,7 +2053,7 @@ export function MatchFeedModal({
                               {/* Center: dot + time */}
                               <div className="flex flex-col items-center justify-center z-10 py-1.5 px-1">
                                 <span className={`shrink-0 rounded-sm ${
-                                  isGoal ? "h-3 w-3 bg-emerald-500" : isSuspension ? "h-2.5 w-2.5 bg-amber-500" : `h-2 w-2 ${style.dot}`
+                                  isGoal ? "h-3 w-3 bg-emerald-500" : suspension?.redCard ? "h-4 w-3 rotate-6 bg-red-600 ring-4 ring-red-100" : isSuspension ? "h-3.5 w-3.5 bg-red-600 ring-4 ring-red-100" : `h-2 w-2 ${style.dot}`
                                 }`} />
                                 <p className="mt-1 whitespace-nowrap text-center text-[11px] font-semibold tabular-nums text-slate-400 leading-none">{event.time || ""}</p>
                               </div>
@@ -1996,7 +2064,7 @@ export function MatchFeedModal({
                                   <>
                                     <span
                                       aria-hidden
-                                      className={`absolute left-0 top-1/2 h-px w-2.5 -translate-y-1/2 ${isGoal ? "bg-emerald-200" : isSuspension ? "bg-amber-200" : "bg-slate-200"}`}
+                                      className={`absolute left-0 top-1/2 h-px w-2.5 -translate-y-1/2 ${isGoal ? "bg-emerald-200" : isSuspension ? "bg-red-300" : "bg-slate-200"}`}
                                     />
                                     {renderBody("left")}
                                   </>
