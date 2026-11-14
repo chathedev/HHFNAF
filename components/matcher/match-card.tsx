@@ -157,9 +157,8 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
         {goals != null && (
           <span
             className={`shrink-0 text-[15px] leading-6 tabular-nums transition-colors duration-700 ${
-              leads || (status === "live" && goals === other) ? "font-black text-slate-950" : "font-semibold text-slate-400"
-            } ${flash ? "text-rose-600" : ""}
-            }`}
+              leads || (status === "live" && goals === other) ? "font-black" : "font-semibold"
+            } ${flash ? "text-rose-600" : leads || (status === "live" && goals === other) ? "text-slate-950" : "text-slate-400"}`}
           >
             {goals}
           </span>
