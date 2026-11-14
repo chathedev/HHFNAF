@@ -498,10 +498,46 @@ const dedupeTimelineEvents = (events: MatchFeedEvent[]) => {
     }
   })
 
-  return [...bestByKey.values()]
+  // The same moment often arrives twice: once from our database (with eventId) and once
+  // from Profixio's raw feed or the eventSummary (without). The keys above never meet then,
+  // so drop an id-less copy when an event with an id sits at the same time, team and type
+  // and nothing contradicts it (player and score agree wherever both sides have one).
+  const entries = [...bestByKey.values()]
+  const withIdByLooseKey = new Map<string, MatchFeedEvent[]>()
+  entries.forEach(({ event }) => {
+    if (event.eventId === undefined) return
+    const key = getLooseEventKey(event)
+    withIdByLooseKey.set(key, [...(withIdByLooseKey.get(key) ?? []), event])
+  })
+
+  return entries
+    .filter(({ event }) => {
+      if (event.eventId !== undefined) return true
+      const twins = withIdByLooseKey.get(getLooseEventKey(event))
+      return !twins?.some((twin) => isCompatibleEvent(twin, event))
+    })
     .sort((a, b) => a.index - b.index)
     .map((entry) => entry.event)
 }
+
+const getLooseEventKey = (event: MatchFeedEvent) => {
+  const semanticType = getEventSemanticType(event)
+  // No period: supplements lack one and inferPeriodFromTime guesses by a 25-minute half, which
+  // is wrong for 30-minute halves. The running match clock already separates the halves.
+  return [
+    normalizeText(event.time),
+    normalizeText(event.team),
+    semanticType,
+    semanticType === "comment" ? normalizeText(event.description) : "",
+  ].join("|")
+}
+
+const isCompatibleEvent = (a: MatchFeedEvent, b: MatchFeedEvent) =>
+  (!a.player || !b.player || normalizeText(a.player) === normalizeText(b.player)) &&
+  (!a.playerNumber || !b.playerNumber || normalizeText(a.playerNumber) === normalizeText(b.playerNumber)) &&
+  (typeof a.homeScore !== "number" ||
+    typeof b.homeScore !== "number" ||
+    (a.homeScore === b.homeScore && a.awayScore === b.awayScore))
 
 const getEventCombinedText = (event: MatchFeedEvent) =>
   isCommentEvent(event)
@@ -1061,10 +1097,14 @@ export function MatchFeedModal({
   const modalRefreshIntervalMs = matchData?.provider === "procup" ? 5_000 : 3_000
   const effectiveClockState = detailClockState ?? clockState ?? null
   const effectivePenalties = detailPenalties.length > 0 ? detailPenalties : penalties
-  // Show best available timeline immediately — never block on detail fetch
-  const timelineSource = detailTimeline
-    ? preferRicherTimeline(detailTimeline, matchFeed)
-    : matchFeed
+  // Show best available timeline immediately — never block on detail fetch. The live list
+  // feed can hold the same event twice (Profixio copy + database copy), so it is deduped
+  // before it is shown or compared by length against the detail timeline.
+  const dedupedFeed = useMemo(() => dedupeTimelineEvents(matchFeed ?? []), [matchFeed])
+  const timelineSource = useMemo(
+    () => (detailTimeline ? preferRicherTimeline(detailTimeline, dedupedFeed) : dedupedFeed),
+    [detailTimeline, dedupedFeed],
+  )
   const hasClockData = Boolean(
     effectiveClockState &&
       (typeof effectiveClockState.currentSeconds === "number" || Boolean(effectiveClockState.clock)),

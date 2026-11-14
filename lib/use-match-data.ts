@@ -1232,6 +1232,18 @@ const createMatchDataChannel = () => {
     return undefined
   }
 
+  // The list snapshot carries Profixio's copy of each event (no eventId) while live deltas
+  // carry our database copy (with eventId), so their fingerprints never match and the same
+  // goal was appended twice. This key ignores ids, so both copies meet; player and score
+  // keep apart distinct events at the same second (e.g. two players activated at once).
+  const getEventContentKey = (event: MatchFeedEvent) => {
+    if (!event.time || !event.type) return undefined
+    const part = (value?: string | number | null) => String(value ?? "").trim().toLowerCase()
+    // Secretariat comments share one type and often a frozen clock; their text tells them apart.
+    const text = part(event.type) === "kommentar" ? part(event.description) : ""
+    return `c:${part(event.time)}|${part(event.type)}|${part(event.team)}|${part(event.player)}|${part(event.playerNumber)}|${part(event.homeScore)}-${part(event.awayScore)}|${text}`
+  }
+
   const parseEventTimeToMinutes = (value?: string) => {
     if (!value) {
       return 0
@@ -1269,6 +1281,10 @@ const createMatchDataChannel = () => {
       const fingerprint = getEventFingerprint(event)
       if (fingerprint) {
         ids.add(fingerprint)
+      }
+      const contentKey = getEventContentKey(event)
+      if (contentKey) {
+        ids.add(contentKey)
       }
     })
     if (ids.size > 0) {
@@ -1522,8 +1538,9 @@ const createMatchDataChannel = () => {
     }
 
     const fingerprint = getEventFingerprint(event)
+    const contentKey = getEventContentKey(event)
     const seen = matchEventIds.get(normalizedId)
-    if (fingerprint && seen?.has(fingerprint)) {
+    if ((fingerprint && seen?.has(fingerprint)) || (contentKey && seen?.has(contentKey))) {
       return false
     }
 
@@ -1574,9 +1591,10 @@ const createMatchDataChannel = () => {
     registerMatch(updatedMatch, reconstructApiMatch(updatedMatch))
     updateMatchCollections(updatedMatch)
 
-    if (fingerprint) {
+    if (fingerprint || contentKey) {
       const nextSet = seen ? new Set(seen) : new Set<string>()
-      nextSet.add(fingerprint)
+      if (fingerprint) nextSet.add(fingerprint)
+      if (contentKey) nextSet.add(contentKey)
       matchEventIds.set(normalizedId, nextSet)
     }
 
