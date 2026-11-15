@@ -1655,6 +1655,22 @@ const createMatchDataChannel = () => {
     return changed
   }
 
+  // Replay of events Profixio corrected in place while we were offline (same id, new penalty).
+  // Only replaces a copy we already hold: a replayed old event must never be added to a feed
+  // that does not have it.
+  const applyCorrectedEvents = (corrected: MatchFeedEvent[]) => {
+    let changed = false
+    corrected.forEach((event) => {
+      const normalizedId = getNormalizedIdFromMatchId(event?.matchId)
+      const feed = normalizedId ? matchMap.get(normalizedId)?.matchFeed : undefined
+      const id = Number(event?.eventId)
+      if (!Array.isArray(feed) || !Number.isFinite(id) || id <= 0) return
+      if (!feed.some((existing) => Number(existing.eventId) === id)) return
+      if (applyMatchEvent(event)) changed = true
+    })
+    return changed
+  }
+
   const handleSnapshot = (payload: any) => {
     // Snapshots (connect + 60s safety poll) carry stripped list payloads: live
     // matches lack the full matchFeed that deltas have accumulated client-side.
@@ -1735,6 +1751,10 @@ const createMatchDataChannel = () => {
       changed = true
     }
 
+    if (Array.isArray(payload?.correctedEvents) && payload.correctedEvents.length > 0 && applyCorrectedEvents(payload.correctedEvents)) {
+      changed = true
+    }
+
     events.forEach((event: MatchFeedEvent) => {
       if (applyMatchEvent(event)) {
         changed = true
@@ -1772,6 +1792,10 @@ const createMatchDataChannel = () => {
 
     // Removals we were not connected to hear (same order as in handleDelta).
     if (Array.isArray(payload?.removedEvents) && payload.removedEvents.length > 0 && applyRemovedEvents(payload.removedEvents)) {
+      changed = true
+    }
+
+    if (Array.isArray(payload?.correctedEvents) && payload.correctedEvents.length > 0 && applyCorrectedEvents(payload.correctedEvents)) {
       changed = true
     }
 
