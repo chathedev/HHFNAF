@@ -1540,7 +1540,19 @@ const createMatchDataChannel = () => {
     const fingerprint = getEventFingerprint(event)
     const contentKey = getEventContentKey(event)
     const seen = matchEventIds.get(normalizedId)
-    if ((fingerprint && seen?.has(fingerprint)) || (contentKey && seen?.has(contentKey))) {
+    // A correction in place: an event id we already hold arrives again with other content (a
+    // 4 minute suspension changed to 2). It replaces the old copy instead of being dropped as seen.
+    const incomingId = Number(event.eventId)
+    const sameIdIndex =
+      Number.isFinite(incomingId) && incomingId > 0 && Array.isArray(existingMatch.matchFeed)
+        ? existingMatch.matchFeed.findIndex((existing) => Number(existing.eventId) === incomingId)
+        : -1
+    if (sameIdIndex >= 0) {
+      const held = existingMatch.matchFeed![sameIdIndex]
+      if (JSON.stringify(held.payload ?? null) === JSON.stringify(event.payload ?? null)) {
+        return false
+      }
+    } else if ((fingerprint && seen?.has(fingerprint)) || (contentKey && seen?.has(contentKey))) {
       return false
     }
 
@@ -1556,7 +1568,10 @@ const createMatchDataChannel = () => {
       time: event.time ?? "",
     }
 
-    const updatedFeed = mergeMatchFeed(existingMatch.matchFeed, [normalizedEvent])
+    const updatedFeed = mergeMatchFeed(
+      sameIdIndex >= 0 ? existingMatch.matchFeed!.filter((_, index) => index !== sameIdIndex) : existingMatch.matchFeed,
+      [normalizedEvent],
+    )
     const nextHomeScore = normalizedEvent.homeScore ?? undefined
     const nextAwayScore = normalizedEvent.awayScore ?? undefined
     // Events are replayed, not just streamed: the server's timeline backfill re-emits a
@@ -1754,6 +1769,11 @@ const createMatchDataChannel = () => {
   const handleMissedEvents = (payload: any) => {
     const events = Array.isArray(payload?.events) ? payload.events : []
     let changed = false
+
+    // Removals we were not connected to hear (same order as in handleDelta).
+    if (Array.isArray(payload?.removedEvents) && payload.removedEvents.length > 0 && applyRemovedEvents(payload.removedEvents)) {
+      changed = true
+    }
 
     events.forEach((event: MatchFeedEvent) => {
       if (applyMatchEvent(event)) {

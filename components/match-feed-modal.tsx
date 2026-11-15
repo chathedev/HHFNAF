@@ -656,6 +656,10 @@ const getServerMaxEventId = (payload: any): number | null => {
     const id = Number(event?.eventId)
     if (Number.isFinite(id) && id > max) max = id
   })
+  // The answer also carries the newest event id in the whole database. A client event at or
+  // below it that is missing from the list was removed in Profixio, not "not stored yet".
+  const latest = Number(payload?.lastEventId)
+  if (Number.isFinite(latest) && latest > max) max = latest
   return max >= 0 ? max : null
 }
 
