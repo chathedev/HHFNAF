@@ -1601,6 +1601,45 @@ const createMatchDataChannel = () => {
     return true
   }
 
+  // Events the secretariat deleted or rewrote in Profixio (a red card entered by mistake). Drop
+  // them from the accumulated feed together with Profixio's id-less copy of the same moment;
+  // registerMatch rebuilds the dedupe keys, so the corrected event is let in afterwards.
+  const applyRemovedEvents = (removed: Array<{ matchId?: string | number; eventId?: string | number }>) => {
+    const idsByMatch = new Map<string, Set<string>>()
+    removed.forEach((entry) => {
+      const normalizedId = getNormalizedIdFromMatchId(entry?.matchId)
+      if (!normalizedId || entry?.eventId === undefined || entry.eventId === null) return
+      const ids = idsByMatch.get(normalizedId) ?? new Set<string>()
+      ids.add(String(entry.eventId))
+      idsByMatch.set(normalizedId, ids)
+    })
+
+    let changed = false
+    idsByMatch.forEach((ids, normalizedId) => {
+      const existingMatch = matchMap.get(normalizedId)
+      const feed = existingMatch?.matchFeed
+      if (!existingMatch || !Array.isArray(feed) || feed.length === 0) return
+      const hasId = (event: MatchFeedEvent) => event.eventId !== undefined && event.eventId !== null
+      const isRemoved = (event: MatchFeedEvent) => hasId(event) && ids.has(String(event.eventId))
+      const removedKeys = new Set<string>()
+      feed.forEach((event) => {
+        const key = isRemoved(event) ? getEventContentKey(event) : undefined
+        if (key) removedKeys.add(key)
+      })
+      const nextFeed = feed.filter((event) => {
+        if (isRemoved(event)) return false
+        const key = hasId(event) ? undefined : getEventContentKey(event)
+        return !(key && removedKeys.has(key))
+      })
+      if (nextFeed.length === feed.length) return
+      const updatedMatch = { ...existingMatch, matchFeed: nextFeed }
+      registerMatch(updatedMatch, reconstructApiMatch(updatedMatch))
+      updateMatchCollections(updatedMatch)
+      changed = true
+    })
+    return changed
+  }
+
   const handleSnapshot = (payload: any) => {
     // Snapshots (connect + 60s safety poll) carry stripped list payloads: live
     // matches lack the full matchFeed that deltas have accumulated client-side.
@@ -1675,6 +1714,11 @@ const createMatchDataChannel = () => {
         changed = true
       }
     })
+
+    // Before the new events: a corrected event shares its content key with the one it replaces.
+    if (Array.isArray(payload?.removedEvents) && payload.removedEvents.length > 0 && applyRemovedEvents(payload.removedEvents)) {
+      changed = true
+    }
 
     events.forEach((event: MatchFeedEvent) => {
       if (applyMatchEvent(event)) {

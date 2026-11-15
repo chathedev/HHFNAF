@@ -6,7 +6,7 @@ import Link from "@/components/quiet-link"
 import { LineChart as ScoutIcon, X } from "lucide-react"
 import { setOpenMatchForRestore } from "@/components/build-refresh"
 import type { NormalizedMatch } from "@/lib/use-match-data"
-import { preferRicherTimeline, resolvePreferredTimeline } from "@/lib/match-timeline"
+import { isSyntheticFinalOnlyTimeline, preferRicherTimeline, resolvePreferredTimeline } from "@/lib/match-timeline"
 import {
   MatchCourt,
   type CourtEvent,
@@ -637,9 +637,36 @@ const buildGoalLookup = (players: any[] = []) => {
   return lookup
 }
 
+// The match detail's own event list is Profixio's current state, read from our database with
+// event ids. It is the truth: when the secretariat deletes or corrects an event (a red card
+// entered by mistake), it is gone here, while the browser's accumulated live feed still holds
+// it. Null when the server has no real event list (ProCup, a lone synthetic placeholder).
+const getServerEvents = (payload: any): any[] | null => {
+  const events = Array.isArray(payload?.events) ? payload.events : []
+  if (events.length === 0 || isSyntheticFinalOnlyTimeline(events)) return null
+  return events.some((event: any) => Number.isFinite(Number(event?.eventId))) ? events : null
+}
+
+/** Highest event id in the server's list; live-feed events above it arrived after that reading. */
+const getServerMaxEventId = (payload: any): number | null => {
+  const events = getServerEvents(payload)
+  if (!events) return null
+  let max = -1
+  events.forEach((event: any) => {
+    const id = Number(event?.eventId)
+    if (Number.isFinite(id) && id > max) max = id
+  })
+  return max >= 0 ? max : null
+}
+
+const getPenaltySignature = (event?: MatchFeedEvent) => {
+  const penalty = event?.payload?.penalty as { durationSeconds?: number; fullTimeExpulsion?: boolean } | undefined
+  return penalty ? `${penalty.durationSeconds ?? ""}|${penalty.fullTimeExpulsion === true ? 1 : 0}` : ""
+}
+
 const enrichTimelineWithMatchDetails = (payload: any, fallbackTimeline: MatchFeedEvent[]) => {
   const baseSource = payload?.match ?? payload
-  const rawTimeline = resolvePreferredTimeline(baseSource, fallbackTimeline)
+  const rawTimeline = getServerEvents(payload) ?? resolvePreferredTimeline(baseSource, fallbackTimeline)
   const normalizedBase = dedupeTimelineEvents(rawTimeline.map((event: any) => normalizeTimelineEvent(event)))
   const goalLookup = buildGoalLookup(payload?.match?.playerStats?.players)
 
@@ -1065,7 +1092,11 @@ export function MatchFeedModal({
   const openMatchIdRef = useRef<string | undefined>(undefined)
   const [detailTimeline, setDetailTimeline] = useState<MatchFeedEvent[] | null>(null)
   const [detailClockState, setDetailClockState] = useState<MatchClockState | null>(null)
-  const [detailPenalties, setDetailPenalties] = useState<MatchPenalty[]>([])
+  // Null until a detail payload with its own penalty list has arrived; an empty list then
+  // means "no one is suspended right now", not "unknown".
+  const [detailPenalties, setDetailPenalties] = useState<MatchPenalty[] | null>(null)
+  // Highest event id of the server's event list, when the detail timeline is built from it.
+  const [detailMaxEventId, setDetailMaxEventId] = useState<number | null>(null)
   const [detailLineup, setDetailLineup] = useState<{ home?: CourtLineupPlayer[]; away?: CourtLineupPlayer[] } | null>(null)
   const [detailPlayers, setDetailPlayers] = useState<CourtPlayerStats[] | null>(null)
   const [detailTeamStats, setDetailTeamStats] = useState<CourtTeamStats[] | null>(null)
@@ -1122,15 +1153,20 @@ export function MatchFeedModal({
   })()
   const modalRefreshIntervalMs = matchData?.provider === "procup" ? 5_000 : 3_000
   const effectiveClockState = detailClockState ?? clockState ?? null
-  const effectivePenalties = detailPenalties.length > 0 ? detailPenalties : penalties
+  const effectivePenalties = detailPenalties ?? penalties
   // Show best available timeline immediately — never block on detail fetch. The live list
   // feed can hold the same event twice (Profixio copy + database copy), so it is deduped
   // before it is shown or compared by length against the detail timeline.
   const dedupedFeed = useMemo(() => dedupeTimelineEvents(matchFeed ?? []), [matchFeed])
-  const timelineSource = useMemo(
-    () => (detailTimeline ? preferRicherTimeline(detailTimeline, dedupedFeed) : dedupedFeed),
-    [detailTimeline, dedupedFeed],
-  )
+  // Follow Profixio: with the server's event list in hand, the live feed may only add events
+  // that are newer than that reading (a goal the socket delivered a moment before the next
+  // fetch). Anything else the feed still holds was deleted or corrected in Profixio.
+  const timelineSource = useMemo(() => {
+    if (!detailTimeline) return dedupedFeed
+    if (detailMaxEventId === null) return preferRicherTimeline(detailTimeline, dedupedFeed)
+    const newer = dedupedFeed.filter((event) => Number(event.eventId) > detailMaxEventId)
+    return newer.length > 0 ? dedupeTimelineEvents([...newer, ...detailTimeline]) : detailTimeline
+  }, [detailTimeline, dedupedFeed, detailMaxEventId])
   const hasClockData = Boolean(
     effectiveClockState &&
       (typeof effectiveClockState.currentSeconds === "number" || Boolean(effectiveClockState.clock)),
@@ -1173,8 +1209,9 @@ export function MatchFeedModal({
     const run = urgent ? (fn: () => void) => fn() : startTransition
     run(() => {
       setDetailTimeline(normalized)
+      setDetailMaxEventId(getServerMaxEventId(payload))
       setDetailClockState((payload?.clockState as MatchClockState) ?? null)
-      setDetailPenalties(Array.isArray(payload?.penalties) ? payload.penalties : [])
+      setDetailPenalties(Array.isArray(payload?.penalties) ? payload.penalties : null)
       const detailMatch = payload?.match
       if (detailMatch?.lineup && typeof detailMatch.lineup === "object") setDetailLineup(detailMatch.lineup)
       if (Array.isArray(detailMatch?.playerStats?.players)) setDetailPlayers(detailMatch.playerStats.players)
@@ -1263,8 +1300,9 @@ export function MatchFeedModal({
     openMatchIdRef.current = matchData?.apiMatchId
     setActiveTab("timeline")
     setDetailTimeline(null)
+    setDetailMaxEventId(null)
     setDetailClockState(null)
-    setDetailPenalties([])
+    setDetailPenalties(null)
     setDetailLineup(null)
     setDetailPlayers(null)
     setDetailTeamStats(null)
@@ -1365,7 +1403,10 @@ export function MatchFeedModal({
     const feedsAreIdentical =
       sortedFeed.length === displayedFeed.length &&
       sortedFeed.every(
-        (event, index) => buildTimelineIdentityKey(event) === buildTimelineIdentityKey(displayedFeed[index]),
+        (event, index) =>
+          buildTimelineIdentityKey(event) === buildTimelineIdentityKey(displayedFeed[index]) &&
+          // A suspension corrected in place (4 min down to 2) keeps its identity key.
+          getPenaltySignature(event) === getPenaltySignature(displayedFeed[index]),
       )
     if (feedsAreIdentical) {
       return
