@@ -17,6 +17,7 @@ import {
 } from "@/components/match-court"
 import { LiveWinOdds } from "@/components/live-win-odds"
 import { extendTeamDisplayName, withSquad } from "@/lib/team-display"
+import { formatCountdown } from "@/lib/countdown"
 
 export type MatchFeedEvent = {
   time?: string
@@ -584,7 +585,10 @@ const parseClockMinutes = (value?: string) => {
 
 // A half's length: Profixio's own period length for the match when known (2x30 seniors, 2x25 or
 // 2x20 youth), else 25. A fixed 25 put a 28:06 suspension in a 2x30 game in "Andra halvlek".
+// And never later than the half Profixio says the match is in: while the clock is in the first
+// half nothing can belong to the second.
 let currentPeriodMinutes = 25
+let currentMatchPeriod: number | null = null
 const inferPeriodFromTime = (time?: string, fallbackPeriod?: number, periodMinutes?: number) => {
   if (typeof fallbackPeriod === "number" && fallbackPeriod > 0) {
     return fallbackPeriod
@@ -595,7 +599,8 @@ const inferPeriodFromTime = (time?: string, fallbackPeriod?: number, periodMinut
     return 1
   }
 
-  return minutes > (periodMinutes || currentPeriodMinutes) ? 2 : 1
+  const guess = minutes > (periodMinutes || currentPeriodMinutes) ? 2 : 1
+  return currentMatchPeriod ? Math.min(guess, currentMatchPeriod) : guess
 }
 
 const getGoalLookupKey = (team?: string, time?: string, variant?: "goal" | "seven") =>
@@ -669,6 +674,8 @@ const enrichTimelineWithMatchDetails = (payload: any, fallbackTimeline: MatchFee
 
   const periodMinutes = Number(payload?.match?.profixioClock?.periodLength) || undefined
   if (periodMinutes) currentPeriodMinutes = periodMinutes
+  const clockPeriod = Number(payload?.match?.profixioClock?.period)
+  currentMatchPeriod = payload?.match?.matchStatus === "live" && clockPeriod >= 1 ? clockPeriod : null
   const penaltyEvents = Array.isArray(payload?.match?.eventSummary?.penaltyEvents) ? payload.match.eventSummary.penaltyEvents : []
   penaltyEvents.forEach((event: any) => {
     pushSupplemental({
@@ -1403,14 +1410,17 @@ export function MatchFeedModal({
     return "-"
   }, [finalScore, latestScore, matchStatus])
 
+  const livePeriod = matchStatus === "live" || matchStatus === "halftime" ? Number(effectiveClockState?.period) || null : null
   const groupedByPeriod = useMemo(() => {
     return displayedFeed.reduce<Record<number, MatchFeedEvent[]>>((acc, event) => {
-      const key = getEventGroupKey(event)
+      const raw = getEventGroupKey(event)
+      // Live: no event can sit in a half the match has not reached yet.
+      const key = livePeriod && raw > 0 && raw < 3 ? Math.min(raw, livePeriod) : raw
       if (!acc[key]) acc[key] = []
       acc[key].push(event)
       return acc
     }, {})
-  }, [displayedFeed])
+  }, [displayedFeed, livePeriod])
 
   const emptyTimelineMessage = useMemo(() => {
     if (matchData?.timelineAvailable === false && matchData?.provider === "procup") {
@@ -1679,7 +1689,14 @@ export function MatchFeedModal({
                   className="inline-flex flex-1 items-center justify-center gap-1.5 bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
                 >
                   <img src="/handbollplay_mini.png" alt="" className="h-3.5 w-3.5 brightness-0 invert" />
-                  {matchStatus === "finished" ? "Se repris" : matchStatus === "upcoming" ? "Se match" : "Se live"}
+                  {matchStatus === "finished"
+                    ? "Se repris"
+                    : matchStatus === "upcoming"
+                      ? (() => {
+                          const left = matchData?.date instanceof Date ? formatCountdown(matchData.date.getTime(), countdownNow) : null
+                          return left ? `Sänds ${left}` : "Se match"
+                        })()
+                      : "Se live"}
                 </a>
               )}
               {scoutHref && (

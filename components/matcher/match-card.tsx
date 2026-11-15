@@ -13,6 +13,7 @@ import {
 } from "@/lib/match-card-utils"
 import type { NormalizedMatch } from "@/lib/use-match-data"
 import { extendTeamDisplayName, withSquad } from "@/lib/team-display"
+import { formatCountdown, useNow } from "@/lib/countdown"
 
 const cleanOpponentName = (value?: string) =>
   (value || "").replace(/\s*\((hemma|borta)\)\s*$/i, "").trim()
@@ -90,6 +91,8 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
   const awaitingFinishedResult = status === "finished" && !scoreValue && !isUnconfirmedZero
   const showLivePendingScore = status === "live" && (match.resultState === "live_pending" || isUnconfirmedZero)
 
+  const nowMs = useNow()
+  const streamCountdown = status === "upcoming" ? formatCountdown(match.date.getTime(), nowMs) : null
   const scorePair = parseScorePair(scoreValue ?? undefined)
   const flash = useScoreFlash(status === "live" ? scoreValue : null)
   const outcome = (() => {
@@ -288,7 +291,7 @@ function MatchCardInner({ match, hasClientMatchData, showDate = false, onOpen, o
                   className="inline-flex items-center gap-1.5 text-slate-900 underline-offset-4 hover:underline"
                 >
                   <img src="/handbollplay_mini.png" alt="" className="h-3.5 w-3.5 brightness-0" />
-                  {getMatchWatchLabel(status)}
+                  {streamCountdown ? `Sänds ${streamCountdown}` : getMatchWatchLabel(status)}
                 </a>
               )}
               {scoutHref && (
