@@ -582,7 +582,10 @@ const parseClockMinutes = (value?: string) => {
   return (Number.isFinite(minutes) ? minutes : 0) + (Number.isFinite(extraMinutes) ? extraMinutes : 0)
 }
 
-const inferPeriodFromTime = (time?: string, fallbackPeriod?: number) => {
+// A half's length: Profixio's own period length for the match when known (2x30 seniors, 2x25 or
+// 2x20 youth), else 25. A fixed 25 put a 28:06 suspension in a 2x30 game in "Andra halvlek".
+let currentPeriodMinutes = 25
+const inferPeriodFromTime = (time?: string, fallbackPeriod?: number, periodMinutes?: number) => {
   if (typeof fallbackPeriod === "number" && fallbackPeriod > 0) {
     return fallbackPeriod
   }
@@ -592,7 +595,7 @@ const inferPeriodFromTime = (time?: string, fallbackPeriod?: number) => {
     return 1
   }
 
-  return minutes > 25 ? 2 : 1
+  return minutes > (periodMinutes || currentPeriodMinutes) ? 2 : 1
 }
 
 const getGoalLookupKey = (team?: string, time?: string, variant?: "goal" | "seven") =>
@@ -664,6 +667,8 @@ const enrichTimelineWithMatchDetails = (payload: any, fallbackTimeline: MatchFee
   const rootTimeline = resolvePreferredTimeline(payload, []).map((event: any) => normalizeTimelineEvent(event))
   rootTimeline.forEach(pushSupplemental)
 
+  const periodMinutes = Number(payload?.match?.profixioClock?.periodLength) || undefined
+  if (periodMinutes) currentPeriodMinutes = periodMinutes
   const penaltyEvents = Array.isArray(payload?.match?.eventSummary?.penaltyEvents) ? payload.match.eventSummary.penaltyEvents : []
   penaltyEvents.forEach((event: any) => {
     pushSupplemental({
@@ -673,7 +678,7 @@ const enrichTimelineWithMatchDetails = (payload: any, fallbackTimeline: MatchFee
       team: event?.team ?? undefined,
       player: event?.player ?? undefined,
       playerNumber: event?.number ? String(event.number) : undefined,
-      period: inferPeriodFromTime(event?.time),
+      period: inferPeriodFromTime(event?.time, typeof event?.period === "number" ? event.period : undefined, periodMinutes),
       eventTypeId: typeof event?.eventTypeId === "number" ? event.eventTypeId : undefined,
     })
   })
@@ -685,7 +690,7 @@ const enrichTimelineWithMatchDetails = (payload: any, fallbackTimeline: MatchFee
       type: "Timeout",
       description: event?.team ? `Timeout ${event.team}` : "Timeout",
       team: event?.team ?? undefined,
-      period: inferPeriodFromTime(event?.time, typeof event?.period === "number" ? event.period : undefined),
+      period: inferPeriodFromTime(event?.time, typeof event?.period === "number" ? event.period : undefined, periodMinutes),
     })
   })
 
@@ -701,7 +706,7 @@ const enrichTimelineWithMatchDetails = (payload: any, fallbackTimeline: MatchFee
         description: event?.description ?? "Tilldömd 7-m",
         team: event?.team ?? undefined,
         player: event?.player ?? undefined,
-        period: inferPeriodFromTime(event?.time),
+        period: inferPeriodFromTime(event?.time, typeof event?.period === "number" ? event.period : undefined, periodMinutes),
       })
     })
 
